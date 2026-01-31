@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('cdp_page_title') }} - SDG{% endblock %}
+
+{% block content %}
+
+<div class="row mb-4">
+<div class="col-md-12">
+<div class="d-flex justify-content-between align-items-center">
+<h1><i class="fas fa-globe-americas me-2"></i>{{ _('cdp_page_title') }}</h1>
+<div>
+<span class="badge bg-{{ 'success' if manager_available else 'danger' }}">
+                    {{ _('module_active_badge') if manager_available else _('module_passive_badge') }}
+                </span>
+<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+</div>
+<p class="lead text-muted">{{ _('cdp_desc') }}</p>
+</div>
+</div>
+
+{% if manager_available %}
+<!-- Score Cards -->
+<div class="row mb-4">
+<div class="col-md-4">
+<div class="card text-white bg-primary mb-3 shadow-sm border-0">
+<div class="card-body">
+<h5 class="card-title">{{ _('cdp_module_climate') }}</h5>
+<p class="card-text display-4">{{ stats.climate_score or '-' }}</p>
+</div>
+</div>
+</div>
+<div class="col-md-4">
+<div class="card text-white bg-info mb-3 shadow-sm border-0">
+<div class="card-body">
+<h5 class="card-title">{{ _('cdp_module_water') }}</h5>
+<p class="card-text display-4">{{ stats.water_score or '-' }}</p>
+</div>
+</div>
+</div>
+<div class="col-md-4">
+<div class="card text-white bg-success mb-3 shadow-sm border-0">
+<div class="card-body">
+<h5 class="card-title">{{ _('cdp_module_forests') }}</h5>
+<p class="card-text display-4">{{ stats.forests_score or '-' }}</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Tabs -->
+<ul class="nav nav-tabs mb-4">
+<li class="nav-item">
+<a class="nav-link {{ 'active' if current_type == 'Climate Change' else '' }}" href="{{ url_for('cdp_module', type='Climate Change') }}">
+<i class="fas fa-cloud me-2"></i>{{ _('cdp_module_climate') }}
+        </a>
+</li>
+<li class="nav-item">
+<a class="nav-link {{ 'active' if current_type == 'Water Security' else '' }}" href="{{ url_for('cdp_module', type='Water Security') }}">
+<i class="fas fa-tint me-2"></i>{{ _('cdp_module_water') }}
+        </a>
+</li>
+<li class="nav-item">
+<a class="nav-link {{ 'active' if current_type == 'Forests' else '' }}" href="{{ url_for('cdp_module', type='Forests') }}">
+<i class="fas fa-tree me-2"></i>{{ _('cdp_module_forests') }}
+        </a>
+</li>
+</ul>
+<!-- Questionnaire Form -->
+<div class="card shadow-sm mb-4">
+<div class="card-header bg-white py-3">
+<h5 class="mb-0">{{ current_type }} {{ _('questionnaire_title') }}</h5>
+</div>
+<div class="card-body">
+<form action="{{ url_for('cdp_module') }}" method="POST">
+<input name="questionnaire_type" type="hidden" value="{{ current_type }}"/>
+            
+            {% if questions %}
+                {% set current_category = namespace(value=None) %}
+                
+                {% for q in questions %}
+                    {% if q.question_category != current_category.value %}
+                        {% set current_category.value = q.question_category %}
+                        <div class="alert alert-secondary mt-4 mb-3">
+<strong>{{ q.question_category }}</strong>
+</div>
+                    {% endif %}
+                    
+                    <div class="mb-4 p-3 border rounded bg-light">
+<label class="form-label fw-bold">
+<span class="badge bg-dark me-2">{{ q.question_id }}</span>
+                            {{ q.question_text }}
+                        </label>
+<textarea class="form-control" name="question_{{ q.question_id }}" rows="3">{{ responses_map.get(q.question_id, '') }}</textarea>
+<div class="form-text text-muted">
+                            {{ _('weight') }}: {{ q.scoring_weight }}
+                        </div>
+</div>
+                {% endfor %}
+                
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+<button class="btn btn-primary btn-lg" type="submit">
+<i class="fas fa-save me-2"></i>{{ _('save_responses') }}
+                    </button>
+</div>
+            {% else %}
+                <div class="alert alert-info">
+                    {{ _('no_questions_found') }}
+                </div>
+            {% endif %}
+        </form>
+</div>
+</div>
+
+{% else %}
+<div class="alert alert-warning">
+<h4 class="alert-heading">{{ _('module_failed_title') }}</h4>
+<p>{{ _('module_failed_desc') }}</p>
+</div>
+{% endif %}
+{% endblock %}

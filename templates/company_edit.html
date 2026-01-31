@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('company_edit_title') if company else _('company_new_title') }} - SDG{% endblock %}
+
+{% block styles %}
+<style>
+    .sticky-sidebar {
+        position: sticky;
+        top: 80px; /* Navbar height + padding */
+        z-index: 1000;
+    }
+    .section-title {
+        border-bottom: 2px solid #f8f9fa;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+        color: #0d6efd;
+    }
+    .anchor-offset {
+        scroll-margin-top: 100px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+<h1 class="h2">{{ _('company_edit_title') if company else _('company_add_title') }}</h1>
+<div class="btn-toolbar mb-2 mb-md-0">
+
+<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+</div>
+<form method="POST">
+<div class="row">
+<!-- Sidebar Navigation -->
+<div class="col-md-3 d-none d-md-block">
+<div class="sticky-sidebar card shadow-sm border-0">
+<div class="card-body p-0">
+<div class="list-group list-group-flush" id="company-nav">
+<a class="list-group-item list-group-item-action" href="#basic-info">
+<i class="bi bi-building me-2"></i> Firma Bilgileri
+                        </a>
+<a class="list-group-item list-group-item-action" href="#sector-location">
+<i class="bi bi-geo-alt me-2"></i> Sektör ve Konum
+                        </a>
+<a class="list-group-item list-group-item-action" href="#vision-mission">
+<i class="bi bi-eye me-2"></i> Vizyon, Misyon ve Değerler
+                        </a>
+<a class="list-group-item list-group-item-action" href="#facilities">
+<i class="bi bi-shop me-2"></i> Firma Tesisleri
+                        </a>
+<a class="list-group-item list-group-item-action" href="#milestones">
+<i class="bi bi-flag me-2"></i> Kilometre Taşları
+                        </a>
+<a class="list-group-item list-group-item-action" href="#products">
+<i class="bi bi-box-seam me-2"></i> Ürün ve Hizmet Grupları
+                        </a>
+<a class="list-group-item list-group-item-action" href="#carbon">
+<i class="bi bi-cloud-haze2 me-2"></i> Karbon Profili
+                        </a>
+<a class="list-group-item list-group-item-action" href="#memberships">
+<i class="bi bi-people me-2"></i> Şirket Üyelikleri
+                        </a>
+<a class="list-group-item list-group-item-action" href="#awards">
+<i class="bi bi-trophy me-2"></i> Sürdürülebilirlik Ödülleri
+                        </a>
+<div class="p-3 border-top">
+<button class="btn btn-primary w-100" type="submit">
+<i class="bi bi-save"></i> {{ _('btn_save') }}
+                            </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Main Content -->
+<div class="col-md-9">
+<!-- 1. Firma Bilgileri -->
+<div class="card shadow-sm border-0 mb-4 anchor-offset" id="basic-info">
+<div class="card-body">
+<h4 class="section-title">Firma Bilgileri</h4>
+<div class="row g-3">
+<div class="col-md-6">
+<label class="form-label" for="sirket_adi">{{ _('lbl_company_name') }}</label>
+<input class="form-control" id="sirket_adi" name="sirket_adi" required="" type="text" value="{{ company.sirket_adi or company.name or '' }}"/>
+</div>
+<div class="col-md-6">
+<label class="form-label" for="ticari_unvan">Ticari Ünvan</label>
+<input class="form-control" id="ticari_unvan" name="ticari_unvan" type="text" value="{{ company.ticari_unvan or '' }}"/>
+</div>
+<div class="col-md-6">
+<label class="form-label" for="vergi_no">{{ _('lbl_tax_number') }}</label>
+<input class="form-control" id="vergi_no" name="vergi_no" type="text" value="{{ company.vergi_no or company.tax_number or '' }}"/>
+</div>
+<div class="col-md-6">
+<label class="form-label" for="vergi_dairesi">Vergi Dairesi</label>
+<input class="form-control" id="vergi_dairesi" name="vergi_dairesi" type="text" value="{{ company.vergi_dairesi or '' }}"/>
+</div>
+<div class="col-md-6">
+<label class="form-label" for="email">E-posta</label>
+<input class="form-control" id="email" name="email" type="email" value="{{ company.email or '' }}"/>
+</div>
+<div class="col-md-6">
+<label class="form-label" for="telefon">Telefon</label>
+<input class="form-control" id="telefon" name="telefon" type="text" value="{{ company.telefon or '' }}"/>
+</div>
+<div class="col-md-6">
+<label class="form-label" for="website">Web Sitesi</label>
+<input class="form-control" id="website" name="website" type="text" value="{{ company.website or '' }}"/>
+</div>
+<div class="col-md-6">
+<label class="form-label" for="calisan_sayisi">Çalışan Sayısı</label>
+<input class="form-control" id="calisan_sayisi" name="calisan_sayisi" type="number" value="{{ company.calisan_sayisi or 0 }}"/>
+</div>
+<div class="col-12">
+<div class="form-check form-switch">
+<input class="form-check-input" id="aktif" name="aktif" type="checkbox" {% if company and (company.aktif or company.is_active) %}checked{% endif %}/>
+<label class="form-check-label" for="aktif">{{ _('lbl_company_active') }}</label>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- 2. Sektör ve Konum -->
+<div class="card shadow-sm border-0 mb-4 anchor-offset" id="sector-location">
+<div class="card-body">
+<h4 class="section-title">Sektör ve Konum</h4>
+<div class="row g-3">
+<div class="col-md-6">
+<label class="form-label" for="sektor">{{ _('lbl_sector') }}</label>
+<input class="form-control" id="sektor" name="sektor" type="text" value="{{ company.sektor or company.sector or '' }}"/>
+</div>
+<div class="col-md-6">
+<label class="form-label" for="il">İl</label>
+<input class="form-control" id="il" name="il" type="text" value="{{ company.il or '' }}"/>
+</div>
+<div class="col-md-6">
+<label class="form-label" for="ilce">İlçe</label>
+<input class="form-control" id="ilce" name="ilce" type="text" value="{{ company.ilce or '' }}"/>
+</div>
+<div class="col-md-6">
+<label class="form-label" for="posta_kodu">Posta Kodu</label>
+<input class="form-control" id="posta_kodu" name="posta_kodu" type="text" value="{{ company.posta_kodu or '' }}"/>
+</div>
+<div class="col-12">
+<label class="form-label" for="adres">Açık Adres</label>
+<textarea class="form-control" id="adres" name="adres" rows="2">{{ company.adres or '' }}</textarea>
+</div>
+</div>
+</div>
+</div>
+<!-- 3. Vizyon, Misyon ve Değerler -->
+<div class="card shadow-sm border-0 mb-4 anchor-offset" id="vision-mission">
+<div class="card-body">
+<h4 class="section-title">Vizyon, Misyon ve Değerler</h4>
+<div class="row g-3">
+<div class="col-12">
+<label class="form-label" for="vizyon">Vizyonumuz</label>
+<textarea class="form-control" id="vizyon" name="vizyon" placeholder="Şirketinizin gelecek vizyonunu buraya yazınız..." rows="3">{{ company.vizyon or '' }}</textarea>
+</div>
+<div class="col-12">
+<label class="form-label" for="misyon">Misyonumuz</label>
+<textarea class="form-control" id="misyon" name="misyon" placeholder="Şirketinizin varoluş amacını buraya yazınız..." rows="3">{{ company.misyon or '' }}</textarea>
+</div>
+<div class="col-12">
+<label class="form-label" for="degerler">Değerlerimiz</label>
+<textarea class="form-control" id="degerler" name="degerler" placeholder="Şirket değerlerinizi buraya yazınız..." rows="3">{{ company.degerler or '' }}</textarea>
+</div>
+</div>
+</div>
+</div>
+<!-- 4. Firma Tesisleri -->
+<div class="card shadow-sm border-0 mb-4 anchor-offset" id="facilities">
+<div class="card-body">
+<h4 class="section-title">Firma Tesisleri</h4>
+<div class="mb-3">
+<label class="form-label" for="tesisler_ozet">Tesis Bilgileri</label>
+<textarea class="form-control" id="tesisler_ozet" name="tesisler_ozet" placeholder="Üretim tesisleri, ofisler ve diğer lokasyonlar hakkında bilgi veriniz..." rows="4">{{ company.tesisler_ozet or '' }}</textarea>
+</div>
+</div>
+</div>
+<!-- 5. Kilometre Taşları -->
+<div class="card shadow-sm border-0 mb-4 anchor-offset" id="milestones">
+<div class="card-body">
+<h4 class="section-title">Kilometre Taşları</h4>
+<div class="mb-3">
+<label class="form-label" for="kilometre_taslari_ozet">Şirket Tarihçesi ve Önemli Dönüm Noktaları</label>
+<textarea class="form-control" id="kilometre_taslari_ozet" name="kilometre_taslari_ozet" placeholder="Kuruluş, büyüme, önemli başarılar vb." rows="4">{{ company.kilometre_taslari_ozet or '' }}</textarea>
+</div>
+</div>
+</div>
+<!-- 6. Ürün ve Hizmet Grupları -->
+<div class="card shadow-sm border-0 mb-4 anchor-offset" id="products">
+<div class="card-body">
+<h4 class="section-title">Ürün ve Hizmet Grupları</h4>
+<div class="mb-3">
+<label class="form-label" for="urun_hizmet_ozet">Ürün ve Hizmetler</label>
+<textarea class="form-control" id="urun_hizmet_ozet" name="urun_hizmet_ozet" placeholder="Sunduğunuz ana ürün ve hizmetleri listeleyiniz..." rows="4">{{ company.urun_hizmet_ozet or '' }}</textarea>
+</div>
+</div>
+</div>
+<!-- 7. Karbon Profili -->
+<div class="card shadow-sm border-0 mb-4 anchor-offset" id="carbon">
+<div class="card-body">
+<h4 class="section-title">Karbon Profili</h4>
+<div class="mb-3">
+<label class="form-label" for="karbon_profili_ozet">Karbon Ayak İzi ve Hedefler</label>
+<textarea class="form-control" id="karbon_profili_ozet" name="karbon_profili_ozet" placeholder="Karbon emisyonları, azaltım hedefleri ve stratejiler..." rows="4">{{ company.karbon_profili_ozet or '' }}</textarea>
+</div>
+</div>
+</div>
+<!-- 8. Şirket Üyelikleri -->
+<div class="card shadow-sm border-0 mb-4 anchor-offset" id="memberships">
+<div class="card-body">
+<h4 class="section-title">Şirket Üyelikleri</h4>
+<div class="mb-3">
+<label class="form-label" for="uyelikler_ozet">Üye Olunan Kuruluşlar</label>
+<textarea class="form-control" id="uyelikler_ozet" name="uyelikler_ozet" placeholder="Sektörel dernekler, odalar ve diğer üyelikler..." rows="4">{{ company.uyelikler_ozet or '' }}</textarea>
+</div>
+</div>
+</div>
+<!-- 9. Sürdürülebilirlik Ödülleri -->
+<div class="card shadow-sm border-0 mb-4 anchor-offset" id="awards">
+<div class="card-body">
+<h4 class="section-title">Sürdürülebilirlik Ödülleri</h4>
+<div class="mb-3">
+<label class="form-label" for="oduller_ozet">Ödüller ve Sertifikalar</label>
+<textarea class="form-control" id="oduller_ozet" name="oduller_ozet" placeholder="Alınan ödüller, ISO sertifikaları vb..." rows="4">{{ company.oduller_ozet or '' }}</textarea>
+</div>
+</div>
+</div>
+<div class="d-grid gap-2 d-md-flex justify-content-md-end mb-5">
+<button class="btn btn-primary btn-lg px-5" type="submit">
+<i class="bi bi-save"></i> {{ _('btn_save') }}
+                </button>
+</div>
+</div>
+</div>
+</form>
+{% endblock %}

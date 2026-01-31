@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('companies_page_title') }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+<h1 class="h2">{{ _('companies_header') }}</h1>
+<div class="btn-toolbar mb-2 mb-md-0">
+<div class="btn-group me-2">
+<button class="btn btn-sm btn-outline-secondary" type="button">{{ _('common_export') }}</button>
+</div>
+        {% if session.role|lower in ['admin', 'super_admin', 'test admin'] %}
+        <a class="btn btn-sm btn-primary" href="{{ url_for('company_add') }}">
+<i class="bi bi-plus-lg"></i> {{ _('companies_new_company') }}
+        </a>
+        {% endif %}
+    <button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+</div>
+<div class="table-responsive">
+<table class="table table-striped table-hover">
+<thead>
+<tr>
+<th>{{ _('col_id') }}</th>
+<th>{{ _('col_company_name') }}</th>
+<th>{{ _('col_sector') }}</th>
+<th>{{ _('col_country') }}</th>
+<th>{{ _('col_status') }}</th>
+<th>{{ _('col_created_at') }}</th>
+<th>{{ _('col_actions') }}</th>
+</tr>
+</thead>
+<tbody>
+            {% for company in companies %}
+            <tr>
+<td>{{ company['id'] }}</td>
+<td>{{ company['name'] }}</td>
+<td>{{ company['sector'] }}</td>
+<td>{{ company['country'] }}</td>
+<td>
+                    {% if company['is_active'] %}
+                    <span class="badge bg-success">{{ _('status_active') }}</span>
+                    {% else %}
+                    <span class="badge bg-secondary">{{ _('status_passive') }}</span>
+                    {% endif %}
+                </td>
+<td>{{ company['created_at'] }}</td>
+<td>
+<a class="btn btn-sm btn-outline-info" href="{{ url_for('company_detail', company_id=company['id']) }}" title="{{ _('companies_details_tooltip') }}">
+<i class="bi bi-eye"></i>
+</a>
+                    {% if session.role|lower in ['admin', 'super_admin', 'test admin'] %}
+                    <a class="btn btn-sm btn-outline-primary" href="{{ url_for('company_edit', company_id=company['id']) }}" title="{{ _('company_edit_title') }}">
+<i class="bi bi-pencil"></i>
+</a>
+<form action="{{ url_for('company_delete', company_id=company['id']) }}" method="POST" onsubmit="return confirm('{{ _('confirm_delete_company') }}');" style="display:inline;">
+<button class="btn btn-sm btn-outline-danger" title="{{ _('btn_delete') }}" type="submit">
+<i class="bi bi-trash"></i>
+</button>
+</form>
+                    {% endif %}
+                </td>
+</tr>
+
+            {% else %}
+            <tr>
+<td class="text-center" colspan="7">{{ _('companies_no_records') }}</td>
+</tr>
+            {% endfor %}
+        </tbody>
+</table>
+</div>
+{% endblock %}

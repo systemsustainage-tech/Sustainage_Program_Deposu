@@ -1,0 +1,266 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('prioritization_title', 'Prioritization') }} - SDG{% endblock %}
+
+{% block content %}
+
+<div class="row mb-4">
+<div class="col-md-12">
+<div class="d-flex justify-content-between align-items-center">
+<h1><i class="fas fa-cube me-2"></i>{{ _('prioritization_title', 'Önceliklendirme (Çifte Önemlilik)') }}</h1>
+<div>
+<span class="badge bg-{{ 'success' if manager_available else 'secondary' }}">
+                    {{ _('module_active_badge') if manager_available else _('module_passive_badge') }}
+                </span>
+<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+</div>
+<p class="lead text-muted">{{ _('prioritization_desc', 'Çifte Önemlilik (Double Materiality) analizi ile konuları finansal ve etki boyutunda değerlendirin.') }}</p>
+</div>
+</div>
+<div class="row">
+<div class="col-12">
+<div class="card shadow-sm border-0">
+<div class="card-body">
+                
+                    {% if stats or records %}
+                        <!-- Dashboard View -->
+<div class="row mb-4">
+<!-- Matrix Chart Section -->
+<div class="col-12 mb-4">
+<div class="card h-100">
+<div class="card-header d-flex justify-content-between align-items-center">
+<h5 class="mb-0"><i class="fas fa-chart-scatter me-2"></i>{{ _('materiality_matrix', 'Önceliklendirme Matrisi') }}</h5>
+<small class="text-muted">X: Finansal Önemlilik | Y: Etki Önemliliği</small>
+</div>
+<div class="card-body">
+                                        {% if records %}
+                                        <div style="position: relative; height: 400px; width: 100%;">
+<canvas id="materialityMatrixChart"></canvas>
+</div>
+                                        {% else %}
+                                        <div class="d-flex flex-column justify-content-center align-items-center h-100 py-5">
+<i class="fas fa-chart-area display-4 text-muted mb-3" style="opacity: 0.3;"></i>
+<p class="text-muted text-center">{{ _('no_data_for_matrix', 'Matris oluşturmak için henüz yeterli veri yok.') }}</p>
+<button class="btn btn-sm btn-outline-primary mt-2" data-bs-target="#addTopicModal" data-bs-toggle="modal">
+<i class="fas fa-plus"></i> {{ _('add_first_topic', 'İlk Konuyu Ekle') }}
+                                            </button>
+</div>
+                                        {% endif %}
+                                    </div>
+</div>
+</div>
+
+                            {% if stats %}
+                            <div class="col-12 mb-4">
+<div class="card">
+<div class="card-header">
+<h5 class="mb-0">{{ _('statistics', 'İstatistikler') }}</h5>
+</div>
+<div class="card-body">
+<div class="row">
+                                            {% for key, value in stats.items() %}
+                                            <div class="col-md-3 mb-3">
+<div class="border rounded p-3 text-center bg-light">
+<h6 class="text-muted text-uppercase small">{{ key|replace('_', ' ')|title }}</h6>
+<h3 class="mb-0 text-primary">{{ value }}</h3>
+</div>
+</div>
+                                            {% endfor %}
+                                        </div>
+</div>
+</div>
+</div>
+                            {% endif %}
+
+                            {% if records %}
+                            <div class="col-12">
+<div class="card">
+<div class="card-header d-flex justify-content-between align-items-center">
+<h5 class="mb-0">{{ _('records', 'Kayıtlar') }}</h5>
+<button class="btn btn-sm btn-primary" data-bs-target="#addTopicModal" data-bs-toggle="modal">
+<i class="fas fa-plus"></i> {{ _('add_new', 'Yeni Ekle') }}
+                                        </button>
+</div>
+<div class="card-body">
+<div class="table-responsive">
+<table class="table table-hover">
+<thead>
+<tr>
+                                                        {% if columns %}
+                                                            {% for col in columns %}
+                                                            <th>{{ col|replace('_', ' ')|title }}</th>
+                                                            {% endfor %}
+                                                        {% else %}
+                                                            <th>{{ _('details', 'Detaylar') }}</th>
+                                                        {% endif %}
+                                                    </tr>
+</thead>
+<tbody>
+                                                    {% for record in records %}
+                                                    <tr>
+                                                        {% if columns %}
+                                                            {% for col in columns %}
+                                                                {% if record is mapping %}
+                                                                    <td>{{ record[col] }}</td>
+                                                                {% else %}
+                                                                    <td>{{ record }}</td>
+                                                                {% endif %}
+                                                            {% endfor %}
+                                                        {% else %}
+                                                            <td>{{ record }}</td>
+                                                        {% endif %}
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+                            {% endif %}
+                        </div>
+                    {% else %}
+                        <!-- Fallback to Under Construction if no data -->
+<div class="text-center py-5">
+<i class="bi bi-cone-striped display-1 text-warning mb-3"></i>
+<h3>{{ _('module_under_construction') }}</h3>
+<p class="text-muted">{{ _('module_coming_soon_desc', 'Bu modülün web arayüzü entegrasyonu devam etmektedir.') }}</p>
+<p class="small text-muted">{{ _('no_data_msg', 'Veri bulunamadı veya modül henüz aktif değil.') }}</p>
+</div>
+                    {% endif %}
+
+            </div>
+</div>
+</div>
+</div>
+<!-- Add Topic Modal -->
+<div aria-hidden="true" class="modal fade" id="addTopicModal" tabindex="-1">
+<div class="modal-dialog">
+<div class="modal-content">
+<div class="modal-header">
+<h5 class="modal-title">{{ _('add_new_topic', 'Yeni Materyal Konu Ekle') }}</h5>
+<button aria-label="Close" class="btn-close" data-bs-dismiss="modal" type="button"></button>
+</div>
+<form action="{{ url_for('prioritization_add') }}" method="POST">
+<div class="modal-body">
+<div class="mb-3">
+<label class="form-label" for="topic_name">{{ _('topic_name', 'Konu Adı') }}</label>
+<input class="form-control" id="topic_name" name="topic_name" required="" type="text"/>
+</div>
+<div class="mb-3">
+<label class="form-label" for="category">{{ _('category', 'Kategori') }}</label>
+<select class="form-select" id="category" name="category" required="">
+<option value="Çevresel">{{ _('cat_environmental', 'Çevresel') }}</option>
+<option value="Sosyal">{{ _('cat_social', 'Sosyal') }}</option>
+<option value="Ekonomik">{{ _('cat_economic', 'Ekonomik') }}</option>
+<option value="Yönetişim">{{ _('cat_governance', 'Yönetişim') }}</option>
+</select>
+</div>
+<div class="row">
+<div class="col-md-6 mb-3">
+<label class="form-label" for="stakeholder_impact">{{ _('stakeholder_impact', 'Etki Önemliliği (Paydaş) (1-5)') }}</label>
+<input class="form-control" id="stakeholder_impact" max="5" min="1" name="stakeholder_impact" required="" step="0.1" type="number"/>
+<div class="form-text">Şirketin dış dünyaya/paydaşlara etkisi (Inside-Out)</div>
+</div>
+<div class="col-md-6 mb-3">
+<label class="form-label" for="business_impact">{{ _('business_impact', 'Finansal Önemlilik (İş) (1-5)') }}</label>
+<input class="form-control" id="business_impact" max="5" min="1" name="business_impact" required="" step="0.1" type="number"/>
+<div class="form-text">Dış dünyanın şirkete finansal etkisi (Outside-In)</div>
+</div>
+</div>
+<div class="mb-3">
+<label class="form-label" for="description">{{ _('description', 'Açıklama') }}</label>
+<textarea class="form-control" id="description" name="description" rows="3"></textarea>
+</div>
+</div>
+<div class="modal-footer">
+<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ _('btn_cancel', 'İptal') }}</button>
+<button class="btn btn-primary" type="submit">{{ _('btn_save', 'Kaydet') }}</button>
+</div>
+</form>
+</div>
+</div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    {% if records %}
+    const records = {{ records | tojson }};
+    const ctx = document.getElementById('materialityMatrixChart');
+    
+    if (ctx && records.length > 0) {
+        // Prepare data for Scatter Plot
+        const scatterData = records.map(r => ({
+            x: parseFloat(r.business_impact || 0), // Financial (X)
+            y: parseFloat(r.stakeholder_impact || 0), // Impact (Y)
+            r: Math.max(5, (parseFloat(r.priority_score || 0) * 3)), // Radius
+            label: r.topic_name
+        }));
+
+        new Chart(ctx, {
+            type: 'bubble', // Using bubble to control radius
+            data: {
+                datasets: [{
+                    label: 'Materyal Konular',
+                    data: scatterData,
+                    backgroundColor: scatterData.map(d => {
+                        // Color based on zone
+                        const avg = (d.x + d.y) / 2;
+                        if (avg >= 3.5) return 'rgba(231, 76, 60, 0.7)'; // Red (High)
+                        if (avg >= 2.0) return 'rgba(241, 196, 15, 0.7)'; // Yellow (Medium)
+                        return 'rgba(149, 165, 166, 0.7)'; // Grey (Low)
+                    }),
+                    borderColor: 'rgba(0,0,0,0.1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        title: { display: true, text: 'Finansal Önemlilik (Financial Materiality)' },
+                        min: 0,
+                        max: 5.5,
+                        grid: {
+                            color: (context) => context.tick.value === 2.5 ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.1)',
+                            lineWidth: (context) => context.tick.value === 2.5 ? 2 : 1
+                        }
+                    },
+                    y: {
+                        title: { display: true, text: 'Etki Önemliliği (Impact Materiality)' },
+                        min: 0,
+                        max: 5.5,
+                        grid: {
+                            color: (context) => context.tick.value === 2.5 ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.1)',
+                            lineWidth: (context) => context.tick.value === 2.5 ? 2 : 1
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const p = context.raw;
+                                return `${p.label}: (F:${p.x}, E:${p.y})`;
+                            }
+                        }
+                    },
+                    annotation: {
+                        annotations: {
+                            box1: {
+                                type: 'box',
+                                xMin: 3.5, xMax: 5.5,
+                                yMin: 3.5, yMax: 5.5,
+                                backgroundColor: 'rgba(231, 76, 60, 0.1)'
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    {% endif %}
+});
+</script>
+{% endblock %}

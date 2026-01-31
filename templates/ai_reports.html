@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - Sustainage{% endblock %}
+
+{% block content %}
+
+<div class="row mb-4">
+<div class="col-md-12">
+<div class="d-flex justify-content-between align-items-center">
+<div>
+<h1 class="display-6"><i class="fas fa-robot text-primary me-2"></i>{{ title }}</h1>
+<p class="lead text-muted">Sürdürülebilirlik verilerinizden yapay zeka destekli içgörüler elde edin.</p>
+</div>
+<div>
+                {% if manager_available %}
+                <span class="badge bg-success p-2"><i class="fas fa-check-circle me-1"></i> AI Servisi Aktif</span>
+                {% else %}
+                <span class="badge bg-warning text-dark p-2"><i class="fas fa-exclamation-triangle me-1"></i> Simülasyon Modu</span>
+                {% endif %}
+            <button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+</div>
+</div>
+</div>
+<!-- Data Summary Cards -->
+<div class="row mb-5">
+<div class="col-md-6 mb-3">
+<div class="card h-100 border-0 shadow-sm border-start border-4 border-success">
+<div class="card-body">
+<div class="d-flex align-items-center">
+<div class="flex-shrink-0 bg-success bg-opacity-10 p-3 rounded">
+<i class="fas fa-globe-americas fa-2x text-success"></i>
+</div>
+<div class="flex-grow-1 ms-3">
+<h6 class="text-muted text-uppercase mb-1">SKA Hedefleri</h6>
+<h3 class="mb-0">{{ sdg_stats.selected_count }}</h3>
+<small class="text-muted">Seçilen Amaç Sayısı</small>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="col-md-6 mb-3">
+<div class="card h-100 border-0 shadow-sm border-start border-4 border-primary">
+<div class="card-body">
+<div class="d-flex align-items-center">
+<div class="flex-shrink-0 bg-primary bg-opacity-10 p-3 rounded">
+<i class="fas fa-list-check fa-2x text-primary"></i>
+</div>
+<div class="flex-grow-1 ms-3">
+<h6 class="text-muted text-uppercase mb-1">Öncelikli Konular</h6>
+<h3 class="mb-0">{{ mat_stats.high_priority }} <span class="text-muted fs-6">/ {{ mat_stats.total_topics }}</span></h3>
+<small class="text-muted">Yüksek Öncelik / Toplam</small>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Action Area -->
+<div class="row mb-5 justify-content-center">
+<div class="col-md-8 text-center">
+<div class="card shadow-sm">
+<div class="card-body p-5">
+<i class="fas fa-magic fa-3x text-warning mb-3"></i>
+<h4>AI Analizini Başlat</h4>
+<p class="text-muted mb-4">Mevcut verilerinizi tarayarak güçlü yönlerinizi, riskleri ve gelişim fırsatlarını raporlayın.</p>
+<form method="POST" onsubmit="showLoading()">
+<button class="btn btn-lg btn-primary px-5" id="analyzeBtn" type="submit">
+<i class="fas fa-play me-2"></i> Analizi Oluştur
+                    </button>
+</form>
+<div class="mt-4" id="loadingArea" style="display: none;">
+<div class="spinner-border text-primary" role="status">
+<span class="visually-hidden">Loading...</span>
+</div>
+<p class="mt-2 text-muted">Yapay zeka verilerinizi analiz ediyor, lütfen bekleyin...</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Results Area -->
+{% if analysis_result %}
+<div class="row mb-5">
+<div class="col-12">
+<div class="card shadow border-0">
+<div class="card-header bg-gradient bg-primary text-white">
+<h5 class="mb-0"><i class="fas fa-file-alt me-2"></i>Analiz Raporu</h5>
+</div>
+<div class="card-body p-4 bg-light">
+<div class="markdown-content p-3 bg-white rounded shadow-sm">
+<!-- Simple formatting for simulation text -->
+                    {{ analysis_result | replace('\n', '<br/>') | safe }}
+                </div>
+</div>
+<div class="card-footer bg-white">
+<div class="d-flex justify-content-end">
+<button class="btn btn-outline-secondary btn-sm me-2" onclick="window.print()">
+<i class="fas fa-print me-1"></i> Yazdır
+                    </button>
+<!-- Future: Save to Report -->
+<a class="btn btn-outline-primary btn-sm" href="{{ url_for('reports_module') }}">
+<i class="fas fa-file-export me-1"></i> Raporlara Git
+                    </a>
+</div>
+</div>
+</div>
+</div>
+</div>
+{% endif %}
+
+<script>
+function showLoading() {
+    document.getElementById('analyzeBtn').disabled = true;
+    document.getElementById('analyzeBtn').innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> İşleniyor...';
+    document.getElementById('loadingArea').style.display = 'block';
+}
+</script>
+<style>
+.markdown-content {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+    color: #333;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('tax_title') }} - {{ _('data_entry_btn') }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+<div class="col-md-12">
+<div class="d-flex justify-content-between align-items-center mb-3"><h1><i class="fas fa-edit me-2"></i>{{ _('tax_title') }} - {{ _('data_entry_btn') }}</h1><button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+<p class="lead text-muted">{{ _('tax_desc') }}</p>
+</div>
+</div>
+<div class="row">
+<div class="col-md-8 mx-auto">
+<div class="card">
+<div class="card-body">
+<form class="needs-validation" method="POST" novalidate="">
+<div class="mb-3">
+<label class="form-label" for="env_objective">{{ _('tax_env_objective') }}</label>
+<select class="form-select" id="env_objective" name="env_objective">
+<option value="CCM">{{ _('tax_obj_climate_mitigation') }}</option>
+<option value="CCA">{{ _('tax_obj_climate_adaptation') }}</option>
+<option value="WTR">{{ _('tax_obj_water') }}</option>
+<option value="CE">{{ _('tax_obj_circular') }}</option>
+<option value="PPC">{{ _('tax_obj_pollution') }}</option>
+<option value="BIO">{{ _('tax_obj_biodiversity') }}</option>
+</select>
+</div>
+<div class="mb-3">
+<label class="form-label" for="year">{{ _('eco_year') }}</label>
+<input class="form-control" id="year" name="year" required="" type="number" value="2025"/>
+</div>
+<div class="mb-3">
+<label class="form-label" for="activity_name">{{ _('tax_activity') }}</label>
+<input class="form-control" id="activity_name" name="activity_name" placeholder="Örn: Yenilenebilir Enerji Üretimi" required="" type="text"/>
+</div>
+<div class="mb-3">
+<label class="form-label" for="nace_code">{{ _('tax_nace') }}</label>
+<input class="form-control" id="nace_code" name="nace_code" placeholder="Örn: D35.11" type="text"/>
+</div>
+<div class="row">
+<div class="col-md-4 mb-3">
+<label class="form-label" for="turnover_amount">{{ _('tax_turnover') }} (TL)</label>
+<input class="form-control" id="turnover_amount" name="turnover_amount" required="" step="0.01" type="number"/>
+</div>
+<div class="col-md-4 mb-3">
+<label class="form-label" for="capex_amount">{{ _('tax_capex') }} (TL)</label>
+<input class="form-control" id="capex_amount" name="capex_amount" required="" step="0.01" type="number"/>
+</div>
+<div class="col-md-4 mb-3">
+<label class="form-label" for="opex_amount">{{ _('tax_opex') }} (TL)</label>
+<input class="form-control" id="opex_amount" name="opex_amount" required="" step="0.01" type="number"/>
+</div>
+</div>
+<div class="row">
+<div class="col-md-6 mb-3">
+<label class="form-label" for="eligible_pct">{{ _('tax_eligible') }} (0-100)</label>
+<input class="form-control" id="eligible_pct" max="100" min="0" name="eligible_pct" required="" step="0.1" type="number"/>
+</div>
+<div class="col-md-6 mb-3">
+<label class="form-label" for="aligned_pct">{{ _('tax_aligned') }} (0-100)</label>
+<input class="form-control" id="aligned_pct" max="100" min="0" name="aligned_pct" required="" step="0.1" type="number"/>
+</div>
+</div>
+<div class="mb-3">
+<h5 class="mb-1">{{ _('tax_tech_criteria') }}</h5>
+<p class="text-muted small mb-2">{{ _('tax_tech_criteria_desc') }}</p>
+<div class="row">
+<div class="col-md-4 mb-2">
+<div class="form-check">
+<input class="form-check-input" id="substantial_contribution" name="substantial_contribution" type="checkbox" value="1"/>
+<label class="form-check-label" for="substantial_contribution">
+                                        Önemli katkı sağlıyor
+                                    </label>
+</div>
+</div>
+<div class="col-md-4 mb-2">
+<div class="form-check">
+<input class="form-check-input" id="dnsh_compliance" name="dnsh_compliance" type="checkbox" value="1"/>
+<label class="form-check-label" for="dnsh_compliance">
+                                        Önemli zarar vermiyor (DNSH)
+                                    </label>
+</div>
+</div>
+<div class="col-md-4 mb-2">
+<div class="form-check">
+<input class="form-check-input" id="minimum_safeguards" name="minimum_safeguards" type="checkbox" value="1"/>
+<label class="form-check-label" for="minimum_safeguards">
+                                        Minimum güvencelere uyumlu
+                                    </label>
+</div>
+</div>
+</div>
+</div>
+<div class="mb-3">
+<label class="form-label">İlgili Diğer Çevresel Hedefler</label>
+<div class="row">
+<div class="col-md-4 mb-2">
+<div class="form-check">
+<input class="form-check-input" id="sec_ccm" name="secondary_objectives" type="checkbox" value="CCM"/>
+<label class="form-check-label" for="sec_ccm">{{ _('tax_obj_climate_mitigation') }}</label>
+</div>
+</div>
+<div class="col-md-4 mb-2">
+<div class="form-check">
+<input class="form-check-input" id="sec_cca" name="secondary_objectives" type="checkbox" value="CCA"/>
+<label class="form-check-label" for="sec_cca">{{ _('tax_obj_climate_adaptation') }}</label>
+</div>
+</div>
+<div class="col-md-4 mb-2">
+<div class="form-check">
+<input class="form-check-input" id="sec_wtr" name="secondary_objectives" type="checkbox" value="WTR"/>
+<label class="form-check-label" for="sec_wtr">{{ _('tax_obj_water') }}</label>
+</div>
+</div>
+<div class="col-md-4 mb-2">
+<div class="form-check">
+<input class="form-check-input" id="sec_ce" name="secondary_objectives" type="checkbox" value="CE"/>
+<label class="form-check-label" for="sec_ce">{{ _('tax_obj_circular') }}</label>
+</div>
+</div>
+<div class="col-md-4 mb-2">
+<div class="form-check">
+<input class="form-check-input" id="sec_ppc" name="secondary_objectives" type="checkbox" value="PPC"/>
+<label class="form-check-label" for="sec_ppc">{{ _('tax_obj_pollution') }}</label>
+</div>
+</div>
+<div class="col-md-4 mb-2">
+<div class="form-check">
+<input class="form-check-input" id="sec_bio" name="secondary_objectives" type="checkbox" value="BIO"/>
+<label class="form-check-label" for="sec_bio">{{ _('tax_obj_biodiversity') }}</label>
+</div>
+</div>
+</div>
+</div>
+<div class="mb-3">
+<label class="form-label" for="documentation">{{ _('eco_description') }}</label>
+<textarea class="form-control" id="documentation" name="documentation" placeholder="Kullanılan teknik kriterler, standartlar ve kanıtlar" rows="3"></textarea>
+</div>
+<div class="d-flex justify-content-between gap-2">
+<a class="btn btn-secondary flex-grow-1" href="{{ url_for('taxonomy_module') }}">{{ _('common.btn_cancel') }}</a>
+<button class="btn btn-primary flex-grow-1" type="submit">{{ _('common.btn_save') }}</button>
+</div>
+</form>
+</div>
+</div>
+</div>
+</div>
+{% endblock %}

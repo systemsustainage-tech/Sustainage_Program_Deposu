@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+
+{% block title %}Lisans Yönetimi{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+<div>
+<h1 class="h2">Lisans Yönetimi</h1>
+<p class="text-muted mb-0">
+            Lisans oluşturma, yenileme, devre dışı bırakma ve doğrulama işlemleri
+        </p>
+</div>
+<div class="btn-toolbar mb-2 mb-md-0">
+
+<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+</div>
+<div class="row g-4 mb-4">
+<div class="col-md-3">
+<div class="card border-0 shadow-sm">
+<div class="card-body">
+<div class="text-muted small">Toplam Lisans</div>
+<div class="h3 mb-0">{{ stats.total }}</div>
+</div>
+</div>
+</div>
+<div class="col-md-3">
+<div class="card border-0 shadow-sm">
+<div class="card-body">
+<div class="text-muted small">Aktif Lisans</div>
+<div class="h3 mb-0 text-success">{{ stats.active }}</div>
+</div>
+</div>
+</div>
+<div class="col-md-3">
+<div class="card border-0 shadow-sm">
+<div class="card-body">
+<div class="text-muted small">Süresi Dolmuş</div>
+<div class="h3 mb-0 text-danger">{{ stats.expired }}</div>
+</div>
+</div>
+</div>
+<div class="col-md-3">
+<div class="card border-0 shadow-sm">
+<div class="card-body">
+<div class="text-muted small">Yakında Dolacak (30g)</div>
+<div class="h3 mb-0 text-warning">{{ stats.expiring_soon }}</div>
+</div>
+</div>
+</div>
+</div>
+<div class="row g-4 mb-4">
+<div class="col-lg-6">
+<div class="card border-0 shadow-sm">
+<div class="card-header">
+<h5 class="mb-0">Yeni Lisans Oluştur</h5>
+</div>
+<div class="card-body">
+<form method="post">
+<input name="action" type="hidden" value="generate"/>
+<div class="mb-3">
+<label class="form-label">Şirket Adı</label>
+<input class="form-control" name="company_name" required="" type="text"/>
+</div>
+<div class="mb-3">
+<label class="form-label">Lisans Tipi</label>
+<select class="form-select" name="license_type">
+<option value="standard">Standard</option>
+<option value="enterprise">Enterprise</option>
+<option value="trial">Trial</option>
+</select>
+</div>
+<div class="row g-3">
+<div class="col-md-4">
+<label class="form-label">Süre (gün)</label>
+<input class="form-control" min="0" name="duration_days" type="number" value="365"/>
+</div>
+<div class="col-md-4">
+<label class="form-label">Maks. Kullanıcı</label>
+<input class="form-control" min="0" name="max_users" type="number" value="10"/>
+</div>
+<div class="col-md-4">
+<label class="form-label">Modüller</label>
+<input class="form-control" name="modules" placeholder="sdg, gri, cbam" type="text"/>
+</div>
+</div>
+<div class="row g-3 mt-2">
+<div class="col-md-6">
+<label class="form-label">E-posta</label>
+<input class="form-control" name="contact_email" type="email"/>
+</div>
+<div class="col-md-6">
+<label class="form-label">Telefon</label>
+<input class="form-control" name="contact_phone" type="text"/>
+</div>
+</div>
+<button class="btn btn-success mt-3" type="submit">
+<i class="bi bi-key-fill"></i> Lisans Oluştur
+                    </button>
+</form>
+</div>
+</div>
+</div>
+<div class="col-lg-6">
+<div class="card border-0 shadow-sm">
+<div class="card-header">
+<h5 class="mb-0">Lisans Doğrula</h5>
+</div>
+<div class="card-body">
+<form method="post">
+<input name="action" type="hidden" value="validate"/>
+<div class="mb-3">
+<label class="form-label">Lisans Anahtarı</label>
+<textarea class="form-control" name="license_key" required="" rows="3"></textarea>
+</div>
+<div class="mb-3">
+<label class="form-label">Donanım ID (isteğe bağlı)</label>
+<input class="form-control" name="hardware_id" placeholder="İstemci makine HW ID" type="text"/>
+</div>
+<button class="btn btn-primary" type="submit">
+<i class="bi bi-check-circle"></i> Doğrula
+                    </button>
+</form>
+</div>
+</div>
+<div class="card border-0 shadow-sm mt-4">
+<div class="card-header">
+<h5 class="mb-0">Lisans Tipine Göre Dağılım</h5>
+</div>
+<div class="card-body">
+<ul class="mb-0">
+                    {% for t, c in stats.by_type.items() %}
+                    <li><strong>{{ t }}</strong>: {{ c }}</li>
+                    {% else %}
+                    <li class="text-muted">Veri bulunamadı.</li>
+                    {% endfor %}
+                </ul>
+</div>
+</div>
+</div>
+</div>
+<div class="card border-0 shadow-sm">
+<div class="card-header">
+<h5 class="mb-0">Lisans Listesi</h5>
+</div>
+<div class="card-body p-0">
+<div class="table-responsive">
+<table class="table table-striped table-hover mb-0">
+<thead class="table-light">
+<tr>
+<th>ID</th>
+<th>Şirket</th>
+<th>Tip</th>
+<th>Durum</th>
+<th>Başlangıç</th>
+<th>Bitiş</th>
+<th>Maks. Kullanıcı</th>
+<th>Modüller</th>
+<th>İşlemler</th>
+</tr>
+</thead>
+<tbody>
+                    {% for lic in licenses %}
+                    <tr>
+<td>{{ lic.id }}</td>
+<td>{{ lic.company }}</td>
+<td>{{ lic.type }}</td>
+<td>
+                            {% if lic.status == 'Active' %}
+                            <span class="badge bg-success">Aktif</span>
+                            {% elif lic.status == 'Expired' %}
+                            <span class="badge bg-secondary">Süresi Dolmuş</span>
+                            {% elif lic.status == 'Expiring Soon' %}
+                            <span class="badge bg-warning text-dark">Yakında Dolacak</span>
+                            {% else %}
+                            <span class="badge bg-light text-dark">{{ lic.status }}</span>
+                            {% endif %}
+                        </td>
+<td>{{ lic.issued }}</td>
+<td>{{ lic.expiry }}</td>
+<td>{{ lic.max_users }}</td>
+<td>{{ lic.modules|join(', ') }}</td>
+<td>
+<div class="d-flex flex-column gap-1">
+<form class="d-flex align-items-center" method="post">
+<input name="action" type="hidden" value="renew"/>
+<input name="license_id" type="hidden" value="{{ lic.id }}"/>
+<input class="form-control form-control-sm me-2" name="additional_days" placeholder="+gün" style="width: 90px;" type="number"/>
+<button class="btn btn-sm btn-outline-primary" type="submit">Uzat</button>
+</form>
+<form method="post">
+<input name="action" type="hidden" value="deactivate"/>
+<input name="license_id" type="hidden" value="{{ lic.id }}"/>
+<input name="reason" type="hidden" value="manual"/>
+<button class="btn btn-sm btn-outline-danger" type="submit" {% if not lic.active %}disabled{% endif %}>
+                                        Devre Dışı
+                                    </button>
+</form>
+</div>
+</td>
+</tr>
+                    {% else %}
+                    <tr>
+<td class="text-center py-3 text-muted" colspan="9">Kayıt bulunamadı.</td>
+</tr>
+                    {% endfor %}
+                </tbody>
+</table>
+</div>
+</div>
+</div>
+
+{% endblock %}
+

@@ -1,0 +1,172 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+CDP Kapsamlı Raporu
+Tüm CDP modüllerini içeren kapsamlı rapor
+"""
+
+import os
+from datetime import datetime
+from typing import Optional
+
+from docx import Document
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.shared import Pt
+
+from .climate_change_report import ClimateChangeReport
+from .forests_report import ForestsReport
+from .water_security_report import WaterSecurityReport
+
+
+def _add_turkish_paragraph(doc, text, style=None, font_name='Calibri', font_size=11):
+    """Türkçe karakterleri destekleyen paragraf ekle"""
+    para = doc.add_paragraph(text, style=style)
+    for run in para.runs:
+        run.font.name = font_name
+        run.font.size = Pt(font_size)
+    return para
+
+def _add_turkish_heading(doc, text, level=1, font_name='Calibri'):
+    """Türkçe karakterleri destekleyen başlık ekle"""
+    heading = doc.add_heading(text, level=level)
+    for run in heading.runs:
+        run.font.name = font_name
+    return heading
+
+
+class ComprehensiveReport:
+    """CDP Kapsamlı Raporu oluşturucu"""
+    
+    def __init__(self, use_ai: bool = True, api_key: Optional[str] = None):
+        self.climate_report = ClimateChangeReport(use_ai=use_ai, api_key=api_key)
+        self.water_report = WaterSecurityReport(use_ai=use_ai, api_key=api_key)
+        self.forests_report = ForestsReport(use_ai=use_ai, api_key=api_key)
+    
+    def generate_report(self, company_id: int, year: int, output_path: str) -> bool:
+        """Kapsamlı CDP raporu oluştur"""
+        try:
+            print(f"[CDP Comprehensive] Kapsamlı rapor oluşturuluyor: {year}")
+            
+            # Tüm raporları ayrı ayrı oluştur
+            base_dir = os.path.dirname(output_path)
+            
+            # Climate
+            climate_path = os.path.join(base_dir, f'CDP_Climate_Change_{year}.docx')
+            self.climate_report.generate_report(company_id, year, climate_path)
+            
+            # Water
+            water_path = os.path.join(base_dir, f'CDP_Water_Security_{year}.docx')
+            self.water_report.generate_report(company_id, year, water_path)
+            
+            # Forests
+            forests_path = os.path.join(base_dir, f'CDP_Forests_{year}.docx')
+            self.forests_report.generate_report(company_id, year, forests_path)
+            
+            # Ana kapsamlı rapor
+            doc = self._create_comprehensive_doc(company_id, year)
+            doc.save(output_path)
+            
+            print(f"[CDP Comprehensive] Rapor kaydedildi: {output_path}")
+            print(f"[CDP Comprehensive] Alt raporlar:")
+            print(f"  - {climate_path}")
+            print(f"  - {water_path}")
+            print(f"  - {forests_path}")
+            
+            return True
+            
+        except Exception as e:
+            print(f"[HATA] CDP Comprehensive raporu oluşturulamadı: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
+    
+    def _create_comprehensive_doc(self, company_id: int, year: int) -> Document:
+        """Kapsamlı rapor ana dokümanı"""
+        doc = Document()
+        
+        # Kapak sayfası
+        title = doc.add_heading('CDP KAPSAMLI SÜRDÜRÜLEBİLİRLİK RAPORU', 0)
+        title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        
+        company_info = self.climate_report.collector.collect_company_info(company_id)
+        company_name = company_info.get('name', 'Şirket')
+        
+        subtitle = doc.add_paragraph(f'{company_name}\n{year}')
+        subtitle.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        subtitle.runs[0].font.size = Pt(16)
+        subtitle.runs[0].font.bold = True
+        
+        doc.add_paragraph()
+        doc.add_paragraph()
+        
+        # İçindekiler
+        doc.add_heading('İÇİNDEKİLER', 1)
+        toc_items = [
+            '1. Giriş ve Genel Bakış',
+            '2. CDP Climate Change Raporu',
+            '3. CDP Water Security Raporu',
+            '4. CDP Forests Raporu',
+            '5. Entegre Performans Değerlendirmesi',
+            '6. Sonuç ve Öneriler'
+        ]
+        
+        for item in toc_items:
+            doc.add_paragraph(item, style='List Number')
+        
+        # 1. Giriş
+        doc.add_page_break()
+        doc.add_heading('1. GİRİŞ VE GENEL BAKIŞ', 1)
+        
+        intro_text = f"""
+Bu rapor, {company_name}'in {year} yılı sürdürülebilirlik performansını 
+CDP (Carbon Disclosure Project) standartları çerçevesinde kapsamlı bir şekilde sunmaktadır.
+
+Rapor, aşağıdaki üç ana CDP modülünü kapsamaktadır:
+• CDP Climate Change (İklim Değişikliği)
+• CDP Water Security (Su Güvenliği)
+• CDP Forests (Ormanlar)
+
+Her modül için detaylı analizler, performans değerlendirmeleri ve öneriler 
+ayrı raporlarda sunulmaktadır. Bu doküman, genel bir özet ve entegre 
+değerlendirme sağlamaktadır.
+        """.strip()
+        
+        doc.add_paragraph(intro_text)
+        
+        # Alt raporlara referans
+        doc.add_page_break()
+        doc.add_heading('DETAYLI RAPORLAR', 1)
+        
+        doc.add_paragraph("""
+Bu kapsamlı raporla birlikte aşağıdaki detaylı raporlar oluşturulmuştur:
+
+1. CDP_Climate_Change_{year}.docx
+   - Sera gazı emisyonları
+   - Enerji tüketimi
+   - İklim riskleri ve fırsatları
+   - Azaltım stratejileri
+
+2. CDP_Water_Security_{year}.docx
+   - Su tüketimi ve çekimi
+   - Su geri dönüşümü
+   - Su riskleri
+   - Su yönetimi stratejileri
+
+3. CDP_Forests_{year}.docx
+   - Orman ürünleri kullanımı
+   - Ormansızlaşma riskleri
+   - Sertifikasyon durumu
+   - Tedarik zinciri yönetimi
+
+Detaylı analiz ve veriler için lütfen ilgili raporlara bakınız.
+        """.format(year=year).strip())
+        
+        # Altbilgi
+        doc.add_page_break()
+        footer = doc.add_paragraph()
+        footer.add_run(f'Rapor Tarihi: {datetime.now().strftime("%d.%m.%Y")}\n').font.size = Pt(9)
+        footer.add_run('© Sustainage CDP Modülü - Kapsamlı Rapor').font.size = Pt(9)
+        footer.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        
+        return doc
+

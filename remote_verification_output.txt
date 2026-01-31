@@ -1,0 +1,65 @@
+Starting...
+Connecting to 72.62.150.207...
+Connected. Reading file...
+--- FILE CONTENT ---
+2026-01-19 11:29:09,961 - INFO - Attempting login with user: test_user
+2026-01-19 11:29:10,316 - INFO - Login successful (redirected to dashboard).
+2026-01-19 11:29:10,316 - INFO - Testing Module: SDG (http://localhost:5000/sdg)
+2026-01-19 11:29:10,563 - INFO - Testing Module: GRI (http://localhost:5000/gri)
+2026-01-19 11:29:10,576 - INFO - Testing Module: CDP (http://localhost:5000/cdp)
+2026-01-19 11:29:10,607 - INFO - Testing Module: Sosyal Etki (http://localhost:5000/social)
+2026-01-19 11:29:10,629 - INFO - Testing Module: Kurumsal Yönetişim (http://localhost:5000/governance)
+2026-01-19 11:29:10,643 - INFO - Testing Module: Karbon Ayak İzi (http://localhost:5000/carbon)
+2026-01-19 11:29:10,662 - INFO - Testing Module: Enerji Yönetimi (http://localhost:5000/energy)
+2026-01-19 11:29:10,680 - INFO - Testing Module: ESG (http://localhost:5000/esg)
+2026-01-19 11:29:10,697 - INFO - Testing Module: CBAM (http://localhost:5000/cbam)
+2026-01-19 11:29:10,727 - INFO - Testing Module: CSRD (http://localhost:5000/csrd)
+2026-01-19 11:29:10,743 - INFO - Testing Module: AB Taksonomisi (http://localhost:5000/taxonomy)
+2026-01-19 11:29:10,774 - INFO - Testing Module: Atık Yönetimi (http://localhost:5000/waste)
+2026-01-19 11:29:10,790 - INFO - Testing Module: Su Yönetimi (http://localhost:5000/water)
+2026-01-19 11:29:10,808 - INFO - Testing Module: Biyoçeşitlilik (http://localhost:5000/biodiversity)
+2026-01-19 11:29:10,829 - INFO - Testing Module: Ekonomik Değer (http://localhost:5000/economic)
+2026-01-19 11:29:10,851 - INFO - Testing Module: Tedarik Zinciri (http://localhost:5000/supply_chain)
+2026-01-19 11:29:10,870 - INFO - Testing Module: ISSB (http://localhost:5000/issb)
+2026-01-19 11:29:10,884 - INFO - Testing Module: IIRC (http://localhost:5000/iirc)
+2026-01-19 11:29:10,896 - INFO - Testing Module: ESRS (http://localhost:5000/esrs)
+2026-01-19 11:29:10,930 - INFO - Testing Module: TCFD (http://localhost:5000/tcfd)
+2026-01-19 11:29:10,950 - INFO - Testing Module: TNFD (http://localhost:5000/tnfd)
+2026-01-19 11:29:10,962 - INFO - Testing Module: SASB (http://localhost:5000/sasb)
+2026-01-19 11:29:10,976 - INFO - Testing Module: IFRS (http://localhost:5000/ifrs)
+2026-01-19 11:29:10,989 - INFO - Testing Module: Raporlar (http://localhost:5000/reports)
+2026-01-19 11:29:11,006 - INFO - Testing Unified Report Generation...
+2026-01-19 11:29:11,288 - INFO - Report generated! Redirected to: http://localhost:5000/reports/view/4
+
+============================================================
+MODULE                    | STATUS     | CODE  | CONTENT
+------------------------------------------------------------
+SDG                       | PASS       | 200   | True
+GRI                       | PASS       | 200   | True
+CDP                       | PASS       | 200   | True
+Sosyal Etki               | PASS       | 200   | True
+Kurumsal Yönetişim        | PASS       | 200   | True
+Karbon Ayak İzi           | PASS       | 200   | True
+Enerji Yönetimi           | PASS       | 200   | True
+ESG                       | PASS       | 200   | True
+CBAM                      | PASS       | 200   | True
+CSRD                      | PASS       | 200   | True
+AB Taksonomisi            | PASS       | 200   | True
+Atık Yönetimi             | PASS       | 200   | True
+Su Yönetimi               | PASS       | 200   | True
+Biyoçeşitlilik            | PASS       | 200   | True
+Ekonomik Değer            | PASS       | 200   | True
+Tedarik Zinciri           | PASS       | 200   | True
+ISSB                      | PASS       | 200   | True
+IIRC                      | PASS       | 200   | True
+ESRS                      | PASS       | 200   | True
+TCFD                      | PASS       | 200   | True
+TNFD                      | PASS       | 200   | True
+SASB                      | PASS       | 200   | True
+IFRS                      | PASS       | 200   | True
+Raporlar                  | PASS       | 200   | True
+------------------------------------------------------------
+Unified Report Generation: PASS
+============================================================
+
+--- END CONTENT ---

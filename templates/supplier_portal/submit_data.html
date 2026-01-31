@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Veri Girişi - Sustainage</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('supplier_portal.dashboard') }}"><i class="fas fa-arrow-left me-2"></i>Panele Dön</a>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card shadow">
+                    <div class="card-header bg-white">
+                        <h4 class="mb-0">Çevresel Veri Bildirimi</h4>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Yıl</label>
+                                    <input type="number" name="year" class="form-control" value="2025" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Dönem</label>
+                                    <select name="period" class="form-select" required>
+                                        <option value="Q1">1. Çeyrek (Q1)</option>
+                                        <option value="Q2">2. Çeyrek (Q2)</option>
+                                        <option value="Q3">3. Çeyrek (Q3)</option>
+                                        <option value="Q4">4. Çeyrek (Q4)</option>
+                                        <option value="Yıllık">Yıllık</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <hr>
+
+                            <div class="mb-3">
+                                <label class="form-label">Enerji Tüketimi (kWh)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-bolt"></i></span>
+                                    <input type="number" step="0.01" name="energy_consumption" class="form-control">
+                                </div>
+                                <div class="form-text">Üretiminiz sırasında harcanan toplam elektrik.</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Karbon Emisyonu (tCO2e)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-cloud"></i></span>
+                                    <input type="number" step="0.01" name="emissions" class="form-control">
+                                </div>
+                                <div class="form-text">Hesaplanmış karbon ayak iziniz (varsa).</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Su Tüketimi (m3)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-tint"></i></span>
+                                    <input type="number" step="0.01" name="water" class="form-control">
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Atık Miktarı (kg)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-trash"></i></span>
+                                    <input type="number" step="0.01" name="waste" class="form-control">
+                                </div>
+                            </div>
+
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-primary btn-lg">Kaydet ve Gönder</button>
+                                <a href="{{ url_for('supplier_portal.dashboard') }}" class="btn btn-secondary">İptal</a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

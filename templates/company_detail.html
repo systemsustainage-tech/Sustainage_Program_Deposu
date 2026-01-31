@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+
+{% block title %}{{ company.name }} - Detaylar{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+<div class="col-md-12">
+<nav aria-label="breadcrumb">
+<ol class="breadcrumb">
+<li class="breadcrumb-item"><a href="{{ url_for('companies') }}">Şirketler</a></li>
+<li aria-current="page" class="breadcrumb-item active">{{ company.name }}</li>
+</ol>
+</nav>
+<div class="card shadow-sm border-0">
+<div class="card-body">
+<div class="d-flex justify-content-between align-items-center mb-3">
+<h2 class="card-title mb-0">{{ company.name }}</h2>
+<span class="badge bg-{{ 'success' if company.is_active else 'secondary' }}">
+                        {{ 'Aktif' if company.is_active else 'Pasif' }}
+                    </span>
+<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+<div class="row g-3">
+<div class="col-md-3">
+<small class="text-muted d-block">Sektör</small>
+<strong>{{ company.sector }}</strong>
+</div>
+<div class="col-md-3">
+<small class="text-muted d-block">Ülke</small>
+<strong>{{ company.country }}</strong>
+</div>
+<div class="col-md-3">
+<small class="text-muted d-block">Vergi No</small>
+<strong>{{ company.tax_number or '-' }}</strong>
+</div>
+<div class="col-md-3">
+<small class="text-muted d-block">Kayıt Tarihi</small>
+<strong>{{ company.created_at }}</strong>
+</div>
+<div class="col-12 mt-3 d-flex gap-2">
+<a class="btn btn-outline-secondary" href="{{ url_for('company_info_edit', company_id=company.id) }}">
+<i class="bi bi-building"></i> Firma Bilgileri
+                        </a>
+<a class="btn btn-outline-primary" href="{{ url_for('company_stakeholder_survey', company_id=company.id) }}">
+<i class="bi bi-people"></i> Paydaş Anketi
+                        </a>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+{% if company.vizyon or company.misyon or company.degerler or company.tesisler_ozet %}
+<div class="row mb-4">
+<div class="col-12">
+<div class="card shadow-sm border-0">
+<div class="card-header bg-white border-0">
+<h5 class="mb-0"><i class="bi bi-info-circle"></i> Kurumsal Kimlik &amp; Tesisler</h5>
+</div>
+<div class="card-body">
+<div class="row g-4">
+                    {% if company.vizyon %}
+                    <div class="col-md-4">
+<div class="p-3 bg-light rounded h-100">
+<h6 class="text-primary fw-bold mb-3"><i class="bi bi-eye"></i> Vizyon</h6>
+<p class="mb-0 text-muted">{{ company.vizyon }}</p>
+</div>
+</div>
+                    {% endif %}
+                    {% if company.misyon %}
+                    <div class="col-md-4">
+<div class="p-3 bg-light rounded h-100">
+<h6 class="text-primary fw-bold mb-3"><i class="bi bi-bullseye"></i> Misyon</h6>
+<p class="mb-0 text-muted">{{ company.misyon }}</p>
+</div>
+</div>
+                    {% endif %}
+                    {% if company.degerler %}
+                    <div class="col-md-4">
+<div class="p-3 bg-light rounded h-100">
+<h6 class="text-primary fw-bold mb-3"><i class="bi bi-gem"></i> Değerler</h6>
+<p class="mb-0 text-muted">{{ company.degerler }}</p>
+</div>
+</div>
+                    {% endif %}
+                    {% if company.tesisler_ozet %}
+                    <div class="col-12">
+<div class="p-3 bg-light rounded">
+<h6 class="text-dark fw-bold mb-3"><i class="bi bi-buildings"></i> Tesisler ve Lokasyonlar</h6>
+<p class="mb-0 text-muted">{{ company.tesisler_ozet }}</p>
+</div>
+</div>
+                    {% endif %}
+                </div>
+</div>
+</div>
+</div>
+</div>
+{% endif %}
+
+<div class="row">
+<!-- Rapor Oluşturma Paneli -->
+<div class="col-md-4">
+<div class="card shadow-sm border-0 h-100">
+<div class="card-header bg-white border-0">
+<h5 class="mb-0"><i class="bi bi-file-earmark-plus"></i> Yeni Rapor Oluştur</h5>
+</div>
+<div class="card-body">
+<form action="{{ url_for('report_add') }}" method="post">
+<input name="company_id" type="hidden" value="{{ company.id }}"/>
+<div class="mb-3">
+<label class="form-label" for="report_type">Rapor Türü</label>
+<select class="form-select" id="report_type" name="report_type" required="">
+<option value="">Seçiniz...</option>
+<option value="ghg_inventory">GHG Karbon Envanteri (Kapsam 1-2-3)</option>
+<option value="tsrs_compliance">TSRS İklim Uyum Raporu</option>
+<option value="waste_report">Atık Yönetim Raporu</option>
+<option value="excel_dashboard">Excel Veri Seti (Tüm Veriler)</option>
+</select>
+</div>
+<div class="mb-3">
+<label class="form-label" for="period">Rapor Dönemi</label>
+<select class="form-select" id="period" name="period" required="">
+<option value="2024">2024</option>
+<option value="2023">2023</option>
+<option value="2025">2025</option>
+</select>
+</div>
+<div class="d-grid">
+<button class="btn btn-primary" type="submit">
+<i class="bi bi-gear-wide-connected"></i> Raporu Oluştur
+                        </button>
+</div>
+</form>
+</div>
+</div>
+</div>
+<!-- Mevcut Raporlar -->
+<div class="col-md-8">
+<div class="card shadow-sm border-0 h-100">
+<div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
+<h5 class="mb-0"><i class="bi bi-archive"></i> Rapor Arşivi</h5>
+<span class="badge bg-secondary">{{ reports|length }} Rapor</span>
+</div>
+<div class="card-body p-0">
+                {% if reports %}
+                <div class="table-responsive">
+<table class="table table-hover align-middle mb-0">
+<thead class="table-light">
+<tr>
+<th class="ps-3">Dosya Adı</th>
+<th>Tür</th>
+<th>Tarih</th>
+<th>Boyut</th>
+<th class="text-end pe-3">İşlem</th>
+</tr>
+</thead>
+<tbody>
+                            {% for report in reports %}
+                            <tr>
+<td class="ps-3">
+<div class="d-flex align-items-center">
+                                        {% if report.type == 'DOCX' %}
+                                        <i class="bi bi-file-word text-primary fs-4 me-2"></i>
+                                        {% elif report.type == 'XLSX' %}
+                                        <i class="bi bi-file-excel text-success fs-4 me-2"></i>
+                                        {% elif report.type == 'PDF' %}
+                                        <i class="bi bi-file-pdf text-danger fs-4 me-2"></i>
+                                        {% else %}
+                                        <i class="bi bi-file-text text-secondary fs-4 me-2"></i>
+                                        {% endif %}
+                                        <span class="text-truncate" style="max-width: 250px;" title="{{ report.name }}">
+                                            {{ report.name }}
+                                        </span>
+</div>
+</td>
+<td><span class="badge bg-light text-dark border">{{ report.type }}</span></td>
+<td>{{ report.date }}</td>
+<td>{{ report.size }}</td>
+<td class="text-end pe-3">
+<div class="btn-group">
+<a class="btn btn-sm btn-outline-info" href="{{ url_for('view_report', report_id=report.id) }}" target="_blank" title="Görüntüle">
+<i class="bi bi-eye"></i>
+</a>
+<a class="btn btn-sm btn-outline-secondary" href="{{ url_for('report_download', report_id=report.id) }}" title="İndir">
+<i class="bi bi-download"></i>
+</a>
+<form action="{{ url_for('report_delete', report_id=report.id) }}" method="post" style="display:inline;">
+<button class="btn btn-sm btn-outline-danger" onclick="return confirm('Bu raporu silmek istediğinizden emin misiniz?');" type="submit">
+<i class="bi bi-trash"></i>
+</button>
+</form>
+</div>
+</td>
+</tr>
+                            {% endfor %}
+                        </tbody>
+</table>
+</div>
+                {% else %}
+                <div class="text-center py-5 text-muted">
+<i class="bi bi-folder2-open display-4 mb-3 d-block"></i>
+<p>Henüz oluşturulmuş rapor bulunmuyor.</p>
+</div>
+                {% endif %}
+            </div>
+</div>
+</div>
+</div>
+{% endblock %}

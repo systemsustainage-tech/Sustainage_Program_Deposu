@@ -1,0 +1,331 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('tcfd_page_title') }} - SDG{% endblock %}
+
+{% block content %}
+
+<div class="row mb-4">
+<div class="col-md-12">
+<div class="d-flex justify-content-between align-items-center">
+<h1><i class="fas fa-temperature-high me-2"></i>{{ _('tcfd_page_title') }}</h1>
+<div>
+<span class="badge bg-{{ 'success' if manager_available else 'danger' }}">
+                    {{ _('module_active_badge') if manager_available else _('module_passive_badge') }}
+                </span>
+<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+</div>
+<p class="lead text-muted">{{ _('tcfd_desc') }}</p>
+</div>
+</div>
+<div class="row mb-4">
+<div class="col-md-4">
+<div class="card text-white bg-primary mb-3 shadow-sm border-0">
+<div class="card-body">
+<h5 class="card-title">{{ _('tcfd_total_risks') }}</h5>
+<p class="card-text display-4">{{ stats.total_risks }}</p>
+</div>
+</div>
+</div>
+<div class="col-md-4">
+<div class="card text-white bg-success mb-3 shadow-sm border-0">
+<div class="card-body">
+<h5 class="card-title">{{ _('tcfd_total_opps') }}</h5>
+<p class="card-text display-4">{{ stats.total_opps }}</p>
+</div>
+</div>
+</div>
+<div class="col-md-4">
+<div class="card text-white bg-info mb-3 shadow-sm border-0">
+<div class="card-body">
+<h5 class="card-title">{{ _('tcfd_financial_impact') }}</h5>
+<p class="card-text display-4">{{ stats.financial_impact }}</p>
+</div>
+</div>
+</div>
+</div>
+<div class="row mb-4">
+<div class="col-md-12">
+<div class="card shadow-sm border-0">
+<div class="card-body">
+<h5>{{ _('tcfd_data_entry') }}</h5>
+<p>{{ _('tcfd_data_entry_desc') }}</p>
+<button class="btn btn-primary" data-bs-target="#addTCFDModal" data-bs-toggle="modal" type="button">
+                    {{ _('btn_add_data') }}
+                </button>
+</div>
+</div>
+</div>
+</div>
+<!-- Add TCFD Modal -->
+<div class="modal fade" id="addTCFDModal" tabindex="-1">
+<div class="modal-dialog">
+<div class="modal-content">
+<div class="modal-header">
+<h5 class="modal-title">{{ _('tcfd_add_title', 'TCFD Verisi Ekle') }}</h5>
+<button class="btn-close" data-bs-dismiss="modal" type="button"></button>
+</div>
+<form action="{{ url_for('tcfd_add') }}" method="POST">
+<div class="modal-body">
+<div class="mb-3">
+<label class="form-label">{{ _('tcfd_col_year', 'Yıl') }}</label>
+<input class="form-control" name="year" required="" type="number" value="2024"/>
+</div>
+<div class="mb-3">
+<label class="form-label">{{ _('tcfd_col_category', 'Kategori') }}</label>
+<select class="form-select" name="category">
+<option value="Governance">Yönetişim (Governance)</option>
+<option value="Strategy">Strateji (Strategy)</option>
+<option value="Risk Management">Risk Yönetimi (Risk Management)</option>
+<option value="Metrics &amp; Targets">Metrikler ve Hedefler (Metrics &amp; Targets)</option>
+</select>
+</div>
+<div class="mb-3">
+<label class="form-label">{{ _('tcfd_col_disclosure', 'Açıklama/Beyan') }}</label>
+<textarea class="form-control" name="disclosure" required="" rows="3"></textarea>
+</div>
+<div class="mb-3">
+<label class="form-label">{{ _('tcfd_col_impact', 'Finansal Etki') }}</label>
+<textarea class="form-control" name="impact" rows="2"></textarea>
+</div>
+</div>
+<div class="modal-footer">
+<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ _('btn_cancel', 'İptal') }}</button>
+<button class="btn btn-primary" type="submit">{{ _('btn_save', 'Kaydet') }}</button>
+</div>
+</form>
+</div>
+</div>
+</div>
+
+{% if recommendations %}
+<div class="row">
+<div class="col-md-12">
+<div class="card shadow-sm border-0">
+<div class="card-header bg-light">
+<h5 class="mb-0">{{ _('tcfd_list_title') }}</h5>
+</div>
+<div class="card-body p-0">
+<div class="table-responsive">
+<table class="table table-hover mb-0">
+<thead>
+<tr>
+<th>{{ _('tcfd_col_year') }}</th>
+<th>{{ _('tcfd_col_category') }}</th>
+<th>{{ _('tcfd_col_disclosure') }}</th>
+<th>{{ _('tcfd_col_impact') }}</th>
+</tr>
+</thead>
+<tbody>
+                            {% for rec in recommendations %}
+                            <tr>
+<td><span class="badge bg-secondary">{{ rec.year }}</span></td>
+<td>{{ rec.category }}</td>
+<td>{{ rec.disclosure }}</td>
+<td>{{ rec.impact }}</td>
+</tr>
+                            {% endfor %}
+                        </tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</div>
+{% else %}
+<div class="alert alert-warning">
+<h4 class="alert-heading">{{ _('data_not_found_title') }}</h4>
+<p>{{ _('data_not_found_desc') }}</p>
+</div>
+        {% endif %}
+
+        <!-- Financial Impact Section -->
+        <div class="row mt-4">
+            <div class="col-md-12">
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">{{ _('tcfd_financial_impact_title', 'Finansal Etki ve Senaryo Analizi') }}</h5>
+                        <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#addTCFDImpactModal">
+                            <i class="bi bi-plus-circle"></i> {{ _('btn_add_impact', 'Finansal Etki Ekle') }}
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        {% if financial_impacts %}
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Tür</th>
+                                                <th>Açıklama</th>
+                                                <th>Etki Tutarı</th>
+                                                <th>Olasılık</th>
+                                                <th>Vade</th>
+                                                <th>Senaryo</th>
+                                                <th>İşlem</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for imp in financial_impacts %}
+                                            <tr>
+                                                <td>
+                                                    <span class="badge bg-{{ 'danger' if imp.risk_opportunity_type == 'Risk' else 'success' }}">
+                                                        {{ imp.risk_opportunity_type }}
+                                                    </span>
+                                                </td>
+                                                <td>{{ imp.description }}</td>
+                                                <td>{{ imp.financial_impact }}</td>
+                                                <td>{{ imp.probability }}</td>
+                                                <td>{{ imp.time_horizon }}</td>
+                                                <td><span class="badge bg-info text-dark">{{ imp.scenario }}</span></td>
+                                                <td>
+                                                    <form action="{{ url_for('tcfd_delete_impact', impact_id=imp.id) }}" method="POST" onsubmit="return confirm('Silmek istediğinize emin misiniz?');">
+                                                        <button type="submit" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></button>
+                                                    </form>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <canvas id="impactChart"></canvas>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info">
+                            {{ _('tcfd_no_impact_data', 'Henüz finansal etki verisi girilmemiş.') }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add TCFD Impact Modal -->
+        <div class="modal fade" id="addTCFDImpactModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">{{ _('tcfd_add_impact_title', 'Finansal Etki Ekle') }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form action="{{ url_for('tcfd_add_impact') }}" method="POST">
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label">Tip (Risk/Fırsat)</label>
+                                <select class="form-select" name="risk_opportunity_type" required>
+                                    <option value="Risk">Risk</option>
+                                    <option value="Opportunity">Fırsat (Opportunity)</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Açıklama</label>
+                                <textarea class="form-control" name="description" rows="2" required></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Finansal Etki Tutarı</label>
+                                <input type="number" step="0.01" class="form-control" name="financial_impact" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Etki Açıklaması</label>
+                                <input type="text" class="form-control" name="impact_description" placeholder="Örn: 1M-5M USD gelir kaybı">
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Olasılık</label>
+                                    <select class="form-select" name="probability">
+                                        <option value="Low">Düşük (Low)</option>
+                                        <option value="Medium">Orta (Medium)</option>
+                                        <option value="High">Yüksek (High)</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Vade (Time Horizon)</label>
+                                    <select class="form-select" name="time_horizon">
+                                        <option value="Short">Kısa (Short)</option>
+                                        <option value="Medium">Orta (Medium)</option>
+                                        <option value="Long">Uzun (Long)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">İklim Senaryosu</label>
+                                <select class="form-select" name="scenario" required>
+                                    <option value="1.5C">1.5°C Senaryosu (Net Zero)</option>
+                                    <option value="2C">2°C Senaryosu (Paris Anlaşması)</option>
+                                    <option value="4C">4°C Senaryosu (Business as Usual)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('btn_cancel', 'İptal') }}</button>
+                            <button type="submit" class="btn btn-primary">{{ _('btn_save', 'Kaydet') }}</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                {% if financial_impacts %}
+                const ctx = document.getElementById('impactChart').getContext('2d');
+                
+                // Group by Scenario
+                const scenarios = ['1.5C', '2C', '4C'];
+                const risks = [0, 0, 0];
+                const opps = [0, 0, 0];
+                
+                const impacts = {{ financial_impacts | tojson }};
+                
+                impacts.forEach(imp => {
+                    const idx = scenarios.indexOf(imp.scenario);
+                    if (idx !== -1) {
+                        const val = parseFloat(imp.financial_impact || 0);
+                        if (imp.risk_opportunity_type === 'Risk') {
+                            risks[idx] += val;
+                        } else {
+                            opps[idx] += val;
+                        }
+                    }
+                });
+
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: scenarios,
+                        datasets: [
+                            {
+                                label: 'Riskler (Maliyet)',
+                                data: risks,
+                                backgroundColor: 'rgba(255, 99, 132, 0.7)',
+                            },
+                            {
+                                label: 'Fırsatlar (Kazanç)',
+                                data: opps,
+                                backgroundColor: 'rgba(75, 192, 192, 0.7)',
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Senaryolara Göre Finansal Etkiler'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+                {% endif %}
+            });
+        </script>
+{% endblock %}

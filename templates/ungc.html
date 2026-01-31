@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('ungc_title', 'UN Global Compact') }} - SDG{% endblock %}
+
+{% block content %}
+
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1><i class="fas fa-globe-americas me-2"></i>{{ _('ungc_title', 'UN Global Compact') }}</h1>
+            <div>
+                <span class="badge bg-{{ 'success' if manager_available else 'secondary' }}">
+                    {{ _('module_active_badge') if manager_available else _('module_passive_badge') }}
+                </span>
+                <button class="btn btn-sm btn-outline-primary ms-2" data-bs-toggle="modal" data-bs-target="#settingsModal">
+                    <i class="fas fa-cog"></i> {{ _('settings', 'Ayarlar') }}
+                </button>
+                <button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()">
+                    <i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}
+                </button>
+            </div>
+        </div>
+        <p class="lead text-muted">{{ _('ungc_desc', 'UNGC 10 İlke Uyumluluk ve Raporlama Modülü') }}</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-transparent border-bottom-0">
+                <ul class="nav nav-tabs card-header-tabs" id="ungcTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">{{ _('overview', 'Genel Bakış') }}</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="principles-tab" data-bs-toggle="tab" data-bs-target="#principles" type="button" role="tab">{{ _('principles', 'İlkeler') }}</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="evidence-tab" data-bs-toggle="tab" data-bs-target="#evidence" type="button" role="tab">{{ _('evidence', 'Kanıtlar') }}</button>
+                    </li>
+                </ul>
+            </div>
+            <div class="card-body">
+                <div class="tab-content" id="ungcTabsContent">
+                    
+                    <!-- Overview Tab -->
+                    <div class="tab-pane fade show active" id="overview" role="tabpanel">
+                        {% if stats %}
+                        <div class="row mb-4">
+                            {% for key, value in stats.items() %}
+                            <div class="col-md-3 mb-3">
+                                <div class="border rounded p-3 text-center bg-light h-100">
+                                    <h6 class="text-muted text-uppercase small">{{ key|replace('_', ' ')|title }}</h6>
+                                    <h3 class="mb-0 text-primary">{{ value }}</h3>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        
+                        {% if category_scores %}
+                        <h5 class="mb-3">{{ _('category_performance', 'Kategori Performansı') }}</h5>
+                        <div class="row">
+                            {% for cat, score in category_scores.items() %}
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <h6 class="mb-0">{{ cat }}</h6>
+                                            <span class="badge bg-{{ 'success' if score >= 80 else 'warning' if score >= 50 else 'danger' }}">{{ score }}%</span>
+                                        </div>
+                                        <div class="progress" style="height: 10px;">
+                                            <div class="progress-bar bg-{{ 'success' if score >= 80 else 'warning' if score >= 50 else 'danger' }}" role="progressbar" style="width: {{ score }}%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Principles Tab -->
+                    <div class="tab-pane fade" id="principles" role="tabpanel">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="mb-0">{{ _('compliance_status', 'Uyumluluk Durumu') }}</h5>
+                            <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addUngcModal">
+                                <i class="fas fa-edit"></i> {{ _('update_compliance', 'Durum Güncelle') }}
+                            </button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>{{ _('id', 'ID') }}</th>
+                                        <th>{{ _('category', 'Kategori') }}</th>
+                                        <th>{{ _('principle', 'İlke') }}</th>
+                                        <th>{{ _('status', 'Durum') }}</th>
+                                        <th>{{ _('score', 'Skor') }}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for p in principles %}
+                                    <tr>
+                                        <td><span class="badge bg-light text-dark">{{ p.principle_id }}</span></td>
+                                        <td>{{ p.category }}</td>
+                                        <td>{{ p.title }}</td>
+                                        <td>
+                                            <span class="badge bg-{{ 'success' if p.status == 'Full' else 'warning' if p.status == 'Partial' else 'secondary' }}">
+                                                {{ p.status }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="progress flex-grow-1 me-2" style="height: 6px; width: 80px;">
+                                                    <div class="progress-bar bg-info" role="progressbar" style="width: {{ p.score }}%"></div>
+                                                </div>
+                                                <small>{{ p.score|int }}%</small>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% else %}
+                                    <tr>
+                                        <td colspan="5" class="text-center py-4 text-muted">{{ _('no_data', 'Veri bulunamadı.') }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Evidence Tab -->
+                    <div class="tab-pane fade" id="evidence" role="tabpanel">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="mb-0">{{ _('evidence_documents', 'Kanıt Belgeleri') }}</h5>
+                            <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addEvidenceModal">
+                                <i class="fas fa-upload"></i> {{ _('upload_evidence', 'Kanıt Yükle') }}
+                            </button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>{{ _('date', 'Tarih') }}</th>
+                                        <th>{{ _('principle', 'İlke') }}</th>
+                                        <th>{{ _('type', 'Tür') }}</th>
+                                        <th>{{ _('description', 'Açıklama') }}</th>
+                                        <th>{{ _('file', 'Dosya') }}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for e in evidence %}
+                                    <tr>
+                                        <td>{{ e.created_at[:10] }}</td>
+                                        <td><span class="badge bg-light text-dark">{{ e.principle_id }}</span></td>
+                                        <td>{{ e.evidence_type }}</td>
+                                        <td>{{ e.evidence_description }}</td>
+                                        <td>
+                                            {% if e.file_path %}
+                                            <a href="{{ url_for('static', filename='uploads/' + e.file_path) }}" target="_blank" class="btn btn-sm btn-outline-info">
+                                                <i class="fas fa-file-download"></i> {{ _('view', 'Görüntüle') }}
+                                            </a>
+                                            {% else %}
+                                            <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% else %}
+                                    <tr>
+                                        <td colspan="5" class="text-center py-4 text-muted">{{ _('no_evidence', 'Henüz kanıt yüklenmemiş.') }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+<!-- Settings Modal -->
+<div class="modal fade" id="settingsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ _('ungc_settings', 'UNGC Skor Ayarları') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('ungc_update_thresholds') }}" method="POST">
+                <div class="modal-body">
+                    <p class="text-muted small">{{ _('thresholds_desc', 'Uyumluluk seviyelerini belirleyen skor eşik değerlerini ayarlayın.') }}</p>
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('full_compliance_threshold', 'Tam Uyum Eşiği (0.0 - 1.0)') }}</label>
+                        <input type="number" step="0.05" min="0" max="1" class="form-control" name="full_threshold" value="{{ thresholds.get('full', 0.6) }}" required>
+                        <div class="form-text">{{ _('full_help', 'Bu değerin üzerindeki skorlar "Tam Uyumlu" sayılır.') }}</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('partial_compliance_threshold', 'Kısmi Uyum Eşiği (0.0 - 1.0)') }}</label>
+                        <input type="number" step="0.05" min="0" max="1" class="form-control" name="partial_threshold" value="{{ thresholds.get('partial', 0.2) }}" required>
+                        <div class="form-text">{{ _('partial_help', 'Bu değerin üzerindeki skorlar "Kısmen Uyumlu" sayılır.') }}</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('cancel', 'İptal') }}</button>
+                    <button type="submit" class="btn btn-primary">{{ _('save', 'Kaydet') }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Add UNGC Compliance Modal -->
+<div class="modal fade" id="addUngcModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ _('add_ungc_compliance', 'UNGC Uyumluluk Ekle') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('ungc_add') }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('principle', 'İlke') }}</label>
+                        <select class="form-select" name="principle_id" required>
+                            {% for i in range(1, 11) %}
+                            <option value="P{{ i }}">P{{ i }} - {{ _('ungc_p' ~ i) }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('compliance_level', 'Uyumluluk Seviyesi') }}</label>
+                        <select class="form-select" name="compliance_level" required>
+                            <option value="Full">{{ _('full_compliance', 'Tam Uyumlu') }}</option>
+                            <option value="Partial">{{ _('partial_compliance', 'Kısmen Uyumlu') }}</option>
+                            <option value="None">{{ _('non_compliant', 'Uyumsuz') }}</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('notes', 'Notlar') }}</label>
+                        <textarea class="form-control" name="notes" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('cancel', 'İptal') }}</button>
+                    <button type="submit" class="btn btn-primary">{{ _('save', 'Kaydet') }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Add Evidence Modal -->
+<div class="modal fade" id="addEvidenceModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ _('upload_evidence', 'Kanıt Belgesi Yükle') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('ungc_upload_evidence') }}" method="POST" enctype="multipart/form-data">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('principle', 'İlgi İlke') }}</label>
+                        <select class="form-select" name="principle_id" required>
+                            {% for i in range(1, 11) %}
+                            <option value="P{{ i }}">P{{ i }} - {{ _('ungc_p' ~ i) }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('evidence_type', 'Kanıt Türü') }}</label>
+                        <select class="form-select" name="evidence_type" required>
+                            <option value="policy">{{ _('policy', 'Politika Belgesi') }}</option>
+                            <option value="report">{{ _('report', 'Rapor/Tutanak') }}</option>
+                            <option value="training">{{ _('training', 'Eğitim Kaydı') }}</option>
+                            <option value="contract">{{ _('contract', 'Sözleşme') }}</option>
+                            <option value="other">{{ _('other', 'Diğer') }}</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('description', 'Açıklama') }}</label>
+                        <input type="text" class="form-control" name="description" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('file', 'Dosya Seç') }}</label>
+                        <input type="file" class="form-control" name="evidence_file">
+                        <div class="form-text">{{ _('file_help', 'Desteklenen formatlar: PDF, DOCX, JPG, PNG (Max 10MB)') }}</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('cancel', 'İptal') }}</button>
+                    <button type="submit" class="btn btn-primary">{{ _('upload', 'Yükle') }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

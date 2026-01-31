@@ -1,0 +1,175 @@
+
+{% extends "base.html" %}
+
+{% block title %}{{ supplier.name }} - Tedarikçi Profili - SustainAge{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1><i class="fas fa-building me-2"></i>{{ supplier.name }}</h1>
+            <button class="btn btn-sm btn-outline-secondary" onclick="history.back()">
+                <i class="bi bi-arrow-left"></i> Geri
+            </button>
+        </div>
+        <p class="lead text-muted">{{ supplier.sector }} | {{ supplier.region }}</p>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header">
+                <h5 class="mb-0">Genel Bilgiler</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Risk Skoru
+                        {% if supplier.risk_score < 30 %}
+                        <span class="badge bg-success rounded-pill">{{ supplier.risk_score|round(1) }}</span>
+                        {% elif supplier.risk_score < 70 %}
+                        <span class="badge bg-warning text-dark rounded-pill">{{ supplier.risk_score|round(1) }}</span>
+                        {% else %}
+                        <span class="badge bg-danger rounded-pill">{{ supplier.risk_score|round(1) }}</span>
+                        {% endif %}
+                    </li>
+                    <li class="list-group-item">
+                        <strong>İletişim:</strong><br>
+                        {{ supplier.contact_info }}
+                    </li>
+                    <li class="list-group-item">
+                        <strong>Sektör:</strong> {{ supplier.sector }}
+                    </li>
+                    <li class="list-group-item">
+                        <strong>Bölge:</strong> {{ supplier.region }}
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-8">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Değerlendirme Geçmişi</h5>
+                <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addAssessmentModal">
+                    <i class="fas fa-clipboard-check"></i> Yeni Değerlendirme
+                </button>
+            </div>
+            <div class="card-body">
+                {% if assessments %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>Tarih</th>
+                                <th>Risk Seviyesi</th>
+                                <th>Skor</th>
+                                <th>Detaylar</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for assessment in assessments %}
+                            <tr>
+                                <td>{{ assessment.assessment_date }}</td>
+                                <td>
+                                    {% if assessment.risk_level == 'Low' %}
+                                    <span class="badge bg-success">Düşük</span>
+                                    {% elif assessment.risk_level == 'Medium' %}
+                                    <span class="badge bg-warning text-dark">Orta</span>
+                                    {% else %}
+                                    <span class="badge bg-danger">Yüksek</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ assessment.score }}</td>
+                                <td>
+                                    <!-- JSON details rendering simplified -->
+                                    <button class="btn btn-sm btn-outline-info" type="button" data-bs-toggle="collapse" data-bs-target="#detail{{ assessment.id }}">
+                                        Göster
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr class="collapse" id="detail{{ assessment.id }}">
+                                <td colspan="4">
+                                    <div class="card card-body bg-light">
+                                        <pre class="mb-0">{{ assessment.details | tojson(indent=2) }}</pre>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    Henüz bir değerlendirme yapılmamış.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Assessment Modal -->
+<div class="modal fade" id="addAssessmentModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form action="{{ url_for('supply_chain_add_assessment', supplier_id=supplier.id) }}" method="POST">
+                <div class="modal-header">
+                    <h5 class="modal-title">Yeni Tedarikçi Değerlendirmesi</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Değerlendirme Tarihi</label>
+                            <input type="date" class="form-control" name="assessment_date" value="{{ today_date }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Genel Risk Seviyesi</label>
+                            <select class="form-select" name="risk_level" required>
+                                <option value="Low">Düşük</option>
+                                <option value="Medium">Orta</option>
+                                <option value="High">Yüksek</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <h6 class="mt-4 mb-3">Değerlendirme Kriterleri (0-100 Puan)</h6>
+                    
+                    <div class="mb-3 row">
+                        <label class="col-sm-8 col-form-label">Çevresel Uyum (ISO 14001 vb.)</label>
+                        <div class="col-sm-4">
+                            <input type="number" class="form-control" name="env_score" min="0" max="100" required>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3 row">
+                        <label class="col-sm-8 col-form-label">İşçi Hakları ve İnsan Hakları</label>
+                        <div class="col-sm-4">
+                            <input type="number" class="form-control" name="social_score" min="0" max="100" required>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3 row">
+                        <label class="col-sm-8 col-form-label">Yönetişim ve Etik</label>
+                        <div class="col-sm-4">
+                            <input type="number" class="form-control" name="gov_score" min="0" max="100" required>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Notlar / Eksiklikler</label>
+                        <textarea class="form-control" name="notes" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-primary">Değerlendirmeyi Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

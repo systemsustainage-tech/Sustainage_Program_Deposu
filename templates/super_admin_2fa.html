@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}2FA Yönetimi{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+<div>
+<h1 class="h2">2FA Yönetimi</h1>
+<p class="text-muted mb-0">
+            Kullanıcılar için iki faktörlü doğrulama ve yedek kod yönetimi
+        </p>
+</div>
+<div class="btn-toolbar mb-2 mb-md-0">
+
+<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+</div>
+<div class="row g-4 mb-4">
+<div class="col-lg-6">
+<div class="card border-0 shadow-sm h-100">
+<div class="card-header">
+<h5 class="mb-0">Kullanıcı ve Durum</h5>
+</div>
+<div class="card-body">
+<form method="post">
+<div class="mb-3">
+<label class="form-label">Kullanıcı</label>
+<select class="form-select" name="username">
+                            {% for u in users %}
+                            <option value="{{ u.username }}" {% if selected_username == u.username %}selected{% endif %}>
+                                {{ u.display_name }} ({{ u.username }})
+                            </option>
+                            {% endfor %}
+                        </select>
+</div>
+<div class="mb-3">
+<label class="form-label">Durum</label>
+<div class="fw-bold">
+                            {% if status_text == 'Aktif' %}
+                            <span class="text-success">Aktif</span>
+                            {% elif status_text == 'Pasif' %}
+                            <span class="text-danger">Pasif</span>
+                            {% else %}
+                            <span class="text-muted">Bilinmiyor</span>
+                            {% endif %}
+                        </div>
+</div>
+<div class="d-flex flex-wrap gap-2">
+<button class="btn btn-success" name="action" type="submit" value="enable">2FA'yı Etkinleştir</button>
+<button class="btn btn-danger" name="action" type="submit" value="disable">2FA'yı Kapat</button>
+<button class="btn btn-primary" name="action" type="submit" value="show_codes">Yedek Kodları Göster</button>
+<button class="btn btn-warning text-dark" name="action" type="submit" value="regen_codes">Yedek Kodları Yenile</button>
+</div>
+</form>
+</div>
+</div>
+</div>
+<div class="col-lg-6">
+<div class="card border-0 shadow-sm h-100">
+<div class="card-header d-flex justify-content-between align-items-center">
+<h5 class="mb-0">Yedek Kodlar</h5>
+<small class="text-muted">Her kod yalnızca bir kez kullanılabilir</small>
+</div>
+<div class="card-body">
+<textarea class="form-control" readonly="" rows="10">
+{% if backup_codes %}{{ backup_codes|join('\n') }}{% endif %}</textarea>
+                {% if qr_data_uri %}
+                <div class="mt-3">
+<div class="mb-2 fw-semibold">QR Kod</div>
+<img alt="2FA QR Kod" class="img-thumbnail" src="{{ qr_data_uri }}" style="max-width: 240px;"/>
+</div>
+                {% endif %}
+            </div>
+</div>
+</div>
+</div>
+<div class="row g-4">
+<div class="col-lg-6">
+<div class="card border-0 shadow-sm">
+<div class="card-header">
+<h5 class="mb-0">Zorunlu 2FA Ayarı</h5>
+</div>
+<div class="card-body">
+<form method="post">
+<input name="action" type="hidden" value="save_force"/>
+<div class="form-check mb-3">
+                            <input class="form-check-input" id="force2fa" name="force_2fa" type="checkbox" value="1" {% if force_2fa %}checked{% endif %}/>
+                            <label class="form-check-label" for="force2fa">
+                                Tüm kullanıcılar için 2FA zorunlu olsun
+                            </label>
+                        </div>
+<button class="btn btn-success" type="submit">Kaydet</button>
+</form>
+</div>
+</div>
+</div>
+</div>
+
+{% endblock %}

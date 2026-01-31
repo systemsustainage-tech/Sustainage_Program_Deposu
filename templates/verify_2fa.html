@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}İki Faktörlü Doğrulama - SustainAge{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6 col-lg-4">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white text-center">
+                <h4 class="mb-0"><i class="bi bi-shield-lock"></i> 2FA Doğrulama</h4>
+            </div>
+            <div class="card-body p-4">
+                <div class="text-center mb-4">
+                    <p class="text-muted">Lütfen doğrulama uygulamanızdaki 6 haneli kodu giriniz.</p>
+                </div>
+                
+                <form method="POST" action="{{ url_for('verify_2fa') }}">
+                    <div class="mb-3">
+                        <label for="code" class="form-label">Doğrulama Kodu</label>
+                        <input type="text" class="form-control form-control-lg text-center" id="code" name="code" 
+                               placeholder="000000" maxlength="6" pattern="\d{6}" required autofocus autocomplete="one-time-code">
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">Doğrula</button>
+                    </div>
+                </form>
+                
+                <hr class="my-4">
+                
+                <div class="text-center">
+                    <p class="small text-muted mb-2">Telefonunuza erişemiyor musunuz?</p>
+                    <button class="btn btn-link btn-sm text-decoration-none" type="button" data-bs-toggle="collapse" data-bs-target="#backupCodeArea">
+                        Yedek Kod Kullan
+                    </button>
+                </div>
+                
+                <div class="collapse mt-3" id="backupCodeArea">
+                    <div class="card card-body bg-light">
+                        <form method="POST" action="{{ url_for('verify_2fa') }}">
+                            <div class="mb-2">
+                                <label for="backup_code" class="form-label small">Yedek Kod</label>
+                                <input type="text" class="form-control form-control-sm" id="backup_code" name="backup_code" placeholder="XXXX-XXXX" required>
+                            </div>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-secondary btn-sm">Yedek Kod ile Giriş</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

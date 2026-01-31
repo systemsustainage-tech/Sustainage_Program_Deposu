@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block title %}Sayfa Bulunamadı (404) - Sustainage{% endblock %}
+
+{% block content %}
+<div class="container text-center py-5">
+    <div class="display-1 text-warning mb-4">404</div>
+    <h1 class="h2 mb-4">Sayfa Bulunamadı</h1>
+    <p class="lead mb-5">Aradığınız sayfa mevcut değil veya taşınmış olabilir.</p>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-primary">Ana Sayfaya Dön</a>
+</div>
+{% endblock %}

@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('sasb_page_title') }} - SDG{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+<div class="col-md-12">
+<div class="d-flex justify-content-between align-items-center">
+<h1><i class="fas fa-industry me-2"></i>{{ _('sasb_page_title') }}</h1>
+<div>
+<span class="badge bg-{{ 'success' if manager_available else 'danger' }}">
+                    {{ _('module_active_badge') if manager_available else _('module_passive_badge') }}
+                </span>
+<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+</div>
+<p class="lead text-muted">{{ _('sasb_desc') }}</p>
+</div>
+</div>
+<div class="row mb-4">
+<div class="col-md-4">
+<div class="card text-white bg-primary mb-3 shadow-sm border-0">
+<div class="card-body">
+<h5 class="card-title">{{ _('sasb_total_metrics') }}</h5>
+<p class="card-text display-4">{{ stats.total_metrics }}</p>
+</div>
+</div>
+</div>
+<div class="col-md-4">
+<div class="card text-white bg-info mb-3 shadow-sm border-0">
+<div class="card-body">
+<h5 class="card-title">{{ _('sasb_topics_covered') }}</h5>
+<p class="card-text display-4">{{ stats.topics_covered }}</p>
+</div>
+</div>
+</div>
+<div class="col-md-4">
+<div class="card text-white bg-success mb-3 shadow-sm border-0">
+<div class="card-body">
+<h5 class="card-title">{{ _('sasb_completion_rate') }}</h5>
+<p class="card-text display-4">%{{ stats.completion_rate }}</p>
+</div>
+</div>
+</div>
+</div>
+<div class="row mb-4">
+<div class="col-md-12">
+<div class="card shadow-sm border-0">
+<div class="card-body">
+<h5>{{ _('sasb_data_entry') }}</h5>
+<p>{{ _('sasb_data_entry_desc') }}</p>
+<button class="btn btn-primary" data-bs-target="#addSASBModal" data-bs-toggle="modal" type="button">
+                    {{ _('btn_add_data') }}
+                </button>
+</div>
+</div>
+</div>
+</div>
+<!-- Add SASB Modal -->
+<div class="modal fade" id="addSASBModal" tabindex="-1">
+<div class="modal-dialog">
+<div class="modal-content">
+<div class="modal-header">
+<h5 class="modal-title">{{ _('sasb_add_title', 'SASB Verisi Ekle') }}</h5>
+<button class="btn-close" data-bs-dismiss="modal" type="button"></button>
+</div>
+<form action="{{ url_for('sasb_add') }}" method="POST">
+<div class="modal-body">
+<div class="mb-3">
+<label class="form-label">{{ _('sasb_col_year', 'Yıl') }}</label>
+<input class="form-control" name="year" required="" type="number" value="2024"/>
+</div>
+<div class="mb-3">
+<label class="form-label">{{ _('sasb_col_topic', 'Konu') }}</label>
+<input class="form-control" name="topic" required="" type="text"/>
+</div>
+<div class="mb-3">
+<label class="form-label">{{ _('sasb_col_metric', 'Metrik') }}</label>
+<input class="form-control" name="metric" required="" type="text"/>
+</div>
+<div class="row">
+<div class="col-md-6 mb-3">
+<label class="form-label">{{ _('sasb_col_value', 'Değer') }}</label>
+<input class="form-control" name="value" required="" type="text"/>
+</div>
+<div class="col-md-6 mb-3">
+<label class="form-label">{{ _('sasb_col_unit', 'Birim') }}</label>
+<input class="form-control" name="unit" required="" type="text"/>
+</div>
+</div>
+</div>
+<div class="modal-footer">
+<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ _('btn_cancel', 'İptal') }}</button>
+<button class="btn btn-primary" type="submit">{{ _('btn_save', 'Kaydet') }}</button>
+</div>
+</form>
+</div>
+</div>
+</div>
+
+{% if disclosures %}
+<div class="row">
+<div class="col-md-12">
+<div class="card shadow-sm border-0">
+<div class="card-header bg-light">
+<h5 class="mb-0">{{ _('sasb_list_title') }}</h5>
+</div>
+<div class="card-body p-0">
+<div class="table-responsive">
+<table class="table table-hover mb-0">
+<thead>
+<tr>
+<th>{{ _('sasb_col_year') }}</th>
+<th>{{ _('sasb_col_topic') }}</th>
+<th>{{ _('sasb_col_metric') }}</th>
+<th>{{ _('sasb_col_value') }}</th>
+<th>{{ _('sasb_col_unit') }}</th>
+</tr>
+</thead>
+<tbody>
+                            {% for row in disclosures %}
+                            <tr>
+<td><span class="badge bg-secondary">{{ row.year }}</span></td>
+<td>{{ row.topic }}</td>
+<td>{{ row.metric }}</td>
+<td>{{ row.value }}</td>
+<td>{{ row.unit }}</td>
+</tr>
+                            {% endfor %}
+                        </tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</div>
+{% else %}
+<div class="alert alert-warning">
+<h4 class="alert-heading">{{ _('data_not_found_title') }}</h4>
+<p>{{ _('data_not_found_desc') }}</p>
+</div>
+{% endif %}
+{% endblock %}

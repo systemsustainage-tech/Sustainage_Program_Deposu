@@ -1,0 +1,74 @@
+# SUSTAINAGE SDG - Python Bağımlılıkları
+# Kurulum: pip install -r requirements.txt
+
+# === TEMEL BAĞIMLILIKLAR ===
+Pillow>=10.0.0           # Görüntü işleme
+openpyxl>=3.1.0          # Excel dosya işleme
+python-docx>=0.8.11      # Word dosya oluşturma
+reportlab>=4.0.0         # PDF oluşturma
+
+# === GÜVENLİK ===
+argon2-cffi>=23.1.0      # Argon2 parola hashleme
+PyJWT>=2.8.0             # JWT token sistemi
+pyotp>=2.9.0             # TOTP (2FA) desteği
+qrcode[pil]>=7.4.2       # QR kod oluşturma (2FA için)
+cryptography>=44.0.1     # Şifreleme (güncellendi - 23 Ekim 2025)
+python-dotenv>=1.0.0     # .env dosya desteği
+
+# === VERİTABANI ===
+# SQLite dahili (Python ile gelir)
+
+# === EMAIL ===
+# smtplib dahili (Python ile gelir)
+
+# === GUI ===
+# tkinter dahili (Python ile gelir)
+
+# === VERİ ANALİZİ ===
+pandas>=2.0.0            # Veri analizi
+numpy>=1.24.0            # Sayısal hesaplamalar
+matplotlib>=3.7.0        # Grafik ve görselleştirme
+
+# === WEB (Opsiyonel) ===
+flask>=3.0.0             # Web framework (web versiyonu için)
+flask-cors>=4.0.0        # CORS desteği
+Flask-Session>=0.5.0     # Session yönetimi
+gunicorn>=21.0.0         # Production web sunucusu
+
+# === TEST ===
+pytest>=7.4.0            # Test framework
+pytest-cov>=4.1.0        # Kod coverage
+bandit>=1.7.5            # Güvenlik taraması
+
+# === KOD KALİTESİ ===
+pylint>=3.0.0            # Kod analizi
+mypy>=1.5.0              # Type checking
+black>=23.7.0            # Kod formatlama
+ruff>=0.14.6             # Hızlı lint kontrolü
+
+# === LOGGING ===
+coloredlogs>=15.0.0      # Renkli konsol logları
+
+# === DİĞER ===
+requests>=2.31.0         # HTTP istekleri
+validators>=0.22.0       # Veri doğrulama
+googletrans==4.0.0-rc1   # Çeviri API (LanguageManager için)
+
+# === AI MODULU (Yeni - 23 Ekim 2025) ===
+# openai>=1.0.0            # OpenAI GPT entegrasyonu
+
+# === POWERPOINT (Yeni - 23 Ekim 2025) ===
+python-pptx>=0.6.21      # PowerPoint oluşturma
+
+# === PERFORMANS (Yeni - 23 Ekim 2025) ===
+psutil>=5.9.0            # Sistem performans izleme
+
+# === GUVENLIK ARACLARI (Yeni - 23 Ekim 2025) ===
+pip-audit>=2.6.0         # Bağımlılık güvenlik taraması
+safety>=2.3.0            # Bilinen güvenlik açıkları kontrolü
+
+# === SCHEDULER (Yeni - 23 Ekim 2025) ===
+schedule>=1.2.0          # Görev zamanlama
+ 
+# === PDF PARSING (GRI gerçek PDF entegrasyonu) ===
+pdfminer.six>=20221105   # PDF metin çıkarımı (sector standards parsing)

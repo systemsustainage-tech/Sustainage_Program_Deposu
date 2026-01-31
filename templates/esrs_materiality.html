@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+
+{% block title %}Çifte Önemlilik Analizi - Sustainage{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-balance-scale me-2"></i>Çifte Önemlilik Analizi (Double Materiality)</h1>
+            <p class="text-muted small mb-0">ESRS/CSRD kapsamında etki ve olasılık analizi.</p>
+        </div>
+        <button class="btn btn-outline-secondary" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button>
+    </div>
+
+    <div class="row">
+        <!-- Veri Giriş Formu -->
+        <div class="col-lg-4 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="m-0 font-weight-bold"><i class="fas fa-plus-circle me-1"></i> Yeni Madde Ekle</h6>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('esrs_materiality') }}">
+                        <div class="mb-3">
+                            <label for="topic" class="form-label">Konu Başlığı (Topic)</label>
+                            <input type="text" class="form-control" id="topic" name="topic" required placeholder="Örn: İklim Değişikliği Azaltım">
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="impact_score" class="form-label">Etki Puanı (1-5)</label>
+                                <select class="form-select" id="impact_score" name="impact_score" required>
+                                    <option value="1">1 - Çok Düşük</option>
+                                    <option value="2">2 - Düşük</option>
+                                    <option value="3">3 - Orta</option>
+                                    <option value="4">4 - Yüksek</option>
+                                    <option value="5">5 - Kritik</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="likelihood" class="form-label">Olasılık (1-5)</label>
+                                <select class="form-select" id="likelihood" name="likelihood" required>
+                                    <option value="1">1 - Nadir</option>
+                                    <option value="2">2 - Düşük İhtimal</option>
+                                    <option value="3">3 - Olası</option>
+                                    <option value="4">4 - Yüksek İhtimal</option>
+                                    <option value="5">5 - Kesin</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="financial_effect" class="form-label">Finansal Etki</label>
+                            <textarea class="form-control" id="financial_effect" name="financial_effect" rows="2" placeholder="Şirkete olan finansal riskler ve fırsatlar..."></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="environmental_effect" class="form-label">Çevresel/Sosyal Etki</label>
+                            <textarea class="form-control" id="environmental_effect" name="environmental_effect" rows="2" placeholder="Çevre ve toplum üzerindeki etkiler..."></textarea>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i> Kaydet</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Matris Grafiği -->
+        <div class="col-lg-8 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white py-3">
+                    <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-chart-scatter me-1"></i> Önemlilik Matrisi</h6>
+                </div>
+                <div class="card-body">
+                    <div style="position: relative; height: 400px; width: 100%;">
+                        <canvas id="materialityMatrix"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mevcut Maddeler Tablosu -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-white py-3">
+            <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-list me-1"></i> Analiz Listesi</h6>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Konu</th>
+                            <th class="text-center">Etki</th>
+                            <th class="text-center">Olasılık</th>
+                            <th>Finansal Etki</th>
+                            <th>Çevresel/Sosyal Etki</th>
+                            <th class="text-end">İşlem</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in items %}
+                        <tr>
+                            <td class="fw-bold">{{ item[2] }}</td>
+                            <td class="text-center">
+                                <span class="badge {% if item[3] >= 4 %}bg-danger{% elif item[3] == 3 %}bg-warning text-dark{% else %}bg-success{% endif %}">
+                                    {{ item[3] }}
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge {% if item[4] >= 4 %}bg-danger{% elif item[4] == 3 %}bg-warning text-dark{% else %}bg-success{% endif %}">
+                                    {{ item[4] }}
+                                </span>
+                            </td>
+                            <td><small>{{ item[5] or '-' }}</small></td>
+                            <td><small>{{ item[6] or '-' }}</small></td>
+                            <td class="text-end">
+                                <form action="{{ url_for('esrs_materiality_delete', item_id=item[0]) }}" method="POST" class="d-inline" onsubmit="return confirm('Bu maddeyi silmek istediğinize emin misiniz?');">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center py-4 text-muted">Henüz kayıtlı madde bulunmamaktadır.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const ctx = document.getElementById('materialityMatrix').getContext('2d');
+        
+        // Verileri hazırla
+        const dataPoints = [
+            {% for item in items %}
+            {
+                x: {{ item[3] }}, // Impact
+                y: {{ item[4] }}, // Likelihood
+                topic: "{{ item[2] }}"
+            },
+            {% endfor %}
+        ];
+
+        new Chart(ctx, {
+            type: 'scatter',
+            data: {
+                datasets: [{
+                    label: 'Önemlilik Maddeleri',
+                    data: dataPoints,
+                    backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    pointRadius: 8,
+                    pointHoverRadius: 10
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        type: 'linear',
+                        position: 'bottom',
+                        title: {
+                            display: true,
+                            text: 'Etki (Impact)',
+                            font: { weight: 'bold' }
+                        },
+                        min: 0,
+                        max: 6,
+                        ticks: { stepSize: 1 }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Olasılık (Likelihood)',
+                            font: { weight: 'bold' }
+                        },
+                        min: 0,
+                        max: 6,
+                        ticks: { stepSize: 1 }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const point = context.raw;
+                                return point.topic + ' (E:' + point.x + ', O:' + point.y + ')';
+                            }
+                        }
+                    },
+                    annotation: {
+                        // Eğer annotation plugin varsa kullanılabilir, yoksa basit tutuyoruz
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

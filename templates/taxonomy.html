@@ -1,0 +1,385 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('tax_title') }} - SDG Platform<!-- Add Taxonomy Modal -->
+<div aria-hidden="true" aria-labelledby="addTaxonomyModalLabel" class="modal fade" id="addTaxonomyModal" tabindex="-1">
+<div class="modal-dialog modal-lg">
+<div class="modal-content">
+<div class="modal-header">
+<h5 class="modal-title" id="addTaxonomyModalLabel">{{ _('tax_title') }} - {{ _('btn_add_data') }}</h5>
+<button aria-label="Close" class="btn-close" data-bs-dismiss="modal" type="button"></button>
+</div>
+<form action="{{ url_for('taxonomy_add') }}" method="POST">
+<div class="modal-body">
+<div class="mb-3">
+<label class="form-label" for="env_objective">{{ _('tax_env_objective') }}</label>
+<select class="form-select" id="env_objective" name="env_objective">
+<option value="CCM">{{ _('tax_obj_climate_mitigation') }}</option>
+<option value="CCA">{{ _('tax_obj_climate_adaptation') }}</option>
+<option value="WTR">{{ _('tax_obj_water') }}</option>
+<option value="CE">{{ _('tax_obj_circular') }}</option>
+<option value="PPC">{{ _('tax_obj_pollution') }}</option>
+<option value="BIO">{{ _('tax_obj_biodiversity') }}</option>
+</select>
+</div>
+<div class="mb-3">
+<label class="form-label" for="year">{{ _('eco_year') }}</label>
+<input class="form-control" id="year" name="year" required="" type="number" value="2025"/>
+</div>
+<div class="mb-3">
+<label class="form-label" for="activity_name">{{ _('tax_activity') }}</label>
+<input class="form-control" id="activity_name" name="activity_name" placeholder="Örn: Yenilenebilir Enerji Üretimi" required="" type="text"/>
+</div>
+<div class="mb-3">
+<label class="form-label" for="nace_code">{{ _('tax_nace') }}</label>
+<input class="form-control" id="nace_code" name="nace_code" placeholder="Örn: D35.11" type="text"/>
+</div>
+<div class="row">
+<div class="col-md-4 mb-3">
+<label class="form-label" for="turnover_amount">{{ _('tax_turnover') }} (TL)</label>
+<input class="form-control" id="turnover_amount" name="turnover_amount" required="" step="0.01" type="number"/>
+</div>
+<div class="col-md-4 mb-3">
+<label class="form-label" for="capex_amount">{{ _('tax_capex') }} (TL)</label>
+<input class="form-control" id="capex_amount" name="capex_amount" required="" step="0.01" type="number"/>
+</div>
+<div class="col-md-4 mb-3">
+<label class="form-label" for="opex_amount">{{ _('tax_opex') }} (TL)</label>
+<input class="form-control" id="opex_amount" name="opex_amount" required="" step="0.01" type="number"/>
+</div>
+</div>
+<div class="mb-3">
+<label class="form-label" for="aligned_pct">{{ _('tax_aligned') }} (0-100)</label>
+<input class="form-control" id="aligned_pct" max="100" min="0" name="aligned_pct" required="" step="0.1" type="number"/>
+</div>
+<div class="mb-3">
+<h5 class="mb-1">{{ _('tax_tech_criteria') }}</h5>
+<p class="text-muted small mb-2">{{ _('tax_tech_criteria_desc') }}</p>
+<div class="row">
+<div class="col-md-4 mb-2">
+<div class="form-check">
+<input class="form-check-input" id="substantial_contribution" name="substantial_contribution" type="checkbox" value="1"/>
+<label class="form-check-label" for="substantial_contribution">
+                                        Önemli katkı sağlıyor
+                                    </label>
+</div>
+</div>
+<div class="col-md-4 mb-2">
+<div class="form-check">
+<input class="form-check-input" id="dnsh_compliance" name="dnsh_compliance" type="checkbox" value="1"/>
+<label class="form-check-label" for="dnsh_compliance">
+                                        Önemli zarar vermiyor (DNSH)
+                                    </label>
+</div>
+</div>
+<div class="col-md-4 mb-2">
+<div class="form-check">
+<input class="form-check-input" id="minimum_safeguards" name="minimum_safeguards" type="checkbox" value="1"/>
+<label class="form-check-label" for="minimum_safeguards">
+                                        Minimum güvencelere uyumlu
+                                    </label>
+</div>
+</div>
+</div>
+</div>
+<div class="mb-3">
+<label class="form-label" for="documentation">{{ _('documentation') }}</label>
+<textarea class="form-control" id="documentation" name="documentation" rows="2"></textarea>
+</div>
+</div>
+<div class="modal-footer">
+<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ _('cancel') }}</button>
+<button class="btn btn-primary" type="submit">{{ _('save') }}</button>
+</div>
+</form>
+</div>
+</div>
+</div>
+{% endblock %}
+
+{% block content %}
+
+<div class="row mb-4">
+<div class="col-md-12">
+<div class="d-flex justify-content-between align-items-center">
+<h1><i class="fas fa-tree me-2"></i>{{ _('tax_title') }}</h1>
+<div>
+<span class="badge bg-{{ 'success' if manager_available else 'danger' }}">
+                    {{ _('module_active_badge') if manager_available else _('module_passive_badge') }}
+                </span>
+<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+</div>
+<p class="lead text-muted">{{ _('tax_desc') }}</p>
+</div>
+</div>
+
+{% if manager_available %}
+<div class="row">
+<div class="col-md-6 mb-4">
+<div class="card h-100">
+<div class="card-body">
+<h5 class="card-title">{{ _('tax_analysis') }}</h5>
+<p class="card-text">{{ _('tax_analysis_desc') }}</p>
+<button class="btn btn-primary" data-bs-target="#addTaxonomyModal" data-bs-toggle="modal" type="button">
+<i class="fas fa-plus me-1"></i> {{ _('btn_add_data') }}
+                </button>
+</div>
+</div>
+</div>
+<div class="col-md-6 mb-4">
+<div class="card h-100">
+<div class="card-body">
+<h5 class="card-title">{{ _('tax_tech_criteria') }}</h5>
+<p class="card-text">{{ _('tax_tech_criteria_desc') }}</p>
+<button class="btn btn-outline-primary" data-bs-target="#addTaxonomyModal" data-bs-toggle="modal" type="button">
+<i class="fas fa-plus me-1"></i> {{ _('btn_add_data') }}
+                </button>
+</div>
+</div>
+</div>
+</div>
+<div class="row mb-4">
+<div class="col-md-4">
+<div class="card text-center h-100 border-success">
+<div class="card-body">
+<h6 class="text-muted">{{ _('tax_turnover') }}</h6>
+<h2 class="display-6 text-success">%{{ stats.turnover_pct }}</h2>
+<small class="text-muted">{{ _('tax_aligned') }}</small>
+</div>
+</div>
+</div>
+<div class="col-md-4">
+<div class="card text-center h-100 border-primary">
+<div class="card-body">
+<h6 class="text-muted">{{ _('tax_capex') }}</h6>
+<h2 class="display-6 text-primary">%{{ stats.capex_pct }}</h2>
+<small class="text-muted">{{ _('tax_aligned') }}</small>
+</div>
+</div>
+</div>
+<div class="col-md-4">
+<div class="card text-center h-100 border-info">
+<div class="card-body">
+<h6 class="text-muted">{{ _('tax_opex') }}</h6>
+<h2 class="display-6 text-info">%{{ stats.opex_pct }}</h2>
+<small class="text-muted">{{ _('tax_aligned') }}</small>
+</div>
+</div>
+</div>
+</div>
+<!-- Recent Data Table -->
+<div class="row">
+<div class="col-md-8">
+<div class="card">
+<div class="card-header">
+<h5 class="mb-0">{{ _('recent_data') }}</h5>
+</div>
+<div class="card-body">
+                {% if detail_item %}
+                <div class="mb-4">
+<h6 class="mb-2">{{ detail_item.activity_name }}</h6>
+<p class="mb-1">
+<strong>{{ _('tax_env_objective') }}:</strong>
+                        {% set obj = detail_item.environmental_objective %}
+                        {% if obj in ['CCM', 'climate_change_mitigation'] %}
+                            {{ _('tax_obj_climate_mitigation') }}
+                        {% elif obj == 'CCA' %}
+                            {{ _('tax_obj_climate_adaptation') }}
+                        {% elif obj == 'WTR' %}
+                            {{ _('tax_obj_water') }}
+                        {% elif obj == 'CE' %}
+                            {{ _('tax_obj_circular') }}
+                        {% elif obj == 'PPC' %}
+                            {{ _('tax_obj_pollution') }}
+                        {% elif obj == 'BIO' %}
+                            {{ _('tax_obj_biodiversity') }}
+                        {% else %}
+                            {{ obj }}
+                        {% endif %}
+                    </p>
+<p class="mb-1">
+<strong>SC / DNSH / MS:</strong>
+                        {{ '✔' if detail_item.substantial_contribution else '-' }} /
+                        {{ '✔' if detail_item.dnsh_compliance else '-' }} /
+                        {{ '✔' if detail_item.minimum_safeguards else '-' }}
+                    </p>
+                    {% if detail_item.secondary_objectives %}
+                    <p class="mb-1">
+<strong>İkincil Hedefler:</strong>
+                        {{ detail_item.secondary_objectives|join(', ') }}
+                    </p>
+                    {% endif %}
+                    {% if detail_item.documentation %}
+                    <p class="mb-0">
+<strong>{{ _('eco_description') }}:</strong>
+                        {{ detail_item.documentation }}
+                    </p>
+                    {% endif %}
+                    <hr/>
+</div>
+                {% endif %}
+                <div class="table-responsive">
+<table class="table table-hover">
+<thead>
+<tr>
+<th>{{ _('eco_year') }}</th>
+<th>{{ _('tax_activity') }}</th>
+<th>{{ _('tax_nace') }}</th>
+<th>{{ _('tax_env_objective') }}</th>
+<th>{{ _('tax_eligible') }}</th>
+<th>{{ _('tax_aligned') }}</th>
+<th>{{ _('tax_turnover') }}</th>
+<th>SC</th>
+<th>DNSH</th>
+<th>MS</th>
+<th>{{ _('date') }}</th>
+</tr>
+</thead>
+<tbody>
+                            {% if recent_data %}
+                                {% for item in recent_data %}
+                                <tr>
+<td>{{ item.year|default(item.assessment_year) }}</td>
+<td>
+<a href="{{ url_for('taxonomy_module', activity_id=item.id) }}">{{ item.activity_name }}</a>
+</td>
+<td><span class="badge bg-secondary">{{ item.nace_code|default(item.activity_code) }}</span></td>
+<td>
+                                        {% set obj = item.environmental_objective %}
+                                        {% if obj in ['CCM', 'climate_change_mitigation'] %}
+                                            {{ _('tax_obj_climate_mitigation') }}
+                                        {% elif obj == 'CCA' %}
+                                            {{ _('tax_obj_climate_adaptation') }}
+                                        {% elif obj == 'WTR' %}
+                                            {{ _('tax_obj_water') }}
+                                        {% elif obj == 'CE' %}
+                                            {{ _('tax_obj_circular') }}
+                                        {% elif obj == 'PPC' %}
+                                            {{ _('tax_obj_pollution') }}
+                                        {% elif obj == 'BIO' %}
+                                            {{ _('tax_obj_biodiversity') }}
+                                        {% else %}
+                                            {{ obj }}
+                                        {% endif %}
+                                    </td>
+                                    {% set eligible_value = item.eligible_pct|default(item.aligned_percentage) %}
+                                    {% set aligned_value = item.aligned_pct|default(item.aligned_percentage) %}
+                                    <td>{{ eligible_value }}%</td>
+<td>
+                                        {% if aligned_value &gt; 50 %}
+                                            <span class="badge bg-success">%{{ aligned_value }}</span>
+                                        {% else %}
+                                            <span class="badge bg-warning text-dark">%{{ aligned_value }}</span>
+                                        {% endif %}
+                                    </td>
+<td>{{ "{:,.2f}".format(item.turnover_amount|default(item.revenue_euro)) }} TL</td>
+<td>
+                                        {% if item.substantial_contribution %}
+                                            <span class="badge bg-success">✔</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">-</span>
+                                        {% endif %}
+                                    </td>
+<td>
+                                        {% if item.dnsh_compliance %}
+                                            <span class="badge bg-success">✔</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">-</span>
+                                        {% endif %}
+                                    </td>
+<td>
+                                        {% if item.minimum_safeguards %}
+                                            <span class="badge bg-success">✔</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">-</span>
+                                        {% endif %}
+                                    </td>
+<td>{{ item.created_at[:10] }}</td>
+</tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+<td class="text-center text-muted" colspan="7">{{ _('no_data_available') }}</td>
+</tr>
+                            {% endif %}
+                        </tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+<div class="col-md-4">
+<div class="card h-100">
+<div class="card-header">
+<h5 class="mb-0">{{ _('tax_framework_mappings') }}</h5>
+</div>
+<div class="card-body">
+<p class="text-muted small mb-3">{{ _('tax_framework_mappings_desc') }}</p>
+<form action="{{ url_for('taxonomy_mapping_add') }}" class="mb-3" method="POST">
+<div class="mb-2">
+<label class="form-label">{{ _('tax_activity_code') }}</label>
+<input class="form-control form-control-sm" name="activity_code" placeholder="4.1, 4.9 gibi" required="" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label">{{ _('tax_objective_code') }}</label>
+<input class="form-control form-control-sm" name="objective_code" placeholder="CCM, CCA, WTR gibi" required="" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label">{{ _('label_sdg_target') }}</label>
+<input class="form-control form-control-sm" name="sdg_target" placeholder="SDG 7.2 gibi" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label">{{ _('label_gri_disclosure') }}</label>
+<input class="form-control form-control-sm" name="gri_disclosure" placeholder="GRI 302-1 gibi" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label">{{ _('label_tsrs_metric') }}</label>
+<input class="form-control form-control-sm" name="tsrs_metric" placeholder="TSRS E1-1 gibi" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label">{{ _('label_mapping_rationale') }}</label>
+<textarea class="form-control form-control-sm" name="mapping_rationale" rows="2"></textarea>
+</div>
+<button class="btn btn-sm btn-primary w-100" type="submit">{{ _('common.btn_save') }}</button>
+</form>
+<div class="table-responsive" style="max-height: 260px;">
+<table class="table table-sm table-striped">
+<thead>
+<tr>
+<th>{{ _('tax_activity_code') }}</th>
+<th>{{ _('tax_objective_code') }}</th>
+<th>SDG</th>
+<th>GRI</th>
+<th>TSRS</th>
+</tr>
+</thead>
+<tbody>
+                            {% if framework_mappings %}
+                                {% for mapping in framework_mappings %}
+                                <tr>
+<td>{{ mapping.activity_code }}</td>
+<td>{{ mapping.objective_code }}</td>
+<td>{{ mapping.sdg_target or '-' }}</td>
+<td>{{ mapping.gri_disclosure or '-' }}</td>
+<td>{{ mapping.tsrs_metric or '-' }}</td>
+</tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+<td class="text-center text-muted" colspan="5">{{ _('no_data_available') }}</td>
+</tr>
+                            {% endif %}
+                        </tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+{% else %}
+<div class="alert alert-warning">
+<h4 class="alert-heading">{{ _('module_failed_title') }}</h4>
+<p>{{ _('module_failed_desc') }}</p>
+</div>
+{% endif %}
+{% endblock %}

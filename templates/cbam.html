@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('cbam_title') }} - SDG{% endblock %}
+
+{% block content %}
+
+<div class="row mb-4">
+<div class="col-md-12">
+<div class="d-flex justify-content-between align-items-center">
+<h1><i class="fas fa-globe-europe me-2"></i>{{ _('cbam_title') }}</h1>
+<div>
+<span class="badge bg-{{ 'success' if manager_available else 'danger' }}">
+                    {{ _('module_active_badge') if manager_available else _('module_passive_badge') }}
+                </span>
+<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+</div>
+<p class="lead text-muted">{{ _('cbam_desc') }}</p>
+</div>
+</div>
+
+{% if manager_available %}
+<div class="row mb-4">
+<div class="col-md-3 mb-4">
+<div class="card h-100 shadow-sm border-warning">
+<div class="card-body">
+<div class="d-flex justify-content-between align-items-center">
+<div>
+<h6 class="card-title text-muted mb-0">{{ _('cbam_total_emissions') }}</h6>
+<h2 class="mt-2 mb-0 fw-bold text-warning">{{ stats.total_emissions }}</h2>
+</div>
+<i class="fas fa-smog fa-2x text-warning opacity-50"></i>
+</div>
+</div>
+</div>
+</div>
+<div class="col-md-3 mb-4">
+<div class="card h-100 shadow-sm border-primary">
+<div class="card-body">
+<div class="d-flex justify-content-between align-items-center">
+<div>
+<h6 class="card-title text-muted mb-0">{{ _('cbam_total_imports') }}</h6>
+<h2 class="mt-2 mb-0 fw-bold text-primary">{{ stats.total_imports }}</h2>
+</div>
+<i class="fas fa-ship fa-2x text-primary opacity-50"></i>
+</div>
+</div>
+</div>
+</div>
+<div class="col-md-3 mb-4">
+<div class="card h-100 shadow-sm border-danger">
+<div class="card-body">
+<div class="d-flex justify-content-between align-items-center">
+<div>
+<h6 class="card-title text-muted mb-0">{{ _('cbam_liability_est') }}</h6>
+<h2 class="mt-2 mb-0 fw-bold text-danger">€{{ stats.liability }}</h2>
+</div>
+<i class="fas fa-euro-sign fa-2x text-danger opacity-50"></i>
+</div>
+</div>
+</div>
+</div>
+<div class="col-md-3 mb-4">
+<div class="card h-100 shadow-sm border-info">
+<div class="card-body">
+<div class="d-flex justify-content-between align-items-center">
+<div>
+<h6 class="card-title text-muted mb-0">{{ _('cbam_threshold_status') }}</h6>
+<h2 class="mt-2 mb-0 fw-bold text-info">
+                            {% if stats.below_de_minimis %}
+                                {{ _('cbam_threshold_below') }}
+                            {% else %}
+                                {{ _('cbam_threshold_above') }}
+                            {% endif %}
+                        </h2>
+<div class="text-muted small">
+                            {{ stats.covered_quantity|default(0) }} / {{ stats.de_minimis_threshold|default(50) }} t
+                        </div>
+</div>
+<i class="fas fa-balance-scale fa-2x text-info opacity-50"></i>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="row mb-4">
+<div class="col-md-12 text-end">
+<a class="btn btn-primary" href="{{ url_for('cbam_add') }}">
+<i class="fas fa-plus me-1"></i>{{ _('btn_add_data') }}
+        </a>
+<a class="btn btn-outline-secondary ms-2" href="{{ url_for('cbam_quarterly_report', period=period or '') }}">
+<i class="fas fa-file-alt me-1"></i>{{ _('cbam_btn_quarterly_report') }}</a>
+</div>
+</div>
+<div class="row mb-4">
+<div class="col-md-12">
+<div class="card">
+<div class="card-header d-flex justify-content-between align-items-center">
+<h5 class="mb-0">{{ _('cbam_period_report') }}</h5>
+</div>
+<div class="card-body">
+<form action="{{ url_for('cbam_module') }}" class="row g-3" method="get">
+<div class="col-md-4">
+<label class="form-label">{{ _('cbam_period') }}</label>
+<input class="form-control" name="period" placeholder="2024-Q1" type="text" value="{{ period or '' }}"/>
+</div>
+<div class="col-md-2 align-self-end">
+<button class="btn btn-outline-primary w-100" type="submit">{{ _('cbam_show_report') }}</button>
+</div>
+</form>
+                {% if report %}
+                <div class="mt-4 row">
+<div class="col-md-3 mb-3">
+<div class="border rounded p-3">
+<div class="text-muted small">{{ _('cbam_report_total_emissions') }}</div>
+<div class="fw-bold">{{ report.total_emissions }}</div>
+</div>
+</div>
+<div class="col-md-3 mb-3">
+<div class="border rounded p-3">
+<div class="text-muted small">{{ _('cbam_report_total_imports') }}</div>
+<div class="fw-bold">{{ report.total_quantity }}</div>
+</div>
+</div>
+<div class="col-md-3 mb-3">
+<div class="border rounded p-3">
+<div class="text-muted small">{{ _('cbam_report_liability') }}</div>
+<div class="fw-bold">€{{ report.cbam_liability }}</div>
+</div>
+</div>
+<div class="col-md-3 mb-3">
+<div class="border rounded p-3">
+<div class="text-muted small">{{ _('cbam_report_eu_ets_price') }}</div>
+<div class="fw-bold">€{{ report.eu_ets_price }}</div>
+</div>
+</div>
+</div>
+                {% endif %}
+            </div>
+</div>
+</div>
+</div>
+<div class="row mb-4">
+<div class="col-md-12">
+<div class="card">
+<div class="card-header d-flex justify-content-between align-items-center">
+<h5 class="mb-0">{{ _('cbam_ets_factor_title') }}</h5>
+</div>
+<div class="card-body">
+<form action="{{ url_for('cbam_factor') }}" class="row g-3" method="post">
+<div class="col-md-3">
+<label class="form-label">{{ _('cbam_factor_period') }}</label>
+<input class="form-control" max="2100" min="2000" name="factor_period" required="" type="number"/>
+</div>
+<div class="col-md-3">
+<label class="form-label">{{ _('cbam_factor_price') }} (€/tCO₂)</label>
+<input class="form-control" name="factor_price" required="" step="0.01" type="number"/>
+</div>
+<div class="col-md-2 align-self-end">
+<button class="btn btn-outline-success w-100" type="submit">{{ _('common.btn_save') }}</button>
+</div>
+</form>
+                {% if ets_factors %}
+                <div class="mt-4 table-responsive">
+<table class="table table-sm">
+<thead>
+<tr>
+<th>{{ _('cbam_factor_period') }}</th>
+<th>{{ _('cbam_factor_price') }}</th>
+</tr>
+</thead>
+<tbody>
+                            {% for f in ets_factors %}
+                            <tr>
+<td>{{ f.period }}</td>
+<td>{{ f.eu_ets_price_eur_per_tco2 }}</td>
+</tr>
+                            {% endfor %}
+                        </tbody>
+</table>
+</div>
+                {% endif %}
+            </div>
+</div>
+</div>
+</div>
+<div class="row">
+<div class="col-md-12">
+<div class="card">
+<div class="card-header">
+<h5 class="mb-0">{{ _('recent_data') }}</h5>
+</div>
+<div class="card-body">
+<div class="table-responsive">
+<table class="table table-hover">
+<thead>
+<tr>
+<th>{{ _('date') }}</th>
+<th>{{ _('product') }}</th>
+<th>{{ _('cbam_cn_code') }}</th>
+<th>{{ _('cbam_sector') }}</th>
+<th>{{ _('cbam_origin_country') }}</th>
+<th>{{ _('cbam_total_imports') }}</th>
+<th>{{ _('cbam_total_emissions') }}</th>
+</tr>
+</thead>
+<tbody>
+                        {% if recent_data %}
+                            {% for item in recent_data %}
+                            <tr>
+<td>{{ item.date[:10] }}</td>
+<td>{{ item.product }}</td>
+<td><span class="badge bg-primary">{{ item.cn_code }}</span></td>
+<td>
+<span class="badge bg-secondary">{{ item.sector }}</span>
+</td>
+<td>{{ item.origin_country }}</td>
+<td>{{ item.quantity }}</td>
+<td>{{ item.emissions }}</td>
+</tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+<td class="text-center text-muted" colspan="5">{{ _('no_data_available') }}</td>
+</tr>
+                        {% endif %}
+                    </tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+{% else %}
+<div class="alert alert-warning">
+<h4 class="alert-heading">{{ _('module_failed_title') }}</h4>
+<p>{{ _('module_failed_desc') }}</p>
+</div>
+{% endif %}
+{% endblock %}

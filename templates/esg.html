@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('esg_title') }} - SDG{% endblock %}
+
+{% block content %}
+
+<div class="row mb-4">
+<div class="col-md-12">
+<div class="d-flex justify-content-between align-items-center">
+<h1><i class="fas fa-chart-pie me-2"></i>{{ _('esg_title') }}</h1>
+<div>
+<span class="badge bg-{{ 'success' if manager_available else 'danger' }}">
+                    {{ _('module_active_badge') if manager_available else _('module_passive_badge') }}
+                </span>
+<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+</div>
+<p class="lead text-muted">{{ _('esg_desc') }}</p>
+</div>
+</div>
+
+{% if manager_available %}
+<div class="row mb-4">
+<div class="col-md-4 mb-4">
+<div class="card h-100 shadow-sm border-success">
+<div class="card-body text-center">
+<i class="fas fa-leaf fa-3x text-success mb-3"></i>
+<h5 class="card-title">{{ _('esg_env') }}</h5>
+<h2 class="fw-bold text-success">{{ stats.environmental }}</h2>
+<div class="progress mt-3">
+<div aria-valuemax="100" aria-valuemin="0" aria-valuenow="{{ stats.environmental }}" class="progress-bar bg-success" role="progressbar" style="width: {{ stats.environmental }}%"></div>
+</div>
+</div>
+</div>
+</div>
+<div class="col-md-4 mb-4">
+<div class="card h-100 shadow-sm border-info">
+<div class="card-body text-center">
+<i class="fas fa-users fa-3x text-info mb-3"></i>
+<h5 class="card-title">{{ _('esg_social') }}</h5>
+<h2 class="fw-bold text-info">{{ stats.social }}</h2>
+<div class="progress mt-3">
+<div aria-valuemax="100" aria-valuemin="0" aria-valuenow="{{ stats.social }}" class="progress-bar bg-info" role="progressbar" style="width: {{ stats.social }}%"></div>
+</div>
+</div>
+</div>
+</div>
+<div class="col-md-4 mb-4">
+<div class="card h-100 shadow-sm border-primary">
+<div class="card-body text-center">
+<i class="fas fa-balance-scale fa-3x text-primary mb-3"></i>
+<h5 class="card-title">{{ _('esg_gov') }}</h5>
+<h2 class="fw-bold text-primary">{{ stats.governance }}</h2>
+<div class="progress mt-3">
+<div aria-valuemax="100" aria-valuemin="0" aria-valuenow="{{ stats.governance }}" class="progress-bar bg-primary" role="progressbar" style="width: {{ stats.governance }}%"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="row mb-4">
+<div class="col-md-12 text-end">
+<a href="{{ url_for('esg_settings') }}" class="btn btn-outline-secondary me-2">
+<i class="fas fa-cog me-1"></i>{{ _('btn_settings', 'Ayarlar') }}
+</a>
+<button class="btn btn-primary" data-bs-target="#addESGDataModal" data-bs-toggle="modal" type="button">
+<i class="fas fa-plus me-1"></i>{{ _('btn_add_data') }}
+        </button>
+</div>
+</div>
+<!-- Add ESG Data Modal -->
+<div aria-hidden="true" aria-labelledby="addESGDataModalLabel" class="modal fade" id="addESGDataModal" tabindex="-1">
+<div class="modal-dialog">
+<div class="modal-content">
+<div class="modal-header">
+<h5 class="modal-title" id="addESGDataModalLabel">{{ _('esg_title') }} - {{ _('btn_add_data') }}</h5>
+<button aria-label="Close" class="btn-close" data-bs-dismiss="modal" type="button"></button>
+</div>
+<form action="{{ url_for('esg_add') }}" method="POST">
+<div class="modal-body">
+<div class="row">
+<div class="col-md-6 mb-3">
+<label class="form-label" for="year">{{ _('eco_year') }}</label>
+<input class="form-control" id="year" name="year" required="" type="number" value="2025"/>
+</div>
+<div class="col-md-6 mb-3">
+<label class="form-label" for="quarter">{{ _('eco_quarter') }}</label>
+<select class="form-select" id="quarter" name="quarter" required="">
+<option value="1">Q1</option>
+<option value="2">Q2</option>
+<option value="3">Q3</option>
+<option value="4">Q4</option>
+</select>
+</div>
+</div>
+<div class="mb-3">
+<label class="form-label" for="environmental_score">{{ _('esg_env') }} Skor (0-100)</label>
+<input class="form-control" id="environmental_score" max="100" min="0" name="environmental_score" required="" step="0.01" type="number"/>
+</div>
+<div class="mb-3">
+<label class="form-label" for="social_score">{{ _('esg_social') }} Skor (0-100)</label>
+<input class="form-control" id="social_score" max="100" min="0" name="social_score" required="" step="0.01" type="number"/>
+</div>
+<div class="mb-3">
+<label class="form-label" for="governance_score">{{ _('esg_gov') }} Skor (0-100)</label>
+<input class="form-control" id="governance_score" max="100" min="0" name="governance_score" required="" step="0.01" type="number"/>
+</div>
+</div>
+<div class="modal-footer">
+<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ _('cancel') }}</button>
+<button class="btn btn-primary" type="submit">{{ _('save') }}</button>
+</div>
+</form>
+</div>
+</div>
+</div>
+<!-- History Table -->
+<div class="row">
+<div class="col-md-12">
+<div class="card">
+<div class="card-header">
+<h5 class="mb-0">{{ _('recent_data') }}</h5>
+</div>
+<div class="card-body">
+<div class="table-responsive">
+<table class="table table-hover">
+<thead>
+<tr>
+<th>{{ _('eco_year') }} / {{ _('eco_quarter') }}</th>
+<th>{{ _('esg_env') }}</th>
+<th>{{ _('esg_social') }}</th>
+<th>{{ _('esg_gov') }}</th>
+<th>{{ _('esg_total') }}</th>
+<th>{{ _('date') }}</th>
+</tr>
+</thead>
+<tbody>
+                            {% if history %}
+                                {% for item in history %}
+                                <tr>
+<td>{{ item.year }} Q{{ item.quarter }}</td>
+<td><span class="badge bg-success">{{ item.environmental_score }}</span></td>
+<td><span class="badge bg-info text-dark">{{ item.social_score }}</span></td>
+<td><span class="badge bg-primary">{{ item.governance_score }}</span></td>
+<td><strong>{{ item.total_score }}</strong></td>
+<td>{{ item.created_at[:10] }}</td>
+</tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+<td class="text-center text-muted" colspan="6">{{ _('no_data_available') }}</td>
+</tr>
+                            {% endif %}
+                        </tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+{% else %}
+<div class="alert alert-warning">
+<h4 class="alert-heading">{{ _('module_failed_title') }}</h4>
+<p>{{ _('module_failed_desc') }}</p>
+</div>
+{% endif %}
+{% endblock %}

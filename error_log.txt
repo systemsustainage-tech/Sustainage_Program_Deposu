@@ -1,0 +1,36 @@
+SDG Save Attempt: cid=1, iid=1, period=2024, notes=Action-1768904862
+SDG Save Attempt: cid=1, iid=1, period=2024, notes=Action-1768906968
+SDG Save Attempt: cid=1, iid=1, period=2024, notes=Action-1768907045
+IIRC Save Attempt: cid=1, year=2024, name=Test Report
+CSRD Save Attempt: cid=1, code=TEST-E1
+IIRC Save Attempt: cid=1, year=2025, name=Test Integrated Report
+SDG Save Attempt: cid=1, iid=1, period=2024, notes=Action-1768910422
+SDG Save Attempt: cid=1, iid=1, period=2024, notes=Action-1768910454
+CSRD Save Attempt: cid=1, code=CSRD
+SDG Save Attempt: cid=1, iid=1, period=2024, notes=Action-1768910481
+IIRC Save Attempt: cid=1, year=2024, name=IIRC-Rep-1768910486
+CSRD Save Attempt: cid=1, code=CSRD
+IIRC Save Attempt: cid=1, year=2024, name=IIRC-Rep-1768910661
+IIRC Save Error: database is locked
+CSRD Save Attempt: cid=1, code=CSRD
+CSRD Save Error: database is locked
+IIRC Save Attempt: cid=1, year=2024, name=IIRC-Rep-1768911249
+SDG Save Attempt: cid=1, iid=1, period=2024, notes=Action-1768927831
+IIRC Save Attempt: cid=1, year=None, name=None
+IIRC Save Error: NOT NULL constraint failed: integrated_reports.year
+SDG Save Attempt: cid=1, iid=1, period=2024, notes=Action-1768928507
+CSRD Save Attempt: cid=1, code=CSRD
+IIRC Save Attempt: cid=1, year=None, name=None
+IIRC Save Error: NOT NULL constraint failed: integrated_reports.year
+SDG Save Attempt: cid=1, iid=1, period=2024, notes=Action-1768929059
+CSRD Save Attempt: cid=1, code=CSRD
+IIRC Save Attempt: cid=1, year=None, name=None
+IIRC Save Error: NOT NULL constraint failed: integrated_reports.year
+SDG Save Attempt: cid=1, iid=1, period=2024, notes=Action-1768930055
+CSRD Save Attempt: cid=1, code=CSRD
+IIRC Save Attempt: cid=1, year=None, name=None
+IIRC Save Error: NOT NULL constraint failed: integrated_reports.year
+SDG Save Attempt: cid=1, iid=1, period=2024, notes=Action-1768930178
+CSRD Save Attempt: cid=1, code=CSRD
+IIRC Save Attempt: cid=1, year=None, name=None
+IIRC Save Error: NOT NULL constraint failed: integrated_reports.year

@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+
+{% block title %}Firma Bilgileri{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+<h1 class="h2">Firma Bilgileri</h1>
+<div class="btn-toolbar mb-2 mb-md-0">
+
+<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+</div>
+<form method="POST">
+<ul class="nav nav-tabs" id="companyInfoTabs" role="tablist">
+<li class="nav-item" role="presentation">
+<button class="nav-link active" data-bs-target="#basic" data-bs-toggle="tab" id="basic-tab" role="tab" type="button">
+                Temel Bilgiler
+            </button>
+</li>
+<li class="nav-item" role="presentation">
+<button class="nav-link" data-bs-target="#legal" data-bs-toggle="tab" id="legal-tab" role="tab" type="button">
+                Yasal Bilgiler
+            </button>
+</li>
+<li class="nav-item" role="presentation">
+<button class="nav-link" data-bs-target="#financial" data-bs-toggle="tab" id="financial-tab" role="tab" type="button">
+                Mali Bilgiler
+            </button>
+</li>
+<li class="nav-item" role="presentation">
+<button class="nav-link" data-bs-target="#sustainability" data-bs-toggle="tab" id="sustainability-tab" role="tab" type="button">
+                Sürdürülebilirlik
+            </button>
+</li>
+<li class="nav-item" role="presentation">
+<button class="nav-link" data-bs-target="#contact" data-bs-toggle="tab" id="contact-tab" role="tab" type="button">
+                İletişim
+            </button>
+</li>
+</ul>
+<div class="tab-content pt-3">
+<div aria-labelledby="basic-tab" class="tab-pane fade show active" id="basic" role="tabpanel">
+<div class="row g-3">
+<div class="col-md-6">
+<label class="form-label">Şirket Adı</label>
+<input class="form-control" name="name" type="text" value="{{ info.name }}"/>
+</div>
+<div class="col-md-6">
+<label class="form-label">Yasal Unvan</label>
+<input class="form-control" name="legal_name" type="text" value="{{ info.legal_name }}"/>
+</div>
+<div class="col-md-6">
+<label class="form-label">Ticari Unvan</label>
+<input class="form-control" name="trading_name" type="text" value="{{ info.trading_name }}"/>
+</div>
+<div class="col-md-6">
+<label class="form-label">Şirket Büyüklüğü</label>
+<input class="form-control" name="company_size" type="text" value="{{ info.company_size }}"/>
+</div>
+<div class="col-md-6">
+<label class="form-label">Sektör</label>
+<input class="form-control" name="sector" type="text" value="{{ info.sector }}"/>
+</div>
+<div class="col-md-3">
+<label class="form-label">Çalışan Sayısı</label>
+<input class="form-control" name="employee_count" type="number" value="{{ info.employee_count }}"/>
+</div>
+<div class="col-md-3">
+<label class="form-label">NACE Kodu</label>
+<input class="form-control" name="industry_code" type="text" value="{{ info.industry_code }}"/>
+</div>
+<div class="col-12">
+<label class="form-label">Sektör Açıklaması</label>
+<textarea class="form-control" name="industry_description" rows="3">{{ info.industry_description }}</textarea>
+</div>
+<div class="col-md-6">
+<label class="form-label">ISIC Kodu</label>
+<input class="form-control" name="isic_code" type="text" value="{{ info.isic_code }}"/>
+</div>
+<div class="col-12">
+<label class="form-label">Şirket Açıklaması</label>
+<textarea class="form-control" name="description" rows="3">{{ info.description }}</textarea>
+</div>
+<div class="col-12">
+<label class="form-label">İş Modeli</label>
+<textarea class="form-control" name="business_model" rows="3">{{ info.business_model }}</textarea>
+</div>
+<div class="col-12">
+<label class="form-label">Ana Ürün/Hizmetler</label>
+<textarea class="form-control" name="key_products_services" rows="3">{{ info.key_products_services }}</textarea>
+</div>
+<div class="col-12">
+<label class="form-label">Hizmet Verilen Pazarlar</label>
+<textarea class="form-control" name="markets_served" rows="3">{{ info.markets_served }}</textarea>
+</div>
+<div class="col-12">
+<label class="form-label">Vizyon</label>
+<textarea class="form-control" name="vizyon" rows="3">{{ info.vizyon }}</textarea>
+</div>
+<div class="col-12">
+<label class="form-label">Misyon</label>
+<textarea class="form-control" name="misyon" rows="3">{{ info.misyon }}</textarea>
+</div>
+<div class="col-12">
+<label class="form-label">Değerler</label>
+<textarea class="form-control" name="degerler" rows="3">{{ info.degerler }}</textarea>
+</div>
+<div class="col-12">
+<label class="form-label">Tesisler ve Lokasyonlar (Özet)</label>
+<textarea class="form-control" name="tesisler_ozet" rows="3">{{ info.tesisler_ozet }}</textarea>
+</div>
+</div>
+</div>
+<div aria-labelledby="legal-tab" class="tab-pane fade" id="legal" role="tabpanel">
+<div class="row g-3">
+<div class="col-md-6">
+<label class="form-label">Sicil Numarası</label>
+<input class="form-control" name="registration_number" type="text" value="{{ info.registration_number }}"/>
+</div>
+<div class="col-md-6">
+<label class="form-label">Vergi Numarası</label>
+<input class="form-control" name="tax_number" type="text" value="{{ info.tax_number }}"/>
+</div>
+<div class="col-md-6">
+<label class="form-label">Hukuki Şekil</label>
+<input class="form-control" name="legal_form" type="text" value="{{ info.legal_form }}"/>
+</div>
+<div class="col-md-6">
+<label class="form-label">Kuruluş Tarihi</label>
+<input class="form-control" name="establishment_date" type="text" value="{{ info.establishment_date }}"/>
+</div>
+<div class="col-md-6">
+<label class="form-label">Mülkiyet Türü</label>
+<input class="form-control" name="ownership_type" type="text" value="{{ info.ownership_type }}"/>
+</div>
+<div class="col-md-6">
+<label class="form-label">Ana Şirket</label>
+<input class="form-control" name="parent_company" type="text" value="{{ info.parent_company }}"/>
+</div>
+<div class="col-12">
+<label class="form-label">Bağlı Şirketler</label>
+<textarea class="form-control" name="subsidiaries" rows="3">{{ info.subsidiaries }}</textarea>
+</div>
+<div class="col-md-6">
+<label class="form-label">Borsa</label>
+<input class="form-control" name="stock_exchange" type="text" value="{{ info.stock_exchange }}"/>
+</div>
+<div class="col-md-6">
+<label class="form-label">Hisse Sembolü</label>
+<input class="form-control" name="ticker_symbol" type="text" value="{{ info.ticker_symbol }}"/>
+</div>
+<div class="col-md-6">
+<label class="form-label">Mali Yıl Sonu</label>
+<input class="form-control" name="fiscal_year_end" type="text" value="{{ info.fiscal_year_end }}"/>
+</div>
+<div class="col-md-6">
+<label class="form-label">Raporlama Dönemi</label>
+<input class="form-control" name="reporting_period" type="text" value="{{ info.reporting_period }}"/>
+</div>
+</div>
+</div>
+<div aria-labelledby="financial-tab" class="tab-pane fade" id="financial" role="tabpanel">
+<div class="row g-3">
+<div class="col-md-6">
+<label class="form-label">Yıllık Ciro</label>
+<input class="form-control" name="annual_revenue" step="0.01" type="number" value="{{ info.annual_revenue }}"/>
+</div>
+<div class="col-md-3">
+<label class="form-label">Para Birimi</label>
+<input class="form-control" name="currency" type="text" value="{{ info.currency }}"/>
+</div>
+<div class="col-md-3">
+<label class="form-label">Denetim Şirketi</label>
+<input class="form-control" name="auditor" type="text" value="{{ info.auditor }}"/>
+</div>
+</div>
+</div>
+<div aria-labelledby="sustainability-tab" class="tab-pane fade" id="sustainability" role="tabpanel">
+<div class="row g-3">
+<div class="col-12">
+<label class="form-label">Sürdürülebilirlik Stratejisi</label>
+<textarea class="form-control" name="sustainability_strategy" rows="3">{{ info.sustainability_strategy }}</textarea>
+</div>
+<div class="col-12">
+<label class="form-label">Materyal Konular</label>
+<textarea class="form-control" name="material_topics" rows="3">{{ info.material_topics }}</textarea>
+</div>
+<div class="col-12">
+<label class="form-label">Paydaş Grupları</label>
+<textarea class="form-control" name="stakeholder_groups" rows="3">{{ info.stakeholder_groups }}</textarea>
+</div>
+<div class="col-md-6">
+<label class="form-label">ESG Değerlendirme Kuruluşu</label>
+<input class="form-control" name="esg_rating_agency" type="text" value="{{ info.esg_rating_agency }}"/>
+</div>
+<div class="col-md-6">
+<label class="form-label">ESG Puanı</label>
+<input class="form-control" name="esg_rating" type="text" value="{{ info.esg_rating }}"/>
+</div>
+<div class="col-12">
+<label class="form-label">Sertifikalar</label>
+<textarea class="form-control" name="certifications" rows="3">{{ info.certifications }}</textarea>
+</div>
+<div class="col-12">
+<label class="form-label">Üyelikler</label>
+<textarea class="form-control" name="memberships" rows="3">{{ info.memberships }}</textarea>
+</div>
+</div>
+</div>
+<div aria-labelledby="contact-tab" class="tab-pane fade" id="contact" role="tabpanel">
+<div class="row g-3">
+<div class="col-12">
+<label class="form-label">Merkez Adresi</label>
+<textarea class="form-control" name="headquarters_address" rows="2">{{ info.headquarters_address }}</textarea>
+</div>
+<div class="col-md-4">
+<label class="form-label">Şehir</label>
+<input class="form-control" name="city" type="text" value="{{ info.city }}"/>
+</div>
+<div class="col-md-4">
+<label class="form-label">Posta Kodu</label>
+<input class="form-control" name="postal_code" type="text" value="{{ info.postal_code }}"/>
+</div>
+<div class="col-md-4">
+<label class="form-label">Ülke</label>
+<input class="form-control" name="country" type="text" value="{{ info.country }}"/>
+</div>
+<div class="col-md-4">
+<label class="form-label">Telefon</label>
+<input class="form-control" name="phone" type="text" value="{{ info.phone }}"/>
+</div>
+<div class="col-md-4">
+<label class="form-label">E-posta</label>
+<input class="form-control" name="email" type="email" value="{{ info.email }}"/>
+</div>
+<div class="col-md-4">
+<label class="form-label">Web Sitesi</label>
+<input class="form-control" name="website" type="text" value="{{ info.website }}"/>
+</div>
+<div class="col-12">
+<label class="form-label">Sürdürülebilirlik İletişim</label>
+<input class="form-control" name="sustainability_contact" type="text" value="{{ info.sustainability_contact }}"/>
+</div>
+</div>
+</div>
+</div>
+<hr class="my-4"/>
+<div class="d-flex justify-content-end">
+<button class="btn btn-primary btn-lg" type="submit">{{ _('btn_save') }}</button>
+</div>
+</form>
+
+{% endblock %}

@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('help_center_title') }} - SDG{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+<h1 class="h2">{{ _('help_center_title') }}</h1>
+<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+<div class="row g-4">
+<div class="col-md-8">
+<div class="accordion" id="accordionHelp">
+<div class="accordion-item">
+<h2 class="accordion-header" id="headingOne">
+<button aria-controls="collapseOne" aria-expanded="true" class="accordion-button" data-bs-target="#collapseOne" data-bs-toggle="collapse" type="button">
+                        {{ _('help_q1') }}
+                    </button>
+</h2>
+<div aria-labelledby="headingOne" class="accordion-collapse collapse show" data-bs-parent="#accordionHelp" id="collapseOne">
+<div class="accordion-body">
+                        {{ _('help_a1') }}
+                    </div>
+</div>
+</div>
+<div class="accordion-item">
+<h2 class="accordion-header" id="headingTwo">
+<button aria-controls="collapseTwo" aria-expanded="false" class="accordion-button collapsed" data-bs-target="#collapseTwo" data-bs-toggle="collapse" type="button">
+                        {{ _('help_q2') }}
+                    </button>
+</h2>
+<div aria-labelledby="headingTwo" class="accordion-collapse collapse" data-bs-parent="#accordionHelp" id="collapseTwo">
+<div class="accordion-body">
+                        {{ _('help_a2') }}
+                    </div>
+</div>
+</div>
+<div class="accordion-item">
+<h2 class="accordion-header" id="headingThree">
+<button aria-controls="collapseThree" aria-expanded="false" class="accordion-button collapsed" data-bs-target="#collapseThree" data-bs-toggle="collapse" type="button">
+                        {{ _('help_q3') }}
+                    </button>
+</h2>
+<div aria-labelledby="headingThree" class="accordion-collapse collapse" data-bs-parent="#accordionHelp" id="collapseThree">
+<div class="accordion-body">
+                        {{ _('help_a3') }}
+                    </div>
+</div>
+</div>
+<div class="accordion-item">
+<h2 class="accordion-header" id="headingFour">
+<button aria-controls="collapseFour" aria-expanded="false" class="accordion-button collapsed" data-bs-target="#collapseFour" data-bs-toggle="collapse" type="button">
+                        {{ _('help_q4') }}
+                    </button>
+</h2>
+<div aria-labelledby="headingFour" class="accordion-collapse collapse" data-bs-parent="#accordionHelp" id="collapseFour">
+<div class="accordion-body">
+                        {{ _('help_a4') }}
+                    </div>
+</div>
+</div>
+</div>
+</div>
+<div class="col-md-4">
+<div class="card shadow-sm border-0 mb-4">
+<div class="card-body">
+<h5 class="card-title"><i class="bi bi-headset"></i> {{ _('support_title') }}</h5>
+<p class="card-text">{{ _('support_desc') }}</p>
+<a class="btn btn-outline-primary w-100" href="{{ url_for('create_ticket') }}">{{ _('btn_create_ticket') }}</a>
+</div>
+</div>
+<div class="card shadow-sm border-0">
+<div class="card-body">
+<h5 class="card-title"><i class="bi bi-book"></i> {{ _('docs_title') }}</h5>
+<p class="card-text">{{ _('docs_desc') }}</p>
+<a class="btn btn-outline-secondary w-100" href="{{ url_for('documentation') }}">{{ _('btn_view_guide') }}</a>
+</div>
+</div>
+</div>
+</div>
+{% endblock %}

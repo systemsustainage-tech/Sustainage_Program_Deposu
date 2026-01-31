@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+<div class="d-flex justify-content-between align-items-center mb-4">
+<h2><i class="fas fa-bullseye text-primary me-2"></i>Hedef Takibi (Target vs Actual)</h2>
+<button class="btn btn-primary" data-bs-target="#addTargetModal" data-bs-toggle="modal">
+<i class="fas fa-plus me-1"></i>Yeni Hedef Ekle
+        </button>
+<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="row">
+        {% for target in targets %}
+        <div class="col-md-6 mb-4">
+<div class="card shadow-sm h-100">
+<div class="card-header bg-white d-flex justify-content-between align-items-center">
+<h5 class="mb-0">{{ target.name }}</h5>
+                    {% if target.status == 'achieved' %}
+                        <span class="badge bg-success">Hedefe Ulaşıldı</span>
+                    {% elif target.status == 'on_track' %}
+                        <span class="badge bg-info text-dark">Yolunda</span>
+                    {% elif target.status == 'behind' %}
+                        <span class="badge bg-danger">Geride</span>
+                    {% else %}
+                        <span class="badge bg-secondary">Beklemede</span>
+                    {% endif %}
+                </div>
+<div class="card-body">
+<div class="row mb-3">
+<div class="col-4">
+<small class="text-muted d-block">Baz Yılı ({{ target.baseline_year }})</small>
+<strong>{{ target.baseline_value }}</strong>
+</div>
+<div class="col-4 text-center">
+<small class="text-muted d-block">Mevcut</small>
+<strong>{{ target.current_value }}</strong>
+</div>
+<div class="col-4 text-end">
+<small class="text-muted d-block">Hedef ({{ target.target_year }})</small>
+<strong>{{ target.target_value }}</strong>
+</div>
+</div>
+<!-- Progress Visualization -->
+                    {% set total_reduction = target.baseline_value - target.target_value %}
+                    {% set current_reduction = target.baseline_value - target.current_value %}
+                    {% if total_reduction > 0 %}
+                        {% set progress = (current_reduction / total_reduction) * 100 %}
+                    {% else %}
+                        {% set progress = 0 %}
+                    {% endif %}
+
+                    <div class="progress" style="height: 25px;">
+<div aria-valuemax="100" aria-valuemin="0" aria-valuenow="{{ progress }}" class="progress-bar {% if target.status == 'behind' %}bg-warning text-dark{% else %}bg-success{% endif %}" role="progressbar" style="width: {{ progress }}%;">
+                            %{{ progress | round(1) }} İlerleme
+                        </div>
+</div>
+<small class="text-muted mt-2 d-block">
+                        {{ target.metric_type | upper }} azaltım hedefi
+                    </small>
+</div>
+</div>
+</div>
+        {% else %}
+        <div class="col-12">
+<div class="alert alert-info">
+                Henüz tanımlanmış bir hedefiniz bulunmamaktadır. "Yeni Hedef Ekle" butonu ile başlayın.
+            </div>
+</div>
+        {% endfor %}
+    </div>
+</div>
+<!-- Add Target Modal -->
+<div class="modal fade" id="addTargetModal" tabindex="-1">
+<div class="modal-dialog">
+<div class="modal-content">
+<form action="{{ url_for('targets_add') }}" method="POST">
+<div class="modal-header">
+<h5 class="modal-title">Yeni Hedef Tanımla</h5>
+<button class="btn-close" data-bs-dismiss="modal" type="button"></button>
+</div>
+<div class="modal-body">
+<div class="mb-3">
+<label class="form-label">Hedef Adı</label>
+<input class="form-control" name="name" placeholder="Örn: 2030 Karbon Nötr" required="" type="text"/>
+</div>
+<div class="mb-3">
+<label class="form-label">Metrik Türü</label>
+<select class="form-select" name="metric_type" required="">
+<option value="carbon">Karbon Emisyonu (tCO2e)</option>
+<option value="energy">Enerji Tüketimi (kWh)</option>
+<option value="water">Su Tüketimi (m3)</option>
+<option value="waste">Atık Miktarı (kg)</option>
+</select>
+</div>
+<div class="row">
+<div class="col-6 mb-3">
+<label class="form-label">Baz Yılı</label>
+<input class="form-control" name="baseline_year" required="" type="number" value="2023"/>
+</div>
+<div class="col-6 mb-3">
+<label class="form-label">Baz Değeri</label>
+<input class="form-control" name="baseline_value" required="" step="0.01" type="number"/>
+</div>
+</div>
+<div class="row">
+<div class="col-6 mb-3">
+<label class="form-label">Hedef Yılı</label>
+<input class="form-control" name="target_year" required="" type="number" value="2030"/>
+</div>
+<div class="col-6 mb-3">
+<label class="form-label">Hedef Değeri</label>
+<input class="form-control" name="target_value" required="" step="0.01" type="number"/>
+</div>
+</div>
+</div>
+<div class="modal-footer">
+<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">İptal</button>
+<button class="btn btn-primary" type="submit">Kaydet</button>
+</div>
+</form>
+</div>
+</div>
+</div>
+{% endblock %}

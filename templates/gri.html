@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('gri_title') }} - SDG Platform{% endblock %}
+
+{% block content %}
+
+<div class="row mb-4">
+<div class="col-md-12">
+<div class="d-flex justify-content-between align-items-center">
+<h1><i class="fas fa-file-alt me-2"></i>{{ _('gri_title') }}</h1>
+<div>
+<span class="badge bg-{{ 'success' if manager_available else 'danger' }}">
+                    {{ _('module_active_badge') if manager_available else _('module_passive_badge') }}
+                </span>
+<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+</div>
+<p class="lead text-muted">{{ _('gri_desc') }}</p>
+</div>
+</div>
+
+{% if manager_available %}
+<div class="row mb-4">
+<div class="col-md-12">
+<div class="card">
+<div class="card-body d-flex justify-content-between align-items-center">
+<div>
+<h5 class="card-title">{{ _('gri_data_entry_title') }}</h5>
+<p class="card-text mb-0">{{ _('gri_data_entry_desc') }}</p>
+</div>
+<button class="btn btn-primary" data-bs-target="#addGriModal" data-bs-toggle="modal" type="button">
+<i class="fas fa-plus me-1"></i> {{ _('btn_add_data') }}
+                </button>
+</div>
+</div>
+</div>
+</div>
+<div class="row mb-4">
+<div class="col-md-4">
+<div class="card text-center h-100 border-primary">
+<div class="card-body">
+<h6 class="text-muted">{{ _('gri_completed_disclosures') }}</h6>
+<h2 class="display-4 text-primary">{{ stats.total_disclosures }}</h2>
+</div>
+</div>
+</div>
+<div class="col-md-4">
+<div class="card text-center h-100 border-success">
+<div class="card-body">
+<h6 class="text-muted">{{ _('gri_covered_standards') }}</h6>
+<h2 class="display-4 text-success">{{ stats.standards_covered }}</h2>
+</div>
+</div>
+</div>
+<div class="col-md-4">
+<div class="card text-center h-100 border-info">
+<div class="card-body">
+<h6 class="text-muted">{{ _('gri_completion_rate') }}</h6>
+<h2 class="display-4 text-info">%{{ stats.completion_rate }}</h2>
+<div class="progress mt-2" style="height: 5px;">
+<div class="progress-bar bg-info" role="progressbar" style="width: {{ stats.completion_rate }}%"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="row mb-4">
+<div class="col-md-12">
+<div class="card">
+<div class="card-header d-flex justify-content-between align-items-center">
+<h5 class="mb-0">{{ _('gri_standards_list') }}</h5>
+<div class="col-md-3">
+    <select class="form-select form-select-sm" id="sectorFilter" onchange="filterTable()">
+        <option value="all">{{ _('gri_all_sectors') }}</option>
+        <option value="General">{{ _('gri_sector_general', 'General') }}</option>
+        <option value="Oil & Gas">{{ _('gri_sector_oil_gas', 'Oil & Gas') }}</option>
+        <option value="Coal">{{ _('gri_sector_coal', 'Coal') }}</option>
+        <option value="Mining">{{ _('gri_sector_mining', 'Mining') }}</option>
+        <option value="Agriculture">{{ _('gri_sector_agriculture', 'Agriculture') }}</option>
+        <option value="Energy">{{ _('gri_sector_energy', 'Energy') }}</option>
+    </select>
+</div>
+</div>
+<div class="card-body">
+<div class="table-responsive">
+<table class="table table-hover" id="griTable">
+<thead>
+<tr>
+<th>{{ _('gri_year') }}</th>
+<th>{{ _('gri_standard') }}</th>
+<th>{{ _('sector', 'Sektör') }}</th>
+<th>{{ _('gri_disclosure') }}</th>
+<th>{{ _('gri_value') }}</th>
+<th>{{ _('gri_last_update') }}</th>
+</tr>
+</thead>
+<tbody>
+                            {% if standards %}
+                                {% for item in standards %}
+                                <tr data-sector="{{ item.sector }}">
+<td>{{ item.year }}</td>
+<td>
+    <span class="badge bg-secondary">{{ item.standard }}</span>
+    <small class="d-block text-muted">{{ item.standard_title }}</small>
+</td>
+<td><span class="badge bg-info text-dark">{{ item.sector }}</span></td>
+<td><strong>{{ item.disclosure }}</strong></td>
+<td>{{ item.value }}</td>
+<td>{{ item.created_at[:10] }}</td>
+</tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+<td class="text-center py-4 text-muted" colspan="6">
+<i class="fas fa-info-circle me-1"></i> {{ _('no_data_found') }}
+                                    </td>
+</tr>
+                            {% endif %}
+                        </tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<script>
+function filterTable() {
+    var input, filter, table, tr, td, i, txtValue;
+    input = document.getElementById("sectorFilter");
+    filter = input.value;
+    table = document.getElementById("griTable");
+    tr = table.getElementsByTagName("tr");
+
+    for (i = 0; i < tr.length; i++) {
+        var sector = tr[i].getAttribute('data-sector');
+        if (sector) {
+            if (filter === 'all' || sector === filter) {
+                tr[i].style.display = "";
+            } else {
+                tr[i].style.display = "none";
+            }
+        }
+    }
+}
+
+function loadIndicators(standardCode) {
+    var select = document.getElementById("disclosureSelect");
+    select.innerHTML = '<option value="" disabled selected>Yükleniyor...</option>';
+    
+    fetch('/api/gri/indicators/' + encodeURIComponent(standardCode))
+        .then(response => response.json())
+        .then(data => {
+            select.innerHTML = '<option value="" disabled selected>{{ _("select_disclosure", "Gösterge Seçiniz") }}</option>';
+            if (data.indicators && data.indicators.length > 0) {
+                data.indicators.forEach(ind => {
+                    var option = document.createElement("option");
+                    option.value = ind.code;
+                    option.text = ind.code + ' - ' + ind.title + ' (' + ind.unit + ')';
+                    select.appendChild(option);
+                });
+            } else {
+                var option = document.createElement("option");
+                option.text = "Gösterge bulunamadı";
+                option.disabled = true;
+                select.appendChild(option);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            select.innerHTML = '<option value="" disabled selected>Hata oluştu</option>';
+        });
+}
+</script>
+<!-- Add GRI Modal -->
+<div aria-hidden="true" class="modal fade" id="addGriModal" tabindex="-1">
+<div class="modal-dialog">
+<div class="modal-content">
+<div class="modal-header">
+<h5 class="modal-title">{{ _('gri_add_data', 'GRI Verisi Ekle') }}</h5>
+<button aria-label="Close" class="btn-close" data-bs-dismiss="modal" type="button"></button>
+</div>
+<form action="{{ url_for('gri_add') }}" method="POST">
+<div class="modal-body">
+<div class="mb-3">
+<label class="form-label" for="year">{{ _('year', 'Yıl') }}</label>
+<input class="form-control" name="year" required="" type="number" value="2025"/>
+</div>
+<div class="mb-3">
+<label class="form-label" for="standard">{{ _('gri_standard', 'Standart') }}</label>
+<select class="form-select" name="standard" id="standardSelect" required onchange="loadIndicators(this.value)">
+<option value="" selected disabled>{{ _('select_standard', 'Standart Seçiniz') }}</option>
+{% for group in all_standards|sort(attribute='sector')|groupby('sector') %}
+    <optgroup label="{{ group.grouper }}">
+        {% for s in group.list %}
+            <option value="{{ s.code }}">{{ s.code }} - {{ s.title }}</option>
+        {% endfor %}
+    </optgroup>
+{% endfor %}
+</select>
+</div>
+<div class="mb-3">
+<label class="form-label" for="disclosure">{{ _('gri_disclosure', 'Gösterge') }}</label>
+<select class="form-select" name="disclosure" id="disclosureSelect" required>
+    <option value="" selected disabled>{{ _('select_disclosure', 'Gösterge Seçiniz') }}</option>
+</select>
+</div>
+<div class="mb-3">
+<label class="form-label" for="value">{{ _('value', 'Değer') }}</label>
+<textarea class="form-control" name="value" required="" rows="3"></textarea>
+</div>
+</div>
+<div class="modal-footer">
+<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ _('cancel', 'İptal') }}</button>
+<button class="btn btn-primary" type="submit">{{ _('save', 'Kaydet') }}</button>
+</div>
+</form>
+</div>
+</div>
+</div>
+
+{% else %}
+<div class="alert alert-warning">
+<i class="bi bi-exclamation-triangle-fill"></i> {{ _('manager_failed') }}
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}Paydaş Anketi{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        {% if submitted %}
+        <div class="card shadow-sm border-0 mt-4">
+            <div class="card-body text-center">
+                <h3 class="mb-3">Teşekkürler</h3>
+                <p class="text-muted mb-0">
+                    Anketi doldurduğunuz için teşekkür ederiz. Görüşleriniz sürdürülebilirlik çalışmalarımız için büyük önem taşımaktadır.
+                </p>
+            </div>
+        </div>
+        {% else %}
+        <div class="card shadow-sm border-0 mt-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3 class="mb-0">
+                        {% if company %}
+                        {{ company.name }} Paydaş Anketi
+                        {% else %}
+                        Paydaş Anketi
+                        {% endif %}
+                    </h3>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button>
+                </div>
+                <p class="text-muted">
+                    Aşağıdaki sorular Birleşmiş Milletler Sürdürülebilir Kalkınma Amaçları'nın 17 hedefini kapsamaktadır. Lütfen her bir başlık için şirketin performansını 1 ile 5 arasında değerlendiriniz (1 = Çok zayıf, 5 = Çok iyi).
+                </p>
+
+                <form method="post">
+                    {% for q in sdg_questions %}
+                    <div class="mb-4">
+                        <h5 class="mb-1">{{ q.title }}</h5>
+                        <p class="mb-2">{{ q.question }}</p>
+                        <div>
+                            {% for v in range(q.min, q.max + 1) %}
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="q_{{ q.id }}" id="q_{{ q.id }}_{{ v }}" value="{{ v }}" required="{{ 'required' if v == q.min }}">
+                                <label class="form-check-label" for="q_{{ q.id }}_{{ v }}">{{ v }}</label>
+                            </div>
+                            {% endfor %}
+                            {% if q.allow_na %}
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="q_{{ q.id }}" id="q_{{ q.id }}_na" value="NA">
+                                <label class="form-check-label" for="q_{{ q.id }}_na">Bilmiyorum / İlgili Değil (N/A)</label>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+
+                    {% if demographic_questions %}
+                    <hr class="my-4">
+                    <h4 class="mb-3">Demografik Bilgiler (opsiyonel)</h4>
+
+                    {% for dq in demographic_questions %}
+                    <div class="mb-3">
+                        <label class="form-label" for="{{ dq.id }}">{{ dq.label }}</label>
+                        {% if dq.type == 'select' %}
+                        <select class="form-select" id="{{ dq.id }}" name="{{ dq.id }}">
+                            {% if not dq.required %}
+                            <option value="">Seçiniz</option>
+                            {% endif %}
+                            {% for opt in dq.options %}
+                            <option value="{{ opt.value }}">{{ opt.label }}</option>
+                            {% endfor %}
+                        </select>
+                        {% elif dq.type == 'text' %}
+                        <input type="text" class="form-control" id="{{ dq.id }}" name="{{ dq.id }}">
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                    {% endif %}
+
+                    <div class="mb-3">
+                        <label for="open_feedback" class="form-label">Eklemek istediğiniz görüş veya önerileriniz</label>
+                        <textarea class="form-control" id="open_feedback" name="open_feedback" rows="4"></textarea>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg">Anketi Gönder</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

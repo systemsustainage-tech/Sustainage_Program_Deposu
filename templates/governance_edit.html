@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - SDG{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h3 class="mb-0"><i class="bi bi-bank2 text-primary"></i> {{ title }}</h3>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button>
+                </div>
+                
+                <form method="post" class="needs-validation" novalidate>
+                    <input type="hidden" name="data_type" value="{{ data_type }}">
+                    
+                    {% if data_type == 'board' or data_type == 'board_member' %}
+                    <h5 class="mb-3 text-muted">{{ _('gov_board_member') }}</h5>
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('gov_name_surname') }}</label>
+                        <input type="text" class="form-control" name="member_name" required>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">{{ _('gov_position') }}</label>
+                            <input type="text" class="form-control" name="position" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">{{ _('gov_membership_type') }}</label>
+                            <select class="form-select" name="member_type">
+                                <option value="Executive">{{ _('gov_type_executive') }}</option>
+                                <option value="Non-Executive">{{ _('gov_type_non_executive') }}</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">{{ _('gov_is_independent') }}</label>
+                            <select class="form-select" name="independence_status">
+                                <option value="Yes">Evet</option>
+                                <option value="No">Hayır</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">{{ _('gender') }}</label>
+                            <select class="form-select" name="gender">
+                                <option value="Male">{{ _('gender_male') }}</option>
+                                <option value="Female">{{ _('gender_female') }}</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">{{ _('gov_expertise') }}</label>
+                            <input type="text" class="form-control" name="expertise_area">
+                        </div>
+                    </div>
+
+                    {% elif data_type == 'committee' %}
+                    <h5 class="mb-3 text-muted">{{ _('gov_committee_def') }}</h5>
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('gov_committee_name') }}</label>
+                        <input type="text" class="form-control" name="committee_name" required>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">{{ _('type') }}</label>
+                            <select class="form-select" name="committee_type">
+                                <option value="Audit">{{ _('gov_comm_audit') }}</option>
+                                <option value="Risk">{{ _('gov_comm_risk') }}</option>
+                                <option value="Governance">{{ _('gov_comm_governance') }}</option>
+                                <option value="Nomination">{{ _('gov_comm_nomination') }}</option>
+                                <option value="Remuneration">{{ _('gov_comm_remuneration') }}</option>
+                                <option value="Other">{{ _('other') }}</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">{{ _('gov_member_count') }}</label>
+                            <input type="number" class="form-control" name="member_count" min="1">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('gov_responsibilities') }}</label>
+                        <textarea class="form-control" name="responsibilities" rows="3"></textarea>
+                    </div>
+
+                    {% elif data_type == 'ethics' %}
+                    <h5 class="mb-3 text-muted">{{ _('gov_ethics_training') }}</h5>
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('gov_training_name') }}</label>
+                        <input type="text" class="form-control" name="training_name" required>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">{{ _('gov_participants') }}</label>
+                            <input type="number" class="form-control" name="participants" min="1">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">{{ _('gov_total_hours') }}</label>
+                            <input type="number" class="form-control" name="total_hours" step="0.1" min="0">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('description') }}</label>
+                        <textarea class="form-control" name="description" rows="3"></textarea>
+                    </div>
+                    {% endif %}
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                        <a href="{{ url_for('governance_module') }}" class="btn btn-outline-secondary me-md-2">{{ _('common.btn_cancel') }}</a>
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> {{ _('common.btn_save') }}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

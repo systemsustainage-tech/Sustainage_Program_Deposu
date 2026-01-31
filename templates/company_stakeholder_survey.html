@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Paydaş Anketi - {{ company.name }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('companies') }}">Şirketler</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('company_detail', company_id=company.id) }}">{{ company.name }}</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Paydaş Anketi</li>
+            </ol>
+        </nav>
+
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3 class="mb-0">{{ company.name }} için Genel Paydaş Anketi</h3>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button>
+                </div>
+                <p class="text-muted mb-4">
+                    Bu anket, Birleşmiş Milletler Sürdürülebilir Kalkınma Amaçları'nın 17 hedefinin her birine ilişkin olarak paydaş görüşlerini toplamak için tasarlanmıştır.
+                </p>
+
+                {% if survey_url %}
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Anket Linki</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="surveyLinkInput" value="{{ survey_url }}" readonly>
+                        <button class="btn btn-outline-secondary" type="button" onclick="copySurveyLink()">Kopyala</button>
+                    </div>
+                </div>
+                <div class="alert alert-info mt-3">
+                    Bu linki paydaşlarınıza e-posta, SMS veya diğer iletişim kanalları üzerinden gönderebilirsiniz.
+                </div>
+                {% else %}
+                <div class="alert alert-danger">
+                    Anket linki oluşturulurken bir hata oluştu.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function copySurveyLink() {
+    var input = document.getElementById('surveyLinkInput');
+    if (!input) return;
+    input.select();
+    input.setSelectionRange(0, 99999);
+    navigator.clipboard.writeText(input.value).then(function() {
+        alert('Anket linki panoya kopyalandı.');
+    }).catch(function() {
+        alert('Link kopyalanamadı, lütfen elle kopyalayın.');
+    });
+}
+</script>
+{% endblock %}
+

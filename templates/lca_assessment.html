@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+
+{% block title %}{{ assessment.name }} - Analiz Detayı{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1><i class="fas fa-chart-pie me-2"></i>{{ assessment.name }}</h1>
+                <p class="text-muted mb-0">Ürün: {{ assessment.product_name }} | Tarih: {{ assessment.assessment_date }}</p>
+            </div>
+            <button class="btn btn-sm btn-outline-secondary" onclick="history.back()">
+                <i class="bi bi-arrow-left"></i> Geri
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <!-- Summary Cards -->
+    <div class="col-md-4">
+        <div class="card text-center h-100 border-primary">
+            <div class="card-body">
+                <h6 class="card-title text-muted">Toplam Karbon Ayak İzi</h6>
+                <h3 class="card-text text-primary">{{ "%.2f"|format(results.total.co2e) }} kg CO₂e</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center h-100 border-warning">
+            <div class="card-body">
+                <h6 class="card-title text-muted">Toplam Enerji Tüketimi</h6>
+                <h3 class="card-text text-warning">{{ "%.2f"|format(results.total.energy) }} MJ</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center h-100 border-info">
+            <div class="card-body">
+                <h6 class="card-title text-muted">Toplam Su Tüketimi</h6>
+                <h3 class="card-text text-info">{{ "%.2f"|format(results.total.water) }} L</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Yaşam Döngüsü Verileri</h5>
+                <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addEntryModal">
+                    <i class="fas fa-plus"></i> Veri Ekle
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead>
+                            <tr>
+                                <th>Aşama</th>
+                                <th>Girdi/Çıktı</th>
+                                <th>Miktar</th>
+                                <th>CO₂e (kg)</th>
+                                <th>İşlem</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for entry in entries %}
+                            <tr>
+                                <td>
+                                    {% if entry.stage == 'raw_material' %}Hammadde
+                                    {% elif entry.stage == 'production' %}Üretim
+                                    {% elif entry.stage == 'distribution' %}Dağıtım
+                                    {% elif entry.stage == 'use' %}Kullanım
+                                    {% elif entry.stage == 'end_of_life' %}Bertaraf
+                                    {% else %}{{ entry.stage }}{% endif %}
+                                </td>
+                                <td>
+                                    {{ entry.item_name }}
+                                    {% if entry.notes %}<br><small class="text-muted">{{ entry.notes }}</small>{% endif %}
+                                </td>
+                                <td>{{ entry.quantity }} {{ entry.unit }}</td>
+                                <td>{{ "%.2f"|format(entry.quantity * entry.co2e_factor) }}</td>
+                                <td>
+                                    <form action="{{ url_for('lca_delete_entry', assessment_id=assessment.id, entry_id=entry.id) }}" method="POST" class="d-inline">
+                                        <button type="submit" class="btn btn-sm btn-link text-danger p-0" onclick="return confirm('Silmek istediğinize emin misiniz?')">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Aşama Bazlı Dağılım</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="stageChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Entry Modal -->
+<div class="modal fade" id="addEntryModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="{{ url_for('lca_add_entry', assessment_id=assessment.id) }}" method="POST">
+                <div class="modal-header">
+                    <h5 class="modal-title">Veri Ekle</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Aşama</label>
+                        <select class="form-select" name="stage" required>
+                            <option value="raw_material">Hammadde Temini</option>
+                            <option value="production">Üretim</option>
+                            <option value="distribution">Dağıtım ve Lojistik</option>
+                            <option value="use">Kullanım</option>
+                            <option value="end_of_life">Bertaraf / Geri Dönüşüm</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Kalem Adı (Girdi/Çıktı)</label>
+                        <input type="text" class="form-control" name="item_name" required>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Miktar</label>
+                            <input type="number" step="0.01" class="form-control" name="quantity" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Birim</label>
+                            <input type="text" class="form-control" name="unit" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Emisyon Faktörü (kg CO₂e / birim)</label>
+                        <input type="number" step="0.0001" class="form-control" name="co2e_factor">
+                        <div class="form-text">Bilinmiyorsa 0 girin.</div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Enerji (MJ)</label>
+                            <input type="number" step="0.01" class="form-control" name="energy_consumption">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Su (L)</label>
+                            <input type="number" step="0.01" class="form-control" name="water_consumption">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Notlar</label>
+                        <textarea class="form-control" name="notes" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-primary">Ekle</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('stageChart').getContext('2d');
+    const data = {
+        labels: ['Hammadde', 'Üretim', 'Dağıtım', 'Kullanım', 'Bertaraf'],
+        datasets: [{
+            label: 'CO2e (kg)',
+            data: [
+                {{ results.by_stage.raw_material.co2e }},
+                {{ results.by_stage.production.co2e }},
+                {{ results.by_stage.distribution.co2e }},
+                {{ results.by_stage.use.co2e }},
+                {{ results.by_stage.end_of_life.co2e }}
+            ],
+            backgroundColor: [
+                'rgba(255, 99, 132, 0.5)',
+                'rgba(54, 162, 235, 0.5)',
+                'rgba(255, 206, 86, 0.5)',
+                'rgba(75, 192, 192, 0.5)',
+                'rgba(153, 102, 255, 0.5)'
+            ],
+            borderWidth: 1
+        }]
+    };
+    
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: data,
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

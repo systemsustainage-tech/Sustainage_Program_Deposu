@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('tnfd_page_title') }} - SDG{% endblock %}
+
+{% block content %}
+
+<div class="row mb-4">
+<div class="col-md-12">
+<div class="d-flex justify-content-between align-items-center">
+<h1><i class="fas fa-leaf me-2"></i>{{ _('tnfd_page_title') }}</h1>
+<div>
+<span class="badge bg-{{ 'success' if manager_available else 'danger' }}">
+                    {{ _('module_active_badge') if manager_available else _('module_passive_badge') }}
+                </span>
+<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+</div>
+<p class="lead text-muted">{{ _('tnfd_desc') }}</p>
+</div>
+</div>
+<div class="row mb-4">
+<div class="col-md-4">
+<div class="card text-white bg-success mb-3 shadow-sm border-0">
+<div class="card-body">
+<h5 class="card-title">{{ _('tnfd_nature_risks') }}</h5>
+<p class="card-text display-4">{{ stats.nature_risks }}</p>
+</div>
+</div>
+</div>
+<div class="col-md-4">
+<div class="card text-white bg-info mb-3 shadow-sm border-0">
+<div class="card-body">
+<h5 class="card-title">{{ _('tnfd_nature_opps') }}</h5>
+<p class="card-text display-4">{{ stats.nature_opps }}</p>
+</div>
+</div>
+</div>
+<div class="col-md-4">
+<div class="card text-white bg-warning mb-3 shadow-sm border-0">
+<div class="card-body">
+<h5 class="card-title">{{ _('tnfd_dependencies') }}</h5>
+<p class="card-text display-4">{{ stats.dependencies }}</p>
+</div>
+</div>
+</div>
+</div>
+<div class="row mb-4">
+<div class="col-md-12">
+<div class="card shadow-sm border-0">
+<div class="card-body">
+<h5>{{ _('tnfd_data_entry') }}</h5>
+<p>{{ _('tnfd_data_entry_desc') }}</p>
+<button class="btn btn-primary" data-bs-target="#addTNFDModal" data-bs-toggle="modal" type="button">
+                    {{ _('btn_add_data') }}
+                </button>
+</div>
+</div>
+</div>
+</div>
+<!-- TNFD Modal -->
+<div class="modal fade" id="addTNFDModal" tabindex="-1">
+<div class="modal-dialog">
+<div class="modal-content">
+<div class="modal-header">
+<h5 class="modal-title">{{ _('tnfd_add_data_title', 'TNFD Verisi Ekle') }}</h5>
+<button class="btn-close" data-bs-dismiss="modal" type="button"></button>
+</div>
+<form action="{{ url_for('tnfd_add') }}" method="POST">
+<div class="modal-body">
+<div class="mb-3">
+<label class="form-label">{{ _('year', 'Yıl') }}</label>
+<input class="form-control" name="year" required="" type="number" value="2024"/>
+</div>
+<div class="mb-3">
+<label class="form-label">{{ _('tnfd_pillar', 'Sütun (Pillar)') }}</label>
+<select class="form-select" name="pillar">
+<option value="Governance">{{ _('tnfd_pillar_gov', 'Yönetişim (Governance)') }}</option>
+<option value="Strategy">{{ _('tnfd_pillar_strat', 'Strateji (Strategy)') }}</option>
+<option value="Risk Management">{{ _('tnfd_pillar_risk', 'Risk Yönetimi (Risk Management)') }}</option>
+<option value="Metrics &amp; Targets">{{ _('tnfd_pillar_metrics', 'Metrikler ve Hedefler (Metrics &amp; Targets)') }}</option>
+</select>
+</div>
+<div class="mb-3">
+<label class="form-label">{{ _('description', 'Açıklama') }}</label>
+<textarea class="form-control" name="disclosure" required="" rows="3"></textarea>
+</div>
+<div class="mb-3">
+<label class="form-label">{{ _('tnfd_nature_impact', 'Doğa Etkisi') }}</label>
+<textarea class="form-control" name="nature_impact" rows="2"></textarea>
+</div>
+</div>
+<div class="modal-footer">
+<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ _('btn_cancel', 'İptal') }}</button>
+<button class="btn btn-primary" type="submit">{{ _('btn_save', 'Kaydet') }}</button>
+</div>
+</form>
+</div>
+</div>
+</div>
+
+{% if recommendations %}
+<div class="row">
+<div class="col-md-12">
+<div class="card shadow-sm border-0">
+<div class="card-header bg-light">
+<h5 class="mb-0">{{ _('tnfd_list_title') }}</h5>
+</div>
+<div class="card-body p-0">
+<div class="table-responsive">
+<table class="table table-hover mb-0">
+<thead>
+<tr>
+<th>{{ _('tnfd_col_year') }}</th>
+<th>{{ _('tnfd_col_pillar') }}</th>
+<th>{{ _('tnfd_col_disclosure') }}</th>
+<th>{{ _('tnfd_col_impact') }}</th>
+</tr>
+</thead>
+<tbody>
+                            {% for rec in recommendations %}
+                            <tr>
+<td><span class="badge bg-secondary">{{ rec.year }}</span></td>
+<td>{{ rec.pillar }}</td>
+<td>{{ rec.disclosure }}</td>
+<td>{{ rec.nature_impact }}</td>
+</tr>
+                            {% endfor %}
+                        </tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</div>
+{% else %}
+<div class="alert alert-warning">
+<h4 class="alert-heading">{{ _('data_not_found_title') }}</h4>
+<p>{{ _('data_not_found_desc') }}</p>
+</div>
+{% endif %}
+{% endblock %}

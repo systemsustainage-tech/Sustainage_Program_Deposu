@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Mesajlar - SDG{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+<h1 class="h2">Mesajlar</h1>
+<div class="btn-toolbar mb-2 mb-md-0">
+<a class="btn btn-sm btn-primary" href="{{ url_for('messages_new') }}">
+<i class="bi bi-pencil-square"></i> Yeni Mesaj
+        </a>
+<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+</div>
+<div class="row">
+<div class="col-md-3">
+<div class="list-group">
+<a aria-current="true" class="list-group-item list-group-item-action {% if box == 'inbox' %}active{% endif %}" href="{{ url_for('messages', box='inbox') }}">
+<div class="d-flex w-100 justify-content-between">
+<h5 class="mb-1">Gelen Kutusu</h5>
+<span class="badge bg-light text-dark rounded-pill">0</span>
+</div>
+</a>
+<a class="list-group-item list-group-item-action {% if box == 'sent' %}active{% endif %}" href="{{ url_for('messages', box='sent') }}">
+<div class="d-flex w-100 justify-content-between">
+<h5 class="mb-1">Gönderilenler</h5>
+</div>
+</a>
+<a class="list-group-item list-group-item-action {% if box == 'archive' %}active{% endif %}" href="{{ url_for('messages', box='archive') }}">
+<div class="d-flex w-100 justify-content-between">
+<h5 class="mb-1">Arşiv</h5>
+</div>
+</a>
+<a class="list-group-item list-group-item-action {% if box == 'trash' %}active{% endif %}" href="{{ url_for('messages', box='trash') }}">
+<div class="d-flex w-100 justify-content-between">
+<h5 class="mb-1">Çöp Kutusu</h5>
+</div>
+</a>
+</div>
+</div>
+<div class="col-md-9">
+<div class="card shadow-sm">
+<div class="card-body text-center py-5">
+<div class="display-1 text-muted mb-3">
+<i class="bi bi-inbox"></i>
+</div>
+<h3>{{ 'Gelen kutunuz boş' if box == 'inbox' else 'Mesaj bulunamadı' }}</h3>
+<p class="text-muted">Şu anda bu klasörde mesajınız bulunmuyor.</p>
+<a class="btn btn-primary mt-3" href="{{ url_for('messages_new') }}">
+<i class="bi bi-pencil-square"></i> Yeni Mesaj Oluştur
+                </a>
+</div>
+</div>
+</div>
+</div>
+{% endblock %}

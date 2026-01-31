@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - SDG{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+<div class="col-md-12">
+<div class="d-flex justify-content-between align-items-center mb-3"><h1><i class="bi bi-book me-2"></i>{{ title }}</h1><button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+<p class="lead text-muted">Sistem kullanımı ve modüller hakkında detaylı bilgiler.</p>
+</div>
+</div>
+<div class="row g-4">
+<div class="col-md-4">
+<div class="list-group" id="list-tab" role="tablist">
+<a aria-controls="list-intro" class="list-group-item list-group-item-action active" data-bs-toggle="list" href="#list-intro" id="list-intro-list" role="tab">Giriş ve Genel Bakış</a>
+<a aria-controls="list-data" class="list-group-item list-group-item-action" data-bs-toggle="list" href="#list-data" id="list-data-list" role="tab">Veri Girişi Nasıl Yapılır?</a>
+<a aria-controls="list-report" class="list-group-item list-group-item-action" data-bs-toggle="list" href="#list-report" id="list-report-list" role="tab">Raporlama Modülleri</a>
+<a aria-controls="list-account" class="list-group-item list-group-item-action" data-bs-toggle="list" href="#list-account" id="list-account-list" role="tab">Hesap Ayarları</a>
+</div>
+</div>
+<div class="col-md-8">
+<div class="tab-content" id="nav-tabContent">
+<div aria-labelledby="list-intro-list" class="tab-pane fade show active" id="list-intro" role="tabpanel">
+<h4>SustainAge Platformuna Hoşgeldiniz</h4>
+<p>Bu platform, şirketinizin sürdürülebilirlik hedeflerini takip etmenize, yönetmenize ve raporlamanıza yardımcı olmak için tasarlanmıştır.</p>
+<p>Sol menüden ilgili modüllere erişebilir, pano üzerinden genel durumu izleyebilirsiniz.</p>
+</div>
+<div aria-labelledby="list-data-list" class="tab-pane fade" id="list-data" role="tabpanel">
+<h4>Veri Girişi</h4>
+<p>Veri girişi yapmak için:</p>
+<ol>
+<li>Ana menüden veya Pano'dan ilgili modülü (Karbon, Enerji, Su vb.) seçin.</li>
+<li>"Yeni Veri Ekle" butonuna tıklayın.</li>
+<li>Açılan formda gerekli alanları doldurun.</li>
+<li>"Kaydet" butonuna tıklayarak işlemi tamamlayın.</li>
+</ol>
+</div>
+<div aria-labelledby="list-report-list" class="tab-pane fade" id="list-report" role="tabpanel">
+<h4>Raporlama</h4>
+<p>Sistem aşağıdaki standartlarda raporlama desteği sunar:</p>
+<ul>
+<li>GRI (Global Reporting Initiative)</li>
+<li>IFRS (Uluslararası Finansal Raporlama Standartları)</li>
+<li>TCFD (İklimle İlgili Finansal Beyanlar Görev Gücü)</li>
+<li>TNFD (Doğa ile İlgili Finansal Beyanlar Görev Gücü)</li>
+</ul>
+</div>
+<div aria-labelledby="list-account-list" class="tab-pane fade" id="list-account" role="tabpanel">
+<h4>Hesap Ayarları</h4>
+<p>Şifrenizi değiştirmek veya profil bilgilerinizi güncellemek için sağ üst köşedeki kullanıcı adınıza tıklayın.</p>
+<p>Yönetici yetkisine sahipseniz, "Yönetim" menüsünden yeni kullanıcılar ekleyebilirsiniz.</p>
+</div>
+</div>
+</div>
+</div>
+{% endblock %}

@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('surveys_title', 'Surveys') }} - SDG{% endblock %}
+
+{% block content %}
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteSurveyModal" tabindex="-1">
+<div class="modal-dialog">
+<div class="modal-content">
+<div class="modal-header">
+<h5 class="modal-title">{{ _('delete_survey', 'Anketi Sil') }}</h5>
+<button class="btn-close" data-bs-dismiss="modal" type="button"></button>
+</div>
+<div class="modal-body">
+<p>{{ _('confirm_delete_survey', 'Bu anketi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.') }}</p>
+<p class="fw-bold" id="deleteSurveyTitle"></p>
+</div>
+<div class="modal-footer">
+<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ _('cancel', 'İptal') }}</button>
+<form action="" id="deleteSurveyForm" method="POST" style="display: inline;">
+<button class="btn btn-danger" type="submit">{{ _('delete', 'Sil') }}</button>
+</form>
+</div>
+</div>
+</div>
+</div>
+<script>
+function confirmDelete(id, title) {
+    document.getElementById('deleteSurveyTitle').textContent = title;
+    document.getElementById('deleteSurveyForm').action = "/surveys/" + id + "/delete";
+    new bootstrap.Modal(document.getElementById('deleteSurveyModal')).show();
+}
+</script>
+
+<div class="row mb-4">
+<div class="col-md-12">
+<div class="d-flex justify-content-between align-items-center">
+<h1><i class="fas fa-cube me-2"></i>{{ _('surveys_title', 'Anket Yönetimi') }}</h1>
+<div>
+<span class="badge bg-{{ 'success' if manager_available else 'secondary' }}">
+                    {{ _('module_active_badge', 'Aktif') if manager_available else _('module_passive_badge', 'Pasif') }}
+                </span>
+<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+</div>
+<p class="lead text-muted">{{ _('surveys_desc', 'Paydaş anketlerini oluşturun ve yönetin.') }}</p>
+</div>
+</div>
+<div class="row">
+<div class="col-12">
+<div class="card shadow-sm border-0">
+<div class="card-body">
+                
+                    {% if stats or records or manager_available %}
+                        <!-- Dashboard View -->
+<div class="row mb-4">
+                            {% if stats %}
+                            <div class="col-12 mb-4">
+<div class="card">
+<div class="card-header">
+<h5 class="mb-0">{{ _('statistics', 'İstatistikler') }}</h5>
+</div>
+<div class="card-body">
+<div class="row">
+                                            {% for key, value in stats.items() %}
+                                            <div class="col-md-3 mb-3">
+<div class="border rounded p-3 text-center bg-light">
+<h6 class="text-muted text-uppercase small">{{ _(key) }}</h6>
+<h3 class="mb-0 text-primary">{{ value }}</h3>
+</div>
+</div>
+                                                {% endfor %}
+                                            </div>
+</div>
+</div>
+</div>
+                                {% endif %}
+    
+                                <div class="col-12">
+<div class="card">
+<div class="card-header d-flex justify-content-between align-items-center">
+<h5 class="mb-0">{{ _('records', 'Kayıtlar') }}</h5>
+<button class="btn btn-sm btn-primary" data-bs-target="#addSurveyModal" data-bs-toggle="modal">
+<i class="fas fa-plus"></i> {{ _('add_new', 'Yeni Ekle') }}
+                                        </button>
+</div>
+<div class="card-body">
+                                            {% if records %}
+                                            <div class="table-responsive">
+<table class="table table-hover">
+<thead>
+<tr>
+<th>{{ _('survey_title_col', 'Anket Başlığı') }}</th>
+<th>{{ _('status', 'Durum') }}</th>
+<th>{{ _('response_count', 'Yanıt Sayısı') }}</th>
+<th>{{ _('created_at', 'Oluşturulma Tarihi') }}</th>
+<th class="text-end">{{ _('actions', 'İşlemler') }}</th>
+</tr>
+</thead>
+<tbody>
+                                                        {% for record in records %}
+                                                        <tr>
+<td>
+<a class="text-decoration-none fw-bold" href="{{ url_for('survey_detail', survey_id=record['id']) }}">
+                                                                    {{ record['survey_title'] }}
+                                                                </a>
+</td>
+<td>
+                                                                {% if record['status'] == 'Aktif' %}
+                                                                    <span class="badge bg-success">{{ _('active', 'Aktif') }}</span>
+                                                                {% else %}
+                                                                    <span class="badge bg-secondary">{{ _('passive', 'Pasif') }}</span>
+                                                                {% endif %}
+                                                            </td>
+<td>{{ record['response_count'] }}</td>
+<td>{{ record['created_at'] }}</td>
+<td class="text-end">
+<a class="btn btn-sm btn-outline-primary" href="{{ url_for('survey_detail', survey_id=record['id']) }}">
+<i class="fas fa-cog"></i> {{ _('manage', 'Yönet') }}
+                                                                </a>
+                                                                {% if record['token'] %}
+                                                                <a class="btn btn-sm btn-outline-success ms-1" href="{{ url_for('public_survey', token=record['token']) }}" target="_blank">
+<i class="fas fa-external-link-alt"></i> {{ _('view', 'Görüntüle') }}
+                                                                </a>
+                                                                {% endif %}
+                                                                <button class="btn btn-sm btn-outline-danger ms-1" onclick="confirmDelete('{{ record['id'] }}', '{{ record['survey_title'] }}')" type="button">
+<i class="fas fa-trash"></i> {{ _('delete', 'Sil') }}
+                                                                </button>
+</td>
+</tr>
+                                                        {% endfor %}
+                                                    </tbody>
+</table>
+</div>
+                                            {% else %}
+                                                <div class="text-center py-4">
+<p class="text-muted mb-0">{{ _('no_records_found', 'Henüz kayıt bulunamadı.') }}</p>
+</div>
+                                            {% endif %}
+                                        </div>
+</div>
+</div>
+                            
+                            {% if not records and not stats %}
+                                <div class="col-12 text-center py-5">
+<p class="text-muted">{{ _('no_data_msg', 'Henüz anket verisi bulunamadı.') }}</p>
+<button class="btn btn-primary" data-bs-target="#addSurveyModal" data-bs-toggle="modal">
+<i class="fas fa-plus"></i> {{ _('add_first_survey', 'İlk Anketi Oluştur') }}
+                                    </button>
+</div>
+                            {% endif %}
+                        </div>
+                    {% else %}
+                        <!-- Fallback to Under Construction if no data -->
+<div class="text-center py-5">
+<i class="bi bi-cone-striped display-1 text-warning mb-3"></i>
+<h3>{{ _('module_under_construction') }}</h3>
+<p class="text-muted">{{ _('module_coming_soon_desc', 'Bu modülün web arayüzü entegrasyonu devam etmektedir.') }}</p>
+<p class="small text-muted">{{ _('no_data_msg', 'Veri bulunamadı veya modül henüz aktif değil.') }}</p>
+</div>
+                    {% endif %}
+
+            </div>
+</div>
+</div>
+</div>
+<!-- Add Survey Modal -->
+<div class="modal fade" id="addSurveyModal" tabindex="-1">
+<div class="modal-dialog">
+<div class="modal-content">
+<div class="modal-header">
+<h5 class="modal-title">{{ _('create_new_survey', 'Yeni Anket Oluştur') }}</h5>
+<button class="btn-close" data-bs-dismiss="modal" type="button"></button>
+</div>
+<form action="{{ url_for('add_survey') }}" method="POST">
+<div class="modal-body">
+<div class="mb-3">
+<label class="form-label">{{ _('select_template', 'Şablon Seç (İsteğe Bağlı)') }}</label>
+<select class="form-select" name="template_id">
+<option value="">{{ _('blank_survey', 'Boş Anket') }}</option>
+                            {% if templates %}
+                                {% for template in templates %}
+                                    <option value="{{ template.id }}">
+                                        {{ template.name }} 
+                                        {% if template.question_count %}
+                                            ({{ template.question_count }} {{ _('questions_count', 'Soru') }})
+                                        {% endif %}
+                                    </option>
+                                {% endfor %}
+                            {% endif %}
+                        </select>
+<div class="form-text">{{ _('template_help', 'Bir şablon seçerseniz, ilgili sorular otomatik olarak yüklenecektir.') }}</div>
+</div>
+<div class="mb-3">
+<label class="form-label">{{ _('stakeholder_group', 'Katılımcı Bilgileri - Paydaş Grubu') }} <span class="text-danger">*</span></label>
+<select class="form-select" name="stakeholder_group" required="">
+<option value="">{{ _('select_stakeholder_group', 'Paydaş Grubu Seçiniz') }}</option>
+                            {% if stakeholder_groups %}
+                                {% for key, name in stakeholder_groups.items() %}
+                                    <option value="{{ key }}">{{ name }}</option>
+                                {% endfor %}
+                            {% else %}
+                                <!-- Fallback if JSON fails to load -->
+<option value="employees">{{ _('employees', 'Çalışanlar') }}</option>
+<option value="customers">{{ _('customers', 'Müşteriler') }}</option>
+<option value="suppliers">{{ _('suppliers', 'Tedarikçiler') }}</option>
+<option value="community">{{ _('community', 'Yerel Toplum') }}</option>
+<option value="investors">{{ _('investors', 'Yatırımcılar') }}</option>
+                            {% endif %}
+                        </select>
+<div class="form-text">{{ _('stakeholder_help', 'Seçilen paydaş grubuna özel sorular (Çevresel, Sosyal, vb.) otomatik olarak eklenecektir.') }}</div>
+</div>
+<div class="mb-3">
+<label class="form-label">{{ _('survey_title', 'Anket Başlığı') }}</label>
+<input class="form-control" name="survey_title" required="" type="text"/>
+</div>
+<div class="mb-3">
+<label class="form-label">{{ _('description', 'Açıklama') }}</label>
+<textarea class="form-control" name="survey_description" rows="3"></textarea>
+</div>
+<!-- Hidden or optional target groups since we use stakeholder group -->
+<div class="mb-3 d-none">
+<label class="form-label">{{ _('target_groups', 'Hedef Gruplar') }}</label>
+<input class="form-control" name="target_groups" type="text"/>
+</div>
+</div>
+<div class="modal-footer">
+<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ _('cancel', 'İptal') }}</button>
+<button class="btn btn-primary" type="submit">{{ _('create', 'Oluştur') }}</button>
+</div>
+</form>
+</div>
+</div>
+</div>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const mode = urlParams.get('mode');
+        
+        if (mode) {
+            const modalEl = document.getElementById('addSurveyModal');
+            const modal = new bootstrap.Modal(modalEl);
+            const titleInput = modalEl.querySelector('input[name="survey_title"]');
+            const descInput = modalEl.querySelector('textarea[name="survey_description"]');
+            
+            if (mode === 'sdg') {
+                titleInput.value = 'SKA Hizalama Anketi';
+                if(descInput) descInput.value = 'Şirketimizin Sürdürülebilir Kalkınma Amaçları (SKA) ile uyumunu değerlendirmek amacıyla hazırlanan anket.';
+                modal.show();
+            } else if (mode === 'materiality') {
+                titleInput.value = 'Önceliklendirme Analizi Anketi';
+                if(descInput) descInput.value = 'Şirketimizin öncelikli sürdürülebilirlik konularını belirlemek için paydaş görüşlerini topladığımız anket.';
+                modal.show();
+            }
+        }
+    });
+</script>
+{% endblock %}

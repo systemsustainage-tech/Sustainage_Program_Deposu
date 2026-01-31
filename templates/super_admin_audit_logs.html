@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('audit_logs_title', 'Audit Logları') }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+<div>
+<h1 class="h2">{{ _('audit_logs_title', 'Audit Logları') }}</h1>
+<p class="text-muted mb-0">
+            Giriş denemeleri ve kritik sistem işlemlerinin geçmişi.
+        </p>
+</div>
+<div class="btn-toolbar mb-2 mb-md-0">
+
+<a class="btn btn-sm btn-outline-primary" href="{{ url_for('super_admin_audit_logs') }}">
+<i class="bi bi-arrow-repeat"></i> Yenile
+        </a>
+<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+</div>
+<div class="card border-0 shadow-sm">
+<div class="card-header d-flex justify-content-between align-items-center">
+<h5 class="mb-0">Son Audit Kayıtları</h5>
+<span class="text-muted small">Gösterilen kayıt: {{ logs|length }}</span>
+</div>
+<div class="card-body p-0">
+<div class="table-responsive">
+<table class="table table-striped table-hover mb-0">
+<thead class="table-light">
+<tr>
+<th scope="col">ID</th>
+<th scope="col">Kullanıcı</th>
+<th scope="col">İşlem</th>
+<th scope="col">Tarih</th>
+<th scope="col">Detay</th>
+</tr>
+</thead>
+<tbody>
+                    {% for log in logs %}
+                    <tr>
+<td>{{ log.id }}</td>
+<td>{{ log.username }}</td>
+<td>{{ log.action }}</td>
+<td>{{ log.timestamp }}</td>
+<td>{{ log.details }}</td>
+</tr>
+                    {% else %}
+                    <tr>
+<td class="text-center py-3 text-muted" colspan="5">
+                            Kayıt bulunamadı.
+                        </td>
+</tr>
+                    {% endfor %}
+                </tbody>
+</table>
+</div>
+</div>
+</div>
+
+{% endblock %}
+

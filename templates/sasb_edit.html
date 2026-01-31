@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('sasb_data_entry') }} - {{ _('app.title') }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+<div class="col-md-12">
+<div class="d-flex justify-content-between align-items-center mb-3"><h1><i class="fas fa-edit me-2"></i>{{ _('sasb_data_entry') }}</h1><button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+</div>
+</div>
+<div class="row">
+<div class="col-md-8 mx-auto">
+<div class="card shadow-sm border-0">
+<div class="card-body">
+<form class="needs-validation" method="POST" novalidate="">
+<div class="mb-3">
+<label class="form-label" for="year">{{ _('sasb_year') }}</label>
+<input class="form-control" id="year" name="year" required="" type="number" value="2024"/>
+</div>
+<div class="mb-3">
+<label class="form-label" for="topic">{{ _('sasb_topic') }}</label>
+<input class="form-control" id="topic" name="topic" placeholder="Örn: Enerji Yönetimi" required="" type="text"/>
+</div>
+<div class="mb-3">
+<label class="form-label" for="metric">{{ _('sasb_metric') }}</label>
+<textarea class="form-control" id="metric" name="metric" placeholder="Örn: Toplam enerji tüketimi" required="" rows="3"></textarea>
+</div>
+<div class="mb-3">
+<label class="form-label" for="value">{{ _('sasb_value') }}</label>
+<input class="form-control" id="value" name="value" placeholder="Örn: 15000" required="" type="text"/>
+</div>
+<div class="mb-3">
+<label class="form-label" for="unit">{{ _('sasb_unit') }}</label>
+<input class="form-control" id="unit" name="unit" placeholder="Örn: GJ" type="text"/>
+</div>
+<div class="d-flex justify-content-between gap-2">
+<a class="btn btn-secondary flex-grow-1" href="{{ url_for('sasb_module') }}">{{ _('common.btn_cancel') }}</a>
+<button class="btn btn-primary flex-grow-1" type="submit">{{ _('common.btn_save') }}</button>
+</div>
+</form>
+</div>
+</div>
+</div>
+</div>
+{% endblock %}

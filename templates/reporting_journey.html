@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+<div class="row mb-4">
+<div class="col-12">
+<div class="d-flex justify-content-between align-items-center mb-3"><h2 class="mb-3 text-primary"><i class="bi bi-map-fill"></i> Sürdürülebilirlik Raporlama Yolculuğu</h2><button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+<p class="text-muted lead">Adım adım kurumsal sürdürülebilirlik raporunuzu oluşturun.</p>
+</div>
+</div>
+<!-- Timeline/Carousel Container -->
+<div class="row">
+<div class="col-12">
+<div class="card shadow-sm border-0 bg-light">
+<div class="card-body p-4">
+<div class="position-relative">
+<!-- Navigation Buttons -->
+<button class="btn btn-light rounded-circle shadow-sm position-absolute start-0 top-50 translate-middle-y z-3" id="prevStepBtn" style="margin-left: -20px; width: 50px; height: 50px;">
+<i class="bi bi-chevron-left fs-4"></i>
+</button>
+<button class="btn btn-light rounded-circle shadow-sm position-absolute end-0 top-50 translate-middle-y z-3" id="nextStepBtn" style="margin-right: -20px; width: 50px; height: 50px;">
+<i class="bi bi-chevron-right fs-4"></i>
+</button>
+<!-- Cards Container (Overflow Hidden) -->
+<div class="overflow-hidden px-2" id="cardsWrapper">
+<div class="d-flex transition-transform" id="cardsContainer" style="transform: translateX(0); transition: transform 0.5s ease;">
+                                
+                                {% for step in journey %}
+                                <div class="card-step-item px-2" style="min-width: 25%; flex: 0 0 25%;">
+<div class="card h-100 border-0 shadow-sm journey-card {{ 'border-primary border-2' if step.status == 'active' else '' }} {{ 'bg-white' if step.status != 'completed' else 'bg-success-subtle' }}">
+<!-- Card Header Status -->
+<div class="card-header bg-transparent border-0 pt-3 pb-0 d-flex justify-content-between align-items-center">
+<span class="badge rounded-pill {{ 'bg-primary' if step.status == 'active' else ('bg-success' if step.status == 'completed' else 'bg-secondary') }}">
+                                                {{ step.number }}
+                                            </span>
+                                            {% if step.status == 'completed' %}
+                                            <i class="bi bi-check-circle-fill text-success fs-5"></i>
+                                            {% elif step.status == 'active' %}
+                                            <div class="spinner-grow spinner-grow-sm text-primary" role="status"></div>
+                                            {% endif %}
+                                        </div>
+<!-- Card Body -->
+<div class="card-body text-center d-flex flex-column justify-content-center py-4">
+<div class="mb-3">
+<!-- Icons based on step code -->
+                                                {% if 'profile' in step.code %}
+                                                <i class="bi bi-building fs-1 {{ 'text-primary' if step.status == 'active' else 'text-muted' }}"></i>
+                                                {% elif 'stakeholder' in step.code %}
+                                                <i class="bi bi-people fs-1 {{ 'text-primary' if step.status == 'active' else 'text-muted' }}"></i>
+                                                {% elif 'sdg' in step.code %}
+                                                <i class="bi bi-globe-europe-africa fs-1 {{ 'text-primary' if step.status == 'active' else 'text-muted' }}"></i>
+                                                {% elif 'materiality' in step.code %}
+                                                <i class="bi bi-bar-chart-steps fs-1 {{ 'text-primary' if step.status == 'active' else 'text-muted' }}"></i>
+                                                {% elif 'report' in step.code %}
+                                                <i class="bi bi-file-earmark-text fs-1 {{ 'text-primary' if step.status == 'active' else 'text-muted' }}"></i>
+                                                {% elif 'ai' in step.code %}
+                                                <i class="bi bi-robot fs-1 {{ 'text-primary' if step.status == 'active' else 'text-muted' }}"></i>
+                                                {% else %}
+                                                <i class="bi bi-check2-square fs-1 {{ 'text-primary' if step.status == 'active' else 'text-muted' }}"></i>
+                                                {% endif %}
+                                            </div>
+<h5 class="card-title mb-2 {{ 'text-primary' if step.status == 'active' else '' }}">
+                                                {{ step.title }}
+                                            </h5>
+<p class="card-text small text-muted mb-4">
+                                                {{ step.description }}
+                                            </p>
+<div class="mt-auto">
+                                                {% if step.status == 'completed' %}
+                                                    <span class="badge bg-success-subtle text-success border border-success p-2">
+<i class="bi bi-check2"></i> Tamamlandı
+                                                    </span>
+                                                {% else %}
+                                                    <a class="btn btn-sm {{ 'btn-primary' if step.status == 'active' else 'btn-outline-secondary' }} w-100 mb-2" href="{{ step.link }}">
+                                                        {{ step.action_text }}
+                                                    </a>
+                                                    {% if step.status == 'active' %}
+                                                    <button class="btn btn-sm btn-outline-success w-100" onclick="markCompleted({{ step.number }})">
+                                                        Tamamlandı İşaretle
+                                                    </button>
+                                                    {% endif %}
+                                                {% endif %}
+                                            </div>
+</div>
+<!-- Footer Status Text -->
+<div class="card-footer bg-transparent border-0 text-center pb-3">
+<small class="text-muted fw-bold">
+                                                {% if step.status == 'completed' %}
+                                                    Tamamlandı
+                                                {% elif step.status == 'active' %}
+                                                    Aktif Adım
+                                                {% else %}
+                                                    Tamamlanacak
+                                                {% endif %}
+                                            </small>
+</div>
+</div>
+</div>
+                                {% endfor %}
+                                
+                            </div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Progress Bar Summary -->
+<div class="row mt-4">
+<div class="col-12">
+<div class="card shadow-sm border-0">
+<div class="card-body">
+<h5 class="card-title">Genel İlerleme Durumu</h5>
+<div class="progress mt-3" style="height: 25px;">
+                        {% set completed_count = journey|selectattr("status", "equalto", "completed")|list|length %}
+                        {% set total_count = journey|length %}
+                        {% set percent = (completed_count / total_count * 100)|round|int %}
+                        <div aria-valuemax="100" aria-valuemin="0" aria-valuenow="{{ percent }}" class="progress-bar progress-bar-striped progress-bar-animated bg-success" role="progressbar" style="width: {{ percent }}%;">
+                             %{{ percent }} Tamamlandı
+                        </div>
+</div>
+<div class="mt-2 text-muted small">
+                        Toplam {{ total_count }} adımdan {{ completed_count }} tanesi tamamlandı.
+                    </div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<style>
+    .journey-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .journey-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+    }
+</style>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const container = document.getElementById('cardsContainer');
+        const cards = document.querySelectorAll('.card-step-item');
+        const prevBtn = document.getElementById('prevStepBtn');
+        const nextBtn = document.getElementById('nextStepBtn');
+        
+        let currentIndex = 0;
+        const cardsPerView = 4; // Show 4 cards at a time like in the image
+        const totalCards = cards.length;
+        
+        // Find active card index to start there
+        cards.forEach((card, index) => {
+            if(card.querySelector('.border-primary')) {
+                // If active card is near the end, adjust view
+                if(index > totalCards - cardsPerView) {
+                    currentIndex = totalCards - cardsPerView;
+                } else {
+                    currentIndex = index;
+                }
+            }
+        });
+        
+        // Ensure index doesn't go below 0
+        if(currentIndex < 0) currentIndex = 0;
+        
+        updateCarousel();
+        
+        prevBtn.addEventListener('click', () => {
+            if(currentIndex > 0) {
+                currentIndex--;
+                updateCarousel();
+            }
+        });
+        
+        nextBtn.addEventListener('click', () => {
+            if(currentIndex < totalCards - cardsPerView) {
+                currentIndex++;
+                updateCarousel();
+            }
+        });
+        
+        function updateCarousel() {
+            const percentage = -(currentIndex * 25); // 25% because 4 items visible (100/4)
+            container.style.transform = `translateX(${percentage}%)`;
+            
+            // Button states
+            prevBtn.disabled = currentIndex === 0;
+            nextBtn.disabled = currentIndex >= totalCards - cardsPerView;
+            
+            prevBtn.style.opacity = currentIndex === 0 ? '0.5' : '1';
+            nextBtn.style.opacity = currentIndex >= totalCards - cardsPerView ? '0.5' : '1';
+        }
+    });
+
+    function markCompleted(stepNumber) {
+        if(confirm('Bu adımı tamamlandı olarak işaretlemek istiyor musunuz?')) {
+            fetch('/journey/complete/' + stepNumber, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if(data.success) {
+                    location.reload();
+                } else {
+                    alert('Hata: ' + data.error);
+                }
+            });
+        }
+    }
+</script>
+{% endblock %}

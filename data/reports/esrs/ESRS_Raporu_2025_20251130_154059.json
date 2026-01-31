@@ -1,0 +1,13 @@
+{
+  "reporting_period": "2025",
+  "company_id": 6,
+  "esrs_disclosures": [
+    {
+      "standard": "ESRS_E1",
+      "code": "E1-6",
+      "name": "GHG Emisyonlari",
+      "status": "tamamlandi",
+      "data": null
+    }
+  ]
+}

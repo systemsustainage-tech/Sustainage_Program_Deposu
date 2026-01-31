@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}Sistem Logları{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+<div>
+<h1 class="h2">Sistem Logları</h1>
+<p class="text-muted mb-0">
+            Uygulama ve sistem olaylarına ait log kayıtları.
+        </p>
+</div>
+<div class="btn-toolbar mb-2 mb-md-0">
+
+<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+</div>
+<div class="row g-3 mb-3">
+<div class="col-md-2">
+<label class="form-label">Seviye</label>
+<select class="form-select" id="filterLevel">
+<option value="">Tümü</option>
+<option value="ERROR">ERROR</option>
+<option value="WARNING">WARNING</option>
+<option value="INFO">INFO</option>
+<option value="DEBUG">DEBUG</option>
+</select>
+</div>
+<div class="col-md-2">
+<label class="form-label">Kullanıcı</label>
+<input class="form-control" id="filterUser" placeholder="__super__ veya id" type="text"/>
+</div>
+<div class="col-md-3">
+<label class="form-label">Metin</label>
+<input class="form-control" id="filterText" placeholder="Mesaj içinde ara" type="text"/>
+</div>
+<div class="col-md-3 d-flex align-items-end">
+<button class="btn btn-primary me-2" onclick="applyLogFilters()" type="button">
+<i class="bi bi-search"></i> Filtrele
+        </button>
+<button class="btn btn-outline-secondary" onclick="resetLogFilters()" type="button">
+<i class="bi bi-x-circle"></i> Temizle
+        </button>
+</div>
+<div class="col-md-2 d-flex align-items-end justify-content-end">
+<span class="badge bg-secondary" id="logCountBadge">
+            Toplam: {{ logs|length }}
+        </span>
+</div>
+</div>
+<div class="card border-0 shadow-sm">
+<div class="card-body p-0">
+<div class="table-responsive" style="max-height: 520px;">
+<table class="table table-hover table-sm mb-0" id="systemLogsTable">
+<thead class="table-light">
+<tr>
+<th style="width: 180px;">Zaman</th>
+<th style="width: 90px;">Seviye</th>
+<th style="width: 120px;">Kullanıcı</th>
+<th style="width: 140px;">Modül</th>
+<th>Mesaj</th>
+</tr>
+</thead>
+<tbody>
+                    {% for log in logs %}
+                    <tr data-level="{{ log.level }}" data-user="{{ log.user }}">
+<td class="text-nowrap">{{ log.timestamp }}</td>
+<td>
+                            {% if log.level == 'ERROR' %}
+                                <span class="badge bg-danger">ERROR</span>
+                            {% elif log.level == 'WARNING' %}
+                                <span class="badge bg-warning text-dark">WARNING</span>
+                            {% elif log.level == 'DEBUG' %}
+                                <span class="badge bg-secondary">DEBUG</span>
+                            {% else %}
+                                <span class="badge bg-info text-dark">INFO</span>
+                            {% endif %}
+                        </td>
+<td>{{ log.user }}</td>
+<td>{{ log.module }}</td>
+<td>
+<span title="{{ log.message }}">{{ log.message }}</span>
+</td>
+</tr>
+                    {% else %}
+                    <tr>
+<td class="text-center py-4 text-muted" colspan="5">
+                            Kayıtlı log bulunamadı.
+                        </td>
+</tr>
+                    {% endfor %}
+                </tbody>
+</table>
+</div>
+</div>
+</div>
+<script>
+function applyLogFilters() {
+    const level = document.getElementById('filterLevel').value;
+    const user = document.getElementById('filterUser').value.toLowerCase();
+    const text = document.getElementById('filterText').value.toLowerCase();
+    const rows = document.querySelectorAll('#systemLogsTable tbody tr');
+    let visible = 0;
+
+    rows.forEach(function (row) {
+        const rowLevel = (row.getAttribute('data-level') || '').toUpperCase();
+        const rowUser = (row.getAttribute('data-user') || '').toLowerCase();
+        const rowText = (row.innerText || '').toLowerCase();
+
+        let ok = true;
+        if (level && rowLevel !== level) ok = false;
+        if (user && !rowUser.includes(user)) ok = false;
+        if (text && !rowText.includes(text)) ok = false;
+
+        row.style.display = ok ? '' : 'none';
+        if (ok) visible += 1;
+    });
+
+    const badge = document.getElementById('logCountBadge');
+    if (badge) {
+        badge.innerText = 'Toplam: ' + visible;
+    }
+}
+
+function resetLogFilters() {
+    document.getElementById('filterLevel').value = '';
+    document.getElementById('filterUser').value = '';
+    document.getElementById('filterText').value = '';
+    applyLogFilters();
+}
+</script>
+
+{% endblock %}
+

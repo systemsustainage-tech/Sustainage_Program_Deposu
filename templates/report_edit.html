@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('report_edit_title') }} - SDG{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+<h1 class="h2">{{ _('report_add_title') }}</h1>
+<div class="btn-toolbar mb-2 mb-md-0">
+
+<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+</div>
+<div class="card shadow-sm border-0">
+<div class="card-body">
+<form enctype="multipart/form-data" method="POST">
+<div class="row g-3">
+<div class="col-md-6">
+<label class="form-label" for="report_name">{{ _('lbl_report_name') }}</label>
+<input class="form-control" id="report_name" name="report_name" required="" type="text"/>
+</div>
+<div class="col-md-6">
+<label class="form-label" for="module_code">{{ _('lbl_module') }}</label>
+<select class="form-select" id="module_code" name="module_code" required="">
+<option value="genel">{{ _('opt_general') }}</option>
+<option value="carbon">{{ _('opt_carbon') }}</option>
+<option value="energy">{{ _('opt_energy') }}</option>
+<option value="water">{{ _('opt_water') }}</option>
+<option value="waste">{{ _('opt_waste') }}</option>
+<option value="social">{{ _('opt_social') }}</option>
+<option value="governance">{{ _('opt_governance') }}</option>
+<option value="cbam">{{ _('opt_cbam') }}</option>
+<option value="esg">{{ _('opt_esg') }}</option>
+<option value="tsrs">{{ _('opt_tsrs') }}</option>
+<option value="sdg">{{ _('opt_sdg') }}</option>
+<option value="gri">{{ _('opt_gri') }}</option>
+<option value="taxonomy">{{ _('opt_taxonomy') }}</option>
+<option value="csrd">{{ _('opt_csrd') }}</option>
+<option value="tcfd">{{ _('opt_tcfd') }}</option>
+<option value="tnfd">{{ _('opt_tnfd') }}</option>
+<option value="cdp">{{ _('opt_cdp') }}</option>
+<option value="issb">{{ _('opt_issb') }}</option>
+<option value="esrs">{{ _('opt_esrs') }}</option>
+<option value="ifrs">{{ _('opt_ifrs') }}</option>
+<option value="iirc">{{ _('opt_iirc') }}</option>
+<option value="ungc">{{ _('opt_ungc') }}</option>
+<option value="sasb">{{ _('opt_sasb') }}</option>
+</select>
+</div>
+<div class="col-md-6">
+<label class="form-label" for="report_type">{{ _('lbl_report_type') }}</label>
+<select class="form-select" id="report_type" name="report_type">
+<option value="PDF">PDF</option>
+<option value="DOCX">Word (DOCX)</option>
+<option value="XLSX">Excel (XLSX)</option>
+<option value="OTHER">{{ _('opt_other') }}</option>
+</select>
+</div>
+<div class="col-md-6">
+<label class="form-label" for="reporting_period">{{ _('lbl_reporting_period') }}</label>
+<input class="form-control" id="reporting_period" name="reporting_period" placeholder="Örn: 2024, 2024-Q1" type="text"/>
+</div>
+<div class="col-12">
+<label class="form-label" for="description">{{ _('lbl_description') }}</label>
+<textarea class="form-control" id="description" name="description" rows="3"></textarea>
+</div>
+<div class="col-12">
+<label class="form-label" for="report_file">{{ _('lbl_report_file') }}</label>
+<input class="form-control" id="report_file" name="report_file" type="file"/>
+<div class="form-text">
+                        {{ _('help_report_file') }}
+                        <br/>
+<span class="text-info"><i class="bi bi-info-circle"></i> Not: Dosya yüklemezseniz ve ilgili modülü (örn. Karbon) seçerseniz, sistem verilerinizi kullanarak otomatik rapor oluşturacaktır.</span>
+</div>
+</div>
+<div class="col-12 text-end">
+<button class="btn btn-primary" type="submit">
+<i class="bi bi-save"></i> {{ _('btn_save') }}
+                    </button>
+</div>
+</div>
+</form>
+</div>
+</div>
+{% endblock %}

@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('role_edit_title', 'Rol Düzenle') if role else _('role_add_title', 'Yeni Rol Ekle') }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">{{ _('role_edit_header', 'Rol Düzenle') if role else _('role_add_header', 'Yeni Rol Ekle') }}</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <button class="btn btn-sm btn-outline-secondary" onclick="history.back()">
+            <i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}
+        </button>
+    </div>
+</div>
+
+<form method="POST" action="{{ url_for('role_save') }}">
+    {% if role %}
+    <input type="hidden" name="role_id" value="{{ role.id }}">
+    {% endif %}
+
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0">{{ _('role_info', 'Rol Bilgileri') }}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">{{ _('role_name_key', 'Rol Anahtarı (Kod)') }}</label>
+                        <input type="text" class="form-control" id="name" name="name" value="{{ role.name if role else '' }}" {{ 'readonly' if role and role.is_system_role else '' }} required>
+                        <div class="form-text">{{ _('role_name_help', 'Benzersiz sistem adı (örn: editor, analyst)') }}</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="display_name" class="form-label">{{ _('role_display_name', 'Görünen Ad') }}</label>
+                        <input type="text" class="form-control" id="display_name" name="display_name" value="{{ role.display_name if role else '' }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="description" class="form-label">{{ _('role_description', 'Açıklama') }}</label>
+                        <textarea class="form-control" id="description" name="description" rows="3">{{ role.description if role else '' }}</textarea>
+                    </div>
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="is_active" name="is_active" {{ 'checked' if not role or role.is_active else '' }}>
+                        <label class="form-check-label" for="is_active">{{ _('status_active', 'Aktif') }}</label>
+                    </div>
+                    
+                    <div class="d-grid gap-2 mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save"></i> {{ _('btn_save', 'Kaydet') }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">{{ _('role_permissions', 'Yetkiler') }}</h5>
+                    <div>
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="toggleAll(true)">{{ _('select_all', 'Tümünü Seç') }}</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleAll(false)">{{ _('deselect_all', 'Tümünü Kaldır') }}</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for module, perms in permissions_by_module.items() %}
+                        <div class="col-md-6 mb-3">
+                            <div class="card h-100 border">
+                                <div class="card-header py-2 bg-light d-flex justify-content-between align-items-center">
+                                    <span class="fw-bold small text-uppercase">{{ module }}</span>
+                                    <div class="form-check form-switch m-0">
+                                        <input class="form-check-input module-switch" type="checkbox" data-module="{{ module }}" onchange="toggleModule(this, '{{ module }}')">
+                                    </div>
+                                </div>
+                                <div class="card-body p-2">
+                                    <div class="list-group list-group-flush">
+                                        {% for perm in perms %}
+                                        <label class="list-group-item py-1 border-0 d-flex align-items-center">
+                                            <input class="form-check-input me-2 perm-check module-{{ module }}" type="checkbox" name="permissions" value="{{ perm.id }}" {{ 'checked' if perm.id in role_permissions else '' }}>
+                                            <div>
+                                                <div class="small fw-bold">{{ perm.display_name }}</div>
+                                                <div class="text-muted extra-small" style="font-size: 0.75rem;">{{ perm.description }}</div>
+                                            </div>
+                                        </label>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<script>
+function toggleAll(checked) {
+    document.querySelectorAll('.perm-check').forEach(el => el.checked = checked);
+    document.querySelectorAll('.module-switch').forEach(el => el.checked = checked);
+}
+
+function toggleModule(source, moduleName) {
+    document.querySelectorAll('.module-' + moduleName).forEach(el => el.checked = source.checked);
+}
+</script>
+{% endblock %}

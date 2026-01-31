@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block title %}Birleşik Sürdürülebilirlik Raporu - SDG{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+<h1 class="h2">Birleşik Sürdürülebilirlik Raporu + AI Yorum</h1>
+<div class="btn-toolbar mb-2 mb-md-0">
+
+<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+</div>
+<div class="card shadow-sm border-0 mb-3">
+<div class="card-body">
+<form method="POST">
+<div class="row g-3">
+<div class="col-md-6">
+<label class="form-label" for="report_name">{{ _('lbl_report_name') }}</label>
+<input class="form-control" id="report_name" name="report_name" placeholder="Birleşik Sürdürülebilirlik Raporu" type="text" value="{{ default_report_name if default_report_name is defined else '' }}"/>
+</div>
+<div class="col-md-6">
+<label class="form-label" for="reporting_period">{{ _('lbl_reporting_period') }}</label>
+<input class="form-control" id="reporting_period" name="reporting_period" placeholder="Örn: 2024, 2024-Q1" type="text" value="{{ default_reporting_period if default_reporting_period is defined else '' }}"/>
+</div>
+<div class="col-12">
+<label class="form-label">Dahil Edilecek Modüller</label>
+<div class="form-check form-switch mb-2">
+<input class="form-check-input" id="select_all_modules" type="checkbox"/>
+<label class="form-check-label" for="select_all_modules">Tümünü seç</label>
+</div>
+<div class="row">
+<div class="col-md-4">
+<div class="form-check">
+<input class="form-check-input" id="mod_carbon" name="modules" type="checkbox" value="carbon" {% if suggested_modules is defined and 'carbon' in suggested_modules %}checked{% endif %}/>
+<label class="form-check-label" for="mod_carbon">{{ _('opt_carbon') }}</label>
+</div>
+<div class="form-check">
+<input class="form-check-input" id="mod_energy" name="modules" type="checkbox" value="energy" {% if suggested_modules is defined and 'energy' in suggested_modules %}checked{% endif %}/>
+<label class="form-check-label" for="mod_energy">{{ _('opt_energy') }}</label>
+</div>
+<div class="form-check">
+<input class="form-check-input" id="mod_water" name="modules" type="checkbox" value="water" {% if suggested_modules is defined and 'water' in suggested_modules %}checked{% endif %}/>
+<label class="form-check-label" for="mod_water">{{ _('opt_water') }}</label>
+</div>
+<div class="form-check">
+<input class="form-check-input" id="mod_waste" name="modules" type="checkbox" value="waste" {% if suggested_modules is defined and 'waste' in suggested_modules %}checked{% endif %}/>
+<label class="form-check-label" for="mod_waste">{{ _('opt_waste') }}</label>
+</div>
+<div class="form-check">
+<input class="form-check-input" id="mod_cbam" name="modules" type="checkbox" value="cbam" {% if suggested_modules is defined and 'cbam' in suggested_modules %}checked{% endif %}/>
+<label class="form-check-label" for="mod_cbam">{{ _('opt_cbam') }}</label>
+</div>
+</div>
+<div class="col-md-4">
+<div class="form-check">
+<input class="form-check-input" id="mod_sdg" name="modules" type="checkbox" value="sdg" {% if suggested_modules is defined and 'sdg' in suggested_modules %}checked{% endif %}/>
+<label class="form-check-label" for="mod_sdg">{{ _('opt_sdg') }}</label>
+</div>
+<div class="form-check">
+<input class="form-check-input" id="mod_gri" name="modules" type="checkbox" value="gri" {% if suggested_modules is defined and 'gri' in suggested_modules %}checked{% endif %}/>
+<label class="form-check-label" for="mod_gri">{{ _('opt_gri') }}</label>
+</div>
+<div class="form-check">
+<input class="form-check-input" id="mod_tsrs" name="modules" type="checkbox" value="tsrs" {% if suggested_modules is defined and 'tsrs' in suggested_modules %}checked{% endif %}/>
+<label class="form-check-label" for="mod_tsrs">{{ _('opt_tsrs') }}</label>
+</div>
+<div class="form-check">
+<input class="form-check-input" id="mod_taxonomy" name="modules" type="checkbox" value="taxonomy" {% if suggested_modules is defined and 'taxonomy' in suggested_modules %}checked{% endif %}/>
+<label class="form-check-label" for="mod_taxonomy">{{ _('opt_taxonomy') }}</label>
+</div>
+<div class="form-check">
+<input class="form-check-input" id="mod_csrd" name="modules" type="checkbox" value="csrd" {% if suggested_modules is defined and 'csrd' in suggested_modules %}checked{% endif %}/>
+<label class="form-check-label" for="mod_csrd">{{ _('opt_csrd') }}</label>
+</div>
+</div>
+<div class="col-md-4">
+<div class="form-check">
+<input class="form-check-input" id="mod_tcfd" name="modules" type="checkbox" value="tcfd" {% if suggested_modules is defined and 'tcfd' in suggested_modules %}checked{% endif %}/>
+<label class="form-check-label" for="mod_tcfd">{{ _('opt_tcfd') }}</label>
+</div>
+<div class="form-check">
+<input class="form-check-input" id="mod_tnfd" name="modules" type="checkbox" value="tnfd" {% if suggested_modules is defined and 'tnfd' in suggested_modules %}checked{% endif %}/>
+<label class="form-check-label" for="mod_tnfd">{{ _('opt_tnfd') }}</label>
+</div>
+<div class="form-check">
+<input class="form-check-input" id="mod_cdp" name="modules" type="checkbox" value="cdp" {% if suggested_modules is defined and 'cdp' in suggested_modules %}checked{% endif %}/>
+<label class="form-check-label" for="mod_cdp">{{ _('opt_cdp') }}</label>
+</div>
+<div class="form-check">
+<input class="form-check-input" id="mod_issb" name="modules" type="checkbox" value="issb" {% if suggested_modules is defined and 'issb' in suggested_modules %}checked{% endif %}/>
+<label class="form-check-label" for="mod_issb">{{ _('opt_issb') }}</label>
+</div>
+<div class="form-check">
+<input class="form-check-input" id="mod_esrs" name="modules" type="checkbox" value="esrs" {% if suggested_modules is defined and 'esrs' in suggested_modules %}checked{% endif %}/>
+<label class="form-check-label" for="mod_esrs">{{ _('opt_esrs') }}</label>
+</div>
+</div>
+</div>
+</div>
+<div class="col-12">
+<div class="form-check form-switch">
+<input checked="" class="form-check-input" id="include_ai" name="include_ai" type="checkbox"/>
+<label class="form-check-label" for="include_ai">AI ile yorum ekle</label>
+</div>
+<div class="form-text">
+                        Seçilen modüllerin rapor geçmişi ve bağlamı üzerinden AI, kısa bir sürdürülebilirlik değerlendirmesi üretir.
+                    </div>
+</div>
+<div class="col-12">
+<label class="form-label" for="description">{{ _('lbl_description') }}</label>
+<textarea class="form-control" id="description" name="description" placeholder="İsteğe bağlı ek notlarınızı yazabilirsiniz." rows="3"></textarea>
+</div>
+<div class="col-12 text-end">
+<button class="btn btn-primary" type="submit">
+<i class="bi bi-layers"></i> Birleşik Rapor Oluştur
+                    </button>
+</div>
+</div>
+</form>
+</div>
+</div>
+<div class="row">
+<div class="col-md-6">
+<div class="card border-0 shadow-sm">
+<div class="card-header bg-white">
+<strong>Paydaş Anketi Özet Görünümü</strong>
+</div>
+<div class="card-body">
+                {% if survey_summary %}
+                    <p class="mb-1"><strong>Anket:</strong> {{ survey_summary.survey_title }}</p>
+                    {% if survey_summary.response_count is not none %}
+                    <p class="mb-2"><strong>Toplam yanıt:</strong> {{ survey_summary.response_count }}</p>
+                    {% endif %}
+                    {% if survey_summary.insights_text %}
+                    <p class="mb-2">{{ survey_summary.insights_text }}</p>
+                    {% endif %}
+                    {% if survey_summary.top3 %}
+                    <p class="mb-1"><strong>En güçlü hedefler:</strong></p>
+<ul class="mb-2">
+                        {% for item in survey_summary.top3 %}
+                        <li>SDG {{ item.goal }} - {{ item.title }} ({{ item.avg_score }})</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                    {% if survey_summary.bottom3 %}
+                    <p class="mb-1"><strong>Gelişim alanı olan hedefler:</strong></p>
+<ul class="mb-0">
+                        {% for item in survey_summary.bottom3 %}
+                        <li>SDG {{ item.goal }} - {{ item.title }} ({{ item.avg_score }})</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                {% else %}
+                    <p class="text-muted mb-0">
+                        Şu anda şirket için kayıtlı bir genel paydaş anket sonucu bulunmuyor.
+                    </p>
+                {% endif %}
+            </div>
+</div>
+</div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var selectAll = document.getElementById('select_all_modules');
+    if (selectAll) {
+        selectAll.addEventListener('change', function (e) {
+            var checked = e.target.checked;
+            var inputs = document.querySelectorAll('input.form-check-input[name="modules"]');
+            inputs.forEach(function (cb) { cb.checked = checked; });
+        });
+    }
+});
+</script>
+{% endblock %}

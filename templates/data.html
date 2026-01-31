@@ -1,0 +1,322 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('data_management_title') }} - SDG{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+<h1 class="h2">{{ _('data_management_title') }}</h1>
+<div class="btn-toolbar mb-2 mb-md-0">
+        {% if session.role|lower in ['admin', 'super_admin', 'test admin'] %}
+        <a class="btn btn-sm btn-primary" href="{{ url_for('data_add') }}">
+<i class="bi bi-plus-circle"></i> {{ _('btn_new_data_entry') }}
+        </a>
+        {% endif %}
+    <button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+</div>
+<ul class="nav nav-tabs mb-4" id="dataTab" role="tablist">
+<li class="nav-item" role="presentation">
+<button class="nav-link active" data-bs-target="#carbon" data-bs-toggle="tab" id="carbon-tab" role="tab" type="button">{{ _('tab_carbon') }}</button>
+</li>
+<li class="nav-item" role="presentation">
+<button class="nav-link" data-bs-target="#energy" data-bs-toggle="tab" id="energy-tab" role="tab" type="button">{{ _('tab_energy') }}</button>
+</li>
+<li class="nav-item" role="presentation">
+<button class="nav-link" data-bs-target="#water" data-bs-toggle="tab" id="water-tab" role="tab" type="button">{{ _('tab_water') }}</button>
+</li>
+<li class="nav-item" role="presentation">
+<button class="nav-link" data-bs-target="#waste" data-bs-toggle="tab" id="waste-tab" role="tab" type="button">{{ _('tab_waste') }}</button>
+</li>
+</ul>
+<div class="tab-content" id="dataTabContent">
+<!-- Carbon Tab -->
+<div class="tab-pane fade show active" id="carbon" role="tabpanel">
+<div class="table-responsive">
+<table class="table table-sm table-hover">
+<thead>
+<tr>
+<th>{{ _('col_scope') }}</th>
+<th>{{ _('col_category') }}</th>
+<th>{{ _('col_quantity') }}</th>
+<th>{{ _('col_unit') }}</th>
+<th>CO2e (kg)</th>
+<th>{{ _('col_date') }}</th>
+</tr>
+</thead>
+<tbody>
+                    {% for item in data.carbon %}
+                    <tr>
+<td>{{ item['scope'] }}</td>
+<td>{{ item['category'] }}</td>
+<td>{{ item['quantity'] }}</td>
+<td>{{ item['unit'] }}</td>
+<td>{{ item['co2e_emissions'] }}</td>
+<td>{{ item['period'] or item['created_at'] }}</td>
+</tr>
+                    {% else %}
+                    <tr><td class="text-center" colspan="6">{{ _('no_data') }}</td></tr>
+                    {% endfor %}
+                </tbody>
+</table>
+</div>
+</div>
+<!-- Energy Tab -->
+<div class="tab-pane fade" id="energy" role="tabpanel">
+<div class="table-responsive">
+<table class="table table-sm table-hover">
+<thead>
+<tr>
+<th>{{ _('col_year_month') }}</th>
+<th>{{ _('col_type') }}</th>
+<th>{{ _('col_consumption') }}</th>
+<th>{{ _('col_unit') }}</th>
+<th>{{ _('col_cost') }}</th>
+</tr>
+</thead>
+<tbody>
+                    {% for item in data.energy %}
+                    <tr>
+<td>{{ item['year'] }}/{{ item['month'] }}</td>
+<td>{{ item['energy_type'] }}</td>
+<td>{{ item['consumption_amount'] }}</td>
+<td>{{ item['unit'] }}</td>
+<td>{{ item['cost'] }}</td>
+</tr>
+                    {% else %}
+                    <tr><td class="text-center" colspan="5">{{ _('no_data') }}</td></tr>
+                    {% endfor %}
+                </tbody>
+</table>
+</div>
+</div>
+<!-- Water Tab -->
+<div class="tab-pane fade" id="water" role="tabpanel">
+<div class="table-responsive">
+<table class="table table-sm table-hover">
+<thead>
+<tr>
+<th>{{ _('col_year_month') }}</th>
+<th>{{ _('col_type') }}</th>
+<th>{{ _('col_consumption') }}</th>
+<th>{{ _('col_unit') }}</th>
+</tr>
+</thead>
+<tbody>
+                    {% for item in data.water %}
+                    <tr>
+<td>{{ item['year'] }}/{{ item['month'] }}</td>
+<td>{{ item['consumption_type'] }}</td>
+<td>{{ item['consumption_amount'] }}</td>
+<td>{{ item['unit'] }}</td>
+</tr>
+                    {% else %}
+                    <tr><td class="text-center" colspan="4">{{ _('no_data') }}</td></tr>
+                    {% endfor %}
+                </tbody>
+</table>
+</div>
+</div>
+<!-- Waste Tab -->
+<div class="tab-pane fade" id="waste" role="tabpanel">
+<div class="table-responsive">
+<table class="table table-sm table-hover">
+<thead>
+<tr>
+<th>{{ _('col_year_month') }}</th>
+<th>{{ _('col_type') }}</th>
+<th>{{ _('col_quantity') }}</th>
+<th>{{ _('col_method') }}</th>
+<th>{{ _('col_hazardous') }}</th>
+</tr>
+</thead>
+<tbody>
+                    {% for item in data.waste %}
+                    <tr>
+<td>{{ item['year'] }}/{{ item['month'] }}</td>
+<td>{{ item['waste_type'] }}</td>
+<td>{{ item['waste_amount'] }}</td>
+<td>{{ item['disposal_method'] }}</td>
+<td>{{ item['hazardous_status'] }}</td>
+</tr>
+                    {% else %}
+                    <tr><td class="text-center" colspan="5">{{ _('no_data') }}</td></tr>
+                    {% endfor %}
+                </tbody>
+</table>
+</div>
+</div>
+</div>
+{% endblock %}
+
+<!-- Add Data Modal -->
+<div aria-hidden="true" class="modal fade" id="addDataModal" tabindex="-1">
+<div class="modal-dialog">
+<div class="modal-content">
+<div class="modal-header">
+<h5 class="modal-title">{{ _('add_new_data', 'Yeni Veri Girişi') }}</h5>
+<button aria-label="Close" class="btn-close" data-bs-dismiss="modal" type="button"></button>
+</div>
+<form action="{{ url_for('data_add') }}" method="POST">
+<div class="modal-body">
+<div class="mb-3">
+<label class="form-label" for="data_type">{{ _('data_type', 'Veri Tipi') }}</label>
+<select class="form-select" id="data_type" name="data_type" onchange="updateDataFields()" required="">
+<option value="">{{ _('select_type', 'Seçiniz') }}</option>
+<option value="carbon">{{ _('carbon', 'Karbon') }}</option>
+<option value="energy">{{ _('energy', 'Enerji') }}</option>
+<option value="water">{{ _('water', 'Su') }}</option>
+<option value="waste">{{ _('waste', 'Atık') }}</option>
+</select>
+</div>
+<div class="mb-3">
+<label class="form-label" for="date">{{ _('date', 'Tarih') }}</label>
+<input class="form-control" name="date" required="" type="date"/>
+</div>
+<!-- Carbon Fields -->
+<div class="data-fields" id="carbon_fields" style="display:none;">
+<div class="mb-3">
+<label class="form-label">{{ _('scope', 'Kapsam') }}</label>
+<select class="form-select" name="scope">
+<option value="Scope 1">Scope 1</option>
+<option value="Scope 2">Scope 2</option>
+<option value="Scope 3">Scope 3</option>
+</select>
+</div>
+<div class="mb-3">
+<label class="form-label">{{ _('category', 'Kategori') }}</label>
+<input class="form-control" name="category" type="text"/>
+</div>
+<div class="mb-3">
+<label class="form-label">{{ _('amount', 'Miktar') }}</label>
+<input class="form-control" name="amount" step="0.01" type="number"/>
+</div>
+</div>
+<!-- Energy Fields -->
+<div class="data-fields" id="energy_fields" style="display:none;">
+<div class="mb-3">
+<label class="form-label">{{ _('energy_type', 'Enerji Tipi') }}</label>
+<input class="form-control" name="energy_type" placeholder="Elektrik, Doğalgaz vb." type="text"/>
+</div>
+<div class="mb-3">
+<label class="form-label">{{ _('consumption', 'Tüketim Miktarı') }}</label>
+<input class="form-control" name="consumption_amount" step="0.01" type="number"/>
+</div>
+<div class="mb-3">
+<label class="form-label">{{ _('cost', 'Maliyet') }}</label>
+<input class="form-control" name="cost" step="0.01" type="number"/>
+</div>
+</div>
+<!-- Water Fields -->
+<div class="data-fields" id="water_fields" style="display:none;">
+<div class="mb-3">
+<label class="form-label">{{ _('water_type', 'Su Tipi') }}</label>
+<input class="form-control" name="consumption_type" placeholder="Şebeke Suyu, Kuyu Suyu vb." type="text"/>
+</div>
+<div class="mb-3">
+<label class="form-label">{{ _('consumption', 'Tüketim Miktarı') }}</label>
+<input class="form-control" name="consumption_amount" step="0.01" type="number"/> <!-- Shared name with Energy if simpler, but backend uses different keys? Check backend -->
+<!-- Backend: energy -> consumption_amount, water -> consumption_amount. Wait. 
+                                 Web App Data Add: 
+                                 Energy: consumption = request.form.get('consumption_amount')
+                                 Water: consumption = request.form.get('consumption_amount') 
+                                 So I can use the same name if I want, but IDs must be unique if I used IDs. I used names.
+                                 However, if all fields are in the form, the hidden ones are still submitted? 
+                                 If I hide them with display:none, they are still submitted. 
+                                 If I name them the same, the last one might overwrite or list.
+                                 Since only one section is visible, the user only fills one. But the browser submits empty values for others.
+                                 Backend:
+                                 if dtype == 'energy': cons = req.form.get('consumption_amount')
+                                 if dtype == 'water': cons = req.form.get('consumption_amount')
+                                 This is fine as long as I don't fill both.
+                                 BUT, if I name them the same in HTML, the browser sends multiple values for the same key.
+                                 Flask `request.form.get` usually takes the first one.
+                                 Better to name them distinctly if possible or rely on the fact that only one is filled?
+                                 Actually, if I use the SAME name, I should be careful. 
+                                 Let's look at `web_app.py` again.
+                                 Energy: `consumption_amount`
+                                 Water: `consumption_amount`
+                                 Since they are separate logic blocks in backend, it's okay IF the user only fills the visible one.
+                                 BUT if the user fills Energy, then switches to Water, the Energy value remains in the hidden input.
+                                 It's better to clear values on switch or use different names.
+                                 Backend expects specific names.
+                                 Energy and Water use the SAME name `consumption_amount`.
+                                 I will use `energy_consumption` and `water_consumption` in the form, and update backend? 
+                                 NO, I should follow backend.
+                                 Backend code:
+                                 Energy: `consumption = float(request.form.get('consumption_amount') or 0)`
+                                 Water: `quantity = float(request.form.get('consumption_amount') or 0)`
+                                 
+                                 Issue: If I have two inputs with `name="consumption_amount"`, Flask receives a list or the first one.
+                                 If I have `<input name="consumption_amount">` in Energy div and another in Water div.
+                                 They will both be submitted.
+                                 If I leave one empty, it's `""`.
+                                 If I fill Energy, Water is empty.
+                                 Flask `request.form.get` might get the empty one if it comes first!
+                                 
+                                 Solution: Use a single input for `consumption_amount` and move it to a common area?
+                                 No, Energy has Cost, Water doesn't.
+                                 
+                                 Better Solution: JavaScript to disable inputs in hidden divs. Disabled inputs are not submitted.
+                            -->
+</div>
+</div>
+<!-- Waste Fields -->
+<div class="data-fields" id="waste_fields" style="display:none;">
+<div class="mb-3">
+<label class="form-label">{{ _('waste_type', 'Atık Tipi') }}</label>
+<input class="form-control" name="waste_type" type="text"/>
+</div>
+<div class="mb-3">
+<label class="form-label">{{ _('amount', 'Miktar') }}</label>
+<input class="form-control" name="waste_amount" step="0.01" type="number"/>
+</div>
+<div class="mb-3">
+<label class="form-label">{{ _('disposal_method', 'Bertaraf Yöntemi') }}</label>
+<input class="form-control" name="disposal_method" type="text"/>
+</div>
+<div class="mb-3">
+<label class="form-label">{{ _('hazardous', 'Tehlikeli mi?') }}</label>
+<select class="form-select" name="hazardous_status">
+<option value="Hayır">{{ _('no', 'Hayır') }}</option>
+<option value="Evet">{{ _('yes', 'Evet') }}</option>
+</select>
+</div>
+</div>
+<div class="mb-3">
+<label class="form-label">{{ _('unit', 'Birim') }}</label>
+<input class="form-control" name="unit" placeholder="kg, kWh, m3, ton vb." type="text"/>
+</div>
+</div>
+<div class="modal-footer">
+<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ _('cancel', 'İptal') }}</button>
+<button class="btn btn-primary" type="submit">{{ _('save', 'Kaydet') }}</button>
+</div>
+</form>
+</div>
+</div>
+</div>
+<script>
+function updateDataFields() {
+    var type = document.getElementById('data_type').value;
+    var fields = document.getElementsByClassName('data-fields');
+    for(var i=0; i<fields.length; i++) {
+        fields[i].style.display = 'none';
+        // Disable all inputs in hidden fields to prevent submission conflicts
+        var inputs = fields[i].getElementsByTagName('input');
+        for(var j=0; j<inputs.length; j++) inputs[j].disabled = true;
+        var selects = fields[i].getElementsByTagName('select');
+        for(var j=0; j<selects.length; j++) selects[j].disabled = true;
+    }
+    
+    if(type) {
+        var activeDiv = document.getElementById(type + '_fields');
+        if(activeDiv) {
+            activeDiv.style.display = 'block';
+            // Enable inputs in active field
+            var inputs = activeDiv.getElementsByTagName('input');
+            for(var j=0; j<inputs.length; j++) inputs[j].disabled = false;
+            var selects = activeDiv.getElementsByTagName('select');
+            for(var j=0; j<selects.length; j++) selects[j].disabled = false;
+        }
+    }
+}
+</script>

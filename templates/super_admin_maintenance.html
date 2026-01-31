@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block title %}Bakım ve Onarım{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+<div>
+<h1 class="h2">Bakım ve Onarım</h1>
+<p class="text-muted mb-0">
+            Veritabanı, yedekler ve sistem durumu için genel bakım görünümü.
+        </p>
+</div>
+<div class="btn-toolbar mb-2 mb-md-0">
+
+<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+</div>
+<div class="row g-4 mb-4">
+<div class="col-md-3">
+<div class="card border-0 shadow-sm">
+<div class="card-body">
+<h6 class="text-muted text-uppercase">Veritabanı Boyutu</h6>
+<h2 class="fw-bold mb-0">{{ metrics.db_size_mb }} MB</h2>
+</div>
+</div>
+</div>
+<div class="col-md-3">
+<div class="card border-0 shadow-sm">
+<div class="card-body">
+<h6 class="text-muted text-uppercase">Tablo Sayısı</h6>
+<h2 class="fw-bold mb-0">{{ metrics.table_count }}</h2>
+</div>
+</div>
+</div>
+<div class="col-md-3">
+<div class="card border-0 shadow-sm">
+<div class="card-body">
+<h6 class="text-muted text-uppercase">Toplam Yedek</h6>
+<h2 class="fw-bold mb-0">{{ metrics.backup_count or 0 }}</h2>
+</div>
+</div>
+</div>
+<div class="col-md-3">
+<div class="card border-0 shadow-sm">
+<div class="card-body">
+<h6 class="text-muted text-uppercase">Son Yedek Tarihi</h6>
+<h2 class="fw-bold mb-0">
+                    {% if metrics.last_backup_at %}
+                        {{ metrics.last_backup_at }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </h2>
+</div>
+</div>
+</div>
+</div>
+<div class="row g-4">
+<div class="col-lg-6">
+<div class="card border-0 shadow-sm mb-4">
+<div class="card-header">
+<h5 class="mb-0">Bakım Özeti</h5>
+</div>
+<div class="card-body">
+<p class="mb-2">
+                    Masaüstü sürümdeki bakım araçlarının tamamı bu bölüme
+                    taşınacaktır. Şu anda bu sayfa, sistemin genel durumunu ve
+                    yedekleme istatistiklerini özetlemek için kullanılmaktadır.
+                </p>
+<ul class="mb-0">
+<li>Veritabanı bütünlük kontrolleri</li>
+<li>İndeks ve performans analizleri</li>
+<li>Log ve geçici dosya temizliği</li>
+<li>Disk alanı ve yedekleme durumu</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="col-lg-6">
+<div class="card border-0 shadow-sm mb-4">
+<div class="card-header">
+<h5 class="mb-0">İlgili Modüller</h5>
+</div>
+<div class="card-body">
+<p class="mb-3">
+                    Detaylı bakım işlemleri için aşağıdaki ekranları da
+                    kullanabilirsiniz:
+                </p>
+<ul class="mb-3">
+<li><a href="{{ url_for('super_admin_backup') }}">Yedekleme ve Geri Yükleme</a></li>
+<li><a href="{{ url_for('super_admin_performance') }}">Performans Dashboard</a></li>
+<li><a href="{{ url_for('super_admin_system_stats') }}">Sistem İstatistikleri</a></li>
+<li><a href="{{ url_for('super_admin_audit_logs') }}">Audit Logları</a></li>
+</ul>
+<p class="mb-0 text-muted">
+                    İlerleyen sprintlerde, masaüstü “Bakım &amp; Onarım” ekranındaki
+                    tüm otomatik kontroller buraya web arayüzü olarak eklenecektir.
+                </p>
+</div>
+</div>
+</div>
+</div>
+
+{% endblock %}
+

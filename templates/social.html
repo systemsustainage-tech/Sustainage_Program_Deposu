@@ -1,0 +1,600 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('social_title') }} - SDG{% endblock %}
+
+{% block content %}
+
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <h2 class="mb-0"><i class="bi bi-people text-primary"></i> {{ _('social_title') }}</h2>
+                        <p class="text-muted mt-2 mb-0">{{ _('social_desc') }}</p>
+                    </div>
+                    <div>
+                        <a href="{{ url_for('social_export') }}" class="btn btn-sm btn-outline-success ms-2"><i class="bi bi-file-earmark-excel"></i> Excel Raporu</a>
+                        <button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button>
+                    </div>
+                </div>
+                
+                <!-- İstatistik Kartları Row 1 -->
+                <div class="row mt-4">
+                    <div class="col-md-4 mb-3">
+                        <div class="card h-100 shadow-sm border-start border-4 border-primary">
+                            <div class="card-body text-center">
+                                <i class="bi bi-people-fill display-4 text-primary mb-3"></i>
+                                <h5>{{ _('social_employee_profile') }}</h5>
+                                <h3 class="fw-bold">{{ stats.employees }}</h3>
+                                <p class="text-muted small">{{ _('social_total_employees') }}</p>
+                                <button class="btn btn-sm btn-outline-primary w-100" data-bs-target="#addEmployeeModal" data-bs-toggle="modal" type="button">
+                                    {{ _('btn_add_data') }}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="card h-100 shadow-sm border-start border-4 border-danger">
+                            <div class="card-body text-center">
+                                <i class="bi bi-heart-pulse-fill display-4 text-danger mb-3"></i>
+                                <h5>{{ _('social_ohs') }}</h5>
+                                <h3 class="fw-bold">{{ stats.incidents }}</h3>
+                                <p class="text-muted small">{{ _('social_incidents') }}</p>
+                                <button class="btn btn-sm btn-outline-danger w-100" data-bs-target="#addOHSModal" data-bs-toggle="modal" type="button">
+                                    {{ _('btn_add_data') }}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="card h-100 shadow-sm border-start border-4 border-success">
+                            <div class="card-body text-center">
+                                <i class="bi bi-mortarboard-fill display-4 text-success mb-3"></i>
+                                <h5>{{ _('social_training') }}</h5>
+                                <h3 class="fw-bold">{{ stats.training_hours | default(0) | round(1) }}</h3>
+                                <p class="text-muted small">{{ _('social_total_hours') }}</p>
+                                <button class="btn btn-sm btn-outline-success w-100" data-bs-target="#addTrainingModal" data-bs-toggle="modal" type="button">
+                                    {{ _('btn_add_data') }}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- İstatistik Kartları Row 2 -->
+                <div class="row mt-2">
+                    <div class="col-md-6 mb-3">
+                        <div class="card h-100 shadow-sm border-start border-4 border-info">
+                            <div class="card-body text-center">
+                                <i class="bi bi-emoji-smile-fill display-4 text-info mb-3"></i>
+                                <h5>Çalışan Memnuniyeti</h5>
+                                <h3 class="fw-bold">{{ stats.avg_satisfaction | default(0) }}</h3>
+                                <p class="text-muted small">Ortalama Skor</p>
+                                <button class="btn btn-sm btn-outline-info w-100" data-bs-target="#addSatisfactionModal" data-bs-toggle="modal" type="button">
+                                    Veri Ekle
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="card h-100 shadow-sm border-start border-4 border-warning">
+                            <div class="card-body text-center">
+                                <i class="bi bi-cash-coin display-4 text-warning mb-3"></i>
+                                <h5>Topluluk Yatırımı</h5>
+                                <h3 class="fw-bold">{{ stats.total_investment | default(0) | round(0) }} TL</h3>
+                                <p class="text-muted small">Toplam Yatırım</p>
+                                <button class="btn btn-sm btn-outline-warning w-100" data-bs-target="#addInvestmentModal" data-bs-toggle="modal" type="button">
+                                    Veri Ekle
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Grafikler Row -->
+                <div class="row mt-4">
+                    <div class="col-md-6 mb-3">
+                        <div class="card shadow-sm border-0 h-100">
+                            <div class="card-header bg-white border-bottom-0">
+                                <h5 class="mb-0"><i class="bi bi-graph-up-arrow text-info"></i> Memnuniyet Trendi</h5>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="satisfactionChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="card shadow-sm border-0 h-100">
+                            <div class="card-header bg-white border-bottom-0">
+                                <h5 class="mb-0"><i class="bi bi-graph-down-arrow text-danger"></i> Devir Hızı Trendi</h5>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="turnoverChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Son Kayıtlar Tablosu -->
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-light">
+                                <h5 class="mb-0"><i class="bi bi-clock-history"></i> {{ _('recent_activities') }}</h5>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-hover mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>{{ _('col_type') }}</th>
+                                                <th>{{ _('col_detail') }}</th>
+                                                <th>{{ _('col_date') }}</th>
+                                                <th>{{ _('col_value') }}</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for item in recent_data %}
+                                            <tr>
+                                                <td>
+                                                    {% if item.type == 'employee' %}
+                                                    <span class="badge bg-primary">{{ _('social_type_employee') }}</span>
+                                                    {% elif item.type == 'ohs' %}
+                                                    <span class="badge bg-danger">{{ _('social_type_ohs') }}</span>
+                                                    {% elif item.type == 'training' %}
+                                                    <span class="badge bg-success">{{ _('social_type_training') }}</span>
+                                                    {% elif item.type == 'satisfaction' %}
+                                                    <span class="badge bg-info">Memnuniyet</span>
+                                                    {% elif item.type == 'investment' %}
+                                                    <span class="badge bg-warning text-dark">Yatırım</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>{{ item.detail }}</td>
+                                                <td>{{ item.date }}</td>
+                                                <td>{{ item.value }}</td>
+                                            </tr>
+                                            {% else %}
+                                            <tr>
+                                                <td class="text-center text-muted py-3" colspan="4">{{ _('no_data_yet') }}</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modals -->
+
+<!-- Employee Modal -->
+<div class="modal fade" id="addEmployeeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ _('social_add_employee') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('social_add') }}" method="POST">
+                <div class="modal-body">
+                    <input type="hidden" name="data_type" value="employee">
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('col_year') }}</label>
+                        <input type="number" class="form-control" name="year" value="2024" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('col_month') }}</label>
+                        <select class="form-select" name="month" required>
+                            <option value="1">Ocak</option>
+                            <option value="2">Şubat</option>
+                            <option value="3">Mart</option>
+                            <option value="4">Nisan</option>
+                            <option value="5">Mayıs</option>
+                            <option value="6">Haziran</option>
+                            <option value="7">Temmuz</option>
+                            <option value="8">Ağustos</option>
+                            <option value="9">Eylül</option>
+                            <option value="10">Ekim</option>
+                            <option value="11">Kasım</option>
+                            <option value="12">Aralık</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('social_total_employees') }}</label>
+                        <input type="number" class="form-control" name="employee_count" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('social_female_employees') }}</label>
+                        <input type="number" class="form-control" name="female_count" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('btn_cancel') }}</button>
+                    <button type="submit" class="btn btn-primary">{{ _('btn_save') }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Training Modal -->
+<div class="modal fade" id="addTrainingModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ _('social_add_training') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('social_add') }}" method="POST">
+                <div class="modal-body">
+                    <input type="hidden" name="data_type" value="training">
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('col_date') }}</label>
+                        <input type="date" class="form-control" name="training_date" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('col_detail') }}</label>
+                        <input type="text" class="form-control" name="training_name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('social_participants') }}</label>
+                        <input type="number" class="form-control" name="participants" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('social_hours') }}</label>
+                        <input type="number" class="form-control" name="hours" step="0.5" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('col_description') }}</label>
+                        <textarea class="form-control" name="description" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('btn_cancel') }}</button>
+                    <button type="submit" class="btn btn-primary">{{ _('btn_save') }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Incident Modal -->
+<div class="modal fade" id="addIncidentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ _('social_add_incident') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('social_add') }}" method="POST">
+                <div class="modal-body">
+                    <input type="hidden" name="data_type" value="ohs">
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('col_date') }}</label>
+                        <input type="date" class="form-control" name="incident_date" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('col_type') }}</label>
+                        <select class="form-select" name="incident_type" required>
+                            <option value="Injury">Yaralanma</option>
+                            <option value="Near Miss">Ramak Kala</option>
+                            <option value="Property Damage">Mal Hasarı</option>
+                            <option value="Environmental">Çevresel</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('col_description') }}</label>
+                        <textarea class="form-control" name="description" rows="3" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Ciddiyet</label>
+                        <select class="form-select" name="severity">
+                            <option value="Low">Düşük</option>
+                            <option value="Medium">Orta</option>
+                            <option value="High">Yüksek</option>
+                            <option value="Critical">Kritik</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('btn_cancel') }}</button>
+                    <button type="submit" class="btn btn-primary">{{ _('btn_save') }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Satisfaction Modal -->
+<div class="modal fade" id="addSatisfactionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Çalışan Memnuniyeti Verisi Ekle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('social_add') }}" method="POST">
+                <div class="modal-body">
+                    <input type="hidden" name="data_type" value="satisfaction">
+                    <div class="mb-3">
+                        <label class="form-label">Yıl</label>
+                        <input type="number" class="form-control" name="year" value="2024" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Anket Tarihi</label>
+                        <input type="date" class="form-control" name="survey_date" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Memnuniyet Skoru (0-100)</label>
+                        <input type="number" class="form-control" name="satisfaction_score" step="0.1" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">İş Gücü Devir Hızı (%)</label>
+                        <input type="number" class="form-control" name="turnover_rate" step="0.1" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Katılım Oranı (%)</label>
+                        <input type="number" class="form-control" name="participation_rate" step="0.1">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Yorumlar</label>
+                        <textarea class="form-control" name="comments" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-primary">Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Investment Modal -->
+<div class="modal fade" id="addInvestmentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Topluluk Yatırımı Ekle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('social_add') }}" method="POST">
+                <div class="modal-body">
+                    <input type="hidden" name="data_type" value="investment">
+                    <div class="mb-3">
+                        <label class="form-label">Proje Adı</label>
+                        <input type="text" class="form-control" name="project_name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Yatırım Tutarı (TL)</label>
+                        <input type="number" class="form-control" name="investment_amount" step="0.01" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Faydalanıcı Sayısı</label>
+                        <input type="number" class="form-control" name="beneficiaries_count">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Tarih</label>
+                        <input type="date" class="form-control" name="date" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Etki Açıklaması</label>
+                        <textarea class="form-control" name="impact_description" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-primary">Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Employee Modal (Placeholder for existing modal if not in included file) -->
+<div class="modal fade" id="addEmployeeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ _('social_add_employee') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('social_add') }}" method="POST">
+                <div class="modal-body">
+                    <input type="hidden" name="data_type" value="employee">
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('social_employee_count') }}</label>
+                        <input type="number" class="form-control" name="employee_count" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('social_gender') }}</label>
+                        <select class="form-select" name="gender">
+                            <option value="Male">{{ _('gender_male') }}</option>
+                            <option value="Female">{{ _('gender_female') }}</option>
+                            <option value="Other">{{ _('gender_other') }}</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('social_department') }}</label>
+                        <input type="text" class="form-control" name="department">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('social_age_group') }}</label>
+                        <select class="form-select" name="age_group">
+                            <option value="18-30">18-30</option>
+                            <option value="31-50">31-50</option>
+                            <option value="50+">50+</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('year') }}</label>
+                        <input type="number" class="form-control" name="year" value="2024">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('btn_cancel') }}</button>
+                    <button type="submit" class="btn btn-primary">{{ _('btn_save') }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- OHS Modal -->
+<div class="modal fade" id="addOHSModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ _('social_add_ohs') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('social_add') }}" method="POST">
+                <div class="modal-body">
+                    <input type="hidden" name="data_type" value="ohs">
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('social_incident_type') }}</label>
+                        <input type="text" class="form-control" name="incident_type" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('date') }}</label>
+                        <input type="date" class="form-control" name="date" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('social_severity') }}</label>
+                        <select class="form-select" name="severity">
+                            <option value="Low">{{ _('severity_low') }}</option>
+                            <option value="Medium">{{ _('severity_medium') }}</option>
+                            <option value="High">{{ _('severity_high') }}</option>
+                            <option value="Critical">{{ _('severity_critical') }}</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('social_lost_days') }}</label>
+                        <input type="number" class="form-control" name="lost_time_days" value="0">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('description') }}</label>
+                        <textarea class="form-control" name="description" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('btn_cancel') }}</button>
+                    <button type="submit" class="btn btn-primary">{{ _('btn_save') }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Training Modal -->
+<div class="modal fade" id="addTrainingModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ _('social_add_training') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('social_add') }}" method="POST">
+                <div class="modal-body">
+                    <input type="hidden" name="data_type" value="training">
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('social_training_name') }}</label>
+                        <input type="text" class="form-control" name="training_name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('social_hours') }}</label>
+                        <input type="number" class="form-control" name="hours" step="0.5" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('social_participants') }}</label>
+                        <input type="number" class="form-control" name="participants" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('date') }}</label>
+                        <input type="date" class="form-control" name="date" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('category') }}</label>
+                        <input type="text" class="form-control" name="category">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('btn_cancel') }}</button>
+                    <button type="submit" class="btn btn-primary">{{ _('btn_save') }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const trends = {{ trends | tojson | safe }};
+        
+        if (trends && trends.years && trends.years.length > 0) {
+            // Satisfaction Chart
+            const satCtx = document.getElementById('satisfactionChart');
+            if (satCtx) {
+                new Chart(satCtx, {
+                    type: 'line',
+                    data: {
+                        labels: trends.years,
+                        datasets: [{
+                            label: 'Memnuniyet Skoru',
+                            data: trends.satisfaction,
+                            borderColor: '#0dcaf0', // info color
+                            backgroundColor: 'rgba(13, 202, 240, 0.1)',
+                            tension: 0.3,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 100
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Turnover Chart
+            const turnCtx = document.getElementById('turnoverChart');
+            if (turnCtx) {
+                new Chart(turnCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: trends.years,
+                        datasets: [{
+                            label: 'Devir Hızı (%)',
+                            data: trends.turnover,
+                            backgroundColor: '#dc3545', // danger color
+                            borderColor: '#dc3545',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            }
+        }
+    });
+</script>
+
+{% endblock %}

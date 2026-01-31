@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+
+{% block title %}Cihaz Detayı - {{ device.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0 text-gray-800">{{ device.name }} <small class="text-muted">({{ device.device_type }})</small></h1>
+        <div>
+            <button type="button" class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#addReadingModal">
+                <i class="fas fa-plus"></i> Veri Ekle (Manuel)
+            </button>
+            <button class="btn btn-secondary" onclick="history.back()">Geri Dön</button>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Chart -->
+        <div class="col-xl-8 col-lg-7">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Zaman Serisi Grafiği</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-area">
+                        <canvas id="deviceChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Info & Stats -->
+        <div class="col-xl-4 col-lg-5">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Cihaz Bilgileri</h6>
+                </div>
+                <div class="card-body">
+                    <p><strong>Birim:</strong> {{ device.unit }}</p>
+                    <p><strong>Eşik Değeri:</strong> {{ device.threshold_value or 'Tanımlanmamış' }}</p>
+                    <p><strong>API Endpoint:</strong> <code>/api/iot/ingest</code></p>
+                    <p><strong>Device ID:</strong> <code>{{ device.id }}</code></p>
+                    <hr>
+                    <div class="alert alert-info">
+                        <small>Cihaz verilerini API üzerinden göndermek için POST isteği yapın:<br>
+                        <code>{ "device_id": {{ device.id }}, "value": 123.45 }</code></small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Table -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Son Okumalar</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>Zaman</th>
+                            <th>Değer</th>
+                            <th>Durum</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for reading in readings %}
+                        <tr>
+                            <td>{{ reading.timestamp }}</td>
+                            <td>{{ reading.value }} {{ device.unit }}</td>
+                            <td>
+                                {% if device.threshold_value and reading.value > device.threshold_value %}
+                                <span class="badge bg-danger">Eşik Aşıldı</span>
+                                {% else %}
+                                <span class="badge bg-success">Normal</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Reading Modal -->
+<div class="modal fade" id="addReadingModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Manuel Veri Ekle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('realtime_add_reading', device_id=device.id) }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Değer ({{ device.unit }})</label>
+                        <input type="number" step="0.01" class="form-control" name="value" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-primary">Ekle</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('deviceChart').getContext('2d');
+    
+    // Data from backend
+    const readings = {{ readings|tojson|safe }};
+    // Reverse to show oldest to newest
+    readings.reverse();
+    
+    const labels = readings.map(r => r.timestamp);
+    const data = readings.map(r => r.value);
+    
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: '{{ device.name }} ({{ device.unit }})',
+                data: data,
+                borderColor: '#4e73df',
+                backgroundColor: 'rgba(78, 115, 223, 0.05)',
+                pointRadius: 3,
+                pointBackgroundColor: '#4e73df',
+                pointBorderColor: '#4e73df',
+                pointHoverRadius: 3,
+                pointHoverBackgroundColor: '#4e73df',
+                pointHoverBorderColor: '#4e73df',
+                pointHitRadius: 10,
+                pointBorderWidth: 2,
+                fill: true,
+                tension: 0.3
+            }]
+        },
+        options: {
+            maintainAspectRatio: false,
+            layout: {
+                padding: {
+                    left: 10,
+                    right: 25,
+                    top: 25,
+                    bottom: 0
+                }
+            },
+            scales: {
+                x: {
+                    grid: {
+                        display: false,
+                        drawBorder: false
+                    },
+                    ticks: {
+                        maxTicksLimit: 7
+                    }
+                },
+                y: {
+                    ticks: {
+                        maxTicksLimit: 5,
+                        padding: 10
+                    },
+                    grid: {
+                        color: "rgb(234, 236, 244)",
+                        zeroLineColor: "rgb(234, 236, 244)",
+                        drawBorder: false,
+                        borderDash: [2],
+                        zeroLineBorderDash: [2]
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: true
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

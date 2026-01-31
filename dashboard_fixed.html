@@ -1,0 +1,381 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - SDG{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-body d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-0">Hoşgeldiniz, <span class="text-primary">{{ session.user }}</span></h2>
+                    <p class="text-muted mb-0">
+                        <i class="bi bi-shield-lock-fill"></i> Rol: {{ session.get('role', 'Kullanıcı') }}
+                    </p>
+                </div>
+                <div>
+                    <span class="badge bg-success rounded-pill p-2">
+                        <i class="bi bi-wifi"></i> Sistem Çevrimiçi
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Özet İstatistikler -->
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="card h-100 border-0 shadow-sm text-center">
+            <div class="card-body">
+                <div class="display-4 text-primary mb-2"><i class="bi bi-people-fill"></i></div>
+                <h5 class="card-title">Kullanıcılar</h5>
+                <h2 class="fw-bold">{{ stats.user_count if stats.user_count is not none else '-' }}</h2>
+                <a href="{{ url_for('users') }}" class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card h-100 border-0 shadow-sm text-center">
+            <div class="card-body">
+                <div class="display-4 text-success mb-2"><i class="bi bi-building"></i></div>
+                <h5 class="card-title">Şirketler</h5>
+                <h2 class="fw-bold">{{ stats.company_count }}</h2>
+                <a href="{{ url_for('companies') }}" class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card h-100 border-0 shadow-sm text-center">
+            <div class="card-body">
+                <div class="display-4 text-info mb-2"><i class="bi bi-file-earmark-text-fill"></i></div>
+                <h5 class="card-title">Raporlar</h5>
+                <h2 class="fw-bold">{{ stats.report_count }}</h2>
+                <a href="{{ url_for('reports') }}" class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card h-100 border-0 shadow-sm text-center">
+            <div class="card-body">
+                <div class="display-4 text-warning mb-2"><i class="bi bi-database-check"></i></div>
+                <h5 class="card-title">Veri Girişi</h5>
+                <h2 class="fw-bold">{{ stats.data_count }}</h2>
+                <a href="{{ url_for('data') }}" class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SÜRDÜRÜLEBİLİRLİK MODÜLLERİ (19 MODÜL) -->
+<div class="row mb-4">
+    <div class="col-12 mb-3">
+        <h4 class="text-muted border-bottom pb-2"><i class="bi bi-grid-fill me-2"></i>Sürdürülebilirlik Modülleri</h4>
+    </div>
+    
+    <!-- Çevresel (Environmental) -->
+    <div class="col-12"><h6 class="text-success mb-3">Çevresel</h6></div>
+    
+    <div class="col-md-2 mb-3">
+        <div class="card h-100 text-center border-0 shadow-sm hover-card">
+            <div class="card-body">
+                <i class="bi bi-cloud-haze2 fs-1 text-success mb-2"></i>
+                <h6 class="card-title">Karbon Ayak İzi</h6>
+                <a href="{{ url_for('carbon_module') }}" class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 mb-3">
+        <div class="card h-100 text-center border-0 shadow-sm hover-card">
+            <div class="card-body">
+                <i class="bi bi-lightning-charge fs-1 text-warning mb-2"></i>
+                <h6 class="card-title">Enerji Yönetimi</h6>
+                <a href="{{ url_for('energy_module') }}" class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 mb-3">
+        <div class="card h-100 text-center border-0 shadow-sm hover-card">
+            <div class="card-body">
+                <i class="bi bi-recycle fs-1 text-secondary mb-2"></i>
+                <h6 class="card-title">Atık Yönetimi</h6>
+                <a href="{{ url_for('waste_module') }}" class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 mb-3">
+        <div class="card h-100 text-center border-0 shadow-sm hover-card">
+            <div class="card-body">
+                <i class="bi bi-droplet fs-1 text-info mb-2"></i>
+                <h6 class="card-title">Su Yönetimi</h6>
+                <a href="{{ url_for('water_module') }}" class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 mb-3">
+        <div class="card h-100 text-center border-0 shadow-sm hover-card">
+            <div class="card-body">
+                <i class="bi bi-tree fs-1 text-success mb-2"></i>
+                <h6 class="card-title">Biyoçeşitlilik</h6>
+                <a href="{{ url_for('biodiversity_module') }}" class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sosyal & Yönetişim (Social & Governance) -->
+    <div class="col-12 mt-3"><h6 class="text-primary mb-3">Sosyal & Yönetişim</h6></div>
+    
+    <div class="col-md-2 mb-3">
+        <div class="card h-100 text-center border-0 shadow-sm hover-card">
+            <div class="card-body">
+                <i class="bi bi-people fs-1 text-info mb-2"></i>
+                <h6 class="card-title">Sosyal Etki</h6>
+                <a href="{{ url_for('social_module') }}" class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 mb-3">
+        <div class="card h-100 text-center border-0 shadow-sm hover-card">
+            <div class="card-body">
+                <i class="bi bi-bank fs-1 text-secondary mb-2"></i>
+                <h6 class="card-title">Kurumsal Yönetim</h6>
+                <a href="{{ url_for('governance_module') }}" class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 mb-3">
+        <div class="card h-100 text-center border-0 shadow-sm hover-card">
+            <div class="card-body">
+                <i class="bi bi-truck fs-1 text-warning mb-2"></i>
+                <h6 class="card-title">Tedarik Zinciri</h6>
+                <a href="{{ url_for('supply_chain_module') }}" class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 mb-3">
+        <div class="card h-100 text-center border-0 shadow-sm hover-card">
+            <div class="card-body">
+                <i class="bi bi-cash-coin fs-1 text-success mb-2"></i>
+                <h6 class="card-title">Ekonomik Değer</h6>
+                <a href="{{ url_for('economic_module') }}" class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Çerçeveler & Standartlar (Frameworks & Standards) -->
+    <div class="col-12 mt-3"><h6 class="text-danger mb-3">Çerçeveler & Standartlar</h6></div>
+    
+    <div class="col-md-2 mb-3">
+        <div class="card h-100 text-center border-0 shadow-sm hover-card">
+            <div class="card-body">
+                <i class="bi bi-bar-chart-steps fs-1 text-primary mb-2"></i>
+                <h6 class="card-title">ESG Skorlama</h6>
+                <a href="{{ url_for('esg_module') }}" class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 mb-3">
+        <div class="card h-100 text-center border-0 shadow-sm hover-card">
+            <div class="card-body">
+                <i class="bi bi-globe-europe-africa fs-1 text-danger mb-2"></i>
+                <h6 class="card-title">CBAM Raporlama</h6>
+                <a href="{{ url_for('cbam_module') }}" class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 mb-3">
+        <div class="card h-100 text-center border-0 shadow-sm hover-card">
+            <div class="card-body">
+                <i class="bi bi-file-earmark-check fs-1 text-primary mb-2"></i>
+                <h6 class="card-title">CSRD Uyumu</h6>
+                <a href="{{ url_for('csrd_module') }}" class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 mb-3">
+        <div class="card h-100 text-center border-0 shadow-sm hover-card">
+            <div class="card-body">
+                <i class="bi bi-diagram-3 fs-1 text-success mb-2"></i>
+                <h6 class="card-title">AB Taksonomisi</h6>
+                <a href="{{ url_for('taxonomy_module') }}" class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 mb-3">
+        <div class="card h-100 text-center border-0 shadow-sm hover-card">
+            <div class="card-body">
+                <i class="bi bi-journal-text fs-1 text-info mb-2"></i>
+                <h6 class="card-title">GRI Standartları</h6>
+                <a href="{{ url_for('gri_module') }}" class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 mb-3">
+        <div class="card h-100 text-center border-0 shadow-sm hover-card">
+            <div class="card-body">
+                <i class="bi bi-bullseye fs-1 text-danger mb-2"></i>
+                <h6 class="card-title">BM Sürdürülebilir Kalkınma Amaçları</h6>
+                <a href="{{ url_for('sdg_module') }}" class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- İleri Raporlama (Advanced Reporting) -->
+    <div class="col-12 mt-3"><h6 class="text-secondary mb-3">İleri Raporlama</h6></div>
+    
+    <div class="col-md-2 mb-3">
+        <div class="card h-100 text-center border-0 shadow-sm hover-card">
+            <div class="card-body">
+                <i class="bi bi-file-earmark-spreadsheet fs-1 text-primary mb-2"></i>
+                <h6 class="card-title">IFRS S1/S2</h6>
+                <a href="{{ url_for('issb_module') }}" class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 mb-3">
+        <div class="card h-100 text-center border-0 shadow-sm hover-card">
+            <div class="card-body">
+                <i class="bi bi-cloud-sun fs-1 text-warning mb-2"></i>
+                <h6 class="card-title">TCFD</h6>
+                <a href="{{ url_for('tcfd_module') }}" class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 mb-3">
+        <div class="card h-100 text-center border-0 shadow-sm hover-card">
+            <div class="card-body">
+                <i class="bi bi-flower1 fs-1 text-success mb-2"></i>
+                <h6 class="card-title">TNFD</h6>
+                <a href="{{ url_for('tnfd_module') }}" class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 mb-3">
+        <div class="card h-100 text-center border-0 shadow-sm hover-card">
+            <div class="card-body">
+                <i class="bi bi-building-check fs-1 text-dark mb-2"></i>
+                <h6 class="card-title">CDP Raporlama</h6>
+                <a href="{{ url_for('cdp_module') }}" class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Grafikler (Demo) -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0"><i class="bi bi-pie-chart-fill"></i> {{ _('chart_emission_dist') }}</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="emissionsChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0"><i class="bi bi-graph-up"></i> {{ _('chart_emission_trend') }}</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="trendChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Basit grafik scriptleri...
+    const emissionsCtx = document.getElementById('emissionsChart').getContext('2d');
+    new Chart(emissionsCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ["{{ _('scope_1') }}", "{{ _('scope_2') }}", "{{ _('scope_3') }}"],
+            datasets: [{
+                data: [30, 45, 25],
+                backgroundColor: ['#ff6384', '#36a2eb', '#ffce56']
+            }]
+        }
+    });
+    
+    const trendCtx = document.getElementById('trendChart').getContext('2d');
+    new Chart(trendCtx, {
+        type: 'line',
+        data: {
+            labels: ["{{ _('month_jan') }}", "{{ _('month_feb') }}", "{{ _('month_mar') }}", "{{ _('month_apr') }}", "{{ _('month_may') }}", "{{ _('month_jun') }}"],
+            datasets: [{
+                label: "{{ _('emission_tco2e') }}",
+                data: [65, 59, 80, 81, 56, 55],
+                borderColor: '#4bc0c0',
+                fill: false
+            }]
+        }
+    });
+</script>
+
+<!-- Hızlı Erişim Menüsü & Son Aktiviteler -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0"><i class="bi bi-grid-3x3-gap-fill"></i> {{ _('quick_access_menu') }}</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <a href="{{ '#' }}" class="btn btn-outline-primary w-100 py-3">
+                            <i class="bi bi-bar-chart-line d-block fs-2 mb-2"></i> {{ _('create_report_btn') }}
+                        </a>
+                    </div>
+                    <div class="col-md-4">
+                        <a href="{{ url_for('data') }}" class="btn btn-outline-success w-100 py-3">
+                            <i class="bi bi-plus-circle d-block fs-2 mb-2"></i> {{ _('data_entry_btn') }}
+                        </a>
+                    </div>
+                    <div class="col-md-4">
+                        <a href="{{ '#' }}" class="btn btn-outline-secondary w-100 py-3">
+                            <i class="bi bi-building d-block fs-2 mb-2"></i> {{ _('companies_btn') }}
+                        </a>
+                    </div>
+                    <div class="col-md-4">
+                        <a href="{{ '#' }}" class="btn btn-outline-info w-100 py-3">
+                            <i class="bi bi-envelope d-block fs-2 mb-2"></i> {{ _('messages_btn') }}
+                        </a>
+                    </div>
+                    <div class="col-md-4">
+                        <a href="{{ url_for('users') }}" class="btn btn-outline-warning w-100 py-3">
+                            <i class="bi bi-people d-block fs-2 mb-2"></i> {{ _('users_btn') }}
+                        </a>
+                    </div>
+                    <div class="col-md-4">
+                        <a href="{{ '#' }}" class="btn btn-outline-danger w-100 py-3">
+                            <i class="bi bi-question-circle d-block fs-2 mb-2"></i> {{ _('help_btn') }}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0"><i class="bi bi-activity"></i> {{ _('recent_activities') }}</h5>
+            </div>
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <div><i class="bi bi-person-check text-success me-2"></i> {{ _('login_activity') }}</div>
+                    <small class="text-muted">{{ _('time_now') }}</small>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <div><i class="bi bi-file-earmark-plus text-primary me-2"></i> {{ _('report_prepared_activity') }}</div>
+                    <small class="text-muted">{{ _('time_2_hours_ago') }}</small>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

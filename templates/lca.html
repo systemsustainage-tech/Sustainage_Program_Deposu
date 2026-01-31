@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}Yaşam Döngüsü Analizi - SustainAge{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1><i class="fas fa-recycle me-2"></i>Yaşam Döngüsü Analizi (LCA)</h1>
+            <button class="btn btn-sm btn-outline-secondary" onclick="history.back()">
+                <i class="bi bi-arrow-left"></i> Geri
+            </button>
+        </div>
+        <p class="lead text-muted">Ürün ve hizmetlerinizin yaşam döngüsü boyunca çevresel etkilerini analiz edin.</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Ürün/Hizmet Listesi</h5>
+                <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addProductModal">
+                    <i class="fas fa-plus"></i> Yeni Ürün Ekle
+                </button>
+            </div>
+            <div class="card-body">
+                {% if products %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>Ürün Adı</th>
+                                <th>Birim</th>
+                                <th>Oluşturulma Tarihi</th>
+                                <th class="text-end">İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for product in products %}
+                            <tr>
+                                <td>
+                                    <strong>{{ product.name }}</strong><br>
+                                    <small class="text-muted">{{ product.description }}</small>
+                                </td>
+                                <td>{{ product.unit }}</td>
+                                <td>{{ product.created_at[:10] }}</td>
+                                <td class="text-end">
+                                    <a href="{{ url_for('lca_product_detail', product_id=product.id) }}" class="btn btn-sm btn-info text-white">
+                                        <i class="fas fa-eye"></i> Detay
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">Henüz bir ürün veya hizmet tanımlanmamış.</p>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addProductModal">
+                        İlk Ürünü Ekle
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Product Modal -->
+<div class="modal fade" id="addProductModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="{{ url_for('lca_add_product') }}" method="POST">
+                <div class="modal-header">
+                    <h5 class="modal-title">Yeni Ürün/Hizmet Ekle</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Ürün Adı</label>
+                        <input type="text" class="form-control" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Birim (Örn: Adet, kg, m3)</label>
+                        <input type="text" class="form-control" name="unit" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Açıklama</label>
+                        <textarea class="form-control" name="description" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-primary">Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

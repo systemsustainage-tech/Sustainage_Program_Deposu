@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('carbon_title') }} - SDG Platform{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1><i class="fas fa-smog me-2"></i>{{ _('carbon_title') }}</h1>
+            <div>
+                <span class="badge bg-{{ 'success' if manager_available else 'danger' }}">
+                    {{ _('module_active') if manager_available else _('module_passive') }}
+                </span>
+            </div>
+        </div>
+        <p class="lead text-muted">{{ _('carbon_desc') }}</p>
+    </div>
+</div>
+
+{% if manager_available %}
+<div class="row">
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-fire fa-3x text-danger mb-3"></i>
+                <h5 class="card-title">{{ _('scope_1_title') }}</h5>
+                <p class="card-text">{{ _('scope_1_desc') }}</p>
+                <a href="{{ url_for('data_add', data_type='carbon', scope='Scope 1') }}" class="btn btn-outline-primary">{{ _('btn_data_entry') }}</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-bolt fa-3x text-warning mb-3"></i>
+                <h5 class="card-title">{{ _('scope_2_title') }}</h5>
+                <p class="card-text">{{ _('scope_2_desc') }}</p>
+                <a href="{{ url_for('data_add', data_type='carbon', scope='Scope 2') }}" class="btn btn-outline-primary">{{ _('btn_data_entry') }}</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-plane fa-3x text-info mb-3"></i>
+                <h5 class="card-title">{{ _('scope_3_title') }}</h5>
+                <p class="card-text">{{ _('scope_3_desc') }}</p>
+                <a href="{{ url_for('data_add', data_type='carbon', scope='Scope 3') }}" class="btn btn-outline-primary">{{ _('btn_data_entry') }}</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="alert alert-warning">
+    <h4 class="alert-heading">{{ _('module_load_error') }}</h4>
+    <p>Karbon Yönetimi {{ _('module_unavailable') }}</p>
+</div>
+{% endif %}
+{% endblock %}

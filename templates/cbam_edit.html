@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('data_entry_btn') }} - {{ _('cbam_title') }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">{{ _('data_entry_btn') }} - {{ _('cbam_title') }}</h4>
+                <button class="btn btn-sm btn-outline-secondary" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button>
+            </div>
+            <div class="card-body">
+                <form method="post" class="needs-validation" novalidate>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('cbam_sector') }}</label>
+                        <select class="form-select" name="sector" required>
+                            <option value="cement">Çimento</option>
+                            <option value="iron_steel">Demir ve Çelik</option>
+                            <option value="aluminium">Alüminyum</option>
+                            <option value="fertilizers">Gübre</option>
+                            <option value="electricity">Elektrik</option>
+                            <option value="hydrogen">Hidrojen</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('cbam_product_code') }} (CN Code)</label>
+                        <input type="text" class="form-control" name="product_code" placeholder="Örn: 2523 10 00" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('cbam_origin_country') }}</label>
+                        <input type="text" class="form-control" name="origin_country" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('cbam_total_imports') }} (Ton / MWh)</label>
+                        <input type="number" class="form-control" name="quantity" step="0.01" min="0" required>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">{{ _('cbam_direct_emissions') }} (tCO2e)</label>
+                            <input type="number" class="form-control" name="direct_emissions" step="0.001" min="0" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">{{ _('cbam_indirect_emissions') }} (tCO2e)</label>
+                            <input type="number" class="form-control" name="indirect_emissions" step="0.001" min="0" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Ödenen Karbon Ücreti (€) (Varsa)</label>
+                        <input type="number" class="form-control" name="carbon_price_paid" step="0.01" min="0" value="0">
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Offset Türü (Varsa)</label>
+                            <select class="form-select" name="offset_type">
+                                <option value="">Seçiniz...</option>
+                                <option value="Gold Standard">Gold Standard</option>
+                                <option value="VCS">VCS (Verified Carbon Standard)</option>
+                                <option value="CDM">CDM (Clean Development Mechanism)</option>
+                                <option value="Other">Diğer</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Offset Miktarı (tCO2e)</label>
+                            <input type="number" class="form-control" name="offset_quantity" step="0.001" min="0" value="0">
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('cbam_module') }}" class="btn btn-light">{{ _('common.btn_cancel') }}</a>
+                        <button type="submit" class="btn btn-primary">{{ _('common.btn_save') }}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

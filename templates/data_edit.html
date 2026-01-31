@@ -1,0 +1,367 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('sdg.data_entry') }} - SDG{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+<h1 class="h2">{{ _('sdg.data_entry') }}</h1>
+<div class="btn-toolbar mb-2 mb-md-0">
+
+<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+</div>
+<div class="card shadow-sm border-0">
+<div class="card-body">
+<form method="POST">
+<div class="row g-3">
+<div class="col-md-12 {% if module %}d-none{% endif %}">
+<label class="form-label" for="data_type">Veri Türü</label>
+<select class="form-select" id="data_type" name="data_type" onchange="toggleFields()">
+<option value="carbon" {% if module == 'carbon' or data_type == 'carbon' %}selected{% endif %}>Karbon Emisyonu</option>
+<option value="energy" {% if module == 'energy' or data_type == 'energy' %}selected{% endif %}>Enerji Tüketimi</option>
+<option value="water" {% if module == 'water' or data_type == 'water' %}selected{% endif %}>Su Tüketimi</option>
+<option value="waste" {% if module == 'waste' or data_type == 'waste' %}selected{% endif %}>Atık Üretimi</option>
+<option value="social" {% if module == 'social' or data_type == 'social' %}selected{% endif %}>Sosyal (İK, İSG, Eğitim)</option>
+<option value="governance" {% if module == 'governance' or data_type == 'governance' %}selected{% endif %}>Yönetişim</option>
+<option value="economic" {% if module == 'economic' or data_type == 'economic' %}selected{% endif %}>Ekonomik</option>
+<option value="biodiversity" {% if module == 'biodiversity' or data_type == 'biodiversity' %}selected{% endif %}>Biyoçeşitlilik</option>
+</select>
+</div>
+<!-- Common Fields -->
+<div class="col-md-6">
+<label class="form-label" for="date">Tarih / Dönem</label>
+<input class="form-control" id="date" name="date" placeholder="YYYY-AA veya YYYY" required="" type="text"/>
+</div>
+<!-- Carbon Fields -->
+<div class="col-12 row g-3 {% if data_type != 'carbon' and data_type is not none %}d-none{% endif %}" id="carbon_fields">
+<div class="col-md-6">
+<label class="form-label" for="scope">Kapsam (Scope)</label>
+<select class="form-select" id="scope" name="scope">
+<option value="Scope 1" {% if scope == 'Scope 1' %}selected{% endif %}>Scope 1</option>
+<option value="Scope 2" {% if scope == 'Scope 2' %}selected{% endif %}>Scope 2</option>
+<option value="Scope 3" {% if scope == 'Scope 3' %}selected{% endif %}>Scope 3</option>
+</select>
+</div>
+<div class="col-md-6">
+<label class="form-label" for="category">Kategori</label>
+<input class="form-control" id="category" name="category" placeholder="Örn: Sabit Yanma, Elektrik" type="text"/>
+</div>
+<div class="col-md-6">
+<label class="form-label" for="amount">Miktar</label>
+<input class="form-control" id="amount" name="amount" step="any" type="number"/>
+</div>
+<div class="col-md-6">
+<label class="form-label" for="unit">Birim</label>
+<input class="form-control" id="unit" name="unit" placeholder="m3, kg, kWh" type="text"/>
+</div>
+<div class="col-md-6">
+<label class="form-label" for="co2e">CO2e (kg)</label>
+<input class="form-control" id="co2e" name="co2e" step="any" type="number"/>
+</div>
+</div>
+<!-- Energy Fields -->
+<div class="col-12 row g-3 {% if data_type != 'energy' %}d-none{% endif %}" id="energy_fields">
+<div class="col-md-6">
+<label class="form-label" for="energy_type">Enerji Türü</label>
+<input class="form-control" id="energy_type" name="energy_type" placeholder="Elektrik, Doğalgaz" type="text"/>
+</div>
+<div class="col-md-6">
+<label class="form-label" for="energy_consumption">Tüketim Miktarı</label>
+<input class="form-control" id="energy_consumption" name="energy_consumption" step="any" type="number"/>
+</div>
+<div class="col-md-6">
+<label class="form-label" for="energy_unit">Birim</label>
+<input class="form-control" id="energy_unit" name="energy_unit" placeholder="kWh, m3" type="text"/>
+</div>
+<div class="col-md-6">
+<label class="form-label" for="cost">Maliyet</label>
+<input class="form-control" id="cost" name="cost" step="any" type="number"/>
+</div>
+</div>
+<!-- Water Fields -->
+<div class="col-12 row g-3 {% if data_type != 'water' %}d-none{% endif %}" id="water_fields">
+<div class="col-md-6">
+<label class="form-label" for="water_type">Su Kaynağı</label>
+<input class="form-control" id="water_type" name="water_type" placeholder="Şebeke, Kuyu" type="text"/>
+</div>
+<div class="col-md-6">
+<label class="form-label" for="water_consumption">Tüketim Miktarı</label>
+<input class="form-control" id="water_consumption" name="water_consumption" step="any" type="number"/>
+</div>
+<div class="col-md-6">
+<label class="form-label" for="water_unit">Birim</label>
+<input class="form-control" id="water_unit" name="water_unit" type="text" value="m3"/>
+</div>
+</div>
+<!-- Waste Fields -->
+<div class="col-12 row g-3 {% if data_type != 'waste' %}d-none{% endif %}" id="waste_fields">
+<div class="col-md-6">
+<label class="form-label" for="waste_type">Atık Türü</label>
+<input class="form-control" id="waste_type" name="waste_type" placeholder="Kağıt, Plastik, Tehlikeli" type="text"/>
+</div>
+<div class="col-md-6">
+<label class="form-label" for="waste_amount">Miktar</label>
+<input class="form-control" id="waste_amount" name="waste_amount" step="any" type="number"/>
+</div>
+<div class="col-md-6">
+<label class="form-label" for="waste_unit">Birim</label>
+<input class="form-control" id="waste_unit" name="waste_unit" placeholder="kg, ton" type="text"/>
+</div>
+<div class="col-md-6">
+<label class="form-label" for="disposal_method">Bertaraf Yöntemi</label>
+<select class="form-select" id="disposal_method" name="disposal_method">
+<option value="recycle">Geri Dönüşüm</option>
+<option value="landfill">Düzenli Depolama</option>
+<option value="incineration">Yakma</option>
+<option value="reuse">Yeniden Kullanım</option>
+</select>
+</div>
+</div>
+<!-- Biodiversity Fields -->
+<div class="col-12 row g-3 {% if data_type != 'biodiversity' %}d-none{% endif %}" id="biodiversity_fields">
+<div class="col-md-6">
+<label class="form-label" for="bio_category">Kategori</label>
+<select class="form-select" id="bio_category" name="bio_category">
+<option value="habitat" {% if category == 'habitat' %}selected{% endif %}>Habitat Alanları</option>
+<option value="species" {% if category == 'species' %}selected{% endif %}>Tür Koruma</option>
+<option value="impact" {% if category == 'impact' %}selected{% endif %}>Etki Yönetimi</option>
+</select>
+</div>
+<div class="col-md-6">
+<label class="form-label" for="bio_description">Açıklama / Detay</label>
+<input class="form-control" id="bio_description" name="bio_description" placeholder="Faaliyet detayı..." type="text"/>
+</div>
+<div class="col-md-6">
+<label class="form-label" for="bio_area">Etkilenen Alan (m²)</label>
+<input class="form-control" id="bio_area" name="bio_area" step="any" type="number"/>
+</div>
+<div class="col-md-6">
+<label class="form-label" for="bio_status">Durum</label>
+<select class="form-select" id="bio_status" name="bio_status">
+<option value="active">Aktif</option>
+<option value="completed">Tamamlandı</option>
+<option value="planned">Planlandı</option>
+</select>
+</div>
+</div>
+<!-- Social Fields -->
+<div class="col-12 row g-3 {% if data_type != 'social' %}d-none{% endif %}" id="social_fields">
+<div class="col-md-12">
+<label class="form-label" for="social_category">Kategori</label>
+<select class="form-select" id="social_category" name="social_category" onchange="toggleSocialSubFields()">
+<option value="employment">İstihdam (Çalışan Sayısı)</option>
+<option value="ohs">İSG (Kaza/Olay)</option>
+<option value="training">Eğitim</option>
+</select>
+</div>
+<!-- Employment Sub-fields -->
+<div class="col-12 row g-3" id="social_employment_fields">
+<div class="col-md-6">
+<label class="form-label" for="employee_count">Çalışan Sayısı</label>
+<input class="form-control" id="employee_count" name="employee_count" type="number"/>
+</div>
+<div class="col-md-6">
+<label class="form-label" for="gender">Cinsiyet</label>
+<select class="form-select" id="gender" name="gender">
+<option value="All">Tümü</option>
+<option value="Male">Erkek</option>
+<option value="Female">Kadın</option>
+<option value="Other">Diğer</option>
+</select>
+</div>
+<div class="col-md-6">
+<label class="form-label" for="department">Departman</label>
+<input class="form-control" id="department" name="department" type="text"/>
+</div>
+</div>
+<!-- OHS Sub-fields -->
+<div class="col-12 row g-3 d-none" id="social_ohs_fields">
+<div class="col-md-6">
+<label class="form-label" for="incident_type">Olay Türü</label>
+<input class="form-control" id="incident_type" name="incident_type" placeholder="İş Kazası, Ramak Kala" type="text"/>
+</div>
+<div class="col-md-6">
+<label class="form-label" for="severity">Ciddiyet</label>
+<select class="form-select" id="severity" name="severity">
+<option value="Low">Düşük</option>
+<option value="Medium">Orta</option>
+<option value="High">Yüksek</option>
+</select>
+</div>
+<div class="col-md-6">
+<label class="form-label" for="lost_time_days">Kayıp Gün Sayısı</label>
+<input class="form-control" id="lost_time_days" name="lost_time_days" type="number" value="0"/>
+</div>
+</div>
+<!-- Training Sub-fields -->
+<div class="col-12 row g-3 d-none" id="social_training_fields">
+<div class="col-md-6">
+<label class="form-label" for="training_name">Eğitim Adı</label>
+<input class="form-control" id="training_name" name="training_name" type="text"/>
+</div>
+<div class="col-md-6">
+<label class="form-label" for="training_hours">Süre (Saat)</label>
+<input class="form-control" id="training_hours" name="training_hours" step="0.5" type="number"/>
+</div>
+<div class="col-md-6">
+<label class="form-label" for="participants">Katılımcı Sayısı</label>
+<input class="form-control" id="participants" name="participants" type="number"/>
+</div>
+</div>
+</div>
+<!-- Governance Fields -->
+<div class="col-12 row g-3 {% if data_type != 'governance' %}d-none{% endif %}" id="governance_fields">
+<div class="col-md-12">
+<label class="form-label" for="governance_category">Kategori</label>
+<select class="form-select" id="governance_category" name="governance_category" onchange="toggleGovernanceSubFields()">
+<option value="board">Yönetim Kurulu</option>
+<option value="ethics">Etik ve Uyum</option>
+</select>
+</div>
+<!-- Board Sub-fields -->
+<div class="col-12 row g-3" id="governance_board_fields">
+<div class="col-md-6">
+<label class="form-label" for="board_members">Toplam Üye Sayısı</label>
+<input class="form-control" id="board_members" name="board_members" type="number"/>
+</div>
+<div class="col-md-6">
+<label class="form-label" for="female_members">Kadın Üye Sayısı</label>
+<input class="form-control" id="female_members" name="female_members" type="number"/>
+</div>
+<div class="col-md-6">
+<label class="form-label" for="independent_members">Bağımsız Üye Sayısı</label>
+<input class="form-control" id="independent_members" name="independent_members" type="number"/>
+</div>
+</div>
+<!-- Ethics Sub-fields -->
+<div class="col-12 row g-3 d-none" id="governance_ethics_fields">
+<div class="col-md-6">
+<label class="form-label" for="ethics_training_hours">Etik Eğitim Saati</label>
+<input class="form-control" id="ethics_training_hours" name="ethics_training_hours" type="number"/>
+</div>
+<div class="col-md-6">
+<label class="form-label" for="whistleblowing_reports">İhbar Bildirim Sayısı</label>
+<input class="form-control" id="whistleblowing_reports" name="whistleblowing_reports" type="number"/>
+</div>
+</div>
+</div>
+<!-- Economic Fields -->
+<div class="col-12 row g-3 {% if data_type != 'economic' %}d-none{% endif %}" id="economic_fields">
+<div class="col-md-12">
+<label class="form-label" for="economic_category">Kategori</label>
+<select class="form-select" id="economic_category" name="economic_category" onchange="toggleEconomicSubFields()">
+<option value="value">Ekonomik Değer</option>
+<option value="climate">İklim Riskleri</option>
+<option value="tax">Vergi</option>
+</select>
+</div>
+<!-- Value Sub-fields -->
+<div class="col-12 row g-3" id="economic_value_fields">
+<div class="col-md-6">
+<label class="form-label" for="revenue">Gelir (TL)</label>
+<input class="form-control" id="revenue" name="revenue" step="any" type="number"/>
+</div>
+<div class="col-md-6">
+<label class="form-label" for="operating_costs">Faaliyet Giderleri (TL)</label>
+<input class="form-control" id="operating_costs" name="operating_costs" step="any" type="number"/>
+</div>
+</div>
+<!-- Climate Sub-fields -->
+<div class="col-12 row g-3 d-none" id="economic_climate_fields">
+<div class="col-md-12">
+<label class="form-label" for="financial_impact">Finansal Etki (TL)</label>
+<input class="form-control" id="financial_impact" name="financial_impact" step="any" type="number"/>
+</div>
+</div>
+<!-- Tax Sub-fields -->
+<div class="col-12 row g-3 d-none" id="economic_tax_fields">
+<div class="col-md-12">
+<label class="form-label" for="tax_paid">Ödenen Vergi (TL)</label>
+<input class="form-control" id="tax_paid" name="tax_paid" step="any" type="number"/>
+</div>
+</div>
+</div>
+<div class="col-12 text-end mt-4">
+<button class="btn btn-primary" type="submit">
+<i class="bi bi-save"></i> {{ _('common.save') }}
+                    </button>
+</div>
+</div>
+</form>
+</div>
+</div>
+<script>
+function toggleFields() {
+    const type = document.getElementById('data_type').value;
+    const fields = ['carbon', 'energy', 'water', 'waste', 'social', 'governance', 'economic'];
+    
+    fields.forEach(f => {
+        const el = document.getElementById(f + '_fields');
+        if (el) {
+            if (f === type) {
+                el.classList.remove('d-none');
+            } else {
+                el.classList.add('d-none');
+            }
+        }
+    });
+    
+    // Trigger sub-fields
+    if (type === 'social') toggleSocialSubFields();
+    if (type === 'governance') toggleGovernanceSubFields();
+    if (type === 'economic') toggleEconomicSubFields();
+}
+
+function toggleSocialSubFields() {
+    const category = document.getElementById('social_category').value;
+    const subFields = ['employment', 'ohs', 'training'];
+    
+    subFields.forEach(f => {
+        const el = document.getElementById('social_' + f + '_fields');
+        if (el) {
+            if (f === category) {
+                el.classList.remove('d-none');
+            } else {
+                el.classList.add('d-none');
+            }
+        }
+    });
+}
+
+function toggleGovernanceSubFields() {
+    const category = document.getElementById('governance_category').value;
+    const subFields = ['board', 'ethics'];
+    
+    subFields.forEach(f => {
+        const el = document.getElementById('governance_' + f + '_fields');
+        if (el) {
+            if (f === category) {
+                el.classList.remove('d-none');
+            } else {
+                el.classList.add('d-none');
+            }
+        }
+    });
+}
+
+function toggleEconomicSubFields() {
+    const category = document.getElementById('economic_category').value;
+    const subFields = ['value', 'climate', 'tax'];
+    
+    subFields.forEach(f => {
+        const el = document.getElementById('economic_' + f + '_fields');
+        if (el) {
+            if (f === category) {
+                el.classList.remove('d-none');
+            } else {
+                el.classList.add('d-none');
+            }
+        }
+    });
+}
+
+// Initial toggle based on server-side or default selection
+document.addEventListener('DOMContentLoaded', function() {
+    toggleFields();
+});
+</script>
+{% endblock %}

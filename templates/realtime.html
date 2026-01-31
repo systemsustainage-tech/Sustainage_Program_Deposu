@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block title %}Gerçek Zamanlı İzleme{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Gerçek Zamanlı İzleme (IoT)</h1>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addDeviceModal">
+            <i class="fas fa-plus"></i> Cihaz Ekle
+        </button>
+    </div>
+
+    <!-- Alerts Section -->
+    {% if alerts %}
+    <div class="card shadow mb-4 border-left-danger">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-danger">Aktif Alarmlar</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>Zaman</th>
+                            <th>Cihaz</th>
+                            <th>Mesaj</th>
+                            <th>Durum</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for alert in alerts %}
+                        <tr>
+                            <td>{{ alert.timestamp }}</td>
+                            <td>{{ alert.device_name }}</td>
+                            <td class="text-danger font-weight-bold">{{ alert.message }}</td>
+                            <td><span class="badge bg-warning text-dark">{{ alert.status }}</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Devices Grid -->
+    <div class="row">
+        {% for device in devices %}
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                {{ device.name }}
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ device.device_type }}
+                            </div>
+                            <div class="mt-2 text-muted small">
+                                Birim: {{ device.unit }}
+                                {% if device.threshold_value %}
+                                <br>Eşik: {{ device.threshold_value }}
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-microchip fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                    <a href="{{ url_for('realtime_device_detail', device_id=device.id) }}" class="btn btn-sm btn-info mt-3 w-100">
+                        Detaylar & Geçmiş
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-12 text-center text-muted">
+            <p>Henüz kayıtlı cihaz bulunmamaktadır.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Add Device Modal -->
+<div class="modal fade" id="addDeviceModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Yeni IoT Cihazı Ekle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('realtime_add_device') }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Cihaz Adı</label>
+                        <input type="text" class="form-control" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Tip</label>
+                        <select class="form-select" name="device_type">
+                            <option value="Energy">Enerji</option>
+                            <option value="Water">Su</option>
+                            <option value="Waste">Atık</option>
+                            <option value="Temperature">Sıcaklık</option>
+                            <option value="Other">Diğer</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Birim</label>
+                        <input type="text" class="form-control" name="unit" placeholder="örn. kWh, m3, C">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Eşik Değeri (Opsiyonel)</label>
+                        <input type="number" step="0.01" class="form-control" name="threshold_value">
+                        <div class="form-text">Bu değer aşılırsa alarm oluşturulur.</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-primary">Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

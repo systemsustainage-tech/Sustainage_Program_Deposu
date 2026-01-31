@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('gri_title') }} - {{ _('data_entry_btn') }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+<div class="col-md-12">
+<div class="d-flex justify-content-between align-items-center mb-3"><h1><i class="fas fa-edit me-2"></i>{{ _('gri_title') }} - {{ _('data_entry_btn') }}</h1><button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+<p class="lead text-muted">{{ _('gri_desc') }}</p>
+</div>
+</div>
+<div class="row">
+<div class="col-md-8 mx-auto">
+<div class="card">
+<div class="card-body">
+<form class="needs-validation" method="POST" novalidate="">
+<div class="mb-3">
+<label class="form-label" for="year">{{ _('gri_year') }}</label>
+<input class="form-control" id="year" name="year" required="" type="number" value="2025"/>
+</div>
+<div class="mb-3">
+<label class="form-label" for="standard">{{ _('gri_standard') }}</label>
+<select class="form-select" id="standard" name="standard" required="">
+<option value="">{{ _('select_option') }}</option>
+<option value="GRI 200">GRI 200: Economic</option>
+<option value="GRI 300">GRI 300: Environmental</option>
+<option value="GRI 400">GRI 400: Social</option>
+</select>
+</div>
+<div class="mb-3">
+<label class="form-label" for="disclosure">{{ _('gri_disclosure') }}</label>
+<input class="form-control" id="disclosure" name="disclosure" placeholder="{{ _('gri_disclosure_placeholder') }}" required="" type="text"/>
+</div>
+<div class="mb-3">
+<label class="form-label" for="value">{{ _('gri_value') }}</label>
+<textarea class="form-control" id="value" name="value" required="" rows="4"></textarea>
+</div>
+<div class="d-flex justify-content-between gap-2">
+<a class="btn btn-secondary flex-grow-1" href="{{ url_for('gri_module') }}">{{ _('common.btn_cancel') }}</a>
+<button class="btn btn-primary flex-grow-1" type="submit">{{ _('common.btn_save') }}</button>
+</div>
+</form>
+</div>
+</div>
+</div>
+</div>
+{% endblock %}
