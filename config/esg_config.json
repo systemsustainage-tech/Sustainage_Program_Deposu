@@ -1,0 +1,46 @@
+{
+  "version": "1.0",
+  "weights": {
+    "E": 0.4,
+    "S": 0.3,
+    "G": 0.3
+  },
+  "sources": {
+    "db_path": "data/sdg_desktop.sqlite",
+    "sdg_questions_table": "sdg_question_responses",
+    "sdg_responses_table": "responses",
+    "gri_responses_table": "gri_responses",
+    "tsrs_responses_table": "tsrs_responses",
+    "tsrs_materiality_table": "tsrs_materiality_assessment",
+    "erp_metrics_table": "erp_metrics",
+    "supplier_assessments_table": "supplier_assessments",
+    "surveys_table": "surveys",
+    "survey_responses_table": "survey_responses"
+  },
+  "mappings": {
+    "E": {
+      "gri_categories": ["Environmental"],
+      "gri_standards": ["GRI 301","GRI 302","GRI 303","GRI 304","GRI 305","GRI 306","GRI 307","GRI 308"],
+      "tsrs_sections": ["TSRS-E1","TSRS-E2","TSRS-E3","TSRS-E4","TSRS-E5"],
+      "sdg_hint_goals": [6,7,12,13,14,15]
+    },
+    "S": {
+      "gri_categories": ["Social"],
+      "gri_standards": ["GRI 401","GRI 402","GRI 403","GRI 404","GRI 405","GRI 406","GRI 407","GRI 408","GRI 409","GRI 410","GRI 411","GRI 412","GRI 413","GRI 414","GRI 415","GRI 416","GRI 417","GRI 418","GRI 419"],
+      "tsrs_sections": ["TSRS-S1","TSRS-S2","TSRS-S3","TSRS-S4"],
+      "sdg_hint_goals": [1,3,4,5,8,10,11,16]
+    },
+    "G": {
+      "gri_categories": ["Universal"],
+      "gri_standards": ["GRI 2"],
+      "tsrs_sections": ["TSRS-G1"],
+      "sdg_hint_goals": [16,17]
+    }
+  },
+  "scoring": {
+    "min_completeness_to_count": 0.5,
+    "evidence_bonus": 0.05,
+    "materiality_bonus": 0.1,
+    "normalize_method": "ratio_answered_to_total"
+  }
+}
