@@ -1,0 +1,121 @@
+{
+  "objectives": [
+    {
+      "id": "CCM",
+      "name": "Climate Change Mitigation",
+      "name_tr": "İklim Değişikliği Azaltımı",
+      "description": "Sera gazı emisyonlarının azaltılması veya önlenmesi",
+      "icon": "🌡️"
+    },
+    {
+      "id": "CCA",
+      "name": "Climate Change Adaptation",
+      "name_tr": "İklim Değişikliğine Uyum",
+      "description": "İklim değişikliğinin olumsuz etkilerinin azaltılması",
+      "icon": "🛡️"
+    },
+    {
+      "id": "WTR",
+      "name": "Sustainable Use of Water",
+      "name_tr": "Suyun Sürdürülebilir Kullanımı",
+      "description": "Su kaynaklarının korunması ve sürdürülebilir kullanımı",
+      "icon": "💧"
+    },
+    {
+      "id": "CE",
+      "name": "Circular Economy",
+      "name_tr": "Döngüsel Ekonomi",
+      "description": "Atık önleme ve kaynak verimliliği",
+      "icon": "♻️"
+    },
+    {
+      "id": "PPC",
+      "name": "Pollution Prevention",
+      "name_tr": "Kirlilik Önleme",
+      "description": "Hava, su ve toprak kirliliğinin önlenmesi",
+      "icon": "🌿"
+    },
+    {
+      "id": "BIO",
+      "name": "Biodiversity",
+      "name_tr": "Biyoçeşitlilik",
+      "description": "Ekosistem ve biyoçeşitliliğin korunması",
+      "icon": "🦋"
+    }
+  ],
+  "criteria": {
+    "substantial_contribution": {
+      "name": "Önemli Katkı",
+      "description": "Faaliyetin en az bir çevresel hedefe önemli katkı sağlaması"
+    },
+    "do_no_harm": {
+      "name": "Önemli Zarar Vermeme (DNSH)",
+      "description": "Faaliyetin diğer çevresel hedeflere önemli zarar vermemesi"
+    },
+    "minimum_safeguards": {
+      "name": "Minimum Güvenceler",
+      "description": "OECD ve BM kılavuzlarına uyum"
+    }
+  },
+  "sectors": [
+    {
+      "name": "Enerji",
+      "nace_codes": ["D35"],
+      "activities": ["Yenilenebilir enerji üretimi", "Enerji verimliliği"]
+    },
+    {
+      "name": "İmalat",
+      "nace_codes": ["C10-C33"],
+      "activities": ["Düşük karbonlu üretim", "Döngüsel ekonomi"]
+    },
+    {
+      "name": "Ulaşım",
+      "nace_codes": ["H49-H53"],
+      "activities": ["Elektrikli araçlar", "Toplu taşıma"]
+    },
+    {
+      "name": "İnşaat",
+      "nace_codes": ["F41-F43"],
+      "activities": ["Yeşil binalar", "Renovasyon"]
+    },
+    {
+      "name": "Su ve Atık",
+      "nace_codes": ["E36-E39"],
+      "activities": ["Su tasarrufu", "Atık yönetimi"]
+    },
+    {
+      "name": "Bilgi ve İletişim",
+      "nace_codes": ["J58-J63"],
+      "activities": ["Veri merkezleri", "Dijitalleşme"]
+    },
+    {
+      "name": "Gayrimenkul",
+      "nace_codes": ["L68"],
+      "activities": ["Enerji verimli binalar"]
+    },
+    {
+      "name": "Profesyonel Hizmetler",
+      "nace_codes": ["M69-M75"],
+      "activities": ["Sürdürülebilirlik danışmanlığı"]
+    }
+  ],
+  "thresholds": {
+    "substantial_contribution": 0.6,
+    "dnsh_compliance": 0.8,
+    "minimum_safeguards": 0.9
+  },
+  "reporting_requirements": {
+    "revenue": {
+      "required": true,
+      "description": "Taxonomy uyumlu faaliyetlerden elde edilen gelir oranı"
+    },
+    "capex": {
+      "required": true,
+      "description": "Taxonomy uyumlu faaliyetlere yapılan sermaye harcamaları oranı"
+    },
+    "opex": {
+      "required": true,
+      "description": "Taxonomy uyumlu faaliyetlere yapılan operasyonel harcamalar oranı"
+    }
+  }
+}

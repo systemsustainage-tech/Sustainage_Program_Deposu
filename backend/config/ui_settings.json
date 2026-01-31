@@ -1,0 +1,8 @@
+{
+  "dashboard_variant": "classic",
+  "dashboard_image_mode": "auto",
+  "dashboard_bg_gradient": {
+    "colors": ["#000000", "#8b0000"]
+  },
+  "dashboard_image_path": "resimler/dashboard.png"
+}

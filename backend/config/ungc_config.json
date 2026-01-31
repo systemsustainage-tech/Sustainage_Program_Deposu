@@ -1,0 +1,945 @@
+{
+  "version": "1.0.0",
+  "last_updated": "2025-01-17",
+  "principles": [
+    {
+      "id": "P1",
+      "number": 1,
+      "category": "Human Rights",
+      "title_en": "Businesses should support and respect the protection of internationally proclaimed human rights",
+      "title_tr": "İşletmeler, uluslararası düzeyde ilan edilmiş insan haklarını desteklemeli ve bu haklara saygı göstermelidir",
+      "description_en": "Companies should support and respect internationally proclaimed human rights within their sphere of influence.",
+      "description_tr": "Şirketler, etki alanları dahilinde uluslararası düzeyde ilan edilmiş insan haklarını desteklemeli ve bu haklara saygı göstermelidir.",
+      "evidence_required": [
+        "policy",
+        "training",
+        "assessments",
+        "monitoring"
+      ]
+    },
+    {
+      "id": "P2",
+      "number": 2,
+      "category": "Human Rights",
+      "title_en": "Make sure that they are not complicit in human rights abuses",
+      "title_tr": "İnsan hakları ihlallerine ortak olmadıklarından emin olmalıdırlar",
+      "description_en": "Companies should ensure they are not complicit in human rights abuses.",
+      "description_tr": "Şirketler, insan hakları ihlallerine ortak olmadıklarından emin olmalıdır.",
+      "evidence_required": [
+        "due_diligence",
+        "supply_chain_audit",
+        "incident_reports",
+        "corrective_actions"
+      ]
+    },
+    {
+      "id": "P3",
+      "number": 3,
+      "category": "Labour",
+      "title_en": "Businesses should uphold the freedom of association and the effective recognition of the right to collective bargaining",
+      "title_tr": "İşletmeler, örgütlenme özgürlüğünü ve toplu pazarlık hakkının etkin bir şekilde tanınmasını desteklemelidir",
+      "description_en": "Companies should uphold the freedom of association and recognize the right to collective bargaining.",
+      "description_tr": "Şirketler, örgütlenme özgürlüğünü ve toplu pazarlık hakkını tanımalıdır.",
+      "evidence_required": [
+        "policy",
+        "worker_representation",
+        "collective_agreements",
+        "grievance_mechanisms"
+      ]
+    },
+    {
+      "id": "P4",
+      "number": 4,
+      "category": "Labour",
+      "title_en": "The elimination of all forms of forced and compulsory labour",
+      "title_tr": "Her türlü zorla ve zorunlu çalıştırmanın ortadan kaldırılması",
+      "description_en": "Companies should eliminate all forms of forced and compulsory labor.",
+      "description_tr": "Şirketler, her türlü zorla ve zorunlu çalıştırmayı ortadan kaldırmalıdır.",
+      "evidence_required": [
+        "policy",
+        "risk_assessment",
+        "supplier_audits",
+        "remediation"
+      ]
+    },
+    {
+      "id": "P5",
+      "number": 5,
+      "category": "Labour",
+      "title_en": "The effective abolition of child labour",
+      "title_tr": "Çocuk işçiliğinin etkin bir şekilde ortadan kaldırılması",
+      "description_en": "Companies should support the effective abolition of child labor.",
+      "description_tr": "Şirketler, çocuk işçiliğinin etkin bir şekilde ortadan kaldırılmasını desteklemelidir.",
+      "evidence_required": [
+        "policy",
+        "age_verification",
+        "supplier_monitoring",
+        "remediation_programs"
+      ]
+    },
+    {
+      "id": "P6",
+      "number": 6,
+      "category": "Labour",
+      "title_en": "The elimination of discrimination in respect of employment and occupation",
+      "title_tr": "İş ve meslek açısından ayrımcılığın ortadan kaldırılması",
+      "description_en": "Companies should eliminate discrimination in employment and occupation.",
+      "description_tr": "Şirketler, iş ve meslek açısından ayrımcılığı ortadan kaldırmalıdır.",
+      "evidence_required": [
+        "policy",
+        "diversity_metrics",
+        "training",
+        "equal_pay_audit"
+      ]
+    },
+    {
+      "id": "P7",
+      "number": 7,
+      "category": "Environment",
+      "title_en": "Businesses should support a precautionary approach to environmental challenges",
+      "title_tr": "İşletmeler, çevresel sorunlara karşı ihtiyati yaklaşımı desteklemelidir",
+      "description_en": "Companies should support a precautionary approach to environmental challenges.",
+      "description_tr": "Şirketler, çevresel sorunlara karşı ihtiyati yaklaşımı desteklemelidir.",
+      "evidence_required": [
+        "policy",
+        "risk_assessment",
+        "environmental_management_system",
+        "monitoring"
+      ]
+    },
+    {
+      "id": "P8",
+      "number": 8,
+      "category": "Environment",
+      "title_en": "Undertake initiatives to promote greater environmental responsibility",
+      "title_tr": "Daha büyük çevresel sorumluluk bilincini geliştirmek için insiyatif almalıdır",
+      "description_en": "Companies should undertake initiatives to promote greater environmental responsibility.",
+      "description_tr": "Şirketler, daha büyük çevresel sorumluluk bilincini geliştirmek için insiyatif almalıdır.",
+      "evidence_required": [
+        "initiatives",
+        "targets",
+        "certifications",
+        "stakeholder_engagement"
+      ]
+    },
+    {
+      "id": "P9",
+      "number": 9,
+      "category": "Environment",
+      "title_en": "Encourage the development and diffusion of environmentally friendly technologies",
+      "title_tr": "Çevre dostu teknolojilerin geliştirilmesini ve yayılmasını teşvik etmelidir",
+      "description_en": "Companies should encourage the development and diffusion of environmentally friendly technologies.",
+      "description_tr": "Şirketler, çevre dostu teknolojilerin geliştirilmesini ve yayılmasını teşvik etmelidir.",
+      "evidence_required": [
+        "rnd_investments",
+        "technology_adoption",
+        "partnerships",
+        "innovation_metrics"
+      ]
+    },
+    {
+      "id": "P10",
+      "number": 10,
+      "category": "Anti-Corruption",
+      "title_en": "Businesses should work against corruption in all its forms, including extortion and bribery",
+      "title_tr": "İşletmeler, rüşvet ve haraç dahil olmak üzere her türlü yolsuzlukla mücadele etmelidir",
+      "description_en": "Companies should work against corruption in all its forms, including extortion and bribery.",
+      "description_tr": "Şirketler, rüşvet ve haraç dahil olmak üzere her türlü yolsuzlukla mücadele etmelidir.",
+      "evidence_required": [
+        "policy",
+        "training",
+        "due_diligence",
+        "incident_reporting"
+      ]
+    }
+  ],
+  "mappings": {
+    "P1": {
+      "sdg": [
+        "16.2",
+        "16.3",
+        "16.10"
+      ],
+      "gri": [
+        "102-16",
+        "102-17",
+        "412-1",
+        "412-2",
+        "412-3"
+      ],
+      "tsrs": [
+        "S1.1",
+        "S1.2"
+      ]
+    },
+    "P2": {
+      "sdg": [
+        "16.1",
+        "16.2"
+      ],
+      "gri": [
+        "412-1",
+        "412-2",
+        "414-1",
+        "414-2"
+      ],
+      "tsrs": [
+        "S1.3",
+        "S1.4"
+      ]
+    },
+    "P3": {
+      "sdg": [
+        "8.8"
+      ],
+      "gri": [
+        "102-41",
+        "407-1"
+      ],
+      "tsrs": [
+        "S2.1",
+        "S2.2"
+      ]
+    },
+    "P4": {
+      "sdg": [
+        "8.7"
+      ],
+      "gri": [
+        "409-1"
+      ],
+      "tsrs": [
+        "S2.3",
+        "S2.4"
+      ]
+    },
+    "P5": {
+      "sdg": [
+        "8.7",
+        "16.2"
+      ],
+      "gri": [
+        "408-1"
+      ],
+      "tsrs": [
+        "S2.5",
+        "S2.6"
+      ]
+    },
+    "P6": {
+      "sdg": [
+        "5.1",
+        "5.5",
+        "8.5",
+        "10.2",
+        "10.3"
+      ],
+      "gri": [
+        "202-1",
+        "405-1",
+        "405-2",
+        "406-1"
+      ],
+      "tsrs": [
+        "S3.1",
+        "S3.2",
+        "S3.3"
+      ]
+    },
+    "P7": {
+      "sdg": [
+        "12.2",
+        "12.4",
+        "12.5",
+        "13.1",
+        "14.1",
+        "15.1"
+      ],
+      "gri": [
+        "102-11",
+        "201-2",
+        "307-1"
+      ],
+      "tsrs": [
+        "E1.1",
+        "E1.2"
+      ]
+    },
+    "P8": {
+      "sdg": [
+        "6.3",
+        "6.4",
+        "7.2",
+        "7.3",
+        "12.2",
+        "13.1",
+        "13.3",
+        "14.1",
+        "15.1"
+      ],
+      "gri": [
+        "302-1",
+        "302-4",
+        "303-1",
+        "303-3",
+        "305-1",
+        "305-2",
+        "305-4",
+        "306-2"
+      ],
+      "tsrs": [
+        "E2.1",
+        "E2.2",
+        "E2.3"
+      ]
+    },
+    "P9": {
+      "sdg": [
+        "7.2",
+        "9.4",
+        "9.5",
+        "12.2",
+        "13.1"
+      ],
+      "gri": [
+        "302-5",
+        "305-5"
+      ],
+      "tsrs": [
+        "E3.1",
+        "E3.2"
+      ]
+    },
+    "P10": {
+      "sdg": [
+        "16.5"
+      ],
+      "gri": [
+        "102-16",
+        "102-17",
+        "205-1",
+        "205-2",
+        "205-3",
+        "206-1"
+      ],
+      "tsrs": [
+        "G1.1",
+        "G1.2",
+        "G1.3"
+      ]
+    }
+  },
+  "levels": {
+    "learner": {
+      "name": "Learner",
+      "name_tr": "Öğrenen",
+      "min_score": 0,
+      "max_score": 40,
+      "badge": "🥉",
+      "color": "#CD7F32",
+      "description_en": "Starting level - Learning about the principles and beginning implementation",
+      "description_tr": "Başlangıç seviyesi - İlkeleri öğrenme ve uygulamaya başlama",
+      "requirements": [
+        "Submit annual COP",
+        "Have basic policies in place",
+        "Demonstrate commitment to improvement"
+      ]
+    },
+    "active": {
+      "name": "Active",
+      "name_tr": "Aktif",
+      "min_score": 40,
+      "max_score": 70,
+      "badge": "🥈",
+      "color": "#C0C0C0",
+      "description_en": "Active level - Implementing principles with measurable progress",
+      "description_tr": "Aktif seviye - İlkeleri ölçülebilir ilerleme ile uygulama",
+      "requirements": [
+        "Submit regular COPs",
+        "Track KPIs systematically",
+        "Implement policies across operations",
+        "Show measurable improvements"
+      ]
+    },
+    "advanced": {
+      "name": "Advanced",
+      "name_tr": "İleri",
+      "min_score": 70,
+      "max_score": 100,
+      "badge": "🥇",
+      "color": "#FFD700",
+      "description_en": "Advanced level - Leadership in implementing and promoting the principles",
+      "description_tr": "İleri seviye - İlkeleri uygulama ve teşvik etmede liderlik",
+      "requirements": [
+        "Comprehensive reporting",
+        "Industry-leading practices",
+        "Innovation and thought leadership",
+        "Demonstrable impact",
+        "Supply chain engagement"
+      ]
+    }
+  },
+  "thresholds": {
+    "full": 0.7,
+    "partial": 0.4,
+    "none": 0,
+    "kpi_below_target_pct": 60.0
+  },
+  "cop_template": {
+    "title": "Communication on Progress (COP)",
+    "sections": [
+      {
+        "id": "ceo_statement",
+        "name_en": "CEO Statement",
+        "name_tr": "CEO Beyanı",
+        "required": true,
+        "min_words": 200,
+        "description_en": "Statement of continued support from the CEO or equivalent",
+        "description_tr": "CEO veya eşdeğerinden sürekli destek beyanı"
+      },
+      {
+        "id": "human_rights",
+        "name_en": "Human Rights",
+        "name_tr": "İnsan Hakları",
+        "principles": [
+          "P1",
+          "P2"
+        ],
+        "subsections": [
+          {
+            "id": "assessment",
+            "name_en": "Assessment, Policy and Goals",
+            "name_tr": "Değerlendirme, Politika ve Hedefler"
+          },
+          {
+            "id": "implementation",
+            "name_en": "Implementation",
+            "name_tr": "Uygulama"
+          },
+          {
+            "id": "measurement",
+            "name_en": "Measurement of Outcomes",
+            "name_tr": "Sonuçların Ölçümü"
+          }
+        ]
+      },
+      {
+        "id": "labour",
+        "name_en": "Labour",
+        "name_tr": "Çalışma Standartları",
+        "principles": [
+          "P3",
+          "P4",
+          "P5",
+          "P6"
+        ],
+        "subsections": [
+          {
+            "id": "assessment",
+            "name_en": "Assessment, Policy and Goals",
+            "name_tr": "Değerlendirme, Politika ve Hedefler"
+          },
+          {
+            "id": "implementation",
+            "name_en": "Implementation",
+            "name_tr": "Uygulama"
+          },
+          {
+            "id": "measurement",
+            "name_en": "Measurement of Outcomes",
+            "name_tr": "Sonuçların Ölçümü"
+          }
+        ]
+      },
+      {
+        "id": "environment",
+        "name_en": "Environment",
+        "name_tr": "Çevre",
+        "principles": [
+          "P7",
+          "P8",
+          "P9"
+        ],
+        "subsections": [
+          {
+            "id": "assessment",
+            "name_en": "Assessment, Policy and Goals",
+            "name_tr": "Değerlendirme, Politika ve Hedefler"
+          },
+          {
+            "id": "implementation",
+            "name_en": "Implementation",
+            "name_tr": "Uygulama"
+          },
+          {
+            "id": "measurement",
+            "name_en": "Measurement of Outcomes",
+            "name_tr": "Sonuçların Ölçümü"
+          }
+        ]
+      },
+      {
+        "id": "anti_corruption",
+        "name_en": "Anti-Corruption",
+        "name_tr": "Yolsuzlukla Mücadele",
+        "principles": [
+          "P10"
+        ],
+        "subsections": [
+          {
+            "id": "assessment",
+            "name_en": "Assessment, Policy and Goals",
+            "name_tr": "Değerlendirme, Politika ve Hedefler"
+          },
+          {
+            "id": "implementation",
+            "name_en": "Implementation",
+            "name_tr": "Uygulama"
+          },
+          {
+            "id": "measurement",
+            "name_en": "Measurement of Outcomes",
+            "name_tr": "Sonuçların Ölçümü"
+          }
+        ]
+      },
+      {
+        "id": "sdg_contribution",
+        "name_en": "SDG Contribution",
+        "name_tr": "SDG Katkısı",
+        "required": false,
+        "description_en": "How the company contributes to Sustainable Development Goals",
+        "description_tr": "Şirketin Sürdürülebilir Kalkınma Hedeflerine nasıl katkıda bulunduğu"
+      }
+    ]
+  },
+  "data_sources": {
+    "csv_dirs": [
+      "data/imports"
+    ]
+  },
+  "kpis": [
+    {
+      "principle_id": "P1",
+      "kpi_id": "P1-KPI1",
+      "name_en": "Human Rights Policy Existence",
+      "name_tr": "İnsan Hakları Politikası Varlığı",
+      "type": "boolean",
+      "weight": 0.25,
+      "description_en": "Does the company have a formal human rights policy?",
+      "description_tr": "Şirketin resmi bir insan hakları politikası var mı?"
+    },
+    {
+      "principle_id": "P1",
+      "kpi_id": "P1-KPI2",
+      "name_en": "Employee Training Rate",
+      "name_tr": "Çalışan Eğitim Oranı",
+      "type": "percentage",
+      "weight": 0.25,
+      "target": 90,
+      "description_en": "Percentage of employees trained on human rights",
+      "description_tr": "İnsan hakları konusunda eğitilen çalışan yüzdesi"
+    },
+    {
+      "principle_id": "P1",
+      "kpi_id": "P1-KPI3",
+      "name_en": "Human Rights Impact Assessments",
+      "name_tr": "İnsan Hakları Etki Değerlendirmeleri",
+      "type": "number",
+      "weight": 0.25,
+      "target": 4,
+      "unit": "assessments/year",
+      "description_en": "Number of human rights impact assessments conducted",
+      "description_tr": "Gerçekleştirilen insan hakları etki değerlendirmesi sayısı"
+    },
+    {
+      "principle_id": "P1",
+      "kpi_id": "P1-KPI4",
+      "name_en": "Human Rights Violations",
+      "name_tr": "İnsan Hakları İhlalleri",
+      "type": "number",
+      "weight": 0.25,
+      "target": 0,
+      "inverse": true,
+      "unit": "incidents/year",
+      "description_en": "Number of human rights violations reported",
+      "description_tr": "Bildirilen insan hakları ihlali sayısı"
+    },
+    {
+      "principle_id": "P2",
+      "kpi_id": "P2-KPI1",
+      "name_en": "Due Diligence Process",
+      "name_tr": "Gerekli Özen Süreci",
+      "type": "boolean",
+      "weight": 0.3,
+      "description_en": "Does the company have a human rights due diligence process?",
+      "description_tr": "Şirketin insan hakları gerekli özen süreci var mı?"
+    },
+    {
+      "principle_id": "P2",
+      "kpi_id": "P2-KPI2",
+      "name_en": "Supply Chain Audit Coverage",
+      "name_tr": "Tedarik Zinciri Denetim Kapsamı",
+      "type": "percentage",
+      "weight": 0.35,
+      "target": 80,
+      "description_en": "Percentage of high-risk suppliers audited for human rights",
+      "description_tr": "İnsan hakları açısından denetlenen yüksek riskli tedarikçi yüzdesi"
+    },
+    {
+      "principle_id": "P2",
+      "kpi_id": "P2-KPI3",
+      "name_en": "Complicity Incidents",
+      "name_tr": "Suç Ortaklığı Olayları",
+      "type": "number",
+      "weight": 0.35,
+      "target": 0,
+      "inverse": true,
+      "unit": "incidents/year",
+      "description_en": "Number of complicity incidents identified",
+      "description_tr": "Tespit edilen suç ortaklığı olay sayısı"
+    },
+    {
+      "principle_id": "P3",
+      "kpi_id": "P3-KPI1",
+      "name_en": "Freedom of Association Policy",
+      "name_tr": "Örgütlenme Özgürlüğü Politikası",
+      "type": "boolean",
+      "weight": 0.3,
+      "description_en": "Does the company have a policy supporting freedom of association?",
+      "description_tr": "Şirketin örgütlenme özgürlüğünü destekleyen bir politikası var mı?"
+    },
+    {
+      "principle_id": "P3",
+      "kpi_id": "P3-KPI2",
+      "name_en": "Collective Bargaining Coverage",
+      "name_tr": "Toplu Pazarlık Kapsamı",
+      "type": "percentage",
+      "weight": 0.35,
+      "target": 70,
+      "description_en": "Percentage of employees covered by collective bargaining agreements",
+      "description_tr": "Toplu pazarlık anlaşmaları kapsamındaki çalışan yüzdesi"
+    },
+    {
+      "principle_id": "P3",
+      "kpi_id": "P3-KPI3",
+      "name_en": "Worker Representative Meetings",
+      "name_tr": "İşçi Temsilcisi Toplantıları",
+      "type": "number",
+      "weight": 0.35,
+      "target": 12,
+      "unit": "meetings/year",
+      "description_en": "Number of meetings with worker representatives",
+      "description_tr": "İşçi temsilcileriyle yapılan toplantı sayısı"
+    },
+    {
+      "principle_id": "P4",
+      "kpi_id": "P4-KPI1",
+      "name_en": "Forced Labour Policy",
+      "name_tr": "Zorla Çalıştırma Politikası",
+      "type": "boolean",
+      "weight": 0.25,
+      "description_en": "Does the company have a policy against forced labor?",
+      "description_tr": "Şirketin zorla çalıştırmaya karşı bir politikası var mı?"
+    },
+    {
+      "principle_id": "P4",
+      "kpi_id": "P4-KPI2",
+      "name_en": "High-Risk Supplier Audits",
+      "name_tr": "Yüksek Riskli Tedarikçi Denetimleri",
+      "type": "percentage",
+      "weight": 0.35,
+      "target": 85,
+      "description_en": "Percentage of high-risk suppliers audited for forced labor",
+      "description_tr": "Zorla çalıştırma açısından denetlenen yüksek riskli tedarikçi yüzdesi"
+    },
+    {
+      "principle_id": "P4",
+      "kpi_id": "P4-KPI3",
+      "name_en": "Forced Labour Cases",
+      "name_tr": "Zorla Çalıştırma Vakaları",
+      "type": "number",
+      "weight": 0.4,
+      "target": 0,
+      "inverse": true,
+      "unit": "cases/year",
+      "description_en": "Number of forced labor cases identified",
+      "description_tr": "Tespit edilen zorla çalıştırma vakası sayısı"
+    },
+    {
+      "principle_id": "P5",
+      "kpi_id": "P5-KPI1",
+      "name_en": "Child Labour Policy",
+      "name_tr": "Çocuk İşçiliği Politikası",
+      "type": "boolean",
+      "weight": 0.25,
+      "description_en": "Does the company have a policy against child labor?",
+      "description_tr": "Şirketin çocuk işçiliğine karşı bir politikası var mı?"
+    },
+    {
+      "principle_id": "P5",
+      "kpi_id": "P5-KPI2",
+      "name_en": "Age Verification System",
+      "name_tr": "Yaş Doğrulama Sistemi",
+      "type": "boolean",
+      "weight": 0.25,
+      "description_en": "Does the company have an age verification system?",
+      "description_tr": "Şirketin yaş doğrulama sistemi var mı?"
+    },
+    {
+      "principle_id": "P5",
+      "kpi_id": "P5-KPI3",
+      "name_en": "Supplier Monitoring Coverage",
+      "name_tr": "Tedarikçi İzleme Kapsamı",
+      "type": "percentage",
+      "weight": 0.3,
+      "target": 90,
+      "description_en": "Percentage of suppliers monitored for child labor",
+      "description_tr": "Çocuk işçiliği açısından izlenen tedarikçi yüzdesi"
+    },
+    {
+      "principle_id": "P5",
+      "kpi_id": "P5-KPI4",
+      "name_en": "Child Labour Cases",
+      "name_tr": "Çocuk İşçiliği Vakaları",
+      "type": "number",
+      "weight": 0.2,
+      "target": 0,
+      "inverse": true,
+      "unit": "cases/year",
+      "description_en": "Number of child labor cases identified",
+      "description_tr": "Tespit edilen çocuk işçiliği vakası sayısı"
+    },
+    {
+      "principle_id": "P6",
+      "kpi_id": "P6-KPI1",
+      "name_en": "Non-Discrimination Policy",
+      "name_tr": "Ayrımcılık Karşıtı Politika",
+      "type": "boolean",
+      "weight": 0.2,
+      "description_en": "Does the company have a non-discrimination policy?",
+      "description_tr": "Şirketin ayrımcılık karşıtı bir politikası var mı?"
+    },
+    {
+      "principle_id": "P6",
+      "kpi_id": "P6-KPI2",
+      "name_en": "Gender Pay Gap",
+      "name_tr": "Cinsiyet Ücret Farkı",
+      "type": "percentage",
+      "weight": 0.25,
+      "target": 0,
+      "inverse": true,
+      "description_en": "Gender pay gap percentage",
+      "description_tr": "Cinsiyet ücret farkı yüzdesi"
+    },
+    {
+      "principle_id": "P6",
+      "kpi_id": "P6-KPI3",
+      "name_en": "Women in Management",
+      "name_tr": "Yönetimdeki Kadınlar",
+      "type": "percentage",
+      "weight": 0.25,
+      "target": 40,
+      "description_en": "Percentage of women in management positions",
+      "description_tr": "Yönetim pozisyonlarındaki kadın yüzdesi"
+    },
+    {
+      "principle_id": "P6",
+      "kpi_id": "P6-KPI4",
+      "name_en": "Discrimination Complaints",
+      "name_tr": "Ayrımcılık Şikayetleri",
+      "type": "number",
+      "weight": 0.3,
+      "target": 0,
+      "inverse": true,
+      "unit": "complaints/year",
+      "description_en": "Number of discrimination complaints",
+      "description_tr": "Ayrımcılık şikayet sayısı"
+    },
+    {
+      "principle_id": "P7",
+      "kpi_id": "P7-KPI1",
+      "name_en": "Environmental Management System",
+      "name_tr": "Çevre Yönetim Sistemi",
+      "type": "boolean",
+      "weight": 0.25,
+      "description_en": "Does the company have a certified environmental management system (e.g., ISO 14001)?",
+      "description_tr": "Şirketin sertifikalı bir çevre yönetim sistemi var mı (örn. ISO 14001)?"
+    },
+    {
+      "principle_id": "P7",
+      "kpi_id": "P7-KPI2",
+      "name_en": "Environmental Risk Assessments",
+      "name_tr": "Çevresel Risk Değerlendirmeleri",
+      "type": "number",
+      "weight": 0.25,
+      "target": 4,
+      "unit": "assessments/year",
+      "description_en": "Number of environmental risk assessments conducted",
+      "description_tr": "Gerçekleştirilen çevresel risk değerlendirmesi sayısı"
+    },
+    {
+      "principle_id": "P7",
+      "kpi_id": "P7-KPI3",
+      "name_en": "Precautionary Actions",
+      "name_tr": "İhtiyati Eylemler",
+      "type": "number",
+      "weight": 0.25,
+      "target": 10,
+      "unit": "actions/year",
+      "description_en": "Number of precautionary actions taken",
+      "description_tr": "Alınan ihtiyati eylem sayısı"
+    },
+    {
+      "principle_id": "P7",
+      "kpi_id": "P7-KPI4",
+      "name_en": "Environmental Incidents",
+      "name_tr": "Çevresel Olaylar",
+      "type": "number",
+      "weight": 0.25,
+      "target": 0,
+      "inverse": true,
+      "unit": "incidents/year",
+      "description_en": "Number of environmental incidents",
+      "description_tr": "Çevresel olay sayısı"
+    },
+    {
+      "principle_id": "P8",
+      "kpi_id": "P8-KPI1",
+      "name_en": "Environmental Initiatives",
+      "name_tr": "Çevresel İnisiyatifler",
+      "type": "number",
+      "weight": 0.25,
+      "target": 8,
+      "unit": "initiatives/year",
+      "description_en": "Number of environmental initiatives implemented",
+      "description_tr": "Uygulanan çevresel inisiyatif sayısı"
+    },
+    {
+      "principle_id": "P8",
+      "kpi_id": "P8-KPI2",
+      "name_en": "Carbon Emissions Reduction",
+      "name_tr": "Karbon Emisyon Azaltımı",
+      "type": "percentage",
+      "weight": 0.3,
+      "target": 20,
+      "description_en": "Percentage reduction in carbon emissions",
+      "description_tr": "Karbon emisyonlarındaki azalma yüzdesi"
+    },
+    {
+      "principle_id": "P8",
+      "kpi_id": "P8-KPI3",
+      "name_en": "Environmental Certifications",
+      "name_tr": "Çevresel Sertifikalar",
+      "type": "number",
+      "weight": 0.25,
+      "target": 3,
+      "unit": "certifications",
+      "description_en": "Number of environmental certifications held",
+      "description_tr": "Sahip olunan çevresel sertifika sayısı"
+    },
+    {
+      "principle_id": "P8",
+      "kpi_id": "P8-KPI4",
+      "name_en": "Renewable Energy Usage",
+      "name_tr": "Yenilenebilir Enerji Kullanımı",
+      "type": "percentage",
+      "weight": 0.2,
+      "target": 50,
+      "description_en": "Percentage of renewable energy in total energy consumption",
+      "description_tr": "Toplam enerji tüketiminde yenilenebilir enerji yüzdesi"
+    },
+    {
+      "principle_id": "P9",
+      "kpi_id": "P9-KPI1",
+      "name_en": "Green Technology R&D Investment",
+      "name_tr": "Yeşil Teknoloji Ar-Ge Yatırımı",
+      "type": "percentage",
+      "weight": 0.3,
+      "target": 5,
+      "description_en": "Percentage of R&D budget spent on green technologies",
+      "description_tr": "Ar-Ge bütçesinden yeşil teknolojilere ayrılan yüzde"
+    },
+    {
+      "principle_id": "P9",
+      "kpi_id": "P9-KPI2",
+      "name_en": "Green Technologies Adopted",
+      "name_tr": "Benimsenen Yeşil Teknolojiler",
+      "type": "number",
+      "weight": 0.3,
+      "target": 5,
+      "unit": "technologies/year",
+      "description_en": "Number of green technologies adopted",
+      "description_tr": "Benimsenen yeşil teknoloji sayısı"
+    },
+    {
+      "principle_id": "P9",
+      "kpi_id": "P9-KPI3",
+      "name_en": "Green Technology Partnerships",
+      "name_tr": "Yeşil Teknoloji Ortaklıkları",
+      "type": "number",
+      "weight": 0.25,
+      "target": 3,
+      "unit": "partnerships",
+      "description_en": "Number of partnerships for green technology development",
+      "description_tr": "Yeşil teknoloji geliştirme için ortaklık sayısı"
+    },
+    {
+      "principle_id": "P9",
+      "kpi_id": "P9-KPI4",
+      "name_en": "Green Patents Filed",
+      "name_tr": "Yeşil Patentler",
+      "type": "number",
+      "weight": 0.15,
+      "target": 2,
+      "unit": "patents/year",
+      "description_en": "Number of green technology patents filed",
+      "description_tr": "Dosyalanan yeşil teknoloji patenti sayısı"
+    },
+    {
+      "principle_id": "P10",
+      "kpi_id": "P10-KPI1",
+      "name_en": "Anti-Corruption Policy",
+      "name_tr": "Yolsuzlukla Mücadele Politikası",
+      "type": "boolean",
+      "weight": 0.25,
+      "description_en": "Does the company have an anti-corruption policy?",
+      "description_tr": "Şirketin yolsuzlukla mücadele politikası var mı?"
+    },
+    {
+      "principle_id": "P10",
+      "kpi_id": "P10-KPI2",
+      "name_en": "Anti-Corruption Training Coverage",
+      "name_tr": "Yolsuzlukla Mücadele Eğitim Kapsamı",
+      "type": "percentage",
+      "weight": 0.3,
+      "target": 95,
+      "description_en": "Percentage of employees trained on anti-corruption",
+      "description_tr": "Yolsuzlukla mücadele konusunda eğitilen çalışan yüzdesi"
+    },
+    {
+      "principle_id": "P10",
+      "kpi_id": "P10-KPI3",
+      "name_en": "Third-Party Due Diligence",
+      "name_tr": "Üçüncü Taraf Gerekli Özeni",
+      "type": "percentage",
+      "weight": 0.25,
+      "target": 100,
+      "description_en": "Percentage of high-risk third parties subject to due diligence",
+      "description_tr": "Gerekli özene tabi tutulan yüksek riskli üçüncü taraf yüzdesi"
+    },
+    {
+      "principle_id": "P10",
+      "kpi_id": "P10-KPI4",
+      "name_en": "Corruption Incidents",
+      "name_tr": "Yolsuzluk Olayları",
+      "type": "number",
+      "weight": 0.2,
+      "target": 0,
+      "inverse": true,
+      "unit": "incidents/year",
+      "description_en": "Number of corruption incidents reported",
+      "description_tr": "Bildirilen yolsuzluk olay sayısı"
+    }
+  ]
+}

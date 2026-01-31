@@ -1,0 +1,19 @@
+{
+  "smtp_server": "smtp.sustainage.tr",
+  "smtp_port": 587,
+  "sender_email": "anket@sustainage.tr",
+  "sender_password": "Kayra_1507_Sk!",
+  "use_tls": true,
+  "validate_ssl": false,
+  "security": "TLS",
+  "sender_name": "SUSTAINAGE SDG",
+  "reply_to": "anket@sustainage.tr",
+  "enabled": true,
+  "admin_email": "admin@sustainage.tr",
+  "info_email": "info@sustainage.tr",
+  "system_email": "anket@sustainage.tr",
+  "pop3_server": "mail.sustainage.tr",
+  "pop3_port": 110,
+  "use_pop3_ssl": false,
+  "web_base_url": "https://sustainage.tr/anket"
+}

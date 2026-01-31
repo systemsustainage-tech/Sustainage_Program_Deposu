@@ -1,0 +1,715 @@
+{
+  "company": {
+    "id": 1,
+    "name": "Test Company Inc.",
+    "sector": "Technology",
+    "country": null
+  },
+  "period": {
+    "year": 2024,
+    "label": "2024"
+  },
+  "kpis": [
+    {
+      "module": "issb",
+      "module_subtype": "IFRS S1",
+      "code": "ISSB-1768930221",
+      "name": "ISSB-1768930221",
+      "value": null,
+      "unit": null,
+      "year": null,
+      "direction": null,
+      "mappings": {
+        "issb_standard": "IFRS S1",
+        "ifrs_reference": "IFRS S1"
+      },
+      "meta": {
+        "created_at": "2026-01-20 17:30:23"
+      }
+    },
+    {
+      "module": "issb",
+      "module_subtype": "IFRS S1",
+      "code": "ISSB-1768930099",
+      "name": "ISSB-1768930099",
+      "value": null,
+      "unit": null,
+      "year": null,
+      "direction": null,
+      "mappings": {
+        "issb_standard": "IFRS S1",
+        "ifrs_reference": "IFRS S1"
+      },
+      "meta": {
+        "created_at": "2026-01-20 17:28:21"
+      }
+    },
+    {
+      "module": "issb",
+      "module_subtype": "IFRS S1",
+      "code": "ISSB-1768929102",
+      "name": "ISSB-1768929102",
+      "value": null,
+      "unit": null,
+      "year": null,
+      "direction": null,
+      "mappings": {
+        "issb_standard": "IFRS S1",
+        "ifrs_reference": "IFRS S1"
+      },
+      "meta": {
+        "created_at": "2026-01-20 17:11:44"
+      }
+    },
+    {
+      "module": "issb",
+      "module_subtype": "IFRS S1",
+      "code": "ISSB-1768928551",
+      "name": "ISSB-1768928551",
+      "value": null,
+      "unit": null,
+      "year": null,
+      "direction": null,
+      "mappings": {
+        "issb_standard": "IFRS S1",
+        "ifrs_reference": "IFRS S1"
+      },
+      "meta": {
+        "created_at": "2026-01-20 17:02:33"
+      }
+    },
+    {
+      "module": "issb",
+      "module_subtype": "IFRS S1",
+      "code": "ISSB-1768927876",
+      "name": "ISSB-1768927876",
+      "value": null,
+      "unit": null,
+      "year": null,
+      "direction": null,
+      "mappings": {
+        "issb_standard": "IFRS S1",
+        "ifrs_reference": "IFRS S1"
+      },
+      "meta": {
+        "created_at": "2026-01-20 16:51:18"
+      }
+    },
+    {
+      "module": "issb",
+      "module_subtype": "IFRS S1",
+      "code": "Governance",
+      "name": "Governance",
+      "value": "ISSB-Metric-1768910513",
+      "unit": null,
+      "year": 2024,
+      "direction": null,
+      "mappings": {
+        "issb_standard": "IFRS S1",
+        "ifrs_reference": "IFRS S1"
+      },
+      "meta": {
+        "created_at": "2026-01-20 12:01:55"
+      }
+    },
+    {
+      "module": "issb",
+      "module_subtype": "IFRS S1",
+      "code": "Governance",
+      "name": "Governance",
+      "value": "ISSB-Metric-1768910480",
+      "unit": null,
+      "year": 2024,
+      "direction": null,
+      "mappings": {
+        "issb_standard": "IFRS S1",
+        "ifrs_reference": "IFRS S1"
+      },
+      "meta": {
+        "created_at": "2026-01-20 12:01:22"
+      }
+    },
+    {
+      "module": "csrd",
+      "module_subtype": "double_materiality",
+      "code": "CSRD_MATERIAL_TOPICS_COUNT",
+      "name": "Önemli konu sayısı (çift önemlilik)",
+      "value": 7,
+      "unit": "adet",
+      "year": 2024,
+      "direction": null,
+      "mappings": {},
+      "meta": {
+        "company_id": 1
+      }
+    },
+    {
+      "module": "csrd",
+      "module_subtype": "disclosures",
+      "code": "CSRD_COMPLETED_DISCLOSURES",
+      "name": "Tamamlanan ESRS açıklama sayısı",
+      "value": 0,
+      "unit": "adet",
+      "year": 2024,
+      "direction": "higher_is_better",
+      "mappings": {},
+      "meta": {
+        "company_id": 1
+      }
+    },
+    {
+      "module": "csrd",
+      "module_subtype": "taxonomy",
+      "code": "CSRD_TAXONOMY_ALIGNMENT_PCT",
+      "name": "AB Taksonomisi uyum oranı (ortalama)",
+      "value": 100.0,
+      "unit": "%",
+      "year": 2024,
+      "direction": "higher_is_better",
+      "mappings": {},
+      "meta": {
+        "company_id": 1
+      }
+    },
+    {
+      "module": "csrd",
+      "module_subtype": "taxonomy",
+      "code": "CSRD_TAXONOMY_TURNOVER_PCT",
+      "name": "Taxonomy uyumlu ciro oranı",
+      "value": 100.0,
+      "unit": "%",
+      "year": 2024,
+      "direction": "higher_is_better",
+      "mappings": {},
+      "meta": {
+        "company_id": 1
+      }
+    },
+    {
+      "module": "csrd",
+      "module_subtype": "taxonomy",
+      "code": "CSRD_TAXONOMY_CAPEX_PCT",
+      "name": "Taxonomy uyumlu CapEx oranı",
+      "value": 100.0,
+      "unit": "%",
+      "year": 2024,
+      "direction": "higher_is_better",
+      "mappings": {},
+      "meta": {
+        "company_id": 1
+      }
+    },
+    {
+      "module": "csrd",
+      "module_subtype": "taxonomy",
+      "code": "CSRD_TAXONOMY_OPEX_PCT",
+      "name": "Taxonomy uyumlu OpEx oranı",
+      "value": 100.0,
+      "unit": "%",
+      "year": 2024,
+      "direction": "higher_is_better",
+      "mappings": {},
+      "meta": {
+        "company_id": 1
+      }
+    },
+    {
+      "module": "environmental",
+      "module_subtype": "carbon",
+      "code": "CARBON_TOTAL_FOOTPRINT",
+      "name": "Toplam karbon ayak izi",
+      "value": 0,
+      "unit": "tCO2e",
+      "year": 2024,
+      "direction": "lower_is_better",
+      "mappings": {},
+      "meta": {
+        "scope1_total": 0,
+        "scope2_total": 0,
+        "scope3_total": 0,
+        "company_id": 1
+      }
+    },
+    {
+      "module": "environmental",
+      "module_subtype": "carbon",
+      "code": "CARBON_SCOPE1",
+      "name": "Scope 1 emisyonları",
+      "value": 0,
+      "unit": "tCO2e",
+      "year": 2024,
+      "direction": "lower_is_better",
+      "mappings": {},
+      "meta": {
+        "company_id": 1
+      }
+    },
+    {
+      "module": "environmental",
+      "module_subtype": "carbon",
+      "code": "CARBON_SCOPE2",
+      "name": "Scope 2 emisyonları",
+      "value": 0,
+      "unit": "tCO2e",
+      "year": 2024,
+      "direction": "lower_is_better",
+      "mappings": {},
+      "meta": {
+        "company_id": 1
+      }
+    },
+    {
+      "module": "environmental",
+      "module_subtype": "carbon",
+      "code": "CARBON_SCOPE3",
+      "name": "Scope 3 emisyonları",
+      "value": 0,
+      "unit": "tCO2e",
+      "year": 2024,
+      "direction": "lower_is_better",
+      "mappings": {},
+      "meta": {
+        "company_id": 1
+      }
+    },
+    {
+      "module": "environmental",
+      "module_subtype": "energy",
+      "code": "ENERGY_TOTAL_CONSUMPTION",
+      "name": "Toplam enerji tüketimi",
+      "value": 54503.77,
+      "unit": null,
+      "year": null,
+      "direction": "lower_is_better",
+      "mappings": {},
+      "meta": {
+        "total_cost": 9000.0,
+        "company_id": 1
+      }
+    },
+    {
+      "module": "environmental",
+      "module_subtype": "energy",
+      "code": "ENERGY_RENEWABLE_RATIO",
+      "name": "Yenilenebilir enerji oranı",
+      "value": 18.347354687574825,
+      "unit": "%",
+      "year": null,
+      "direction": "higher_is_better",
+      "mappings": {},
+      "meta": {
+        "company_id": 1
+      }
+    },
+    {
+      "module": "environmental",
+      "module_subtype": "water",
+      "code": "WATER_TOTAL_CONSUMPTION",
+      "name": "Toplam su tüketimi",
+      "value": 5050.0,
+      "unit": "m3",
+      "year": 2024,
+      "direction": "lower_is_better",
+      "mappings": {},
+      "meta": {
+        "company_id": 1
+      }
+    },
+    {
+      "module": "environmental",
+      "module_subtype": "water",
+      "code": "WATER_RECYCLING_RATIO",
+      "name": "Su geri kazanım oranı",
+      "value": 9.900990099009901,
+      "unit": "%",
+      "year": 2024,
+      "direction": "higher_is_better",
+      "mappings": {},
+      "meta": {
+        "company_id": 1
+      }
+    },
+    {
+      "module": "environmental",
+      "module_subtype": "water",
+      "code": "WATER_QUALITY_COMPLIANCE",
+      "name": "Su kalite uyum oranı",
+      "value": 0,
+      "unit": "%",
+      "year": 2024,
+      "direction": "higher_is_better",
+      "mappings": {},
+      "meta": {
+        "company_id": 1
+      }
+    },
+    {
+      "module": "environmental",
+      "module_subtype": "waste",
+      "code": "WASTE_TOTAL_AMOUNT",
+      "name": "Toplam atık miktarı",
+      "value": 32.0,
+      "unit": null,
+      "year": 2024,
+      "direction": "lower_is_better",
+      "mappings": {},
+      "meta": {
+        "total_recycled": 15.0,
+        "company_id": 1
+      }
+    },
+    {
+      "module": "environmental",
+      "module_subtype": "waste",
+      "code": "WASTE_RECYCLING_RATIO",
+      "name": "Atık geri dönüşüm oranı",
+      "value": 46.875,
+      "unit": "%",
+      "year": 2024,
+      "direction": "higher_is_better",
+      "mappings": {},
+      "meta": {
+        "company_id": 1
+      }
+    },
+    {
+      "module": "supply_chain",
+      "module_subtype": "dashboard",
+      "code": "SC_TOTAL_SUPPLIERS",
+      "name": "Toplam tedarikçi sayısı",
+      "value": 1,
+      "unit": "adet",
+      "year": null,
+      "direction": "higher_is_better",
+      "mappings": {},
+      "meta": {
+        "company_id": 1
+      }
+    },
+    {
+      "module": "supply_chain",
+      "module_subtype": "dashboard",
+      "code": "SC_ACTIVE_SUPPLIERS",
+      "name": "Aktif tedarikçi sayısı",
+      "value": 1,
+      "unit": "adet",
+      "year": null,
+      "direction": "higher_is_better",
+      "mappings": {},
+      "meta": {
+        "company_id": 1
+      }
+    },
+    {
+      "module": "supply_chain",
+      "module_subtype": "dashboard",
+      "code": "SC_LOCAL_SUPPLIER_RATIO",
+      "name": "Yerel tedarikçi oranı",
+      "value": 0,
+      "unit": "%",
+      "year": null,
+      "direction": "higher_is_better",
+      "mappings": {},
+      "meta": {
+        "company_id": 1
+      }
+    },
+    {
+      "module": "supply_chain",
+      "module_subtype": "dashboard",
+      "code": "SC_SUSTAINABLE_RATIO",
+      "name": "Sürdürülebilir tedarikçi oranı",
+      "value": 0,
+      "unit": "%",
+      "year": null,
+      "direction": "higher_is_better",
+      "mappings": {},
+      "meta": {
+        "company_id": 1
+      }
+    },
+    {
+      "module": "supply_chain",
+      "module_subtype": "dashboard",
+      "code": "SC_AVG_SCORE",
+      "name": "Ortalama tedarikçi skoru",
+      "value": 0,
+      "unit": "puan",
+      "year": null,
+      "direction": "higher_is_better",
+      "mappings": {},
+      "meta": {
+        "company_id": 1
+      }
+    },
+    {
+      "module": "supply_chain",
+      "module_subtype": "dashboard",
+      "code": "SC_HIGH_RISK_SUPPLIERS",
+      "name": "Yüksek riskli tedarikçi sayısı",
+      "value": 0,
+      "unit": "adet",
+      "year": null,
+      "direction": "lower_is_better",
+      "mappings": {},
+      "meta": {
+        "company_id": 1
+      }
+    },
+    {
+      "module": "supply_chain",
+      "module_subtype": "dashboard",
+      "code": "SC_TOTAL_SPEND",
+      "name": "Toplam tedarik harcaması",
+      "value": 0,
+      "unit": null,
+      "year": null,
+      "direction": "lower_is_better",
+      "mappings": {},
+      "meta": {
+        "company_id": 1
+      }
+    },
+    {
+      "module": "social",
+      "module_subtype": "workforce",
+      "code": "SOC_TOTAL_EMPLOYEES",
+      "name": "Toplam çalışan sayısı",
+      "value": 467,
+      "unit": "kişi",
+      "year": 2024,
+      "direction": "higher_is_better",
+      "mappings": {},
+      "meta": {
+        "company_id": 1
+      }
+    },
+    {
+      "module": "social",
+      "module_subtype": "ohs",
+      "code": "SOC_LTIFR",
+      "name": "Kayıp zamanlı kaza sıklık oranı (LTIFR)",
+      "value": 0.0,
+      "unit": null,
+      "year": 2024,
+      "direction": "lower_is_better",
+      "mappings": {},
+      "meta": {
+        "company_id": 1
+      }
+    },
+    {
+      "module": "social",
+      "module_subtype": "training",
+      "code": "SOC_TRAINING_HOURS_PER_EMPLOYEE",
+      "name": "Çalışan başına eğitim saati",
+      "value": 0.0,
+      "unit": "saat/kişi",
+      "year": 2024,
+      "direction": "higher_is_better",
+      "mappings": {},
+      "meta": {
+        "company_id": 1
+      }
+    }
+  ],
+  "alignments": {
+    "standard_mappings": [
+      {
+        "id": 13,
+        "source_standard": "GRI",
+        "source_code": "GRI 201-1",
+        "source_title": "Direct economic value generated and distributed",
+        "source_description": "Direct economic value generated and distributed including revenues",
+        "target_standard": "SDG",
+        "target_code": "SDG 8.1",
+        "target_title": "Decent Work and Economic Growth",
+        "target_description": "Sustain per capita economic growth",
+        "mapping_type": "direct",
+        "mapping_strength": "medium",
+        "notes": "Economic contribution",
+        "verified": 1
+      },
+      {
+        "id": 4,
+        "source_standard": "GRI",
+        "source_code": "GRI 302-1",
+        "source_title": "Energy consumption within the organization",
+        "source_description": "Total fuel consumption, electricity, heating, cooling, and steam",
+        "target_standard": "SDG",
+        "target_code": "SDG 7.3",
+        "target_title": "Affordable and Clean Energy",
+        "target_description": "Double the global rate of improvement in energy efficiency",
+        "mapping_type": "direct",
+        "mapping_strength": "strong",
+        "notes": "Energy efficiency metrics",
+        "verified": 1
+      },
+      {
+        "id": 6,
+        "source_standard": "GRI",
+        "source_code": "GRI 303-3",
+        "source_title": "Water withdrawal",
+        "source_description": "Total water withdrawal from all sources",
+        "target_standard": "SDG",
+        "target_code": "SDG 6.4",
+        "target_title": "Clean Water and Sanitation",
+        "target_description": "Substantially increase water-use efficiency",
+        "mapping_type": "direct",
+        "mapping_strength": "strong",
+        "notes": "Water management",
+        "verified": 1
+      },
+      {
+        "id": 5,
+        "source_standard": "GRI",
+        "source_code": "GRI 305-1",
+        "source_title": "Direct GHG emissions (Scope 1)",
+        "source_description": "Gross direct greenhouse gas emissions in metric tons of CO2 equivalent",
+        "target_standard": "SDG",
+        "target_code": "SDG 13.2",
+        "target_title": "Climate Action",
+        "target_description": "Integrate climate change measures into national policies",
+        "mapping_type": "direct",
+        "mapping_strength": "strong",
+        "notes": "GHG emissions tracking",
+        "verified": 1
+      },
+      {
+        "id": 11,
+        "source_standard": "GRI",
+        "source_code": "GRI 306-3",
+        "source_title": "Waste generated",
+        "source_description": "Total weight of waste generated and waste diverted from disposal",
+        "target_standard": "SDG",
+        "target_code": "SDG 12.5",
+        "target_title": "Responsible Consumption and Production",
+        "target_description": "Substantially reduce waste generation",
+        "mapping_type": "direct",
+        "mapping_strength": "strong",
+        "notes": "Waste management",
+        "verified": 1
+      },
+      {
+        "id": 7,
+        "source_standard": "GRI",
+        "source_code": "GRI 401-1",
+        "source_title": "New employee hires and employee turnover",
+        "source_description": "Total number and rate of new employee hires and employee turnover",
+        "target_standard": "SDG",
+        "target_code": "SDG 8.5",
+        "target_title": "Decent Work and Economic Growth",
+        "target_description": "Full and productive employment and decent work for all",
+        "mapping_type": "direct",
+        "mapping_strength": "strong",
+        "notes": "Employment metrics",
+        "verified": 1
+      },
+      {
+        "id": 8,
+        "source_standard": "GRI",
+        "source_code": "GRI 403-9",
+        "source_title": "Work-related injuries",
+        "source_description": "Number and rate of fatalities, high-consequence and recordable work-related injuries",
+        "target_standard": "SDG",
+        "target_code": "SDG 8.8",
+        "target_title": "Decent Work and Economic Growth",
+        "target_description": "Protect labour rights and promote safe working environments",
+        "mapping_type": "direct",
+        "mapping_strength": "strong",
+        "notes": "Occupational health and safety",
+        "verified": 1
+      },
+      {
+        "id": 9,
+        "source_standard": "GRI",
+        "source_code": "GRI 404-1",
+        "source_title": "Average hours of training per year per employee",
+        "source_description": "Average hours of training that employees have undertaken",
+        "target_standard": "SDG",
+        "target_code": "SDG 4.4",
+        "target_title": "Quality Education",
+        "target_description": "Increase the number of people with relevant skills for employment",
+        "mapping_type": "direct",
+        "mapping_strength": "strong",
+        "notes": "Training and development",
+        "verified": 1
+      },
+      {
+        "id": 10,
+        "source_standard": "GRI",
+        "source_code": "GRI 405-1",
+        "source_title": "Diversity of governance bodies and employees",
+        "source_description": "Percentage of individuals within governance bodies and employees per category",
+        "target_standard": "SDG",
+        "target_code": "SDG 5.5",
+        "target_title": "Gender Equality",
+        "target_description": "Ensure women's full participation in leadership",
+        "mapping_type": "direct",
+        "mapping_strength": "strong",
+        "notes": "Gender diversity",
+        "verified": 1
+      },
+      {
+        "id": 12,
+        "source_standard": "GRI",
+        "source_code": "GRI 413-1",
+        "source_title": "Operations with local community engagement",
+        "source_description": "Percentage of operations with implemented local community engagement",
+        "target_standard": "SDG",
+        "target_code": "SDG 11.3",
+        "target_title": "Sustainable Cities and Communities",
+        "target_description": "Enhance inclusive and sustainable urbanization",
+        "mapping_type": "direct",
+        "mapping_strength": "medium",
+        "notes": "Community engagement",
+        "verified": 1
+      },
+      {
+        "id": 1,
+        "source_standard": "TSRS",
+        "source_code": "TSRS E1",
+        "source_title": "İklim Değişikliği",
+        "source_description": "Enerji, emisyon ve iklimle ilgili TSRS göstergeleri",
+        "target_standard": "ESRS",
+        "target_code": "ESRS E1",
+        "target_title": "İklim Değişikliği",
+        "target_description": "ESRS E1 kapsamındaki iklim açıklamaları",
+        "mapping_type": "direct",
+        "mapping_strength": "strong",
+        "notes": "TSRS çevre standartları ↔ ESRS E1",
+        "verified": 1
+      },
+      {
+        "id": 2,
+        "source_standard": "TSRS",
+        "source_code": "TSRS E2",
+        "source_title": "Kirlilik",
+        "source_description": "Kirletici emisyonlar ve yönetimi",
+        "target_standard": "ESRS",
+        "target_code": "ESRS E2",
+        "target_title": "Kirlilik",
+        "target_description": "ESRS E2 kapsamındaki kirlilik açıklamaları",
+        "mapping_type": "direct",
+        "mapping_strength": "strong",
+        "notes": "TSRS çevre standartları ↔ ESRS E2",
+        "verified": 1
+      },
+      {
+        "id": 3,
+        "source_standard": "TSRS",
+        "source_code": "TSRS E3",
+        "source_title": "Su ve Deniz Kaynakları",
+        "source_description": "Su tüketimi ve kaynak yönetimi",
+        "target_standard": "ESRS",
+        "target_code": "ESRS E3",
+        "target_title": "Su ve Deniz Kaynakları",
+        "target_description": "ESRS E3 kapsamındaki su ve deniz açıklamaları",
+        "mapping_type": "direct",
+        "mapping_strength": "strong",
+        "notes": "TSRS çevre standartları ↔ ESRS E3",
+        "verified": 1
+      }
+    ]
+  }
+}

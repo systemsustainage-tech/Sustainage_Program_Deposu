@@ -1,0 +1,89 @@
+{
+  "app": {
+    "title": "SUSTAINAGE SDG",
+    "subtitle": "Sustainability Management System"
+  },
+  "menu": {
+    "dashboard": "Dashboard",
+    "tasks": "My Tasks",
+    "surveys": "My Surveys",
+    "sdg": "SDG Module",
+    "gri": "GRI Standards",
+    "tsrs": "TSRS Standards",
+    "esg": "ESG Module",
+    "skdm": "CBAM Module",
+    "strategic": "Strategic Management",
+    "reports": "Reports",
+    "management": "Management"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "search": "Search",
+    "filter": "Filter",
+    "export": "Export",
+    "import": "Import",
+    "refresh": "Refresh",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "yes": "Yes",
+    "no": "No",
+    "ok": "OK",
+    "apply": "Apply",
+    "reset": "Reset"
+  },
+  "report": {
+    "title": "Sustainability Report",
+    "period": "Period",
+    "year": "Year",
+    "quarter": "Quarter",
+    "generate": "Generate Report",
+    "download": "Download",
+    "preview": "Preview",
+    "executive_summary": "Executive Summary",
+    "introduction": "Introduction",
+    "methodology": "Methodology",
+    "findings": "Findings",
+    "recommendations": "Recommendations",
+    "conclusion": "Conclusion",
+    "appendices": "Appendices"
+  },
+  "sdg": {
+    "goals": "Sustainable Development Goals",
+    "targets": "Targets",
+    "indicators": "Indicators",
+    "progress": "Progress",
+    "data_entry": "Data Entry"
+  },
+  "gri": {
+    "standards": "GRI Standards",
+    "disclosures": "Disclosures",
+    "economic": "Economic",
+    "environmental": "Environmental",
+    "social": "Social",
+    "content_index": "GRI Content Index"
+  },
+  "metrics": {
+    "total_employees": "Total Employees",
+    "new_hires": "New Hires",
+    "turnover_rate": "Turnover Rate",
+    "emissions": "GHG Emissions",
+    "energy": "Energy Consumption",
+    "water": "Water Consumption",
+    "waste": "Waste Generated"
+  },
+  "status": {
+    "completed": "Completed",
+    "in_progress": "In Progress",
+    "pending": "Pending",
+    "cancelled": "Cancelled",
+    "active": "Active",
+    "inactive": "Inactive"
+  }
+}
+
