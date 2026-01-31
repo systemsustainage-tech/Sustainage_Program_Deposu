@@ -1,7 +1,8 @@
 import sqlite3
 import os
 
-DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'sustainage.db')
+# Correct DB Path per config/database.py
+DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'backend', 'data', 'sdg_desktop.sqlite')
 
 def check_gri():
     if not os.path.exists(DB_PATH):

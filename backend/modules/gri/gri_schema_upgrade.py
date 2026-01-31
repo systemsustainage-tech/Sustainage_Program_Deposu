@@ -31,6 +31,31 @@ class GRISchemaUpgrade:
         cursor = conn.cursor()
 
         try:
+            # 0. Temel Tablolar (Eksikse Oluştur)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS gri_standards (
+                    id INTEGER PRIMARY KEY,
+                    code TEXT UNIQUE NOT NULL,
+                    name TEXT NOT NULL,
+                    description TEXT,
+                    category TEXT,
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS gri_indicators (
+                    id INTEGER PRIMARY KEY,
+                    standard_id INTEGER,
+                    code TEXT UNIQUE NOT NULL,
+                    name TEXT NOT NULL,
+                    description TEXT,
+                    unit TEXT,
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (standard_id) REFERENCES gri_standards(id)
+                )
+            """)
+
             # 1. GRI Kategorileri
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS gri_categories (
@@ -222,187 +247,17 @@ class GRISchemaUpgrade:
                         logging.info(f"gri_indicators tablosunda '{field_name}' alanı zaten mevcut")
                     else:
                         raise e
-
+            
             conn.commit()
-            logging.info("\nTüm ek tablolar başarıyla oluşturuldu!")
-            return True
-
+            print("GRI Schema Upgrade successful")
         except Exception as e:
-            logging.error(f"Şema genişletme hatası: {e}")
+            print(f"Schema upgrade error: {e}")
             conn.rollback()
-            return False
+            raise e
         finally:
             conn.close()
-
-    def populate_initial_data(self) -> None:
-        """Başlangıç verilerini ekle"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
-        try:
-            # Kategoriler
-            categories = [
-                ('Universal', 'Universal', 'GRI Universal Standards', 1),
-                ('Economic', 'Economic', 'GRI Economic Standards', 2),
-                ('Environmental', 'Environmental', 'GRI Environmental Standards', 3),
-                ('Social', 'Social', 'GRI Social Standards', 4),
-                ('Sector-Specific', 'Sector', 'GRI Sector-Specific Standards', 5)
-            ]
-
-            for name, group, desc, sort_order in categories:
-                cursor.execute("""
-                    INSERT OR IGNORE INTO gri_categories (name, group_name, description, sort_order)
-                    VALUES (?, ?, ?, ?)
-                """, (name, group, desc, sort_order))
-
-            # Dijital Araçlar
-            digital_tools = [
-                ('GRI Software', 'Software', 'GRI raporlama yazılımı', 'Raporlama'),
-                ('ERP Sistemi', 'System', 'Kurumsal kaynak planlama sistemi', 'Operasyonel'),
-                ('HRIS Sistemi', 'System', 'İnsan kaynakları bilgi sistemi', 'Sosyal'),
-                ('Enerji Yönetim Sistemi', 'System', 'Enerji tüketim takip sistemi', 'Çevresel'),
-                ('Karbon Hesaplama Yazılımı', 'Software', 'Karbon ayak izi hesaplama', 'Çevresel'),
-                ('İSG Yazılımı', 'Software', 'İş sağlığı ve güvenliği yönetimi', 'Sosyal'),
-                ('Sürdürülebilirlik Yazılımı', 'Software', 'Sürdürülebilirlik raporlama', 'Universal')
-            ]
-
-            for name, type_tool, desc, category in digital_tools:
-                cursor.execute("""
-                    INSERT OR IGNORE INTO gri_digital_tools (name, type, description, category)
-                    VALUES (?, ?, ?, ?)
-                """, (name, type_tool, desc, category))
-
-            # Raporlama Formatları
-            reporting_formats = [
-                ('GRI Content Index', 'xlsx', 'GRI İçerik İndeksi', None),
-                ('GRI Core Report', 'docx', 'GRI Core Raporu', None),
-                ('GRI Comprehensive Report', 'docx', 'GRI Comprehensive Raporu', None),
-                ('KPI Dashboard', 'xlsx', 'KPI Dashboard Raporu', None),
-                ('Risk Assessment', 'pdf', 'Risk Değerlendirme Raporu', None),
-                ('Target Progress', 'xlsx', 'Hedef İlerleme Raporu', None)
-            ]
-
-            for name, ext, desc, template in reporting_formats:
-                cursor.execute("""
-                    INSERT OR IGNORE INTO gri_reporting_formats (name, extension, description, template_path)
-                    VALUES (?, ?, ?, ?)
-                """, (name, ext, desc, template))
-
-            # Birim Sözlüğü
-            units = [
-                ('Text', 'Metin', 'Text', 'Qualitative', 'Kalitatif veri'),
-                ('Number', 'Sayı', 'Number', 'Quantitative', 'Sayısal veri'),
-                ('Currency', 'Para Birimi', 'Currency', 'Financial', 'Finansal veri'),
-                ('Percentage', 'Yüzde', 'Percentage', 'Ratio', 'Oran verisi'),
-                ('Ratio', 'Oran', 'Ratio', 'Ratio', 'Oran verisi'),
-                ('MWh', 'Megawatt Saat', 'Megawatt Hour', 'Energy', 'Enerji birimi'),
-                ('tCO2e', 'Ton CO2 Eşdeğeri', 'Ton CO2 Equivalent', 'Emission', 'Emisyon birimi'),
-                ('Ton', 'Ton', 'Ton', 'Weight', 'Ağırlık birimi'),
-                ('m³', 'Metreküp', 'Cubic Meter', 'Volume', 'Hacim birimi'),
-                ('kg', 'Kilogram', 'Kilogram', 'Weight', 'Ağırlık birimi')
-            ]
-
-            for code, name_tr, name_en, category, desc in units:
-                cursor.execute("""
-                    INSERT OR IGNORE INTO gri_units (code, name_tr, name_en, category, description)
-                    VALUES (?, ?, ?, ?, ?)
-                """, (code, name_tr, name_en, category, desc))
-
-            # Veri Kaynakları
-            sources = [
-                ('Raporlama Departmanı', 'Manual', 'Manuel raporlama', 'Universal'),
-                ('İnsan Kaynakları', 'HRIS', 'İK bilgi sistemi', 'Social'),
-                ('Finans', 'ERP', 'Finansal sistem', 'Economic'),
-                ('Operasyonlar', 'MES', 'Üretim yönetim sistemi', 'Environmental'),
-                ('İş Güvenliği', 'EHS', 'Çevre sağlık güvenlik', 'Social'),
-                ('Sürdürülebilirlik', 'Sustainability', 'Sürdürülebilirlik yazılımı', 'Universal')
-            ]
-
-            for name, system, desc, category in sources:
-                cursor.execute("""
-                    INSERT OR IGNORE INTO gri_sources (name, system, description, category)
-                    VALUES (?, ?, ?, ?)
-                """, (name, system, desc, category))
-
-            conn.commit()
-            logging.info("Başlangıç verileri başarıyla eklendi!")
-            return True
-
-        except Exception as e:
-            logging.error(f"Başlangıç veri ekleme hatası: {e}")
-            conn.rollback()
-            return False
-        finally:
-            conn.close()
-
-    def verify_schema(self) -> None:
-        """Şema doğrulaması"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
-        try:
-            # Ek tabloları kontrol et
-            expected_tables = [
-                'gri_categories', 'gri_kpis', 'gri_targets', 'gri_benchmarks',
-                'gri_digital_tools', 'gri_reporting_formats', 'gri_validation_rules',
-                'gri_units', 'gri_sources', 'gri_risks'
-            ]
-
-            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'gri_%'")
-            existing_tables = [row[0] for row in cursor.fetchall()]
-
-            logging.info("\n=== ŞEMA DOĞRULAMA ===")
-            logging.info(f"Mevcut GRI tabloları: {len(existing_tables)}")
-
-            for table in expected_tables:
-                if table in existing_tables:
-                    cursor.execute(f"SELECT COUNT(*) FROM {table}")
-                    count = cursor.fetchone()[0]
-                    logging.info(f"OK {table}: {count} kayıt")
-                else:
-                    logging.info(f"EKSIK {table}: EKSIK")
-
-            # Ana tabloları kontrol et
-            main_tables = ['gri_standards', 'gri_indicators', 'gri_responses', 'gri_selections']
-            for table in main_tables:
-                if table in existing_tables:
-                    cursor.execute(f"SELECT COUNT(*) FROM {table}")
-                    count = cursor.fetchone()[0]
-                    logging.info(f"OK {table}: {count} kayıt")
-                else:
-                    logging.info(f"EKSIK {table}: EKSIK")
-
-            return True
-
-        except Exception as e:
-            logging.error(f"Şema doğrulama hatası: {e}")
-            return False
-        finally:
-            conn.close()
-
-def upgrade_gri_schema() -> None:
-    """GRI şemasını genişlet"""
-    logging.info("GRI Şema Genişletme Başlıyor...")
-
-    upgrade = GRISchemaUpgrade()
-
-    # 1. Ek tabloları oluştur
-    logging.info("\n1. Ek tabloları oluşturuluyor...")
-    if not upgrade.create_extension_tables():
-        return False
-
-    # 2. Başlangıç verilerini ekle
-    logging.info("\n2. Başlangıç verileri ekleniyor...")
-    if not upgrade.populate_initial_data():
-        return False
-
-    # 3. Şema doğrulaması
-    logging.info("\n3. Şema doğrulaması...")
-    if not upgrade.verify_schema():
-        return False
-
-    logging.info("\nGRI şema genişletme başarıyla tamamlandı!")
-    return True
 
 if __name__ == "__main__":
-    upgrade_gri_schema()
+    logging.basicConfig(level=logging.INFO)
+    upgrader = GRISchemaUpgrade()
+    upgrader.create_extension_tables()

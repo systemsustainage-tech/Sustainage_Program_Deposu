@@ -18,7 +18,7 @@ except ImportError:
         from core.language_manager import LanguageManager
     except ImportError:
         class LanguageManager:
-            def __init__(self, base_dir): pass
+            def __init__(self, base_dir=None): pass
             def get_text(self, key, lang=None, default=None): return default or key
 
 from modules.reporting.advanced_report_manager import AdvancedReportManager
@@ -40,12 +40,11 @@ class AIManager:
         
         # Initialize LanguageManager
         try:
-            root_dir = os.path.dirname(self.base_dir)
-            self.lm = LanguageManager(root_dir)
+            self.lm = LanguageManager()
         except Exception as e:
             logging.error(f"LanguageManager initialization failed: {e}")
             # Fallback mock
-            self.lm = type('MockLM', (), {'get_text': lambda s, k, l=None, d=None: d or k})()
+            self.lm = type('MockLM', (), {'get_text': lambda s, k, l=None, **kw: k})()
 
         # Konfigurasyonu yukle
         self.config = self._load_config()
@@ -65,7 +64,11 @@ class AIManager:
     def _get_text_safe(self, key: str, lang: str = "tr", default: str = None) -> str:
         """LanguageManager uzerinden guvenli ceviri al"""
         try:
-            return self.lm.get_text(key, lang, default)
+            # LanguageManager.get_text returns key if not found
+            val = self.lm.get_text(key, lang)
+            if val == key and default:
+                return default
+            return val
         except Exception as e:
             logging.error(f"Translation error for key {key}: {e}")
             return default or key

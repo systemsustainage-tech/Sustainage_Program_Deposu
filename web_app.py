@@ -55,7 +55,7 @@ if os.path.exists('/var/www/sustainage/backend/data/sdg_desktop.sqlite'):
 
 # Initialize Managers
 audit_manager = AuditManager(DB_PATH)
-language_manager = LanguageManager(BASE_DIR)
+language_manager = LanguageManager()
 
 COMPANY_INFO_FIELDS = [
     "name",
@@ -460,6 +460,14 @@ MANAGERS = {
 #     logging.info("Supplier Portal blueprint registered.")
 # except Exception as e:
 #     logging.error(f"Failed to register Supplier Portal blueprint: {e}")
+
+# Register Role API Blueprint
+try:
+    from backend.app.api.role_api import role_bp
+    app.register_blueprint(role_bp)
+    logging.info("Role API blueprint registered.")
+except Exception as e:
+    logging.error(f"Failed to register Role API blueprint: {e}")
 
 def _init_managers():
     global MANAGERS

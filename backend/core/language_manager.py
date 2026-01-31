@@ -1,77 +1,83 @@
-import os
+# -*- coding: utf-8 -*-
 import json
+import os
 import logging
-from typing import Dict, Optional
 
 class LanguageManager:
-    def __init__(self, base_dir: str, default_lang: str = 'tr'):
-        self.base_dir = base_dir
-        self.default_lang = default_lang
-        self.translations: Dict[str, Dict[str, str]] = {}
-        self.current_lang = default_lang
-        self.load_languages()
+    """
+    Singleton class to manage multi-language support for AI reports and system messages.
+    Loads translations from backend/locales/*.json.
+    """
+    _instance = None
+    _translations = {}
+    _default_lang = 'tr'
 
-    def load_languages(self):
-        """Mevcut dil dosyalarını yükler (locales/*.json)"""
-        locales_dir = os.path.join(self.base_dir, 'locales')
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(LanguageManager, cls).__new__(cls)
+            cls._instance._load_translations()
+        return cls._instance
+
+    def _load_translations(self):
+        """Load all JSON translation files from locales directory."""
+        # Assuming this file is in backend/core/language_manager.py
+        base_dir = os.path.dirname(os.path.dirname(__file__)) # backend/
+        locales_dir = os.path.join(base_dir, 'locales')
+        
         if not os.path.exists(locales_dir):
-            logging.warning(f"Locales directory not found: {locales_dir}")
+            logging.error(f"Locales directory not found: {locales_dir}")
             return
 
+        logging.info(f"Loading translations from {locales_dir}")
         for filename in os.listdir(locales_dir):
             if filename.endswith('.json'):
                 lang_code = filename.split('.')[0]
-                file_path = os.path.join(locales_dir, filename)
                 try:
-                    with open(file_path, 'r', encoding='utf-8') as f:
-                        data = json.load(f)
-                        if isinstance(data, dict):
-                            self.translations[lang_code] = data
-                            logging.info(f"Loaded translations for {lang_code}")
+                    with open(os.path.join(locales_dir, filename), 'r', encoding='utf-8') as f:
+                        self._translations[lang_code] = json.load(f)
+                    logging.debug(f"Loaded {lang_code} translation")
                 except Exception as e:
-                    logging.error(f"Error loading translation file {filename}: {e}")
+                    logging.error(f"Error loading translation {filename}: {e}")
 
-        # Backend config overlay (legacy support)
-        backend_tr_path = os.path.join(self.base_dir, 'backend', 'config', 'translations_tr.json')
-        if os.path.exists(backend_tr_path):
-            try:
-                with open(backend_tr_path, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                    if isinstance(data, dict) and 'tr' in self.translations:
-                        # Only update root keys
-                        for k, v in data.items():
-                            if not isinstance(v, dict):
-                                self.translations['tr'][k] = v
-                        logging.info("Loaded overlay translations from backend/config/translations_tr.json")
-            except Exception as e:
-                logging.error(f"Error loading backend overlay translations: {e}")
-
-    def get_text(self, key: str, lang: Optional[str] = None, default: Optional[str] = None) -> str:
-        """Belirtilen anahtar için çeviriyi döndürür."""
-        target_lang = lang or self.current_lang
+    def get_text(self, key, lang='tr', **kwargs):
+        """
+        Get translated text for a key.
+        Supports nested keys (e.g. 'auth.login_failed')
+        Fallback: requested_lang -> en -> tr -> key
+        """
+        lang = lang or self._default_lang
         
-        # Eğer istenen dil yoksa varsayılan dile düş
-        if target_lang not in self.translations:
-            target_lang = self.default_lang
+        # Fallback chain
+        langs_to_try = [lang]
+        if lang != 'en': langs_to_try.append('en')
+        if lang != 'tr' and 'tr' not in langs_to_try: langs_to_try.append('tr')
 
-        # Çeviriyi al
-        translation = self.translations.get(target_lang, {}).get(key)
+        for l in langs_to_try:
+            val = self._get_value(l, key)
+            if val is not None:
+                try:
+                    return val.format(**kwargs)
+                except KeyError:
+                    return val # Return raw if formatting fails
+                except Exception:
+                    return val
         
-        if translation is None:
-            # Fallback to default language if current is different
-            if target_lang != self.default_lang:
-                translation = self.translations.get(self.default_lang, {}).get(key)
-            
-            # Still None? Return default or key
-            if translation is None:
-                return default if default is not None else key
-                
-        return translation
+        return key # Return key if nothing found
 
-    def set_language(self, lang: str):
-        """Aktif dili değiştirir."""
-        if lang in self.translations:
-            self.current_lang = lang
-        else:
-            logging.warning(f"Language {lang} not found, keeping {self.current_lang}")
+    def _get_value(self, lang, key):
+        if lang not in self._translations:
+            return None
+        
+        data = self._translations[lang]
+        keys = key.split('.')
+        
+        for k in keys:
+            if isinstance(data, dict) and k in data:
+                data = data[k]
+            else:
+                return None
+        
+        return data if isinstance(data, str) else None
 
+    def get_all_translations(self, lang):
+        return self._translations.get(lang, {})

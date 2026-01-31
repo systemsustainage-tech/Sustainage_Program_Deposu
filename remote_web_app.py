@@ -18,7 +18,7 @@ from modules.sdg.sdg_manager import SDGManager
 from core.language_manager import LanguageManager
 
 # Initialize Language Manager
-language_manager = LanguageManager(BACKEND_DIR)
+language_manager = LanguageManager()
 
 DB_PATH = os.path.join(BACKEND_DIR, 'data', 'sdg_desktop.sqlite')
 
