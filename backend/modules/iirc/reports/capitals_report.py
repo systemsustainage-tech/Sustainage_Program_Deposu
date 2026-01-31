@@ -1,0 +1,197 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+6 Sermaye Detaylı Raporu
+"""
+
+import logging
+import os
+from datetime import datetime
+from typing import Dict
+
+import matplotlib
+import matplotlib.pyplot as plt
+from docx import Document
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.shared import Inches, Pt
+
+matplotlib.use('Agg')
+
+from ..iirc_manager import IIRCManager
+
+
+def _add_turkish_paragraph(doc, text, style=None, font_name='Calibri', font_size=11):
+    """Türkçe karakterleri destekleyen paragraf ekle"""
+    para = _add_turkish_paragraph(doc, text, style=style)
+    for run in para.runs:
+        run.font.name = font_name
+        run.font.size = Pt(font_size)
+    return para
+
+def _add_turkish_heading(doc, text, level=1, font_name='Calibri'):
+    """Türkçe karakterleri destekleyen başlık ekle"""
+    heading = _add_turkish_heading(doc, text, level=level)
+    for run in heading.runs:
+        run.font.name = font_name
+    return heading
+
+
+class CapitalsReportGenerator:
+    """6 Sermaye Detaylı Raporu"""
+
+    def __init__(self):
+        self.manager = IIRCManager()
+
+    def generate_capitals_report(self, company_id: int, year: int, output_path: str) -> bool:
+        """6 Sermaye raporu oluştur"""
+        try:
+            logging.info(f"[IIRC Capitals] 6 Sermaye raporu oluşturuluyor: {year}")
+
+            # Veri toplama
+            capitals = self.manager.get_six_capitals(company_id, year)
+            company_info = {'name': 'Sustainage'}  # Varsayılan
+
+            # Grafikler
+            charts_dir = os.path.join(os.path.dirname(output_path), 'charts')
+            os.makedirs(charts_dir, exist_ok=True)
+            chart_files = self._create_capitals_charts(capitals, charts_dir)
+
+            # DOCX oluştur
+            doc = self._create_docx(company_info, year, capitals, chart_files)
+            doc.save(output_path)
+
+            logging.info(f"[IIRC Capitals] Rapor kaydedildi: {output_path}")
+            return True
+
+        except Exception as e:
+            logging.error(f"[HATA] 6 Sermaye raporu oluşturulamadı: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
+
+    def _create_capitals_charts(self, capitals: list, output_dir: str) -> Dict[str, str]:
+        """6 Sermaye grafiklerini oluştur"""
+        chart_files = {}
+
+        if not capitals:
+            return chart_files
+
+        # Radar chart (6 sermaye değerleri)
+        fig, ax = plt.subplots(figsize=(8, 8), subplot_kw=dict(projection='polar'))
+
+        categories = [c.get('capital_name', '') for c in capitals]
+        values = [c.get('current_value', 0) for c in capitals]
+
+        # Normalize (0-100 arası)
+        max_val = max(values) if values else 1
+        normalized_values = [(v / max_val) * 100 if max_val > 0 else 0 for v in values]
+
+        # Kapalı şekil için son değeri başa ekle
+        categories + [categories[0]]
+        values_closed = normalized_values + [normalized_values[0]]
+
+        # Açılar
+        import numpy as np
+        angles = np.linspace(0, 2 * np.pi, len(categories), endpoint=False).tolist()
+        angles_closed = angles + [angles[0]]
+
+        # Çiz
+        ax.plot(angles_closed, values_closed, 'o-', linewidth=2, color='#6A1B9A')
+        ax.fill(angles_closed, values_closed, alpha=0.25, color='#6A1B9A')
+
+        ax.set_xticks(angles)
+        ax.set_xticklabels(categories, size=10)
+        ax.set_ylim(0, 100)
+        ax.set_title('6 Sermaye Değer Analizi', size=14, fontweight='bold', pad=20)
+        ax.grid(True)
+
+        chart_path = os.path.join(output_dir, 'six_capitals_radar.png')
+        plt.savefig(chart_path, dpi=150, bbox_inches='tight')
+        plt.close()
+
+        chart_files['radar'] = chart_path
+
+        # Bar chart (sermaye karşılaştırma)
+        fig, ax = plt.subplots(figsize=(10, 6))
+
+        colors = ['#6A1B9A', '#8E24AA', '#AB47BC', '#BA68C8', '#CE93D8', '#E1BEE7']
+        bars = ax.barh(categories, values, color=colors)
+
+        ax.set_xlabel('Değer', fontsize=12)
+        ax.set_title('6 Sermaye Karşılaştırması', fontsize=14, fontweight='bold')
+        ax.grid(axis='x', alpha=0.3)
+
+        # Değerleri göster
+        for bar in bars:
+            width = bar.get_width()
+            ax.text(width, bar.get_y() + bar.get_height()/2.,
+                   f'{width:.1f}',
+                   ha='left', va='center', fontsize=9, fontweight='bold')
+
+        chart_path = os.path.join(output_dir, 'six_capitals_bar.png')
+        plt.savefig(chart_path, dpi=150, bbox_inches='tight')
+        plt.close()
+
+        chart_files['bar'] = chart_path
+
+        return chart_files
+
+    def _create_docx(self, company_info: Dict, year: int, capitals: list, charts: Dict) -> Document:
+        """DOCX raporu oluştur"""
+        doc = Document()
+
+        # Başlık
+        title = _add_turkish_heading(doc, '6 SERMAYE DETAYLI RAPORU', 0)
+        title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+        company_name = company_info.get('name', 'Şirket')
+
+        subtitle = _add_turkish_paragraph(doc, f'{company_name} - {year}')
+        subtitle.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        subtitle.runs[0].font.size = Pt(14)
+
+        _add_turkish_paragraph(doc, )
+
+        # Özet
+        _add_turkish_heading(doc, 'YÖNETİCİ ÖZETİ', 1)
+        _add_turkish_paragraph(doc, """
+Bu rapor, organizasyonumuzun 6 sermaye türünü nasıl kullandığını ve 
+geliştirdiğini göstermektedir. IIRC Çerçevesi'ne uygun olarak, 
+tüm sermaye türlerimizin mevcut durumu, trendleri ve gelecek beklentileri 
+değerlendirilmiştir.
+        """.strip())
+
+        # Grafikler
+        if 'radar' in charts:
+            _add_turkish_paragraph(doc, )
+            doc.add_picture(charts['radar'], width=Inches(5.5))
+            last_paragraph = doc.paragraphs[-1]
+            last_paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+        if 'bar' in charts:
+            doc.add_page_break()
+            doc.add_picture(charts['bar'], width=Inches(6))
+            last_paragraph = doc.paragraphs[-1]
+            last_paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+        # Her sermaye için detay
+        doc.add_page_break()
+        _add_turkish_heading(doc, 'SERMAYE DETAYLARI', 1)
+
+        for capital in capitals:
+            _add_turkish_heading(doc, capital.get('capital_name', 'Sermaye'), 2)
+
+            _add_turkish_paragraph(doc, f"Açıklama: {capital.get('description', '-')}")
+            _add_turkish_paragraph(doc, f"Mevcut Değer: {capital.get('current_value', 0):.2f}")
+            _add_turkish_paragraph(doc, f"Trend: {capital.get('trend', 'Stabil')}")
+
+            _add_turkish_paragraph(doc, )
+
+        # Altbilgi
+        doc.add_page_break()
+        footer = _add_turkish_paragraph(doc, )
+        footer.add_run(f'Rapor Tarihi: {datetime.now().strftime("%d.%m.%Y")}\n').font.size = Pt(9)
+        footer.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+        return doc
+

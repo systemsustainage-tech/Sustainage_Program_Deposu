@@ -1,0 +1,120 @@
+GRI_Standard;Kod;Başlık;Açıklama;Kategori;Birim;Metodoloji;Raporlama_Durumu;Veri_Kaynağı;Sorumlu_Birim
+GRI 1;1-1;GRI standartlarının kullanımı;Kuruluşun GRI standartlarını nasıl kullandığını açıklar;Universal;Text;Genel;Zorunlu;Raporlama departmanı;Sürdürülebilirlik
+GRI 1;1-2;Raporlama dönemi ve sıklığı;Raporlama dönemi ve sıklığını belirtir;Universal;Text;Genel;Zorunlu;Raporlama departmanı;Sürdürülebilirlik
+GRI 1;1-3;Raporlama sınırları;Raporlama sınırlarını tanımlar;Universal;Text;Genel;Zorunlu;Raporlama departmanı;Sürdürülebilirlik
+GRI 1;1-4;Yeniden beyanlar;Önceki raporlardaki değişiklikleri açıklar;Universal;Text;Genel;Zorunlu;Raporlama departmanı;Sürdürülebilirlik
+GRI 2;2-1;Organizasyonel detaylar;Kuruluşun temel bilgilerini sunar;Universal;Text;Genel;Zorunlu;İnsan Kaynakları;İnsan Kaynakları
+GRI 2;2-2;Sürdürülebilirlik raporlamasına dahil kuruluşlar;Raporlama kapsamındaki kuruluşları listeler;Universal;Text;Genel;Zorunlu;Raporlama departmanı;Sürdürülebilirlik
+GRI 2;2-3;Raporlama dönemi ve iletişim;Raporlama dönemi ve iletişim bilgilerini verir;Universal;Text;Genel;Zorunlu;Raporlama departmanı;Sürdürülebilirlik
+GRI 2;2-4;Bilgi yeniden beyanları;Önceki raporlardaki değişiklikleri açıklar;Universal;Text;Genel;Zorunlu;Raporlama departmanı;Sürdürülebilirlik
+GRI 2;2-5;Harici güvence;Dış güvence süreçlerini açıklar;Universal;Text;Genel;Zorunlu;Denetim departmanı;Denetim
+GRI 2;2-6;Faaliyetler ve değer zinciri;Faaliyetler ve değer zincirini tanımlar;Universal;Text;Genel;Zorunlu;Operasyonlar;Operasyonlar
+GRI 2;2-7;Çalışanlar;Çalışan sayısı ve dağılımını verir;Universal;Number;Kişi;Zorunlu;İnsan Kaynakları;İnsan Kaynakları
+GRI 2;2-8;Çalışan olmayan işçiler;Çalışan olmayan işçi sayısını verir;Universal;Number;Kişi;Zorunlu;İnsan Kaynakları;İnsan Kaynakları
+GRI 2;2-9;Yönetişim yapısı;Yönetişim yapısını açıklar;Universal;Text;Genel;Zorunlu;Yönetim;Yönetim
+GRI 2;2-10;En yüksek yönetişim organı seçimi;Yönetişim organı seçim sürecini açıklar;Universal;Text;Genel;Zorunlu;Yönetim;Yönetim
+GRI 2;2-11;En yüksek yönetişim organı başkanı;Yönetişim organı başkanını tanımlar;Universal;Text;Genel;Zorunlu;Yönetim;Yönetim
+GRI 2;2-12;Sürdürülebilirlik konularında rol;Sürdürülebilirlik konularındaki rolü açıklar;Universal;Text;Genel;Zorunlu;Yönetim;Yönetim
+GRI 2;2-13;Sorumluluk devri;Sorumluluk devir sürecini açıklar;Universal;Text;Genel;Zorunlu;Yönetim;Yönetim
+GRI 2;2-14;Sürdürülebilirlik raporlamasında rol;Raporlamadaki rolü açıklar;Universal;Text;Genel;Zorunlu;Yönetim;Yönetim
+GRI 2;2-15;Çıkar çatışmaları;Çıkar çatışmalarını yönetir;Universal;Text;Genel;Zorunlu;Yönetim;Yönetim
+GRI 2;2-16;Kritik endişelerin iletişimi;Kritik endişelerin iletişimini açıklar;Universal;Text;Genel;Zorunlu;Yönetim;Yönetim
+GRI 2;2-17;En yüksek yönetişim organı bilgisi;Yönetişim organı bilgisini verir;Universal;Text;Genel;Zorunlu;Yönetim;Yönetim
+GRI 2;2-18;Performans değerlendirmesi;Performans değerlendirme sürecini açıklar;Universal;Text;Genel;Zorunlu;Yönetim;Yönetim
+GRI 2;2-19;Ödeme politikaları;Ödeme politikalarını açıklar;Universal;Text;Genel;Zorunlu;İnsan Kaynakları;İnsan Kaynakları
+GRI 2;2-20;Ödeme belirleme süreci;Ödeme belirleme sürecini açıklar;Universal;Text;Genel;Zorunlu;İnsan Kaynakları;İnsan Kaynakları
+GRI 2;2-21;Yıllık toplam tazminat oranı;Tazminat oranını verir;Universal;Ratio;Oran;Zorunlu;İnsan Kaynakları;İnsan Kaynakları
+GRI 2;2-22;Sürdürülebilir kalkınma stratejisi;Sürdürülebilir kalkınma stratejisini açıklar;Universal;Text;Genel;Zorunlu;Strateji;Strateji
+GRI 2;2-23;Politika taahhütleri;Politika taahhütlerini listeler;Universal;Text;Genel;Zorunlu;Yönetim;Yönetim
+GRI 2;2-24;Politika taahhütlerinin gömülmesi;Politika taahhütlerinin uygulanmasını açıklar;Universal;Text;Genel;Zorunlu;Yönetim;Yönetim
+GRI 2;2-25;Kamu politikasına katkı;Kamu politikasına katkıyı açıklar;Universal;Text;Genel;Zorunlu;Yönetim;Yönetim
+GRI 2;2-26;Lobicilik;Lobicilik faaliyetlerini açıklar;Universal;Text;Genel;Zorunlu;Yönetim;Yönetim
+GRI 2;2-27;Siyasi katkılar;Siyasi katkıları açıklar;Universal;Text;Genel;Zorunlu;Yönetim;Yönetim
+GRI 2;2-28;Paydaş katılımı yaklaşımı;Paydaş katılımı yaklaşımını açıklar;Universal;Text;Genel;Zorunlu;Sürdürülebilirlik;Sürdürülebilirlik
+GRI 2;2-29;Paydaş grupları;Paydaş gruplarını tanımlar;Universal;Text;Genel;Zorunlu;Sürdürülebilirlik;Sürdürülebilirlik
+GRI 2;2-30;Toplu pazarlık anlaşmaları;Toplu pazarlık anlaşmalarını açıklar;Universal;Text;Genel;Zorunlu;İnsan Kaynakları;İnsan Kaynakları
+GRI 3;3-1;Materyal konu belirleme süreci;Materyal konu belirleme sürecini açıklar;Universal;Text;Genel;Zorunlu;Sürdürülebilirlik;Sürdürülebilirlik
+GRI 3;3-2;Materyal konular listesi;Materyal konuları listeler;Universal;Text;Genel;Zorunlu;Sürdürülebilirlik;Sürdürülebilirlik
+GRI 3;3-3;Materyal konuların yönetimi;Materyal konuların yönetimini açıklar;Universal;Text;Genel;Zorunlu;Sürdürülebilirlik;Sürdürülebilirlik
+GRI 201;201-1;Doğrudan ekonomik değer üretimi;Ekonomik değer üretimini verir;Economic;Currency;Para birimi;Zorunlu;Finans;Finans
+GRI 201;201-2;Finansal kuruluşların etkileri;Finansal kuruluşların etkilerini açıklar;Economic;Text;Genel;Zorunlu;Finans;Finans
+GRI 201;201-3;Tanımlanmış fayda planları;Fayda planlarını açıklar;Economic;Text;Genel;Zorunlu;İnsan Kaynakları;İnsan Kaynakları
+GRI 201;201-4;Hükümet mali yardımları;Hükümet mali yardımlarını verir;Economic;Currency;Para birimi;Zorunlu;Finans;Finans
+GRI 202;202-1;Kıdemli yöneticiler için ortalama maaş oranı;Maaş oranını verir;Economic;Ratio;Oran;Zorunlu;İnsan Kaynakları;İnsan Kaynakları
+GRI 202;202-2;Operasyonların yerel sahipliği;Yerel sahiplik oranını verir;Economic;Percentage;Yüzde;Zorunlu;Operasyonlar;Operasyonlar
+GRI 203;203-1;Altyapı yatırımları;Altyapı yatırımlarını verir;Economic;Currency;Para birimi;Zorunlu;Operasyonlar;Operasyonlar
+GRI 203;203-2;Önemli dolaylı ekonomik etkiler;Dolaylı ekonomik etkileri açıklar;Economic;Text;Genel;Zorunlu;Operasyonlar;Operasyonlar
+GRI 204;204-1;Yerel tedarikçilerden satın alma oranı;Yerel tedarikçi oranını verir;Economic;Percentage;Yüzde;Zorunlu;Tedarik;Tedarik
+GRI 205;205-1;Yolsuzlukla mücadele operasyonları;Yolsuzlukla mücadele operasyonlarını açıklar;Economic;Text;Genel;Zorunlu;Yönetim;Yönetim
+GRI 205;205-2;Yolsuzlukla mücadele eğitimi;Yolsuzlukla mücadele eğitimini açıklar;Economic;Text;Genel;Zorunlu;İnsan Kaynakları;İnsan Kaynakları
+GRI 205;205-3;Yolsuzlukla mücadele önlemlerinin etkililiği;Önlemlerin etkililiğini açıklar;Economic;Text;Genel;Zorunlu;Yönetim;Yönetim
+GRI 206;206-1;Rekabet yasası ihlalleri;Rekabet yasası ihlallerini açıklar;Economic;Text;Genel;Zorunlu;Yasal;Yasal
+GRI 207;207-1;Vergi yaklaşımı;Vergi yaklaşımını açıklar;Economic;Text;Genel;Zorunlu;Finans;Finans
+GRI 207;207-2;Vergi yönetişimi ve kontrolü;Vergi yönetişimini açıklar;Economic;Text;Genel;Zorunlu;Finans;Finans
+GRI 207;207-3;Vergi bilgilerinin raporlanması;Vergi bilgilerini verir;Economic;Text;Genel;Zorunlu;Finans;Finans
+GRI 207;207-4;Vergi politikaları ve etkileri;Vergi politikalarını açıklar;Economic;Text;Genel;Zorunlu;Finans;Finans
+GRI 301;301-1;Kullanılan malzemeler;Malzeme kullanımını verir;Environmental;Ton/m³;Ton/m³;Zorunlu;Operasyonlar;Operasyonlar
+GRI 301;301-2;Geri dönüştürülmüş girdi malzemeleri;Geri dönüştürülmüş malzemeleri verir;Environmental;Ton/m³;Ton/m³;Zorunlu;Operasyonlar;Operasyonlar
+GRI 301;301-3;Geri kazanılan ürünler;Geri kazanılan ürünleri verir;Environmental;Ton/m³;Ton/m³;Zorunlu;Operasyonlar;Operasyonlar
+GRI 302;302-1;Organizasyon içi enerji tüketimi;İç enerji tüketimini verir;Environmental;MWh;MWh;Zorunlu;Operasyonlar;Operasyonlar
+GRI 302;302-2;Organizasyon dışı enerji tüketimi;Dış enerji tüketimini verir;Environmental;MWh;MWh;Zorunlu;Operasyonlar;Operasyonlar
+GRI 302;302-3;Enerji yoğunluğu;Enerji yoğunluğunu verir;Environmental;MWh/unit;MWh/unit;Zorunlu;Operasyonlar;Operasyonlar
+GRI 302;302-4;Enerji tüketiminin azaltılması;Enerji azaltımını verir;Environmental;MWh;MWh;Zorunlu;Operasyonlar;Operasyonlar
+GRI 302;302-5;Ürün enerji gereksinimlerinin azaltılması;Ürün enerji azaltımını verir;Environmental;MWh;MWh;Zorunlu;Operasyonlar;Operasyonlar
+GRI 303;303-1;Su çekimi;Su çekimini verir;Environmental;m³;m³;Zorunlu;Operasyonlar;Operasyonlar
+GRI 303;303-2;Su tüketimi;Su tüketimini verir;Environmental;m³;m³;Zorunlu;Operasyonlar;Operasyonlar
+GRI 303;303-3;Su deşarjı;Su deşarjını verir;Environmental;m³;m³;Zorunlu;Operasyonlar;Operasyonlar
+GRI 303;303-4;Su tüketiminin azaltılması;Su azaltımını verir;Environmental;m³;m³;Zorunlu;Operasyonlar;Operasyonlar
+GRI 303;303-5;Su geri kazanımı;Su geri kazanımını verir;Environmental;m³;m³;Zorunlu;Operasyonlar;Operasyonlar
+GRI 304;304-1;Operasyonların biyoçeşitlilik etkileri;Biyoçeşitlilik etkilerini açıklar;Environmental;Text;Genel;Zorunlu;Operasyonlar;Operasyonlar
+GRI 304;304-2;Biyoçeşitlilik olumsuz etkileri;Olumsuz etkileri açıklar;Environmental;Text;Genel;Zorunlu;Operasyonlar;Operasyonlar
+GRI 304;304-3;Korumalı alanlar;Korumalı alanları açıklar;Environmental;Text;Genel;Zorunlu;Operasyonlar;Operasyonlar
+GRI 304;304-4;IUCN Kırmızı Liste türleri;IUCN türlerini açıklar;Environmental;Text;Genel;Zorunlu;Operasyonlar;Operasyonlar
+GRI 305;305-1;Scope 1 sera gazı emisyonları;Scope 1 emisyonları verir;Environmental;tCO2e;tCO2e;Zorunlu;Operasyonlar;Operasyonlar
+GRI 305;305-2;Scope 2 sera gazı emisyonları;Scope 2 emisyonları verir;Environmental;tCO2e;tCO2e;Zorunlu;Operasyonlar;Operasyonlar
+GRI 305;305-3;Scope 3 sera gazı emisyonları;Scope 3 emisyonları verir;Environmental;tCO2e;tCO2e;Zorunlu;Operasyonlar;Operasyonlar
+GRI 305;305-4;Sera gazı emisyon yoğunluğu;Emisyon yoğunluğunu verir;Environmental;tCO2e/unit;tCO2e/unit;Zorunlu;Operasyonlar;Operasyonlar
+GRI 305;305-5;Sera gazı emisyonlarının azaltılması;Emisyon azaltımını verir;Environmental;tCO2e;tCO2e;Zorunlu;Operasyonlar;Operasyonlar
+GRI 305;305-6;Ozon tabakasını incelten maddeler;Ozon incelten maddeleri verir;Environmental;kg;kg;Zorunlu;Operasyonlar;Operasyonlar
+GRI 305;305-7;Azot ve kükürt oksitler;NOx ve SOx emisyonlarını verir;Environmental;kg;kg;Zorunlu;Operasyonlar;Operasyonlar
+GRI 306;306-1;Atık üretimi;Atık üretimini verir;Environmental;Ton;Ton;Zorunlu;Operasyonlar;Operasyonlar
+GRI 306;306-2;Atık üretiminin azaltılması;Atık azaltımını verir;Environmental;Ton;Ton;Zorunlu;Operasyonlar;Operasyonlar
+GRI 306;306-3;Atık geri kazanımı;Atık geri kazanımını verir;Environmental;Ton;Ton;Zorunlu;Operasyonlar;Operasyonlar
+GRI 306;306-4;Tehlikeli atık üretimi;Tehlikeli atık üretimini verir;Environmental;Ton;Ton;Zorunlu;Operasyonlar;Operasyonlar
+GRI 307;307-1;Çevresel uyumluluk ihlalleri;Uyumluluk ihlallerini açıklar;Environmental;Text;Genel;Zorunlu;Yasal;Yasal
+GRI 308;308-1;Yeni tedarikçilerin çevresel değerlendirmesi;Yeni tedarikçi değerlendirmesini açıklar;Environmental;Text;Genel;Zorunlu;Tedarik;Tedarik
+GRI 308;308-2;Mevcut tedarikçilerin çevresel değerlendirmesi;Mevcut tedarikçi değerlendirmesini açıklar;Environmental;Text;Genel;Zorunlu;Tedarik;Tedarik
+GRI 401;401-1;Yeni işe alımlar ve işten ayrılmalar;İşe alım ve ayrılmaları verir;Social;Number;Kişi;Zorunlu;İnsan Kaynakları;İnsan Kaynakları
+GRI 401;401-2;Sosyal haklara sahip çalışanlar;Sosyal haklara sahip çalışanları verir;Social;Number;Kişi;Zorunlu;İnsan Kaynakları;İnsan Kaynakları
+GRI 401;401-3;Ebeveyn izni;Ebeveyn izni kullanımını verir;Social;Number;Kişi;Zorunlu;İnsan Kaynakları;İnsan Kaynakları
+GRI 402;402-1;Toplu pazarlık anlaşmaları;Toplu pazarlık anlaşmalarını açıklar;Social;Text;Genel;Zorunlu;İnsan Kaynakları;İnsan Kaynakları
+GRI 403;403-1;İş sağlığı ve güvenliği yönetişimi;İSG yönetişimini açıklar;Social;Text;Genel;Zorunlu;İş Güvenliği;İş Güvenliği
+GRI 403;403-2;İş sağlığı ve güvenliği eğitimi;İSG eğitimini açıklar;Social;Text;Genel;Zorunlu;İş Güvenliği;İş Güvenliği
+GRI 403;403-3;İş sağlığı ve güvenliği hizmetleri;İSG hizmetlerini açıklar;Social;Text;Genel;Zorunlu;İş Güvenliği;İş Güvenliği
+GRI 403;403-4;İş sağlığı ve güvenliği danışmanlığı;İSG danışmanlığını açıklar;Social;Text;Genel;Zorunlu;İş Güvenliği;İş Güvenliği
+GRI 403;403-5;İş sağlığı ve güvenliği performansı;İSG performansını verir;Social;Text;Genel;Zorunlu;İş Güvenliği;İş Güvenliği
+GRI 403;403-6;İş kazaları ve meslek hastalıkları;İş kazalarını verir;Social;Number;Kişi;Zorunlu;İş Güvenliği;İş Güvenliği
+GRI 404;404-1;Çalışan eğitimi;Çalışan eğitimini açıklar;Social;Text;Genel;Zorunlu;İnsan Kaynakları;İnsan Kaynakları
+GRI 404;404-2;Çalışan gelişim programları;Gelişim programlarını açıklar;Social;Text;Genel;Zorunlu;İnsan Kaynakları;İnsan Kaynakları
+GRI 404;404-3;Çalışan değerlendirme süreci;Değerlendirme sürecini açıklar;Social;Text;Genel;Zorunlu;İnsan Kaynakları;İnsan Kaynakları
+GRI 405;405-1;Yönetim organı ve çalışanların çeşitliliği;Çeşitliliği verir;Social;Text;Genel;Zorunlu;İnsan Kaynakları;İnsan Kaynakları
+GRI 405;405-2;Cinsiyet ücret farkı oranı;Ücret farkı oranını verir;Social;Ratio;Oran;Zorunlu;İnsan Kaynakları;İnsan Kaynakları
+GRI 406;406-1;Ayrımcılık olayları;Ayrımcılık olaylarını açıklar;Social;Text;Genel;Zorunlu;İnsan Kaynakları;İnsan Kaynakları
+GRI 407;407-1;Örgütlenme özgürlüğü ihlalleri;Örgütlenme ihlallerini açıklar;Social;Text;Genel;Zorunlu;İnsan Kaynakları;İnsan Kaynakları
+GRI 408;408-1;Çocuk işçiliği operasyonları;Çocuk işçiliğini açıklar;Social;Text;Genel;Zorunlu;İnsan Kaynakları;İnsan Kaynakları
+GRI 409;409-1;Zorla çalıştırma operasyonları;Zorla çalıştırmayı açıklar;Social;Text;Genel;Zorunlu;İnsan Kaynakları;İnsan Kaynakları
+GRI 410;410-1;Güvenlik personeli eğitimi;Güvenlik eğitimini açıklar;Social;Text;Genel;Zorunlu;Güvenlik;Güvenlik
+GRI 411;411-1;Yerli halk hakları ihlalleri;Yerli halk hakları ihlallerini açıklar;Social;Text;Genel;Zorunlu;Yasal;Yasal
+GRI 412;412-1;İnsan hakları değerlendirmesi;İnsan hakları değerlendirmesini açıklar;Social;Text;Genel;Zorunlu;Yasal;Yasal
+GRI 412;412-2;İnsan hakları eğitimi;İnsan hakları eğitimini açıklar;Social;Text;Genel;Zorunlu;İnsan Kaynakları;İnsan Kaynakları
+GRI 413;413-1;Yerel topluluk katılımı;Yerel topluluk katılımını açıklar;Social;Text;Genel;Zorunlu;Sürdürülebilirlik;Sürdürülebilirlik
+GRI 413;413-2;Yerel topluluk şikayetleri;Yerel topluluk şikayetlerini açıklar;Social;Text;Genel;Zorunlu;Sürdürülebilirlik;Sürdürülebilirlik
+GRI 414;414-1;Yeni tedarikçilerin sosyal değerlendirmesi;Yeni tedarikçi sosyal değerlendirmesini açıklar;Social;Text;Genel;Zorunlu;Tedarik;Tedarik
+GRI 414;414-2;Mevcut tedarikçilerin sosyal değerlendirmesi;Mevcut tedarikçi sosyal değerlendirmesini açıklar;Social;Text;Genel;Zorunlu;Tedarik;Tedarik
+GRI 415;415-1;Kamu politikası katılımı;Kamu politikası katılımını açıklar;Social;Text;Genel;Zorunlu;Yönetim;Yönetim
+GRI 416;416-1;Müşteri sağlığı ve güvenliği değerlendirmesi;Müşteri sağlık güvenlik değerlendirmesini açıklar;Social;Text;Genel;Zorunlu;Kalite;Kalite
+GRI 416;416-2;Müşteri sağlığı ve güvenliği ihlalleri;Müşteri sağlık güvenlik ihlallerini açıklar;Social;Text;Genel;Zorunlu;Kalite;Kalite
+GRI 417;417-1;Pazarlama ve etiketleme yasaları;Pazarlama etiketleme yasalarını açıklar;Social;Text;Genel;Zorunlu;Yasal;Yasal
+GRI 417;417-2;Müşteri gizliliği ihlalleri;Müşteri gizliliği ihlallerini açıklar;Social;Text;Genel;Zorunlu;Yasal;Yasal
+GRI 418;418-1;Müşteri gizliliği ihlalleri;Müşteri gizliliği ihlallerini açıklar;Social;Text;Genel;Zorunlu;Yasal;Yasal
+GRI 419;419-1;Sosyoekonomik uyumluluk ihlalleri;Sosyoekonomik uyumluluk ihlallerini açıklar;Social;Text;Genel;Zorunlu;Yasal;Yasal

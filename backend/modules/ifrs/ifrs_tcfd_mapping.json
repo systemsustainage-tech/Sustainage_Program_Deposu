@@ -1,0 +1,67 @@
+{
+  "ifrs_s2_to_tcfd": {
+    "governance": {
+      "ifrs_disclosure": "IFRS S2 - Governance",
+      "tcfd_pillar": "Governance",
+      "tcfd_recommendations": [
+        "Describe board oversight",
+        "Describe management role"
+      ],
+      "coverage": "100%",
+      "notes": "TCFD governance tam olarak IFRS S2 governance'i karsilar"
+    },
+    "strategy": {
+      "ifrs_disclosure": "IFRS S2 - Strategy",
+      "tcfd_pillar": "Strategy",
+      "tcfd_recommendations": [
+        "Describe climate risks and opportunities",
+        "Impact on business, strategy and financial planning",
+        "Resilience of strategy (scenarios)"
+      ],
+      "coverage": "90%",
+      "notes": "TCFD scenario analysis IFRS S2 gereksinimleriyle %90 uyumlu"
+    },
+    "risk_management": {
+      "ifrs_disclosure": "IFRS S2 - Risk Management",
+      "tcfd_pillar": "Risk Management",
+      "tcfd_recommendations": [
+        "Identify and assess climate risks",
+        "Manage climate risks",
+        "Integration into overall risk management"
+      ],
+      "coverage": "100%",
+      "notes": "Tam uyumlu"
+    },
+    "metrics_targets": {
+      "ifrs_disclosure": "IFRS S2 - Metrics and Targets",
+      "tcfd_pillar": "Metrics and Targets",
+      "tcfd_requirements": [
+        "Scope 1 emissions",
+        "Scope 2 emissions",
+        "Scope 3 emissions (if appropriate)",
+        "Climate-related risks and opportunities",
+        "Targets and progress"
+      ],
+      "coverage": "85%",
+      "notes": "TCFD metrikleri mevcut, IFRS S2 ek metrik gereksinimleri eklenebilir"
+    }
+  },
+  "missing_in_tcfd": [
+    {
+      "ifrs_requirement": "Industry-based metrics (SASB alignment)",
+      "status": "partial",
+      "solution": "SASB modülünden veri çek"
+    },
+    {
+      "ifrs_requirement": "Financed emissions (financial sector)",
+      "status": "missing",
+      "solution": "Yeni hesaplama modülü gerekli"
+    },
+    {
+      "ifrs_requirement": "Internal carbon pricing",
+      "status": "missing",
+      "solution": "Carbon modülüne eklenebilir"
+    }
+  ]
+}
+

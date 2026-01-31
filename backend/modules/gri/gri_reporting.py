@@ -1,0 +1,574 @@
+import logging
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+GRI Raporlama Modülü
+- PDF/DOCX çıktı üretir
+- GRI içerik indeksi ve TSRS eşleştirme özetlerini sunar
+- SDG ve TSRS uyumluluğunu GRI perspektifinden kontrol eder
+"""
+
+import os
+import sqlite3
+from datetime import datetime
+from typing import Dict, Optional, Tuple
+
+from docx import Document
+from docx.enum.table import WD_TABLE_ALIGNMENT
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.shared import Inches, Pt
+from reportlab.lib import colors
+from reportlab.lib.enums import TA_CENTER
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.units import inch
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.platypus import (Paragraph, SimpleDocTemplate, Spacer, Table,
+                                TableStyle)
+
+from utils.language_manager import LanguageManager
+from config.database import DB_PATH
+
+
+def _add_turkish_paragraph(doc, text, style=None, font_name='Calibri', font_size=11):
+    para = doc.add_paragraph(text if text is not None else '', style=style)
+    for run in para.runs:
+        try:
+            run.font.name = font_name
+            run.font.size = Pt(font_size)
+            from docx.oxml.ns import qn
+            r = run._element
+            r.rPr.rFonts.set(qn('w:ascii'), font_name)
+            r.rPr.rFonts.set(qn('w:hAnsi'), font_name)
+            r.rPr.rFonts.set(qn('w:cs'), font_name)
+        except Exception as e:
+            logging.error(f"Silent error caught: {str(e)}")
+    return para
+
+def _add_turkish_heading(doc, text, level=1, font_name='Calibri'):
+    heading = doc.add_heading(text, level=level)
+    for run in heading.runs:
+        try:
+            run.font.name = font_name
+            from docx.oxml.ns import qn
+            r = run._element
+            r.rPr.rFonts.set(qn('w:ascii'), font_name)
+            r.rPr.rFonts.set(qn('w:hAnsi'), font_name)
+            r.rPr.rFonts.set(qn('w:cs'), font_name)
+        except Exception as e:
+            logging.error(f"Silent error caught: {str(e)}")
+    return heading
+
+
+class GRIReporting:
+    """GRI raporlama ve içerik indeksi üreticisi"""
+
+    def __init__(self, db_path: str = DB_PATH) -> None:
+        if not os.path.isabs(db_path):
+            base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+            self.db_path = os.path.join(base_dir, db_path)
+        else:
+            self.db_path = db_path
+
+        # Türkçe font desteği için font kaydetme
+        self._setup_turkish_fonts()
+        self.lm = LanguageManager()
+
+    def _setup_turkish_fonts(self) -> None:
+        """Türkçe karakter desteği için fontları kaydet"""
+        try:
+            # Proje içi fontları öncelikli kontrol et
+            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            local_font_path = os.path.join(base_dir, 'raporlama', 'fonts', 'DejaVuSans.ttf')
+            
+            font_paths = [local_font_path]
+
+            # Sistem fontlarını ekle (Windows'ta Arial, Linux'ta DejaVu Sans)
+            import platform
+
+            if platform.system() == "Windows":
+                # Windows sistem fontları
+                windir = os.environ.get('WINDIR', 'C:/Windows')
+                font_paths.extend([
+                    os.path.join(windir, "Fonts", "segoeui.ttf"),
+                    os.path.join(windir, "Fonts", "calibri.ttf"),
+                    os.path.join(windir, "Fonts", "tahoma.ttf")
+                ])
+            else:
+                # Linux/Mac sistem fontları
+                font_paths.extend([
+                    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+                    "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+                    "/System/Library/Fonts/Arial.ttf"  # Mac
+                ])
+
+            # Mevcut fontları kaydet
+            for font_path in font_paths:
+                if os.path.exists(font_path):
+                    try:
+                        pdfmetrics.registerFont(TTFont('TurkishFont', font_path))
+                        logging.info(f"Türkçe font kaydedildi: {font_path}")
+                        break
+                    except Exception as e:
+                        logging.info(f"Font kaydedilemedi {font_path}: {e}")
+                        continue
+            else:
+                # Hiçbir font bulunamazsa varsayılan font kullan
+                logging.info("Türkçe font bulunamadı, varsayılan font kullanılacak")
+
+        except Exception as e:
+            logging.error(f"Font kurulumu hatası: {e}")
+
+    def get_connection(self) -> sqlite3.Connection:
+        return sqlite3.connect(self.db_path)
+
+    def _get_company(self, conn: sqlite3.Connection, company_id: int) -> Optional[Tuple]:
+        cur = conn.cursor()
+        # Öncelik: company_info
+        row = cur.execute(
+            "SELECT company_id, COALESCE(ticari_unvan, sirket_adi) FROM company_info WHERE company_id = ?",
+            (company_id,),
+        ).fetchone()
+        if row:
+            return row
+        # Yedek: companies tablosu
+        fallback = cur.execute(
+            "SELECT id, name FROM companies WHERE id = ?",
+            (company_id,),
+        ).fetchone()
+        if fallback:
+            return (fallback[0], fallback[1])
+        return None
+
+    def get_gri_data(self, company_id: int, period: Optional[str] = None) -> Dict:
+        """Şirket için GRI veri görünümü"""
+        conn = self.get_connection()
+        cur = conn.cursor()
+        try:
+            company = self._get_company(conn, company_id)
+            if not company:
+                return { 'error': f"Şirket bulunamadı: {company_id}" }
+
+            # Seçilen göstergeler
+            selections = cur.execute(
+                """
+                SELECT gi.id, gi.code, gi.title, gs.code as standard_code, gs.title as standard_title
+                FROM gri_selections sel
+                JOIN gri_indicators gi ON gi.id = sel.indicator_id
+                JOIN gri_standards gs ON gs.id = gi.standard_id
+                WHERE sel.company_id=? AND sel.selected=1
+                ORDER BY gs.code, gi.code
+                """,
+                (company_id,)
+            ).fetchall()
+
+            # Cevaplanan göstergeler
+            if period:
+                responses = cur.execute(
+                    """
+                    SELECT gi.id, gi.code, gi.title, gs.code as standard_code, gs.title as standard_title,
+                           r.response_value, r.numerical_value, r.unit, r.methodology, r.reporting_status
+                    FROM gri_responses r
+                    JOIN gri_indicators gi ON gi.id = r.indicator_id
+                    JOIN gri_standards gs ON gs.id = gi.standard_id
+                    WHERE r.company_id=? AND r.period=?
+                    ORDER BY gs.code, gi.code
+                    """,
+                    (company_id, period)
+                ).fetchall()
+            else:
+                responses = cur.execute(
+                    """
+                    SELECT gi.id, gi.code, gi.title, gs.code as standard_code, gs.title as standard_title,
+                           r.response_value, r.numerical_value, r.unit, r.methodology, r.reporting_status
+                    FROM gri_responses r
+                    JOIN gri_indicators gi ON gi.id = r.indicator_id
+                    JOIN gri_standards gs ON gs.id = gi.standard_id
+                    WHERE r.company_id=?
+                    ORDER BY gs.code, gi.code
+                    """,
+                    (company_id,)
+                ).fetchall()
+
+            # İçerik indeksi satırları (gösterge → TSRS eşleştirmeleri)
+            content_rows = []
+            indicators = cur.execute(
+                """
+                SELECT gi.id, gi.code, gi.title, gs.code as standard_code, gs.title as standard_title
+                FROM gri_indicators gi
+                JOIN gri_standards gs ON gs.id = gi.standard_id
+                ORDER BY gs.code, gi.code
+                """
+            ).fetchall()
+            for iid, icode, ititle, scode, stitle in indicators:
+                tsrs = cur.execute(
+                    """
+                    SELECT tsrs_section, tsrs_metric
+                    FROM map_gri_tsrs
+                    WHERE gri_disclosure = ?
+                    ORDER BY tsrs_section, tsrs_metric
+                    """,
+                    (icode,)
+                ).fetchall()
+                tsrs_summary = ", ".join([f"{sec}: {met}" for sec, met in tsrs]) if tsrs else "—"
+                content_rows.append((scode, icode, ititle, tsrs_summary))
+
+            return {
+                'company': {'id': company[0], 'name': company[1]},
+                'selections': selections,
+                'responses': responses,
+                'content_rows': content_rows,
+                'report_date': datetime.now().strftime('%Y-%m-%d'),
+                'report_time': datetime.now().strftime('%H:%M')
+            }
+        finally:
+            conn.close()
+
+    # --- GRI 303 Su Metrikleri Yardımcıları ---
+    def _get_gri303_water_metrics(self, company_id: int, period: Optional[str] = None) -> Optional[Dict]:
+        """WaterManager üzerinden GRI 303 (Su ve Deşarjlar) ile ilişkili metrikleri getir."""
+        try:
+            from modules.environmental.water_manager import WaterManager
+        except Exception as e:
+            logging.error(f"WaterManager import hatası: {e}")
+            return None
+        wm = WaterManager(db_path=self.db_path)
+        use_period = period or datetime.now().strftime('%Y')
+        metrics = wm.calculate_water_footprint(company_id, use_period) or {}
+        if metrics.get('total_water_footprint', 0) == 0:
+            try:
+                records = wm.get_water_consumption(company_id)
+                if records:
+                    last_period = records[0].get('period')
+                    if last_period:
+                        metrics = wm.calculate_water_footprint(company_id, last_period) or {}
+            except Exception as e:
+                logging.error(f"Su kayıtları getirilirken hata: {e}")
+        return metrics if metrics else None
+
+    def create_pdf_report(self, company_id: int, output_path: str, period: Optional[str] = None) -> bool:
+        data = self.get_gri_data(company_id, period)
+        if 'error' in data:
+            logging.error(f"Hata: {data['error']}")
+            return False
+
+        doc = SimpleDocTemplate(output_path, pagesize=A4)
+        styles = getSampleStyleSheet()
+
+        # Türkçe font desteği için font adını belirle
+        font_name = 'TurkishFont' if 'TurkishFont' in pdfmetrics.getRegisteredFontNames() else 'Helvetica'
+
+        title_style = ParagraphStyle('Title', parent=styles['Heading1'],
+                                   alignment=TA_CENTER, fontSize=22, textColor=colors.darkblue,
+                                   spaceAfter=20, fontName=font_name)
+        h_style = ParagraphStyle('Heading', parent=styles['Heading2'],
+                               textColor=colors.darkgreen, spaceAfter=12, fontName=font_name)
+        n_style = ParagraphStyle('Normal', parent=styles['Normal'], fontName=font_name)
+
+        story = []
+        story.append(Paragraph(self.lm.tr('gri_report_title', "GRI İçerik İndeksi ve Rapor"), title_style))
+        story.append(Paragraph(f"{self.lm.tr('company', 'Şirket')}: {data['company']['name']}", n_style))
+        story.append(Paragraph(f"{self.lm.tr('date', 'Tarih')}: {data['report_date']} {data['report_time']}", n_style))
+        if period:
+            story.append(Paragraph(f"{self.lm.tr('period', 'Dönem')}: {period}", n_style))
+        story.append(Spacer(1, 12))
+
+        # Özet kartlar
+        total_sel = len(data['selections'])
+        total_resp = len(data['responses'])
+        story.append(Paragraph(self.lm.tr('summary', "Özet"), h_style))
+        story.append(Paragraph(f"- {self.lm.tr('selected_gri_indicators', 'Seçilen GRI göstergeleri')}: {total_sel}", n_style))
+        story.append(Paragraph(f"- {self.lm.tr('answered_gri_indicators', 'Cevaplanan GRI göstergeleri')}: {total_resp}", n_style))
+        story.append(Spacer(1, 12))
+
+        # GRI 303: Su ve Deşarjlar
+        story.append(Paragraph(self.lm.tr('gri_303_water', "GRI 303: Su ve Deşarjlar"), h_style))
+        water = self._get_gri303_water_metrics(company_id, period)
+        if water:
+            ws_data = [
+                [self.lm.tr('metric', 'Metrik'), self.lm.tr('value', 'Değer')],
+                [self.lm.tr('total_water_footprint_m3', 'Toplam Su Ayak İzi (m³)'), str(water.get('total_water_footprint', 0))],
+                [self.lm.tr('blue_water_m3', 'Mavi Su (m³)'), str(water.get('total_blue_water', 0))],
+                [self.lm.tr('green_water_m3', 'Yeşil Su (m³)'), str(water.get('total_green_water', 0))],
+                [self.lm.tr('grey_water_m3', 'Gri Su (m³)'), str(water.get('total_grey_water', 0))],
+                [self.lm.tr('avg_efficiency_ratio', 'Ortalama Verimlilik Oranı'), str(water.get('efficiency_metrics', {}).get('average_efficiency_ratio', 0))],
+                [self.lm.tr('avg_recycling_rate', 'Ortalama Geri Dönüşüm Oranı'), str(water.get('efficiency_metrics', {}).get('average_recycling_rate', 0))]
+            ]
+            tbl = Table(ws_data, colWidths=[2.6*inch, 2.2*inch])
+            tbl.setStyle(TableStyle([
+                ('BACKGROUND', (0,0), (-1,0), colors.lightgrey),
+                ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+                ('GRID', (0,0), (-1,-1), 0.25, colors.grey),
+                ('FONTNAME', (0,0), (-1,-1), font_name),
+            ]))
+            story.append(tbl)
+            bsrc = water.get('breakdown_by_source') or {}
+            if bsrc:
+                story.append(Spacer(1, 8))
+                story.append(Paragraph(self.lm.tr('breakdown_by_source', "Kaynağa Göre Dağılım"), ParagraphStyle('SubHead', parent=styles['Heading3'], textColor=colors.darkblue)))
+                src_rows = [[self.lm.tr('source', 'Kaynak'), self.lm.tr('total_m3', 'Toplam (m³)'), self.lm.tr('blue', 'Mavi'), self.lm.tr('green', 'Yeşil'), self.lm.tr('grey', 'Gri')]]
+                for src, vals in bsrc.items():
+                    src_rows.append([
+                        src,
+                        str(round(vals.get('total', 0), 2)),
+                        str(round(vals.get('blue_water', 0), 2)),
+                        str(round(vals.get('green_water', 0), 2)),
+                        str(round(vals.get('grey_water', 0), 2))
+                    ])
+                src_tbl = Table(src_rows)
+                src_tbl.setStyle(TableStyle([
+                    ('BACKGROUND', (0,0), (-1,0), colors.lightgrey),
+                    ('GRID', (0,0), (-1,-1), 0.25, colors.grey),
+                    ('FONTNAME', (0,0), (-1,-1), font_name),
+                ]))
+                story.append(src_tbl)
+        else:
+            story.append(Paragraph(self.lm.tr('gri_303_not_found', "GRI 303 için su metrikleri bulunamadı."), n_style))
+
+        # İçerik indeksini standartlara göre bölümlere ayır ve tablo halinde ekle
+        story.append(Paragraph(self.lm.tr('gri_content_index_tsrs', "GRI İçerik İndeksi (TSRS eşleştirmeleri ile)"), h_style))
+        # Gruplama
+        from collections import defaultdict
+        grouped = defaultdict(list)
+        for scode, icode, ititle, tsrs in data['content_rows']:
+            grouped[scode].append((icode, ititle, tsrs))
+        # Sıralı standartlar
+        for scode in sorted(grouped.keys()):
+            story.append(Spacer(1, 8))
+            story.append(Paragraph(f"{scode}", ParagraphStyle('StdHeading', parent=styles['Heading3'], textColor=colors.darkblue)))
+            table_data = [[self.lm.tr('gri_indicator', "GRI Gösterge"), self.lm.tr('title', "Başlık"), self.lm.tr('tsrs_mapping', "TSRS Eşleştirmeleri")]]
+            # Satırları ekle
+            for icode, ititle, tsrs in grouped[scode]:
+                table_data.append([icode, ititle, tsrs])
+            tbl = Table(table_data, repeatRows=1)
+            tbl.setStyle(TableStyle([
+                ('BACKGROUND', (0,0), (-1,0), colors.lightgrey),
+                ('FONTNAME', (0,0), (-1,0), font_name),
+                ('FONTNAME', (0,1), (-1,-1), font_name),  # Tüm hücreler için Türkçe font
+                ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+                ('VALIGN', (0,0), (-1,-1), 'TOP'),
+                ('GRID', (0,0), (-1,-1), 0.25, colors.grey),
+            ]))
+            story.append(tbl)
+            # Bölümler arasında görsel ayrım; çok uzun ise sayfa kırımı ekle
+            story.append(Spacer(1, 12))
+
+        try:
+            doc.build(story)
+            return True
+        except Exception as e:
+            logging.error(f"PDF rapor oluşturma hatası: {e}")
+            return False
+
+    def _add_logo_to_docx(self, doc, company_id: int):
+        """DOCX raporuna logo ekle"""
+        try:
+            from modules.reporting.brand_identity_manager import BrandIdentityManager
+            bim = BrandIdentityManager(self.db_path, company_id)
+            bi = bim.get_brand_identity(company_id)
+            logo_path = bi.get('logo_path')
+            
+            if logo_path and os.path.exists(logo_path):
+                from docx.shared import Inches
+                p = doc.add_paragraph()
+                run = p.add_run()
+                run.add_picture(logo_path, width=Inches(1.6))
+                p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        except Exception as e:
+            logging.warning(f"Logo ekleme hatası (DOCX): {e}")
+
+    def create_docx_report(self, company_id: int, output_path: str, period: Optional[str] = None) -> bool:
+        data = self.get_gri_data(company_id, period)
+        if 'error' in data:
+            logging.error(f"Hata: {data['error']}")
+            return False
+
+        doc = Document()
+
+        # Logo ekle
+        self._add_logo_to_docx(doc, company_id)
+
+        # Türkçe karakter desteği için font ayarları
+        def set_turkish_font(paragraph, font_name='Calibri') -> None:
+            for run in paragraph.runs:
+                run.font.name = font_name
+                run._element.rPr.rFonts.set('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}ascii', font_name)
+                run._element.rPr.rFonts.set('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}hAnsi', font_name)
+        def set_cell_font(cell, font_name='Calibri') -> None:
+            for paragraph in cell.paragraphs:
+                for run in paragraph.runs:
+                    run.font.name = font_name
+                    run._element.rPr.rFonts.set('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}ascii', font_name)
+                    run._element.rPr.rFonts.set('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}hAnsi', font_name)
+
+        # Başlık
+        title = _add_turkish_paragraph(doc, self.lm.tr('gri_report_title', "GRI İçerik İndeksi ve Rapor"))
+        title.runs[0].font.size = Pt(24)
+        title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        set_turkish_font(title, 'Calibri')
+
+        # Şirket bilgileri
+        company_para = _add_turkish_paragraph(doc, f"{self.lm.tr('company', 'Şirket')}: {data['company']['name']}")
+        set_turkish_font(company_para)
+
+        date_para = _add_turkish_paragraph(doc, f"{self.lm.tr('date', 'Tarih')}: {data['report_date']} {data['report_time']}")
+        set_turkish_font(date_para)
+
+        if period:
+            period_para = _add_turkish_paragraph(doc, f"{self.lm.tr('period', 'Dönem')}: {period}")
+            set_turkish_font(period_para)
+
+        _add_turkish_paragraph(doc, "")
+
+        # Özet bölümü
+        summary_title = _add_turkish_paragraph(doc, self.lm.tr('summary', "Özet"))
+        summary_title.runs[0].bold = True
+        set_turkish_font(summary_title)
+
+        selections_para = _add_turkish_paragraph(doc, f"- {self.lm.tr('selected_gri_indicators', 'Seçilen GRI göstergeleri')}: {len(data['selections'])}")
+        set_turkish_font(selections_para)
+
+        responses_para = _add_turkish_paragraph(doc, f"- {self.lm.tr('answered_gri_indicators', 'Cevaplanan GRI göstergeleri')}: {len(data['responses'])}")
+        set_turkish_font(responses_para)
+
+        # GRI 303: Su ve Deşarjlar
+        h303 = _add_turkish_paragraph(doc, self.lm.tr('gri_303_water', "GRI 303: Su ve Deşarjlar"))
+        h303.runs[0].bold = True
+        set_turkish_font(h303)
+        water = self._get_gri303_water_metrics(company_id, period)
+        if water:
+            tbl = doc.add_table(rows=1, cols=2)
+            tbl.alignment = WD_TABLE_ALIGNMENT.LEFT
+            hdr = tbl.rows[0].cells
+            hdr[0].text = self.lm.tr('metric', 'Metrik')
+            hdr[1].text = self.lm.tr('value', 'Değer')
+            # Özet satırları
+            rows = [
+                (self.lm.tr('total_water_footprint_m3', 'Toplam Su Ayak İzi (m³)'), str(water.get('total_water_footprint', 0))),
+                (self.lm.tr('blue_water_m3', 'Mavi Su (m³)'), str(water.get('total_blue_water', 0))),
+                (self.lm.tr('green_water_m3', 'Yeşil Su (m³)'), str(water.get('total_green_water', 0))),
+                (self.lm.tr('grey_water_m3', 'Gri Su (m³)'), str(water.get('total_grey_water', 0))),
+                (self.lm.tr('avg_efficiency_ratio', 'Ortalama Verimlilik Oranı'), str(water.get('efficiency_metrics', {}).get('average_efficiency_ratio', 0))),
+                (self.lm.tr('avg_recycling_rate', 'Ortalama Geri Dönüşüm Oranı'), str(water.get('efficiency_metrics', {}).get('average_recycling_rate', 0)))
+            ]
+            for met, val in rows:
+                r = tbl.add_row().cells
+                r[0].text = met
+                r[1].text = val
+                set_cell_font(r[0])
+                set_cell_font(r[1])
+            # Kaynağa göre dağılım
+            bsrc = water.get('breakdown_by_source') or {}
+            if bsrc:
+                tbl2 = doc.add_table(rows=1, cols=5)
+                tbl2.alignment = WD_TABLE_ALIGNMENT.LEFT
+                h2 = tbl2.rows[0].cells
+                h2[0].text = self.lm.tr('source', 'Kaynak')
+                h2[1].text = self.lm.tr('total_m3', 'Toplam (m³)')
+                h2[2].text = self.lm.tr('blue', 'Mavi')
+                h2[3].text = self.lm.tr('green', 'Yeşil')
+                h2[4].text = self.lm.tr('grey', 'Gri')
+                for src, vals in bsrc.items():
+                    r = tbl2.add_row().cells
+                    r[0].text = src
+                    r[1].text = str(round(vals.get('total', 0), 2))
+                    r[2].text = str(round(vals.get('blue_water', 0), 2))
+                    r[3].text = str(round(vals.get('green_water', 0), 2))
+                    r[4].text = str(round(vals.get('grey_water', 0), 2))
+                    for c in r:
+                        set_cell_font(c)
+        else:
+            p = _add_turkish_paragraph(doc, self.lm.tr('gri_303_not_found', "GRI 303 için su metrikleri bulunamadı."))
+            set_turkish_font(p)
+
+        # İçerik indeksi tablosu
+        _add_turkish_paragraph(doc, "")
+        h = _add_turkish_paragraph(doc, self.lm.tr('gri_content_index_tsrs', "GRI İçerik İndeksi (TSRS eşleştirmeleri ile)"))
+        h.runs[0].bold = True
+        set_turkish_font(h)
+
+        rows = min(len(data['content_rows']), 300)
+        table = doc.add_table(rows=rows + 1, cols=4)
+        table.alignment = WD_TABLE_ALIGNMENT.LEFT
+
+        hdr = table.rows[0].cells
+        hdr[0].text = self.lm.tr('gri_standard', "GRI Standart")
+        hdr[1].text = self.lm.tr('gri_indicator', "GRI Gösterge")
+        hdr[2].text = self.lm.tr('title', "Başlık")
+        hdr[3].text = self.lm.tr('tsrs_mapping', "TSRS Eşleştirmeleri")
+
+        # Başlık hücrelerine font uygula
+        for cell in hdr:
+            set_cell_font(cell, 'Calibri')
+
+        for i in range(rows):
+            scode, icode, ititle, tsrs = data['content_rows'][i]
+            cells = table.rows[i+1].cells
+            cells[0].text = scode
+            cells[1].text = icode
+            cells[2].text = ititle
+            cells[3].text = tsrs
+
+            # Veri hücrelerine font uygula
+            for cell in cells:
+                set_cell_font(cell, 'Calibri')
+
+        try:
+            doc.save(output_path)
+            return True
+        except Exception as e:
+            logging.error(f"DOCX rapor oluşturma hatası: {e}")
+            return False
+
+    def check_consistency(self) -> Dict:
+        """GRI↔TSRS ve SDG↔GRI bağlamında basit uyumluluk kontrolü yapar."""
+        conn = self.get_connection()
+        cur = conn.cursor()
+        result = {
+            'missing_gri_standards': [],
+            'indicators_without_tsrs': [],
+            'sdg_indicators_without_gri': []
+        }
+        try:
+            # Beklenen GRI standartlarından (seed veya excel) var olmayanları raporla (kod listesi)
+            expected = set([f"GRI {i}" for i in [1,2,3]])
+            expected.update([f"GRI {i}" for i in range(201, 209)])
+            expected.update([f"GRI {i}" for i in range(301, 309)])
+            expected.update([f"GRI {i}" for i in range(401, 420)])
+            rows = cur.execute("SELECT code FROM gri_standards").fetchall()
+            present = set([r[0] for r in rows])
+            result['missing_gri_standards'] = sorted(list(expected - present), key=lambda x: int(x.split()[1]))
+
+            # TSRS eşleştirmesi olmayan GRI göstergeleri
+            rows = cur.execute("SELECT code FROM gri_indicators").fetchall()
+            all_gri_disc = [r[0] for r in rows]
+            ind_wo_tsrs = []
+            for disc in all_gri_disc:
+                cnt = cur.execute("SELECT COUNT(*) FROM map_gri_tsrs WHERE gri_disclosure=?", (disc,)).fetchone()[0]
+                if cnt == 0:
+                    ind_wo_tsrs.append(disc)
+            result['indicators_without_tsrs'] = ind_wo_tsrs
+
+            # GRI eşleştirmesi olmayan SDG göstergeleri
+            rows = cur.execute("SELECT code FROM sdg_indicators").fetchall()
+            sdg_codes = [r[0] for r in rows]
+            sdg_wo_gri = []
+            for sc in sdg_codes:
+                cnt = cur.execute("SELECT COUNT(*) FROM map_sdg_gri WHERE sdg_indicator_code=?", (sc,)).fetchone()[0]
+                if cnt == 0:
+                    sdg_wo_gri.append(sc)
+            result['sdg_indicators_without_gri'] = sdg_wo_gri
+            return result
+        finally:
+            conn.close()
+
+
+if __name__ == '__main__':
+    rep = GRIReporting()
+    logging.info("GRI raporlama modülü başlatıldı")
+    # Basit kontrol
+    consistency = rep.check_consistency()
+    logging.info("Eksik GRI standartları:", consistency['missing_gri_standards'][:10], '...')
+    logging.info("TSRS eşleşmesi olmayan GRI göstergeleri sayısı:", len(consistency['indicators_without_tsrs']))
+    logging.info("GRI eşleştirmesi olmayan SDG göstergeleri sayısı:", len(consistency['sdg_indicators_without_gri']))

@@ -1,0 +1,284 @@
+{
+  "sasb_gri_mapping": [
+    {
+      "sasb_topic_code": "ENV-1",
+      "sasb_metric_code": "ENV-1-1",
+      "gri_standard": "GRI 305",
+      "gri_topic": "Emissions",
+      "gri_indicator": "305-1",
+      "mapping_type": "Direct",
+      "mapping_strength": 1.0,
+      "mapping_notes": "Direct mapping to GRI 305-1 Direct GHG emissions"
+    },
+    {
+      "sasb_topic_code": "ENV-1",
+      "sasb_metric_code": "ENV-1-2",
+      "gri_standard": "GRI 305",
+      "gri_topic": "Emissions",
+      "gri_indicator": "305-2",
+      "mapping_type": "Direct",
+      "mapping_strength": 1.0,
+      "mapping_notes": "Direct mapping to GRI 305-2 Energy indirect GHG emissions"
+    },
+    {
+      "sasb_topic_code": "ENV-1",
+      "sasb_metric_code": "ENV-1-3",
+      "gri_standard": "GRI 305",
+      "gri_topic": "Emissions",
+      "gri_indicator": "305-3",
+      "mapping_type": "Direct",
+      "mapping_strength": 1.0,
+      "mapping_notes": "Direct mapping to GRI 305-3 Other indirect GHG emissions"
+    },
+    {
+      "sasb_topic_code": "ENV-1",
+      "sasb_metric_code": "ENV-1-4",
+      "gri_standard": "GRI 305",
+      "gri_topic": "Emissions",
+      "gri_indicator": "305-4",
+      "mapping_type": "Direct",
+      "mapping_strength": 1.0,
+      "mapping_notes": "Direct mapping to GRI 305-4 GHG emissions intensity"
+    },
+    {
+      "sasb_topic_code": "ENV-2",
+      "sasb_metric_code": "ENV-2-1",
+      "gri_standard": "GRI 305",
+      "gri_topic": "Emissions",
+      "gri_indicator": "305-7",
+      "mapping_type": "Direct",
+      "mapping_strength": 0.9,
+      "mapping_notes": "Direct mapping to GRI 305-7 NOx emissions"
+    },
+    {
+      "sasb_topic_code": "ENV-2",
+      "sasb_metric_code": "ENV-2-2",
+      "gri_standard": "GRI 305",
+      "gri_topic": "Emissions",
+      "gri_indicator": "305-8",
+      "mapping_type": "Direct",
+      "mapping_strength": 0.9,
+      "mapping_notes": "Direct mapping to GRI 305-8 SOx emissions"
+    },
+    {
+      "sasb_topic_code": "ENV-3",
+      "sasb_metric_code": "ENV-3-1",
+      "gri_standard": "GRI 303",
+      "gri_topic": "Water and Effluents",
+      "gri_indicator": "303-1",
+      "mapping_type": "Direct",
+      "mapping_strength": 1.0,
+      "mapping_notes": "Direct mapping to GRI 303-1 Water withdrawal by source"
+    },
+    {
+      "sasb_topic_code": "ENV-3",
+      "sasb_metric_code": "ENV-3-2",
+      "gri_standard": "GRI 303",
+      "gri_topic": "Water and Effluents",
+      "gri_indicator": "303-2",
+      "mapping_type": "Direct",
+      "mapping_strength": 1.0,
+      "mapping_notes": "Direct mapping to GRI 303-2 Water discharge by quality and destination"
+    },
+    {
+      "sasb_topic_code": "ENV-4",
+      "sasb_metric_code": "ENV-4-1",
+      "gri_standard": "GRI 306",
+      "gri_topic": "Waste",
+      "gri_indicator": "306-1",
+      "mapping_type": "Direct",
+      "mapping_strength": 1.0,
+      "mapping_notes": "Direct mapping to GRI 306-1 Waste generation and significant waste-related impacts"
+    },
+    {
+      "sasb_topic_code": "ENV-4",
+      "sasb_metric_code": "ENV-4-2",
+      "gri_standard": "GRI 306",
+      "gri_topic": "Waste",
+      "gri_indicator": "306-2",
+      "mapping_type": "Direct",
+      "mapping_strength": 1.0,
+      "mapping_notes": "Direct mapping to GRI 306-2 Management of significant waste-related impacts"
+    },
+    {
+      "sasb_topic_code": "SOC-1",
+      "sasb_metric_code": "SOC-1-1",
+      "gri_standard": "GRI 412",
+      "gri_topic": "Human Rights Assessment",
+      "gri_indicator": "412-1",
+      "mapping_type": "Direct",
+      "mapping_strength": 1.0,
+      "mapping_notes": "Direct mapping to GRI 412-1 Operations that have been subject to human rights reviews or impact assessments"
+    },
+    {
+      "sasb_topic_code": "SOC-1",
+      "sasb_metric_code": "SOC-1-2",
+      "gri_standard": "GRI 413",
+      "gri_topic": "Local Communities",
+      "gri_indicator": "413-1",
+      "mapping_type": "Direct",
+      "mapping_strength": 1.0,
+      "mapping_notes": "Direct mapping to GRI 413-1 Operations with local community engagement, impact assessments, and development programs"
+    },
+    {
+      "sasb_topic_code": "HUM-1",
+      "sasb_metric_code": "HUM-1-1",
+      "gri_standard": "GRI 401",
+      "gri_topic": "Employment",
+      "gri_indicator": "401-1",
+      "mapping_type": "Direct",
+      "mapping_strength": 1.0,
+      "mapping_notes": "Direct mapping to GRI 401-1 New employee hires and employee turnover"
+    },
+    {
+      "sasb_topic_code": "HUM-1",
+      "sasb_metric_code": "HUM-1-2",
+      "gri_standard": "GRI 405",
+      "gri_topic": "Diversity and Equal Opportunity",
+      "gri_indicator": "405-1",
+      "mapping_type": "Direct",
+      "mapping_strength": 1.0,
+      "mapping_notes": "Direct mapping to GRI 405-1 Diversity of governance bodies and employees"
+    },
+    {
+      "sasb_topic_code": "HUM-2",
+      "sasb_metric_code": "HUM-2-1",
+      "gri_standard": "GRI 403",
+      "gri_topic": "Occupational Health and Safety",
+      "gri_indicator": "403-2",
+      "mapping_type": "Direct",
+      "mapping_strength": 1.0,
+      "mapping_notes": "Direct mapping to GRI 403-2 Types of injury and rates of injury, occupational diseases, lost days, and absenteeism"
+    },
+    {
+      "sasb_topic_code": "HUM-2",
+      "sasb_metric_code": "HUM-2-2",
+      "gri_standard": "GRI 403",
+      "gri_topic": "Occupational Health and Safety",
+      "gri_indicator": "403-3",
+      "mapping_type": "Direct",
+      "mapping_strength": 1.0,
+      "mapping_notes": "Direct mapping to GRI 403-3 Workers with high incidence or high risk of diseases related to their occupation"
+    },
+    {
+      "sasb_topic_code": "BUS-1",
+      "sasb_metric_code": "BUS-1-1",
+      "gri_standard": "GRI 201",
+      "gri_topic": "Economic Performance",
+      "gri_indicator": "201-1",
+      "mapping_type": "Partial",
+      "mapping_strength": 0.7,
+      "mapping_notes": "Partial mapping to GRI 201-1 Direct economic value generated and distributed"
+    },
+    {
+      "sasb_topic_code": "BUS-1",
+      "sasb_metric_code": "BUS-1-2",
+      "gri_standard": "GRI 201",
+      "gri_topic": "Economic Performance",
+      "gri_indicator": "201-2",
+      "mapping_type": "Partial",
+      "mapping_strength": 0.7,
+      "mapping_notes": "Partial mapping to GRI 201-2 Financial implications and other risks and opportunities due to climate change"
+    },
+    {
+      "sasb_topic_code": "LEA-1",
+      "sasb_metric_code": "LEA-1-1",
+      "gri_standard": "GRI 205",
+      "gri_topic": "Anti-corruption",
+      "gri_indicator": "205-1",
+      "mapping_type": "Direct",
+      "mapping_strength": 1.0,
+      "mapping_notes": "Direct mapping to GRI 205-1 Operations assessed for risks related to corruption"
+    },
+    {
+      "sasb_topic_code": "LEA-1",
+      "sasb_metric_code": "LEA-1-2",
+      "gri_standard": "GRI 205",
+      "gri_topic": "Anti-corruption",
+      "gri_indicator": "205-2",
+      "mapping_type": "Direct",
+      "mapping_strength": 1.0,
+      "mapping_notes": "Direct mapping to GRI 205-2 Communication and training about anti-corruption policies and procedures"
+    },
+    {
+      "sasb_topic_code": "LEA-2",
+      "sasb_metric_code": "LEA-2-1",
+      "gri_standard": "GRI 201",
+      "gri_topic": "Economic Performance",
+      "gri_indicator": "201-2",
+      "mapping_type": "Related",
+      "mapping_strength": 0.6,
+      "mapping_notes": "Related mapping to GRI 201-2 Financial implications and other risks and opportunities due to climate change"
+    },
+    {
+      "sasb_topic_code": "LEA-2",
+      "sasb_metric_code": "LEA-2-2",
+      "gri_standard": "GRI 201",
+      "gri_topic": "Economic Performance",
+      "gri_indicator": "201-3",
+      "mapping_type": "Related",
+      "mapping_strength": 0.6,
+      "mapping_notes": "Related mapping to GRI 201-3 Defined benefit plan obligations and other retirement plans"
+    },
+    {
+      "sasb_topic_code": "IFRS-S2",
+      "sasb_metric_code": "IFRS-S2-1",
+      "gri_standard": "GRI 201",
+      "gri_topic": "Economic Performance",
+      "gri_indicator": "201-2",
+      "mapping_type": "Direct",
+      "mapping_strength": 0.9,
+      "mapping_notes": "Direct mapping to GRI 201-2 Financial implications and other risks and opportunities due to climate change"
+    },
+    {
+      "sasb_topic_code": "IFRS-S2",
+      "sasb_metric_code": "IFRS-S2-2",
+      "gri_standard": "GRI 201",
+      "gri_topic": "Economic Performance",
+      "gri_indicator": "201-2",
+      "mapping_type": "Direct",
+      "mapping_strength": 0.9,
+      "mapping_notes": "Direct mapping to GRI 201-2 Financial implications and other risks and opportunities due to climate change"
+    },
+    {
+      "sasb_topic_code": "IFRS-S2",
+      "sasb_metric_code": "IFRS-S2-3",
+      "gri_standard": "GRI 305",
+      "gri_topic": "Emissions",
+      "gri_indicator": "305-1",
+      "mapping_type": "Direct",
+      "mapping_strength": 1.0,
+      "mapping_notes": "Alignment with IFRS S2 Gross Scope 1 greenhouse gas emissions"
+    },
+    {
+      "sasb_topic_code": "IFRS-S2",
+      "sasb_metric_code": "IFRS-S2-3",
+      "gri_standard": "GRI 305",
+      "gri_topic": "Emissions",
+      "gri_indicator": "305-2",
+      "mapping_type": "Direct",
+      "mapping_strength": 1.0,
+      "mapping_notes": "Alignment with IFRS S2 Gross Scope 2 greenhouse gas emissions"
+    },
+    {
+      "sasb_topic_code": "IFRS-S2",
+      "sasb_metric_code": "IFRS-S2-3",
+      "gri_standard": "GRI 305",
+      "gri_topic": "Emissions",
+      "gri_indicator": "305-3",
+      "mapping_type": "Direct",
+      "mapping_strength": 1.0,
+      "mapping_notes": "Alignment with IFRS S2 Gross Scope 3 greenhouse gas emissions"
+    },
+    {
+      "sasb_topic_code": "IFRS-S1",
+      "sasb_metric_code": "IFRS-S1-1",
+      "gri_standard": "GRI 2",
+      "gri_topic": "General Disclosures",
+      "gri_indicator": "2-12",
+      "mapping_type": "Direct",
+      "mapping_strength": 0.9,
+      "mapping_notes": "Role of highest governance body in overseeing the management of impacts"
+    }
+  ]
+}

@@ -1,0 +1,246 @@
+{
+  "scenarios": [
+    {
+      "scenario_name": "Net Zero 2050",
+      "scenario_source": "IEA",
+      "temperature_target": 1.5,
+      "time_horizon": 30,
+      "scenario_type": "Transition",
+      "description": "Net sıfır emisyonlara 2050'de ulaşma senaryosu. Agresif emisyon azaltımı, hızlı teknoloji dönüşümü ve güçlü politikalar içerir.",
+      "key_assumptions": {
+        "carbon_price_2030": 130,
+        "carbon_price_2050": 250,
+        "renewable_energy_share_2030": 60,
+        "renewable_energy_share_2050": 88,
+        "ev_share_2030": 60,
+        "ev_share_2050": 100,
+        "policy_stringency": "Very High",
+        "technology_availability": "High",
+        "public_acceptance": "High"
+      },
+      "impacts": {
+        "transition_risks": "Very High",
+        "physical_risks": "Low",
+        "opportunities": "Very High"
+      },
+      "strategic_implications": "Agresif düşük karbon stratejisi gerektirir. Erken hamlede bulunanlar için büyük fırsatlar. Yüksek yatırım gereksinimleri.",
+      "reference": "IEA Net Zero by 2050 Roadmap"
+    },
+    {
+      "scenario_name": "Below 2°C",
+      "scenario_source": "IPCC/NGFS",
+      "temperature_target": 2.0,
+      "time_horizon": 30,
+      "scenario_type": "Transition",
+      "description": "2°C altı hedefine ulaşma senaryosu. Orta-yüksek emisyon azaltımı ve aşamalı geçiş politikaları.",
+      "key_assumptions": {
+        "carbon_price_2030": 75,
+        "carbon_price_2050": 200,
+        "renewable_energy_share_2030": 50,
+        "renewable_energy_share_2050": 75,
+        "ev_share_2030": 40,
+        "ev_share_2050": 80,
+        "policy_stringency": "High",
+        "technology_availability": "Medium-High",
+        "public_acceptance": "Medium-High"
+      },
+      "impacts": {
+        "transition_risks": "High",
+        "physical_risks": "Medium",
+        "opportunities": "High"
+      },
+      "strategic_implications": "Dengeli geçiş stratejisi. Orta vadede uyum planlaması. Kademeli yatırımlar.",
+      "reference": "NGFS Climate Scenarios, IPCC Pathways"
+    },
+    {
+      "scenario_name": "Current Policies",
+      "scenario_source": "IEA/IPCC",
+      "temperature_target": 3.0,
+      "time_horizon": 30,
+      "scenario_type": "Physical",
+      "description": "Mevcut politikaların devam etmesi durumu. Yetersiz emisyon azaltımı ve yüksek fiziksel riskler.",
+      "key_assumptions": {
+        "carbon_price_2030": 25,
+        "carbon_price_2050": 50,
+        "renewable_energy_share_2030": 35,
+        "renewable_energy_share_2050": 50,
+        "ev_share_2030": 20,
+        "ev_share_2050": 40,
+        "policy_stringency": "Low",
+        "technology_availability": "Medium",
+        "public_acceptance": "Medium"
+      },
+      "impacts": {
+        "transition_risks": "Low",
+        "physical_risks": "Very High",
+        "opportunities": "Low"
+      },
+      "strategic_implications": "Yüksek fiziksel risk yönetimi gerekir. Uyum ve dayanıklılık stratejileri kritik. Geç kalan düzenleme riski.",
+      "reference": "IEA Stated Policies Scenario (STEPS)"
+    },
+    {
+      "scenario_name": "Hot House World (4°C+)",
+      "scenario_source": "IPCC",
+      "temperature_target": 4.0,
+      "time_horizon": 30,
+      "scenario_type": "Physical",
+      "description": "Yetersiz iklim eylemi senaryosu. Çok yüksek fiziksel riskler ve ekosistem tahribatı.",
+      "key_assumptions": {
+        "carbon_price_2030": 10,
+        "carbon_price_2050": 20,
+        "renewable_energy_share_2030": 30,
+        "renewable_energy_share_2050": 40,
+        "ev_share_2030": 10,
+        "ev_share_2050": 25,
+        "policy_stringency": "Very Low",
+        "technology_availability": "Low-Medium",
+        "public_acceptance": "Low"
+      },
+      "impacts": {
+        "transition_risks": "Very Low",
+        "physical_risks": "Critical",
+        "opportunities": "Very Low"
+      },
+      "strategic_implications": "Kritik fiziksel risk yönetimi. Büyük ölçekli kesintilere hazırlık. Varlık taşınması gerekebilir.",
+      "reference": "IPCC High Emissions Scenario (RCP8.5)"
+    },
+    {
+      "scenario_name": "Delayed Transition",
+      "scenario_source": "NGFS",
+      "temperature_target": 2.0,
+      "time_horizon": 30,
+      "scenario_type": "Combined",
+      "description": "Gecikmeli geçiş senaryosu. 2030'a kadar sınırlı eylem, sonrasında ani politika değişiklikleri.",
+      "key_assumptions": {
+        "carbon_price_2030": 30,
+        "carbon_price_2050": 300,
+        "renewable_energy_share_2030": 35,
+        "renewable_energy_share_2050": 80,
+        "ev_share_2030": 25,
+        "ev_share_2050": 90,
+        "policy_stringency": "Low then Very High",
+        "technology_availability": "Medium",
+        "public_acceptance": "Variable"
+      },
+      "impacts": {
+        "transition_risks": "Very High (sudden)",
+        "physical_risks": "High",
+        "opportunities": "Medium"
+      },
+      "strategic_implications": "En riskli senaryo - hem geçiş hem fiziksel riskleri. Stranded asset riski yüksek. Esneklik kritik.",
+      "reference": "NGFS Delayed Transition Scenario"
+    },
+    {
+      "scenario_name": "Orderly Transition",
+      "scenario_source": "NGFS",
+      "temperature_target": 1.7,
+      "time_horizon": 30,
+      "scenario_type": "Transition",
+      "description": "Düzenli geçiş senaryosu. Hemen başlayan ve istikrarlı politikalar. Düşük fiziksel ve geçiş riskleri.",
+      "key_assumptions": {
+        "carbon_price_2030": 100,
+        "carbon_price_2050": 200,
+        "renewable_energy_share_2030": 55,
+        "renewable_energy_share_2050": 85,
+        "ev_share_2030": 50,
+        "ev_share_2050": 95,
+        "policy_stringency": "High",
+        "technology_availability": "High",
+        "public_acceptance": "High"
+      },
+      "impacts": {
+        "transition_risks": "Medium",
+        "physical_risks": "Low",
+        "opportunities": "Very High"
+      },
+      "strategic_implications": "İdeal senaryo - öngörülebilir geçiş. Proaktif stratejiler için zaman var. Yatırım güvenliği yüksek.",
+      "reference": "NGFS Orderly Scenarios"
+    }
+  ],
+  "scenario_comparison_metrics": {
+    "carbon_price": {
+      "unit": "USD/tCO2e",
+      "scenarios": {
+        "Net Zero 2050": {
+          "2025": 80,
+          "2030": 130,
+          "2040": 200,
+          "2050": 250
+        },
+        "Below 2°C": {
+          "2025": 50,
+          "2030": 75,
+          "2040": 140,
+          "2050": 200
+        },
+        "Current Policies": {
+          "2025": 15,
+          "2030": 25,
+          "2040": 40,
+          "2050": 50
+        },
+        "Hot House World": {
+          "2025": 5,
+          "2030": 10,
+          "2040": 15,
+          "2050": 20
+        }
+      }
+    },
+    "renewable_energy_share": {
+      "unit": "% of total energy",
+      "scenarios": {
+        "Net Zero 2050": {
+          "2025": 40,
+          "2030": 60,
+          "2040": 75,
+          "2050": 88
+        },
+        "Below 2°C": {
+          "2025": 35,
+          "2030": 50,
+          "2040": 65,
+          "2050": 75
+        },
+        "Current Policies": {
+          "2025": 28,
+          "2030": 35,
+          "2040": 42,
+          "2050": 50
+        },
+        "Hot House World": {
+          "2025": 25,
+          "2030": 30,
+          "2040": 35,
+          "2050": 40
+        }
+      }
+    },
+    "global_temperature_rise": {
+      "unit": "°C above pre-industrial",
+      "scenarios": {
+        "Net Zero 2050": {
+          "2030": 1.4,
+          "2050": 1.5,
+          "2100": 1.5
+        },
+        "Below 2°C": {
+          "2030": 1.5,
+          "2050": 1.8,
+          "2100": 2.0
+        },
+        "Current Policies": {
+          "2030": 1.6,
+          "2050": 2.4,
+          "2100": 3.0
+        },
+        "Hot House World": {
+          "2030": 1.7,
+          "2050": 2.8,
+          "2100": 4.3
+        }
+      }
+    }
+  }
+}
+

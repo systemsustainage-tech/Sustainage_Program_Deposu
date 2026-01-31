@@ -1,0 +1,264 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+EU Taxonomy Reporting
+Taxonomy raporları oluşturma
+"""
+
+import os
+from datetime import datetime
+from typing import Dict, List
+
+import pandas as pd
+from docx import Document
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.shared import Inches, Pt, RGBColor
+
+
+def _add_turkish_paragraph(doc, text, style=None, font_name='Calibri', font_size=11):
+    """Türkçe karakterleri destekleyen paragraf ekle"""
+    para = doc.add_paragraph(text, style=style)
+    for run in para.runs:
+        run.font.name = font_name
+        run.font.size = Pt(font_size)
+    return para
+
+def _add_turkish_heading(doc, text, level=1, font_name='Calibri'):
+    """Türkçe karakterleri destekleyen başlık ekle"""
+    heading = doc.add_heading(text, level=level)
+    for run in heading.runs:
+        run.font.name = font_name
+    return heading
+
+
+class TaxonomyReporting:
+    """EU Taxonomy raporlama"""
+    
+    def __init__(self, manager) -> None:
+        self.manager = manager
+    
+    def generate_docx_report(self, company_id: int, period: str, output_dir: str = 'reports') -> str:
+        """DOCX raporu oluştur"""
+        try:
+            # Rapor verilerini al
+            report_data = self.manager.generate_taxonomy_report(company_id, period)
+            
+            # Çıktı dizini
+            os.makedirs(output_dir, exist_ok=True)
+            
+            # Dosya adı
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            filename = f"eu_taxonomy_report_{company_id}_{period}_{timestamp}.docx"
+            filepath = os.path.join(output_dir, filename)
+            
+            # Doküman oluştur
+            doc = Document()
+            
+            # Başlık
+            title = doc.add_heading('EU Taxonomy Uyum Raporu', 0)
+            title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            
+            # Genel bilgiler
+            doc.add_heading('Genel Bilgiler', level=1)
+            
+            info_table = doc.add_table(rows=3, cols=2)
+            info_table.style = 'Light Grid Accent 1'
+            
+            info_table.rows[0].cells[0].text = 'Şirket ID'
+            info_table.rows[0].cells[1].text = str(company_id)
+            info_table.rows[1].cells[0].text = 'Raporlama Dönemi'
+            info_table.rows[1].cells[1].text = period
+            info_table.rows[2].cells[0].text = 'Rapor Tarihi'
+            info_table.rows[2].cells[1].text = datetime.now().strftime('%d.%m.%Y')
+            
+            # Özet
+            doc.add_heading('Yönetici Özeti', level=1)
+            
+            summary = report_data.get('summary', {})
+            
+            p = doc.add_paragraph()
+            p.add_run(f"Toplam Faaliyet Sayısı: ").bold = True
+            p.add_run(f"{summary.get('total_activities', 0)}\n")
+            
+            p.add_run(f"Uygun Faaliyet Sayısı: ").bold = True
+            p.add_run(f"{summary.get('eligible_activities', 0)}\n")
+            
+            p.add_run(f"Uyumlu Faaliyet Sayısı: ").bold = True
+            p.add_run(f"{summary.get('aligned_activities', 0)}\n")
+            
+            p.add_run(f"Uygunluk Oranı: ").bold = True
+            p.add_run(f"{summary.get('eligibility_rate', 0):.1f}%\n")
+            
+            p.add_run(f"Uyumluluk Oranı: ").bold = True
+            p.add_run(f"{summary.get('alignment_rate', 0):.1f}%")
+            
+            # KPI'lar
+            doc.add_heading('Taxonomy KPI\'ları', level=1)
+            
+            kpis = report_data.get('kpis', {})
+            
+            # Gelir KPI'ları
+            doc.add_heading('Gelir (Revenue)', level=2)
+            revenue = kpis.get('revenue', {})
+            
+            revenue_table = doc.add_table(rows=4, cols=2)
+            revenue_table.style = 'Light Grid Accent 1'
+            
+            revenue_table.rows[0].cells[0].text = 'Metrik'
+            revenue_table.rows[0].cells[1].text = 'Değer'
+            revenue_table.rows[1].cells[0].text = 'Toplam Gelir Payı'
+            revenue_table.rows[1].cells[1].text = f"{revenue.get('total', 0):.2f}%"
+            revenue_table.rows[2].cells[0].text = 'Uygun Gelir Oranı'
+            revenue_table.rows[2].cells[1].text = f"{revenue.get('eligible_percentage', 0):.2f}%"
+            revenue_table.rows[3].cells[0].text = 'Uyumlu Gelir Oranı'
+            revenue_table.rows[3].cells[1].text = f"{revenue.get('aligned_percentage', 0):.2f}%"
+            
+            # CapEx KPI'ları
+            doc.add_heading('Sermaye Harcamaları (CapEx)', level=2)
+            capex = kpis.get('capex', {})
+            
+            capex_table = doc.add_table(rows=4, cols=2)
+            capex_table.style = 'Light Grid Accent 1'
+            
+            capex_table.rows[0].cells[0].text = 'Metrik'
+            capex_table.rows[0].cells[1].text = 'Değer'
+            capex_table.rows[1].cells[0].text = 'Toplam CapEx Payı'
+            capex_table.rows[1].cells[1].text = f"{capex.get('total', 0):.2f}%"
+            capex_table.rows[2].cells[0].text = 'Uygun CapEx Oranı'
+            capex_table.rows[2].cells[1].text = f"{capex.get('eligible_percentage', 0):.2f}%"
+            capex_table.rows[3].cells[0].text = 'Uyumlu CapEx Oranı'
+            capex_table.rows[3].cells[1].text = f"{capex.get('aligned_percentage', 0):.2f}%"
+            
+            # OpEx KPI'ları
+            doc.add_heading('Operasyonel Harcamalar (OpEx)', level=2)
+            opex = kpis.get('opex', {})
+            
+            opex_table = doc.add_table(rows=4, cols=2)
+            opex_table.style = 'Light Grid Accent 1'
+            
+            opex_table.rows[0].cells[0].text = 'Metrik'
+            opex_table.rows[0].cells[1].text = 'Değer'
+            opex_table.rows[1].cells[0].text = 'Toplam OpEx Payı'
+            opex_table.rows[1].cells[1].text = f"{opex.get('total', 0):.2f}%"
+            opex_table.rows[2].cells[0].text = 'Uygun OpEx Oranı'
+            opex_table.rows[2].cells[1].text = f"{opex.get('eligible_percentage', 0):.2f}%"
+            opex_table.rows[3].cells[0].text = 'Uyumlu OpEx Oranı'
+            opex_table.rows[3].cells[1].text = f"{opex.get('aligned_percentage', 0):.2f}%"
+            
+            # Faaliyetler
+            doc.add_heading('Taxonomy Faaliyetleri', level=1)
+            
+            activities = report_data.get('activities', [])
+            
+            if activities:
+                # Faaliyet tablosu
+                activity_table = doc.add_table(rows=len(activities) + 1, cols=6)
+                activity_table.style = 'Light Grid Accent 1'
+                
+                # Başlıklar
+                headers = ['Kod', 'Faaliyet', 'Sektör', 'Gelir %', 'Uygun', 'Uyumlu']
+                for i, header in enumerate(headers):
+                    activity_table.rows[0].cells[i].text = header
+                
+                # Veriler
+                for i, activity in enumerate(activities, 1):
+                    activity_table.rows[i].cells[0].text = activity.get('activity_code', '')
+                    activity_table.rows[i].cells[1].text = activity.get('activity_name_tr', '')[:30]
+                    activity_table.rows[i].cells[2].text = activity.get('sector', '')
+                    activity_table.rows[i].cells[3].text = f"{activity.get('revenue_share', 0):.1f}"
+                    activity_table.rows[i].cells[4].text = '' if activity.get('is_eligible') else ''
+                    activity_table.rows[i].cells[5].text = '' if activity.get('is_aligned') else ''
+            
+            # Sonuç ve öneriler
+            doc.add_heading('Sonuç ve Öneriler', level=1)
+            
+            doc.add_paragraph(
+                "Bu rapor, şirketin EU Taxonomy uyumluluğunu değerlendirmektedir. "
+                "Raporlanan KPI'lar, şirketin sürdürülebilir faaliyetlerinin finansal "
+                "performansa katkısını göstermektedir."
+            )
+            
+            # Belgeyi kaydet
+            doc.save(filepath)
+            
+            print(f"[OK] EU Taxonomy raporu oluşturuldu: {filepath}")
+            return filepath
+            
+        except Exception as e:
+            print(f"[HATA] EU Taxonomy raporu oluşturma hatası: {e}")
+            return None
+    
+    def generate_excel_report(self, company_id: int, period: str, output_dir: str = 'reports') -> str:
+        """Excel raporu oluştur"""
+        try:
+            # Rapor verilerini al
+            report_data = self.manager.generate_taxonomy_report(company_id, period)
+            
+            # Çıktı dizini
+            os.makedirs(output_dir, exist_ok=True)
+            
+            # Dosya adı
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            filename = f"eu_taxonomy_report_{company_id}_{period}_{timestamp}.xlsx"
+            filepath = os.path.join(output_dir, filename)
+            
+            # Excel writer
+            with pd.ExcelWriter(filepath, engine='openpyxl') as writer:
+                # Özet sayfası
+                summary = report_data.get('summary', {})
+                summary_df = pd.DataFrame([
+                    ['Toplam Faaliyet', summary.get('total_activities', 0)],
+                    ['Uygun Faaliyet', summary.get('eligible_activities', 0)],
+                    ['Uyumlu Faaliyet', summary.get('aligned_activities', 0)],
+                    ['Uygunluk Oranı (%)', f"{summary.get('eligibility_rate', 0):.1f}"],
+                    ['Uyumluluk Oranı (%)', f"{summary.get('alignment_rate', 0):.1f}"]
+                ], columns=['Metrik', 'Değer'])
+                summary_df.to_excel(writer, sheet_name='Özet', index=False)
+                
+                # KPI sayfası
+                kpis = report_data.get('kpis', {})
+                kpi_data = []
+                
+                for kpi_type in ['revenue', 'capex', 'opex']:
+                    kpi = kpis.get(kpi_type, {})
+                    kpi_data.append([
+                        kpi_type.upper(),
+                        kpi.get('total', 0),
+                        kpi.get('eligible', 0),
+                        kpi.get('aligned', 0),
+                        kpi.get('eligible_percentage', 0),
+                        kpi.get('aligned_percentage', 0)
+                    ])
+                
+                kpi_df = pd.DataFrame(kpi_data, columns=[
+                    'KPI', 'Toplam', 'Uygun', 'Uyumlu', 'Uygun %', 'Uyumlu %'
+                ])
+                kpi_df.to_excel(writer, sheet_name='KPI', index=False)
+                
+                # Faaliyetler sayfası
+                activities = report_data.get('activities', [])
+                if activities:
+                    activities_df = pd.DataFrame(activities)
+                    activities_df.to_excel(writer, sheet_name='Faaliyetler', index=False)
+            
+            print(f"[OK] EU Taxonomy Excel raporu oluşturuldu: {filepath}")
+            return filepath
+            
+        except Exception as e:
+            print(f"[HATA] EU Taxonomy Excel raporu oluşturma hatası: {e}")
+            return None
+
+# Test fonksiyonu
+if __name__ == '__main__':
+    import sys
+    sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+    
+    from modules.eu_taxonomy.taxonomy_manager import EUTaxonomyManager
+    
+    db_path = 'data/sdg_desktop.sqlite'
+    manager = EUTaxonomyManager(db_path)
+    reporting = TaxonomyReporting(manager)
+    
+    # Test rapor oluştur
+    filepath = reporting.generate_docx_report(company_id=1, period='2024')
+    print(f"Rapor oluşturuldu: {filepath}")

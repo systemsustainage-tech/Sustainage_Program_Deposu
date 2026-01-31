@@ -1,0 +1,669 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+GELİŞMİŞ RAPORLAMA SİSTEMİ
+==========================
+
+Özelleştirilebilir rapor şablonları ve gelişmiş raporlama
+"""
+
+import json
+import os
+import sqlite3
+from dataclasses import dataclass
+from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional, Tuple
+
+import openpyxl
+import pandas as pd
+from docx import Document
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.shared import Inches
+from openpyxl.styles import Alignment, Font, PatternFill
+from reportlab.lib import colors
+from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.units import inch
+from reportlab.platypus import (Paragraph, SimpleDocTemplate, Spacer, Table,
+                                TableStyle)
+
+
+@dataclass
+class ReportTemplate:
+    """Rapor şablonu veri yapısı"""
+    template_id: str
+    template_name: str
+    template_type: str  # pdf, docx, xlsx
+    category: str  # sdg, gri, carbon, esrs, etc.
+    language: str
+    template_config: Dict[str, Any]
+    is_active: bool
+    created_at: str
+
+@dataclass
+class ReportSection:
+    """Rapor bölümü veri yapısı"""
+    section_id: str
+    section_name: str
+    section_type: str  # header, content, table, chart, footer
+    content: str
+    order: int
+    is_required: bool
+
+def _add_turkish_paragraph(doc, text, style=None, font_name='Calibri', font_size=11):
+    """Türkçe karakterleri destekleyen paragraf ekle"""
+    para = doc.add_paragraph(text, style=style)
+    for run in para.runs:
+        run.font.name = font_name
+        run.font.size = Pt(font_size)
+    return para
+
+def _add_turkish_heading(doc, text, level=1, font_name='Calibri'):
+    """Türkçe karakterleri destekleyen başlık ekle"""
+    heading = doc.add_heading(text, level=level)
+    for run in heading.runs:
+        run.font.name = font_name
+    return heading
+
+
+class AdvancedReportTemplates:
+    """Gelişmiş rapor şablonları yöneticisi"""
+    
+    def __init__(self, db_path: str = None):
+        self.db_path = db_path or 'data/sdg_desktop.db'
+        self.templates = {}
+        self._create_tables()
+        self._load_default_templates()
+    
+    def _create_tables(self):
+        """Raporlama tablolarını oluştur"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            # Rapor şablonları
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS report_templates (
+                    id TEXT PRIMARY KEY,
+                    template_name TEXT NOT NULL,
+                    template_type TEXT NOT NULL,
+                    category TEXT NOT NULL,
+                    language TEXT DEFAULT 'tr',
+                    template_config TEXT NOT NULL,
+                    is_active INTEGER DEFAULT 1,
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            # Rapor bölümleri
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS report_sections (
+                    id TEXT PRIMARY KEY,
+                    template_id TEXT NOT NULL,
+                    section_name TEXT NOT NULL,
+                    section_type TEXT NOT NULL,
+                    content TEXT NOT NULL,
+                    order_index INTEGER DEFAULT 0,
+                    is_required INTEGER DEFAULT 1,
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY(template_id) REFERENCES report_templates(id)
+                )
+            """)
+            
+            # Rapor oluşturma geçmişi
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS report_generation_log (
+                    id TEXT PRIMARY KEY,
+                    company_id INTEGER NOT NULL,
+                    template_id TEXT NOT NULL,
+                    report_name TEXT NOT NULL,
+                    file_path TEXT NOT NULL,
+                    generation_time REAL,
+                    status TEXT DEFAULT 'success',
+                    error_message TEXT,
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY(company_id) REFERENCES companies(id),
+                    FOREIGN KEY(template_id) REFERENCES report_templates(id)
+                )
+            """)
+            
+            # Rapor özelleştirmeleri
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS report_customizations (
+                    id TEXT PRIMARY KEY,
+                    company_id INTEGER NOT NULL,
+                    template_id TEXT NOT NULL,
+                    custom_config TEXT NOT NULL,
+                    is_active INTEGER DEFAULT 1,
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY(company_id) REFERENCES companies(id),
+                    FOREIGN KEY(template_id) REFERENCES report_templates(id)
+                )
+            """)
+            
+            conn.commit()
+            conn.close()
+            
+        except Exception as e:
+            print(f"[HATA] Raporlama tabloları oluşturulamadı: {e}")
+    
+    def _load_default_templates(self):
+        """Varsayılan şablonları yükle"""
+        try:
+            # SDG Raporu Şablonu
+            sdg_template = ReportTemplate(
+                template_id="sdg_template_tr",
+                template_name="SDG İlerleme Raporu",
+                template_type="pdf",
+                category="sdg",
+                language="tr",
+                template_config={
+                    'page_size': 'A4',
+                    'orientation': 'portrait',
+                    'margins': {'top': 1, 'bottom': 1, 'left': 1, 'right': 1},
+                    'header': True,
+                    'footer': True,
+                    'page_numbers': True
+                },
+                is_active=True,
+                created_at=datetime.now().isoformat()
+            )
+            
+            # GRI Raporu Şablonu
+            gri_template = ReportTemplate(
+                template_id="gri_template_tr",
+                template_name="GRI Sürdürülebilirlik Raporu",
+                template_type="docx",
+                category="gri",
+                language="tr",
+                template_config={
+                    'page_size': 'A4',
+                    'orientation': 'portrait',
+                    'margins': {'top': 1, 'bottom': 1, 'left': 1, 'right': 1},
+                    'header': True,
+                    'footer': True,
+                    'page_numbers': True
+                },
+                is_active=True,
+                created_at=datetime.now().isoformat()
+            )
+            
+            # Karbon Raporu Şablonu
+            carbon_template = ReportTemplate(
+                template_id="carbon_template_tr",
+                template_name="Karbon Ayak İzi Raporu",
+                template_type="pdf",
+                category="carbon",
+                language="tr",
+                template_config={
+                    'page_size': 'A4',
+                    'orientation': 'portrait',
+                    'margins': {'top': 1, 'bottom': 1, 'left': 1, 'right': 1},
+                    'header': True,
+                    'footer': True,
+                    'page_numbers': True
+                },
+                is_active=True,
+                created_at=datetime.now().isoformat()
+            )
+            
+            # Şablonları kaydet
+            self.templates = {
+                'sdg': sdg_template,
+                'gri': gri_template,
+                'carbon': carbon_template
+            }
+            
+            # Veritabanına kaydet
+            for template in self.templates.values():
+                self._save_template(template)
+            
+        except Exception as e:
+            print(f"[HATA] Varsayılan şablonlar yüklenemedi: {e}")
+    
+    def _save_template(self, template: ReportTemplate):
+        """Şablonu kaydet"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                INSERT OR REPLACE INTO report_templates
+                (id, template_name, template_type, category, language, template_config, is_active, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                template.template_id, template.template_name, template.template_type,
+                template.category, template.language, json.dumps(template.template_config),
+                template.is_active, template.created_at
+            ))
+            
+            conn.commit()
+            conn.close()
+            
+        except Exception as e:
+            print(f"[HATA] Şablon kaydedilemedi: {e}")
+    
+    def create_sdg_report(self, company_id: int, period: str, data: Dict[str, Any]) -> str:
+        """SDG raporu oluştur"""
+        try:
+            template = self.templates['sdg']
+            report_name = f"SDG_Raporu_{company_id}_{period}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            file_path = f"raporlar/sdg/{report_name}.pdf"
+            
+            # Klasörü oluştur
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            
+            # PDF oluştur
+            doc = SimpleDocTemplate(file_path, pagesize=A4)
+            styles = getSampleStyleSheet()
+            story = []
+            
+            # Başlık
+            title_style = ParagraphStyle(
+                'CustomTitle',
+                parent=styles['Heading1'],
+                fontSize=18,
+                spaceAfter=30,
+                alignment=TA_CENTER
+            )
+            story.append(Paragraph("SDG İLERLEME RAPORU", title_style))
+            story.append(Spacer(1, 12))
+            
+            # Şirket bilgileri
+            company_info = f"""
+            <b>Şirket:</b> {data.get('company_name', 'Bilinmeyen')}<br/>
+            <b>Dönem:</b> {period}<br/>
+            <b>Rapor Tarihi:</b> {datetime.now().strftime('%d.%m.%Y')}
+            """
+            story.append(Paragraph(company_info, styles['Normal']))
+            story.append(Spacer(1, 20))
+            
+            # SDG hedefleri tablosu
+            if 'sdg_data' in data:
+                sdg_data = data['sdg_data']
+                
+                # Tablo başlıkları
+                table_data = [['SDG Hedefi', 'İlerleme (%)', 'Durum', 'Notlar']]
+                
+                for goal, progress in sdg_data.items():
+                    status = "Tamamlandı" if progress >= 80 else "Devam Ediyor" if progress >= 50 else "Başlangıç"
+                    table_data.append([goal, f"{progress:.1f}%", status, ""])
+                
+                # Tablo oluştur
+                table = Table(table_data, colWidths=[2*inch, 1*inch, 1.5*inch, 2*inch])
+                table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('FONTSIZE', (0, 0), (-1, 0), 12),
+                    ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                    ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                    ('GRID', (0, 0), (-1, -1), 1, colors.black)
+                ]))
+                
+                story.append(Paragraph("SDG Hedefleri İlerleme Durumu", styles['Heading2']))
+                story.append(Spacer(1, 12))
+                story.append(table)
+                story.append(Spacer(1, 20))
+            
+            # Özet
+            if 'summary' in data:
+                summary = data['summary']
+                summary_text = f"""
+                <b>Rapor Özeti:</b><br/>
+                • Toplam {len(sdg_data)} SDG hedefi değerlendirildi<br/>
+                • Ortalama ilerleme: %{summary.get('avg_progress', 0):.1f}<br/>
+                • Tamamlanan hedefler: {summary.get('completed', 0)}<br/>
+                • Devam eden hedefler: {summary.get('in_progress', 0)}
+                """
+                story.append(Paragraph(summary_text, styles['Normal']))
+            
+            # PDF'i oluştur
+            doc.build(story)
+            
+            # Geçmişe kaydet
+            self._save_generation_log(company_id, template.template_id, report_name, file_path)
+            
+            print(f"[OK] SDG raporu oluşturuldu: {file_path}")
+            return file_path
+            
+        except Exception as e:
+            print(f"[HATA] SDG raporu oluşturulamadı: {e}")
+            return ""
+    
+    def create_gri_report(self, company_id: int, period: str, data: Dict[str, Any]) -> str:
+        """GRI raporu oluştur"""
+        try:
+            template = self.templates['gri']
+            report_name = f"GRI_Raporu_{company_id}_{period}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            file_path = f"raporlar/gri/{report_name}.docx"
+            
+            # Klasörü oluştur
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            
+            # Word belgesi oluştur
+            doc = Document()
+            
+            # Başlık
+            title = doc.add_heading('GRI SÜRDÜRÜLEBİLİRLİK RAPORU', 0)
+            title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            
+            # Şirket bilgileri
+            doc.add_paragraph(f"Şirket: {data.get('company_name', 'Bilinmeyen')}")
+            doc.add_paragraph(f"Dönem: {period}")
+            doc.add_paragraph(f"Rapor Tarihi: {datetime.now().strftime('%d.%m.%Y')}")
+            doc.add_paragraph("")
+            
+            # GRI konuları
+            if 'gri_topics' in data:
+                doc.add_heading('GRI Konuları', level=1)
+                
+                for topic, details in data['gri_topics'].items():
+                    doc.add_heading(topic, level=2)
+                    doc.add_paragraph(f"Açıklama: {details.get('description', '')}")
+                    doc.add_paragraph(f"Kapsam: {details.get('scope', '')}")
+                    doc.add_paragraph(f"Metodoloji: {details.get('methodology', '')}")
+                    doc.add_paragraph("")
+            
+            # Belgeyi kaydet
+            doc.save(file_path)
+            
+            # Geçmişe kaydet
+            self._save_generation_log(company_id, template.template_id, report_name, file_path)
+            
+            print(f"[OK] GRI raporu oluşturuldu: {file_path}")
+            return file_path
+            
+        except Exception as e:
+            print(f"[HATA] GRI raporu oluşturulamadı: {e}")
+            return ""
+    
+    def create_carbon_report(self, company_id: int, period: str, data: Dict[str, Any]) -> str:
+        """Karbon raporu oluştur"""
+        try:
+            template = self.templates['carbon']
+            report_name = f"Karbon_Raporu_{company_id}_{period}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            file_path = f"raporlar/carbon/{report_name}.pdf"
+            
+            # Klasörü oluştur
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            
+            # PDF oluştur
+            doc = SimpleDocTemplate(file_path, pagesize=A4)
+            styles = getSampleStyleSheet()
+            story = []
+            
+            # Başlık
+            title_style = ParagraphStyle(
+                'CustomTitle',
+                parent=styles['Heading1'],
+                fontSize=18,
+                spaceAfter=30,
+                alignment=TA_CENTER
+            )
+            story.append(Paragraph("KARBON AYAK İZİ RAPORU", title_style))
+            story.append(Spacer(1, 12))
+            
+            # Şirket bilgileri
+            company_info = f"""
+            <b>Şirket:</b> {data.get('company_name', 'Bilinmeyen')}<br/>
+            <b>Dönem:</b> {period}<br/>
+            <b>Rapor Tarihi:</b> {datetime.now().strftime('%d.%m.%Y')}
+            """
+            story.append(Paragraph(company_info, styles['Normal']))
+            story.append(Spacer(1, 20))
+            
+            # Emisyon verileri
+            if 'emissions' in data:
+                emissions = data['emissions']
+                
+                # Toplam emisyon
+                total_emissions = emissions.get('total', 0)
+                story.append(Paragraph(f"<b>Toplam Emisyon:</b> {total_emissions:.2f} tCO2e", styles['Normal']))
+                story.append(Spacer(1, 12))
+                
+                # Scope breakdown
+                if 'scope_breakdown' in emissions:
+                    scope_data = emissions['scope_breakdown']
+                    
+                    # Tablo başlıkları
+                    table_data = [['Kapsam', 'Emisyon (tCO2e)', 'Yüzde (%)']]
+                    
+                    for scope, value in scope_data.items():
+                        percentage = (value / total_emissions * 100) if total_emissions > 0 else 0
+                        table_data.append([scope.upper(), f"{value:.2f}", f"{percentage:.1f}%"])
+                    
+                    # Tablo oluştur
+                    table = Table(table_data, colWidths=[2*inch, 1.5*inch, 1.5*inch])
+                    table.setStyle(TableStyle([
+                        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                        ('FONTSIZE', (0, 0), (-1, 0), 12),
+                        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                        ('GRID', (0, 0), (-1, -1), 1, colors.black)
+                    ]))
+                    
+                    story.append(Paragraph("Emisyon Kapsamları", styles['Heading2']))
+                    story.append(Spacer(1, 12))
+                    story.append(table)
+                    story.append(Spacer(1, 20))
+            
+            # PDF'i oluştur
+            doc.build(story)
+            
+            # Geçmişe kaydet
+            self._save_generation_log(company_id, template.template_id, report_name, file_path)
+            
+            print(f"[OK] Karbon raporu oluşturuldu: {file_path}")
+            return file_path
+            
+        except Exception as e:
+            print(f"[HATA] Karbon raporu oluşturulamadı: {e}")
+            return ""
+    
+    def create_excel_report(self, company_id: int, period: str, data: Dict[str, Any]) -> str:
+        """Excel raporu oluştur"""
+        try:
+            report_name = f"Excel_Raporu_{company_id}_{period}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            file_path = f"raporlar/excel/{report_name}.xlsx"
+            
+            # Klasörü oluştur
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            
+            # Excel dosyası oluştur
+            wb = openpyxl.Workbook()
+            
+            # Ana sayfa
+            ws = wb.active
+            ws.title = "Rapor Özeti"
+            
+            # Başlık
+            ws['A1'] = "SÜRDÜRÜLEBİLİRLİK RAPORU"
+            ws['A1'].font = Font(size=16, bold=True)
+            ws['A1'].alignment = Alignment(horizontal='center')
+            ws.merge_cells('A1:D1')
+            
+            # Şirket bilgileri
+            ws['A3'] = "Şirket:"
+            ws['B3'] = data.get('company_name', 'Bilinmeyen')
+            ws['A4'] = "Dönem:"
+            ws['B4'] = period
+            ws['A5'] = "Rapor Tarihi:"
+            ws['B5'] = datetime.now().strftime('%d.%m.%Y')
+            
+            # Veri tablosu
+            if 'data_table' in data:
+                table_data = data['data_table']
+                
+                # Başlıklar
+                headers = list(table_data[0].keys()) if table_data else []
+                for col, header in enumerate(headers, 1):
+                    cell = ws.cell(row=7, column=col, value=header)
+                    cell.font = Font(bold=True)
+                    cell.fill = PatternFill(start_color='CCCCCC', end_color='CCCCCC', fill_type='solid')
+                
+                # Veriler
+                for row, row_data in enumerate(table_data, 8):
+                    for col, header in enumerate(headers, 1):
+                        ws.cell(row=row, column=col, value=row_data.get(header, ''))
+            
+            # Dosyayı kaydet
+            wb.save(file_path)
+            
+            print(f"[OK] Excel raporu oluşturuldu: {file_path}")
+            return file_path
+            
+        except Exception as e:
+            print(f"[HATA] Excel raporu oluşturulamadı: {e}")
+            return ""
+    
+    def _save_generation_log(self, company_id: int, template_id: str, report_name: str, file_path: str):
+        """Rapor oluşturma geçmişini kaydet"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            log_id = f"log_{company_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            
+            cursor.execute("""
+                INSERT INTO report_generation_log
+                (id, company_id, template_id, report_name, file_path, status)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (log_id, company_id, template_id, report_name, file_path, 'success'))
+            
+            conn.commit()
+            conn.close()
+            
+        except Exception as e:
+            print(f"[HATA] Rapor geçmişi kaydedilemedi: {e}")
+    
+    def get_available_templates(self) -> List[Dict[str, Any]]:
+        """Mevcut şablonları getir"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                SELECT * FROM report_templates WHERE is_active = 1
+                ORDER BY category, template_name
+            """)
+            
+            templates = []
+            for row in cursor.fetchall():
+                templates.append({
+                    'id': row[0],
+                    'name': row[1],
+                    'type': row[2],
+                    'category': row[3],
+                    'language': row[4],
+                    'config': json.loads(row[5])
+                })
+            
+            conn.close()
+            return templates
+            
+        except Exception as e:
+            print(f"[HATA] Şablonlar alınamadı: {e}")
+            return []
+    
+    def get_generation_history(self, company_id: int = None) -> List[Dict[str, Any]]:
+        """Rapor oluşturma geçmişini getir"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            if company_id:
+                cursor.execute("""
+                    SELECT * FROM report_generation_log WHERE company_id = ?
+                    ORDER BY created_at DESC
+                """, (company_id,))
+            else:
+                cursor.execute("""
+                    SELECT * FROM report_generation_log
+                    ORDER BY created_at DESC
+                """)
+            
+            history = []
+            for row in cursor.fetchall():
+                history.append({
+                    'id': row[0],
+                    'company_id': row[1],
+                    'template_id': row[2],
+                    'report_name': row[3],
+                    'file_path': row[4],
+                    'generation_time': row[5],
+                    'status': row[6],
+                    'error_message': row[7],
+                    'created_at': row[8]
+                })
+            
+            conn.close()
+            return history
+            
+        except Exception as e:
+            print(f"[HATA] Rapor geçmişi alınamadı: {e}")
+            return []
+
+
+if __name__ == "__main__":
+    # Test
+    print("[TEST] Gelişmiş Raporlama...")
+    
+    templates = AdvancedReportTemplates()
+    
+    # Test verisi
+    test_data = {
+        'company_name': 'Test Şirketi',
+        'sdg_data': {
+            'SDG 1': 75.5,
+            'SDG 2': 60.0,
+            'SDG 3': 85.0,
+            'SDG 4': 70.0,
+            'SDG 5': 65.0
+        },
+        'summary': {
+            'avg_progress': 71.1,
+            'completed': 1,
+            'in_progress': 4
+        }
+    }
+    
+    # SDG raporu oluştur
+    sdg_report = templates.create_sdg_report(1, '2024', test_data)
+    print(f"SDG raporu: {sdg_report}")
+    
+    # GRI raporu oluştur
+    gri_data = {
+        'company_name': 'Test Şirketi',
+        'gri_topics': {
+            'GRI 201': {
+                'description': 'Ekonomik performans',
+                'scope': 'Şirket geneli',
+                'methodology': 'Muhasebe kayıtları'
+            }
+        }
+    }
+    gri_report = templates.create_gri_report(1, '2024', gri_data)
+    print(f"GRI raporu: {gri_report}")
+    
+    # Karbon raporu oluştur
+    carbon_data = {
+        'company_name': 'Test Şirketi',
+        'emissions': {
+            'total': 150.5,
+            'scope_breakdown': {
+                'scope1': 45.5,
+                'scope2': 40.0,
+                'scope3': 65.0
+            }
+        }
+    }
+    carbon_report = templates.create_carbon_report(1, '2024', carbon_data)
+    print(f"Karbon raporu: {carbon_report}")
+    
+    print("[OK] Test tamamlandı")

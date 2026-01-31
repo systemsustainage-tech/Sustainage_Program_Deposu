@@ -1,0 +1,196 @@
+{
+  "sasb_sectors": [
+    {
+      "sector_code": "AGRI",
+      "sector_name": "Agricultural Products & Services",
+      "sector_description": "Companies involved in agricultural production, processing, and services",
+      "industry_group": "Agriculture",
+      "market_cap_range": "All",
+      "geography": "Global"
+    },
+    {
+      "sector_code": "AUTO",
+      "sector_name": "Automobiles",
+      "sector_description": "Companies that design, manufacture, and sell automobiles and related products",
+      "industry_group": "Transportation",
+      "market_cap_range": "All",
+      "geography": "Global"
+    },
+    {
+      "sector_code": "BANK",
+      "sector_name": "Banks",
+      "sector_description": "Commercial banks, investment banks, and other financial institutions",
+      "industry_group": "Financial Services",
+      "market_cap_range": "All",
+      "geography": "Global"
+    },
+    {
+      "sector_code": "BIOT",
+      "sector_name": "Biotechnology & Pharmaceuticals",
+      "sector_description": "Companies engaged in biotechnology research, pharmaceutical development, and healthcare",
+      "industry_group": "Healthcare",
+      "market_cap_range": "All",
+      "geography": "Global"
+    },
+    {
+      "sector_code": "CHEM",
+      "sector_name": "Chemicals",
+      "sector_description": "Companies involved in chemical manufacturing and distribution",
+      "industry_group": "Materials",
+      "market_cap_range": "All",
+      "geography": "Global"
+    },
+    {
+      "sector_code": "CONS",
+      "sector_name": "Consumer Goods",
+      "sector_description": "Companies that manufacture and sell consumer products",
+      "industry_group": "Consumer Discretionary",
+      "market_cap_range": "All",
+      "geography": "Global"
+    },
+    {
+      "sector_code": "EDUC",
+      "sector_name": "Education",
+      "sector_description": "Educational institutions and education technology companies",
+      "industry_group": "Consumer Discretionary",
+      "market_cap_range": "All",
+      "geography": "Global"
+    },
+    {
+      "sector_code": "ENER",
+      "sector_name": "Energy",
+      "sector_description": "Oil, gas, and renewable energy companies",
+      "industry_group": "Energy",
+      "market_cap_range": "All",
+      "geography": "Global"
+    },
+    {
+      "sector_code": "FINS",
+      "sector_name": "Financial Services",
+      "sector_description": "Insurance, asset management, and other financial services",
+      "industry_group": "Financial Services",
+      "market_cap_range": "All",
+      "geography": "Global"
+    },
+    {
+      "sector_code": "FOOD",
+      "sector_name": "Food & Beverage",
+      "sector_description": "Food and beverage production, processing, and retail",
+      "industry_group": "Consumer Staples",
+      "market_cap_range": "All",
+      "geography": "Global"
+    },
+    {
+      "sector_code": "HEAL",
+      "sector_name": "Healthcare",
+      "sector_description": "Healthcare providers, medical devices, and healthcare services",
+      "industry_group": "Healthcare",
+      "market_cap_range": "All",
+      "geography": "Global"
+    },
+    {
+      "sector_code": "HOTL",
+      "sector_name": "Hotels & Leisure",
+      "sector_description": "Hospitality, tourism, and leisure services",
+      "industry_group": "Consumer Discretionary",
+      "market_cap_range": "All",
+      "geography": "Global"
+    },
+    {
+      "sector_code": "INSU",
+      "sector_name": "Insurance",
+      "sector_description": "Life, property, and casualty insurance companies",
+      "industry_group": "Financial Services",
+      "market_cap_range": "All",
+      "geography": "Global"
+    },
+    {
+      "sector_code": "MATE",
+      "sector_name": "Materials",
+      "sector_description": "Mining, metals, and materials manufacturing",
+      "industry_group": "Materials",
+      "market_cap_range": "All",
+      "geography": "Global"
+    },
+    {
+      "sector_code": "MEDI",
+      "sector_name": "Media & Entertainment",
+      "sector_description": "Media, entertainment, and communications companies",
+      "industry_group": "Communication Services",
+      "market_cap_range": "All",
+      "geography": "Global"
+    },
+    {
+      "sector_code": "PROP",
+      "sector_name": "Real Estate",
+      "sector_description": "Real estate development, management, and investment",
+      "industry_group": "Real Estate",
+      "market_cap_range": "All",
+      "geography": "Global"
+    },
+    {
+      "sector_code": "RETA",
+      "sector_name": "Retail",
+      "sector_description": "Retail trade and e-commerce companies",
+      "industry_group": "Consumer Discretionary",
+      "market_cap_range": "All",
+      "geography": "Global"
+    },
+    {
+      "sector_code": "TECH",
+      "sector_name": "Technology & Communications",
+      "sector_description": "Software, hardware, and telecommunications companies",
+      "industry_group": "Information Technology",
+      "market_cap_range": "All",
+      "geography": "Global"
+    },
+    {
+      "sector_code": "TRAN",
+      "sector_name": "Transportation",
+      "sector_description": "Airlines, shipping, logistics, and transportation services",
+      "industry_group": "Industrials",
+      "market_cap_range": "All",
+      "geography": "Global"
+    },
+    {
+      "sector_code": "UTIL",
+      "sector_name": "Utilities",
+      "sector_description": "Electric, gas, and water utilities",
+      "industry_group": "Utilities",
+      "market_cap_range": "All",
+      "geography": "Global"
+    }
+  ],
+  "sasb_dimensions": [
+    {
+      "dimension_code": "ENV",
+      "dimension_name": "Environment",
+      "dimension_description": "Environmental impacts and resource management",
+      "dimension_order": 1
+    },
+    {
+      "dimension_code": "SOC",
+      "dimension_name": "Social Capital",
+      "dimension_description": "Human rights, community relations, and social impacts",
+      "dimension_order": 2
+    },
+    {
+      "dimension_code": "HUM",
+      "dimension_name": "Human Capital",
+      "dimension_description": "Employee relations, diversity, and human capital management",
+      "dimension_order": 3
+    },
+    {
+      "dimension_code": "BUS",
+      "dimension_name": "Business Model & Innovation",
+      "dimension_description": "Product innovation, business model resilience, and competitive positioning",
+      "dimension_order": 4
+    },
+    {
+      "dimension_code": "LEA",
+      "dimension_name": "Leadership & Governance",
+      "dimension_description": "Corporate governance, ethics, and risk management",
+      "dimension_order": 5
+    }
+  ]
+}

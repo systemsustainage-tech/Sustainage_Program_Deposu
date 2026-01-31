@@ -1,0 +1,427 @@
+{
+  "sectors": [
+    {
+      "sector_code": "TC-SI",
+      "sector_name": "Software & IT Services",
+      "industry_group": "Technology & Communications",
+      "description": "Yazılım ve BT hizmetleri sağlayan şirketler",
+      "disclosure_topics": [
+        {
+          "topic_code": "DATA-SEC",
+          "topic_name": "Data Security",
+          "category": "Business Model & Innovation",
+          "is_material": 1,
+          "description": "Veri güvenliği ve müşteri gizliliği",
+          "metrics": [
+            {
+              "metric_code": "TC-SI-230a.1",
+              "metric_name": "Veri güvenliği ihlallerinin sayısı, etkilenen kullanıcı sayısı",
+              "metric_type": "Quantitative",
+              "unit": "Sayı",
+              "reporting_guidance": "Yıl içinde tespit edilen ve raporlanan tüm veri güvenliği ihlalleri"
+            },
+            {
+              "metric_code": "TC-SI-230a.2",
+              "metric_name": "Veri güvenliği risklerini tanımlama ve ele alma yaklaşımı",
+              "metric_type": "Discussion",
+              "unit": "Metin",
+              "reporting_guidance": "Veri güvenliği politikaları ve prosedürleri hakkında açıklama"
+            }
+          ]
+        },
+        {
+          "topic_code": "EMP-DIV",
+          "topic_name": "Employee Engagement, Diversity & Inclusion",
+          "category": "Human Capital",
+          "is_material": 1,
+          "description": "Çalışan bağlılığı ve çeşitlilik",
+          "metrics": [
+            {
+              "metric_code": "TC-SI-330a.1",
+              "metric_name": "Yönetim pozisyonlarında cinsiyet çeşitliliği yüzdesi",
+              "metric_type": "Quantitative",
+              "unit": "%",
+              "reporting_guidance": "Yönetici ve üst düzey pozisyonlardaki kadın oranı"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "sector_code": "TC-IM",
+      "sector_name": "Internet Media & Services",
+      "industry_group": "Technology & Communications",
+      "description": "İnternet medya ve hizmet sağlayıcıları",
+      "disclosure_topics": [
+        {
+          "topic_code": "USR-PRIV",
+          "topic_name": "User Privacy & Data Security",
+          "category": "Social Capital",
+          "is_material": 1,
+          "description": "Kullanıcı gizliliği ve veri güvenliği",
+          "metrics": [
+            {
+              "metric_code": "TC-IM-220a.1",
+              "metric_name": "Kullanıcı verilerinin toplanması, kullanımı ve saklanmasına ilişkin politikalar",
+              "metric_type": "Discussion",
+              "unit": "Metin",
+              "reporting_guidance": "Veri toplama ve kullanım politikaları açıklaması"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "sector_code": "FN-CB",
+      "sector_name": "Commercial Banks",
+      "industry_group": "Financials",
+      "description": "Ticari bankalar",
+      "disclosure_topics": [
+        {
+          "topic_code": "FIN-INCL",
+          "topic_name": "Financial Inclusion & Capacity Building",
+          "category": "Social Capital",
+          "is_material": 1,
+          "description": "Finansal kapsayıcılık",
+          "metrics": [
+            {
+              "metric_code": "FN-CB-240a.1",
+              "metric_name": "Düşük gelirli müşterilere kredi tutarı",
+              "metric_type": "Quantitative",
+              "unit": "USD",
+              "reporting_guidance": "Gelir seviyesi düşük müşterilere verilen toplam kredi"
+            }
+          ]
+        },
+        {
+          "topic_code": "SYS-RISK",
+          "topic_name": "Systemic Risk Management",
+          "category": "Leadership & Governance",
+          "is_material": 1,
+          "description": "Sistemik risk yönetimi",
+          "metrics": [
+            {
+              "metric_code": "FN-CB-550a.1",
+              "metric_name": "Küresel sistemik öneme sahip banka (G-SIB) skoru",
+              "metric_type": "Quantitative",
+              "unit": "Puan",
+              "reporting_guidance": "Basel Komitesi G-SIB değerlendirme metodolojisi"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "sector_code": "FB-FR",
+      "sector_name": "Food Retailers & Distributors",
+      "industry_group": "Food & Beverage",
+      "description": "Gıda perakendecileri ve distribütörleri",
+      "disclosure_topics": [
+        {
+          "topic_code": "FOOD-SAFE",
+          "topic_name": "Food Safety",
+          "category": "Social Capital",
+          "is_material": 1,
+          "description": "Gıda güvenliği",
+          "metrics": [
+            {
+              "metric_code": "FB-FR-250a.1",
+              "metric_name": "Gıda güvenliği ihlallerinin sayısı",
+              "metric_type": "Quantitative",
+              "unit": "Sayı",
+              "reporting_guidance": "Gıda güvenliği standartlarına uyumsuzluk sayısı"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "sector_code": "CG-AA",
+      "sector_name": "Apparel, Accessories & Footwear",
+      "industry_group": "Consumer Goods",
+      "description": "Giyim, aksesuar ve ayakkabı",
+      "disclosure_topics": [
+        {
+          "topic_code": "LAB-COND",
+          "topic_name": "Labor Conditions in the Supply Chain",
+          "category": "Human Capital",
+          "is_material": 1,
+          "description": "Tedarik zincirinde çalışma koşulları",
+          "metrics": [
+            {
+              "metric_code": "CG-AA-430b.1",
+              "metric_name": "Tier 1 tedarikçi tesislerinin yüzdesi",
+              "metric_type": "Quantitative",
+              "unit": "%",
+              "reporting_guidance": "Çalışma koşulları denetiminden geçen tesislerin oranı"
+            }
+          ]
+        },
+        {
+          "topic_code": "RAW-MAT",
+          "topic_name": "Raw Materials Sourcing",
+          "category": "Environment",
+          "is_material": 1,
+          "description": "Hammadde tedariği",
+          "metrics": [
+            {
+              "metric_code": "CG-AA-440a.1",
+              "metric_name": "Sürdürülebilir hammaddelerin yüzdesi",
+              "metric_type": "Quantitative",
+              "unit": "%",
+              "reporting_guidance": "Sertifikalı organik veya sürdürülebilir hammadde oranı"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "sector_code": "TR-AU",
+      "sector_name": "Automobiles",
+      "industry_group": "Transportation",
+      "description": "Otomotiv üreticileri",
+      "disclosure_topics": [
+        {
+          "topic_code": "FUEL-ECON",
+          "topic_name": "Fuel Economy & Use-phase Emissions",
+          "category": "Environment",
+          "is_material": 1,
+          "description": "Yakıt ekonomisi ve emisyonlar",
+          "metrics": [
+            {
+              "metric_code": "TR-AU-410a.1",
+              "metric_name": "Satış ağırlıklı ortalama yakıt ekonomisi",
+              "metric_type": "Quantitative",
+              "unit": "mpg veya L/100km",
+              "reporting_guidance": "Satılan araçların ortalama yakıt tüketimi"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "sector_code": "IF-EU",
+      "sector_name": "Electric Utilities & Power Generators",
+      "industry_group": "Infrastructure",
+      "description": "Elektrik şirketleri ve güç üreticileri",
+      "disclosure_topics": [
+        {
+          "topic_code": "GHG-EM",
+          "topic_name": "Greenhouse Gas Emissions",
+          "category": "Environment",
+          "is_material": 1,
+          "description": "Sera gazı emisyonları",
+          "metrics": [
+            {
+              "metric_code": "IF-EU-110a.1",
+              "metric_name": "Scope 1 emisyonlar",
+              "metric_type": "Quantitative",
+              "unit": "metrik ton CO2e",
+              "reporting_guidance": "Doğrudan sera gazı emisyonları"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "sector_code": "EM-EP",
+      "sector_name": "Oil & Gas - Exploration & Production",
+      "industry_group": "Extractives & Minerals Processing",
+      "description": "Petrol ve gaz arama ve üretim",
+      "disclosure_topics": [
+        {
+          "topic_code": "GHG-EM",
+          "topic_name": "Greenhouse Gas Emissions",
+          "category": "Environment",
+          "is_material": 1,
+          "description": "Sera gazı emisyonları",
+          "metrics": [
+            {
+              "metric_code": "EM-EP-110a.1",
+              "metric_name": "Scope 1 emisyonlar",
+              "metric_type": "Quantitative",
+              "unit": "metrik ton CO2e",
+              "reporting_guidance": "Operasyonlardan kaynaklanan doğrudan emisyonlar"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "sector_code": "HC-BP",
+      "sector_name": "Biotechnology & Pharmaceuticals",
+      "industry_group": "Healthcare",
+      "description": "Biyoteknoloji ve ilaç şirketleri",
+      "disclosure_topics": [
+        {
+          "topic_code": "DRUG-SAFE",
+          "topic_name": "Drug Safety",
+          "category": "Social Capital",
+          "is_material": 1,
+          "description": "İlaç güvenliği",
+          "metrics": [
+            {
+              "metric_code": "HC-BP-250a.1",
+              "metric_name": "FDA Enforcement Reports sayısı",
+              "metric_type": "Quantitative",
+              "unit": "Sayı",
+              "reporting_guidance": "Geri çağırma ve güvenlik uyarıları"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "sector_code": "RE-DE",
+      "sector_name": "Real Estate",
+      "industry_group": "Real Estate",
+      "description": "Gayrimenkul geliştirme ve yönetimi",
+      "disclosure_topics": [
+        {
+          "topic_code": "ENE-MAN",
+          "topic_name": "Energy Management",
+          "category": "Environment",
+          "is_material": 1,
+          "description": "Enerji yönetimi",
+          "metrics": [
+            {
+              "metric_code": "RE-DE-130a.1",
+              "metric_name": "Enerji tüketimi veri kapsamı",
+              "metric_type": "Quantitative",
+              "unit": "%",
+              "reporting_guidance": "Enerji verisi toplanan alan yüzdesi"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "sector_code": "IF-WU",
+      "sector_name": "Water Utilities & Services",
+      "industry_group": "Infrastructure",
+      "description": "Su hizmetleri",
+      "disclosure_topics": [
+        {
+          "topic_code": "WAT-SUP",
+          "topic_name": "Water Supply Resilience",
+          "category": "Environment",
+          "is_material": 1,
+          "description": "Su arzı dayanıklılığı",
+          "metrics": [
+            {
+              "metric_code": "IF-WU-440a.1",
+              "metric_name": "Su kaynağı stresi altındaki alan",
+              "metric_type": "Quantitative",
+              "unit": "%",
+              "reporting_guidance": "Yüksek su stresi olan bölgelerde hizmet verilen nüfus oranı"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "sector_code": "SV-PS",
+      "sector_name": "Professional & Commercial Services",
+      "industry_group": "Services",
+      "description": "Profesyonel ve ticari hizmetler",
+      "disclosure_topics": [
+        {
+          "topic_code": "DAT-SEC",
+          "topic_name": "Data Security",
+          "category": "Business Model & Innovation",
+          "is_material": 1,
+          "description": "Veri güvenliği",
+          "metrics": [
+            {
+              "metric_code": "SV-PS-230a.1",
+              "metric_name": "Veri ihlallerinin sayısı",
+              "metric_type": "Quantitative",
+              "unit": "Sayı",
+              "reporting_guidance": "Müşteri verilerini etkileyen güvenlik ihlalleri"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "sector_code": "CN-CM",
+      "sector_name": "Construction Materials",
+      "industry_group": "Infrastructure",
+      "description": "İnşaat malzemeleri",
+      "disclosure_topics": [
+        {
+          "topic_code": "GHG-EM",
+          "topic_name": "Greenhouse Gas Emissions",
+          "category": "Environment",
+          "is_material": 1,
+          "description": "Sera gazı emisyonları",
+          "metrics": [
+            {
+              "metric_code": "CN-CM-110a.1",
+              "metric_name": "Scope 1 CO2 emisyonları",
+              "metric_type": "Quantitative",
+              "unit": "metrik ton CO2",
+              "reporting_guidance": "Üretim sürecinden kaynaklanan emisyonlar"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "sector_code": "FN-IN",
+      "sector_name": "Insurance",
+      "industry_group": "Financials",
+      "description": "Sigorta şirketleri",
+      "disclosure_topics": [
+        {
+          "topic_code": "ENV-RISK",
+          "topic_name": "Environmental Risk Exposure",
+          "category": "Environment",
+          "is_material": 1,
+          "description": "Çevresel risk maruziyeti",
+          "metrics": [
+            {
+              "metric_code": "FN-IN-450a.1",
+              "metric_name": "İklim değişikliğine maruz kalan prim tutarı",
+              "metric_type": "Quantitative",
+              "unit": "USD",
+              "reporting_guidance": "İklim riskine maruz bölgelerdeki sigorta primi"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "sector_code": "TC-EC",
+      "sector_name": "E-Commerce",
+      "industry_group": "Technology & Communications",
+      "description": "E-ticaret platformları",
+      "disclosure_topics": [
+        {
+          "topic_code": "DATA-SEC",
+          "topic_name": "Data Security & Customer Privacy",
+          "category": "Social Capital",
+          "is_material": 1,
+          "description": "Veri güvenliği ve müşteri gizliliği",
+          "metrics": [
+            {
+              "metric_code": "TC-EC-230a.1",
+              "metric_name": "Veri ihlallerinin sayısı ve etkilenen kullanıcılar",
+              "metric_type": "Quantitative",
+              "unit": "Sayı",
+              "reporting_guidance": "Müşteri verilerini etkileyen güvenlik olayları"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "total_sectors": 15,
+    "created_date": "2025-10-19",
+    "source": "SASB Standards",
+    "note": "İlk 15 popüler sektör. Toplam 77 sektör mevcut."
+  }
+}
+

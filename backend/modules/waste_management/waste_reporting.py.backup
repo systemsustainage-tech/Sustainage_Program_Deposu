@@ -1,0 +1,492 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+ATIK YÖNETİMİ RAPORLAMA MODÜLÜ
+Atık yönetimi raporları oluşturur (DOCX, Excel, CSV)
+"""
+
+import json
+import os
+from datetime import datetime
+from typing import Dict, List, Optional, Union
+
+
+def _add_turkish_paragraph(doc, text, style=None, font_name='Calibri', font_size=11):
+    """Türkçe karakterleri destekleyen paragraf ekle"""
+    para = doc.add_paragraph(text, style=style)
+    for run in para.runs:
+        run.font.name = font_name
+        run.font.size = Pt(font_size)
+    return para
+
+def _add_turkish_heading(doc, text, level=1, font_name='Calibri'):
+    """Türkçe karakterleri destekleyen başlık ekle"""
+    heading = doc.add_heading(text, level=level)
+    for run in heading.runs:
+        run.font.name = font_name
+    return heading
+
+
+class WasteReporting:
+    """Atık Yönetimi Raporlama"""
+    
+    def __init__(self, waste_manager) -> None:
+        self.waste_manager = waste_manager
+        self.company_id = waste_manager.company_id
+    
+    def generate_waste_management_report(self, company_id: int, period: str, 
+                                       include_details: bool = True) -> Optional[str]:
+        """Atık yönetimi raporu oluştur"""
+        try:
+            # Veri toplama
+            waste_records = self.waste_manager.get_waste_records(company_id, period)
+            waste_targets = self.waste_manager.get_waste_targets(company_id)
+            recycling_projects = self.waste_manager.get_recycling_projects(company_id)
+            metrics = self.waste_manager.calculate_waste_metrics(company_id, period)
+            statistics = self.waste_manager.get_waste_statistics(company_id)
+            
+            # DOCX raporu oluştur
+            try:
+                from docx import Document
+                from docx.enum.text import WD_ALIGN_PARAGRAPH
+                from docx.shared import Inches
+                
+                doc = Document()
+                
+                # Başlık
+                title = doc.add_heading('Atık Yönetimi Raporu', 0)
+                title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                
+                # Rapor bilgileri
+                doc.add_heading('Rapor Bilgileri', level=1)
+                report_info = doc.add_paragraph()
+                report_info.add_run('Şirket ID: ').bold = True
+                report_info.add_run(f'{company_id}\n')
+                report_info.add_run('Dönem: ').bold = True
+                report_info.add_run(f'{period}\n')
+                report_info.add_run('Rapor Tarihi: ').bold = True
+                report_info.add_run(f'{datetime.now().strftime("%d.%m.%Y %H:%M")}\n')
+                
+                # Özet metrikler
+                doc.add_heading('Özet Metrikler', level=1)
+                if metrics:
+                    metrics_table = doc.add_table(rows=1, cols=2)
+                    metrics_table.style = 'Table Grid'
+                    hdr_cells = metrics_table.rows[0].cells
+                    hdr_cells[0].text = 'Metrik'
+                    hdr_cells[1].text = 'Değer'
+                    
+                    metrics_data = [
+                        ('Toplam Atık Üretimi', f"{metrics.get('total_waste_generated', 0):.2f} kg"),
+                        ('Toplam Atık Bertarafı', f"{metrics.get('total_waste_disposed', 0):.2f} kg"),
+                        ('Toplam Geri Dönüşüm', f"{metrics.get('total_waste_recycled', 0):.2f} kg"),
+                        ('Geri Dönüşüm Oranı', f"%{metrics.get('recycling_rate', 0):.2f}"),
+                        ('Atık Azaltma Oranı', f"%{metrics.get('waste_reduction_rate', 0):.2f}"),
+                        ('Döngüsel Ekonomi İndeksi', f"{metrics.get('circular_economy_index', 0):.2f}"),
+                        ('Toplam Atık Maliyeti', f"{metrics.get('waste_cost', 0):.2f} TL"),
+                        ('Karbon Ayak İzi', f"{metrics.get('carbon_footprint', 0):.2f} kg CO2e"),
+                        ('Tehlikeli Atık Oranı', f"%{metrics.get('hazardous_waste_ratio', 0):.2f}"),
+                        ('Organik Atık Oranı', f"%{metrics.get('organic_waste_ratio', 0):.2f}"),
+                        ('Geri Dönüştürülebilir Atık Oranı', f"%{metrics.get('recyclable_waste_ratio', 0):.2f}"),
+                        ('Veri Kalitesi Skoru', f"{metrics.get('data_quality_score', 0):.2f}/100")
+                    ]
+                    
+                    for metric_name, metric_value in metrics_data:
+                        row_cells = metrics_table.add_row().cells
+                        row_cells[0].text = metric_name
+                        row_cells[1].text = metric_value
+                
+                # Atık kayıtları
+                if include_details and waste_records:
+                    doc.add_heading('Atık Kayıtları', level=1)
+                    records_table = doc.add_table(rows=1, cols=6)
+                    records_table.style = 'Table Grid'
+                    hdr_cells = records_table.rows[0].cells
+                    hdr_cells[0].text = 'Atık Kodu'
+                    hdr_cells[1].text = 'Atık Adı'
+                    hdr_cells[2].text = 'Miktar'
+                    hdr_cells[3].text = 'Kategori'
+                    hdr_cells[4].text = 'Geri Dönüşüm Oranı'
+                    hdr_cells[5].text = 'Bertaraf Yöntemi'
+                    
+                    for record in waste_records[:20]:  # İlk 20 kayıt
+                        row_cells = records_table.add_row().cells
+                        row_cells[0].text = record.get('waste_code', '')
+                        row_cells[1].text = record.get('waste_name', '')
+                        row_cells[2].text = f"{record.get('quantity', 0):.2f} {record.get('unit', 'kg')}"
+                        row_cells[3].text = record.get('waste_category', '')
+                        row_cells[4].text = f"%{record.get('recycling_rate', 0):.1f}"
+                        row_cells[5].text = record.get('disposal_method', '')
+                
+                # Hedefler
+                if waste_targets:
+                    doc.add_heading('Atık Azaltma Hedefleri', level=1)
+                    targets_table = doc.add_table(rows=1, cols=5)
+                    targets_table.style = 'Table Grid'
+                    hdr_cells = targets_table.rows[0].cells
+                    hdr_cells[0].text = 'Hedef Adı'
+                    hdr_cells[1].text = 'Hedef Türü'
+                    hdr_cells[2].text = 'Hedef Yılı'
+                    hdr_cells[3].text = 'Azaltma Yüzdesi'
+                    hdr_cells[4].text = 'Durum'
+                    
+                    for target in waste_targets:
+                        row_cells = targets_table.add_row().cells
+                        row_cells[0].text = target.get('target_name', '')
+                        row_cells[1].text = target.get('target_type', '')
+                        row_cells[2].text = str(target.get('target_year', ''))
+                        row_cells[3].text = f"%{target.get('reduction_percentage', 0):.1f}"
+                        row_cells[4].text = target.get('status', '')
+                
+                # Geri dönüşüm projeleri
+                if recycling_projects:
+                    doc.add_heading('Geri Dönüşüm Projeleri', level=1)
+                    projects_table = doc.add_table(rows=1, cols=4)
+                    projects_table.style = 'Table Grid'
+                    hdr_cells = projects_table.rows[0].cells
+                    hdr_cells[0].text = 'Proje Adı'
+                    hdr_cells[1].text = 'Proje Türü'
+                    hdr_cells[2].text = 'Durum'
+                    hdr_cells[3].text = 'Yatırım Miktarı'
+                    
+                    for project in recycling_projects:
+                        row_cells = projects_table.add_row().cells
+                        row_cells[0].text = project.get('project_name', '')
+                        row_cells[1].text = project.get('project_type', '')
+                        row_cells[2].text = project.get('status', '')
+                        row_cells[3].text = f"{project.get('investment_amount', 0):.2f} TL"
+                
+                # İstatistikler
+                if statistics:
+                    doc.add_heading('Genel İstatistikler', level=1)
+                    stats_para = doc.add_paragraph()
+                    stats_para.add_run('Toplam Atık Kayıt Sayısı: ').bold = True
+                    stats_para.add_run(f'{statistics.get("total_records", 0)}\n')
+                    stats_para.add_run('Toplam Atık Türü Sayısı: ').bold = True
+                    stats_para.add_run(f'{statistics.get("total_waste_types", 0)}\n')
+                    stats_para.add_run('Aktif Hedef Sayısı: ').bold = True
+                    stats_para.add_run(f'{statistics.get("active_targets", 0)}\n')
+                    stats_para.add_run('Aktif Proje Sayısı: ').bold = True
+                    stats_para.add_run(f'{statistics.get("active_projects", 0)}\n')
+                
+                # Raporu kaydet
+                filename = f"atik_yonetimi_raporu_{company_id}_{period}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.docx"
+                filepath = os.path.join("reports", filename)
+                
+                # reports klasörünü oluştur
+                os.makedirs("reports", exist_ok=True)
+                
+                doc.save(filepath)
+                print(f"[OK] Atik yonetimi raporu olusturuldu: {filepath}")
+                
+                # Veritabanına kaydet
+                self.waste_manager.save_waste_report(company_id, f"Atık Yönetimi Raporu - {period}", 
+                                                   "DOCX", period, json.dumps({
+                                                       'metrics': metrics,
+                                                       'statistics': statistics,
+                                                       'record_count': len(waste_records),
+                                                       'target_count': len(waste_targets),
+                                                       'project_count': len(recycling_projects)
+                                                   }), filepath)
+                
+                return filepath
+                
+            except ImportError:
+                print("[UYARI] python-docx yuklu degil. DOCX rapor olusturulamadi.")
+                return None
+                
+        except Exception as e:
+            print(f"[HATA] Atik yonetimi raporu olusturulurken hata: {e}")
+            return None
+    
+    def generate_excel_report(self, company_id: int, period: str) -> Optional[str]:
+        """Excel atık yönetimi raporu oluştur"""
+        try:
+            from openpyxl import Workbook
+            from openpyxl.styles import Alignment, Font, PatternFill
+
+            # Veri toplama
+            waste_records = self.waste_manager.get_waste_records(company_id, period)
+            waste_targets = self.waste_manager.get_waste_targets(company_id)
+            recycling_projects = self.waste_manager.get_recycling_projects(company_id)
+            metrics = self.waste_manager.calculate_waste_metrics(company_id, period)
+            
+            wb = Workbook()
+            
+            # Özet sayfası
+            ws_summary = wb.active
+            ws_summary.title = "Özet"
+            
+            # Başlık
+            ws_summary['A1'] = "Atık Yönetimi Raporu"
+            ws_summary['A1'].font = Font(size=16, bold=True)
+            ws_summary['A2'] = f"Şirket ID: {company_id}"
+            ws_summary['A3'] = f"Dönem: {period}"
+            ws_summary['A4'] = f"Rapor Tarihi: {datetime.now().strftime('%d.%m.%Y %H:%M')}"
+            
+            # Metrikler
+            if metrics:
+                row = 6
+                ws_summary[f'A{row}'] = "Metrik"
+                ws_summary[f'B{row}'] = "Değer"
+                ws_summary[f'A{row}'].font = Font(bold=True)
+                ws_summary[f'B{row}'].font = Font(bold=True)
+                
+                metrics_data = [
+                    ('Toplam Atık Üretimi', f"{metrics.get('total_waste_generated', 0):.2f} kg"),
+                    ('Toplam Atık Bertarafı', f"{metrics.get('total_waste_disposed', 0):.2f} kg"),
+                    ('Toplam Geri Dönüşüm', f"{metrics.get('total_waste_recycled', 0):.2f} kg"),
+                    ('Geri Dönüşüm Oranı', f"%{metrics.get('recycling_rate', 0):.2f}"),
+                    ('Atık Azaltma Oranı', f"%{metrics.get('waste_reduction_rate', 0):.2f}"),
+                    ('Döngüsel Ekonomi İndeksi', f"{metrics.get('circular_economy_index', 0):.2f}"),
+                    ('Toplam Atık Maliyeti', f"{metrics.get('waste_cost', 0):.2f} TL"),
+                    ('Karbon Ayak İzi', f"{metrics.get('carbon_footprint', 0):.2f} kg CO2e")
+                ]
+                
+                for metric_name, metric_value in metrics_data:
+                    row += 1
+                    ws_summary[f'A{row}'] = metric_name
+                    ws_summary[f'B{row}'] = metric_value
+            
+            # Atık kayıtları sayfası
+            if waste_records:
+                ws_records = wb.create_sheet("Atık Kayıtları")
+                
+                # Başlıklar
+                headers = ['Atık Kodu', 'Atık Adı', 'Miktar', 'Birim', 'Kategori', 
+                          'Tehlikeli Seviye', 'Geri Dönüşüm Oranı', 'Bertaraf Yöntemi', 
+                          'Kaynak Konumu', 'Oluşum Kaynağı', 'Bertaraf Maliyeti', 
+                          'Karbon Ayak İzi', 'Veri Kalitesi', 'Notlar']
+                
+                for col, header in enumerate(headers, 1):
+                    cell = ws_records.cell(row=1, column=col, value=header)
+                    cell.font = Font(bold=True)
+                    cell.fill = PatternFill(start_color="CCCCCC", end_color="CCCCCC", fill_type="solid")
+                
+                # Veriler
+                for row, record in enumerate(waste_records, 2):
+                    ws_records.cell(row=row, column=1, value=record.get('waste_code', ''))
+                    ws_records.cell(row=row, column=2, value=record.get('waste_name', ''))
+                    ws_records.cell(row=row, column=3, value=record.get('quantity', 0))
+                    ws_records.cell(row=row, column=4, value=record.get('unit', ''))
+                    ws_records.cell(row=row, column=5, value=record.get('waste_category', ''))
+                    ws_records.cell(row=row, column=6, value=record.get('hazard_level', ''))
+                    ws_records.cell(row=row, column=7, value=record.get('recycling_rate', 0))
+                    ws_records.cell(row=row, column=8, value=record.get('disposal_method', ''))
+                    ws_records.cell(row=row, column=9, value=record.get('source_location', ''))
+                    ws_records.cell(row=row, column=10, value=record.get('generation_source', ''))
+                    ws_records.cell(row=row, column=11, value=record.get('disposal_cost', 0))
+                    ws_records.cell(row=row, column=12, value=record.get('carbon_footprint', 0))
+                    ws_records.cell(row=row, column=13, value=record.get('data_quality', ''))
+                    ws_records.cell(row=row, column=14, value=record.get('notes', ''))
+                
+                # Sütun genişliklerini ayarla
+                for column in ws_records.columns:
+                    max_length = 0
+                    column_letter = column[0].column_letter
+                    for cell in column:
+                        try:
+                            if len(str(cell.value)) > max_length:
+                                max_length = len(str(cell.value))
+                        except Exception as e:
+                            pass
+                    adjusted_width = min(max_length + 2, 50)
+                    ws_records.column_dimensions[column_letter].width = adjusted_width
+            
+            # Hedefler sayfası
+            if waste_targets:
+                ws_targets = wb.create_sheet("Hedefler")
+                
+                headers = ['Hedef Adı', 'Hedef Türü', 'Atık Kategorisi', 'Başlangıç Yılı', 
+                          'Hedef Yılı', 'Başlangıç Miktarı', 'Hedef Miktarı', 'Azaltma Yüzdesi', 
+                          'Hedef Birimi', 'Durum', 'İlerleme', 'Açıklama']
+                
+                for col, header in enumerate(headers, 1):
+                    cell = ws_targets.cell(row=1, column=col, value=header)
+                    cell.font = Font(bold=True)
+                    cell.fill = PatternFill(start_color="CCCCCC", end_color="CCCCCC", fill_type="solid")
+                
+                for row, target in enumerate(waste_targets, 2):
+                    ws_targets.cell(row=row, column=1, value=target.get('target_name', ''))
+                    ws_targets.cell(row=row, column=2, value=target.get('target_type', ''))
+                    ws_targets.cell(row=row, column=3, value=target.get('waste_category', ''))
+                    ws_targets.cell(row=row, column=4, value=target.get('base_year', ''))
+                    ws_targets.cell(row=row, column=5, value=target.get('target_year', ''))
+                    ws_targets.cell(row=row, column=6, value=target.get('base_quantity', 0))
+                    ws_targets.cell(row=row, column=7, value=target.get('target_quantity', 0))
+                    ws_targets.cell(row=row, column=8, value=target.get('reduction_percentage', 0))
+                    ws_targets.cell(row=row, column=9, value=target.get('target_unit', ''))
+                    ws_targets.cell(row=row, column=10, value=target.get('status', ''))
+                    ws_targets.cell(row=row, column=11, value=target.get('progress', 0))
+                    ws_targets.cell(row=row, column=12, value=target.get('description', ''))
+            
+            # Projeler sayfası
+            if recycling_projects:
+                ws_projects = wb.create_sheet("Projeler")
+                
+                headers = ['Proje Adı', 'Proje Türü', 'Atık Türleri', 'Başlangıç Tarihi', 
+                          'Bitiş Tarihi', 'Durum', 'Yatırım Miktarı', 'Beklenen Tasarruf', 
+                          'Önceki Geri Dönüşüm Oranı', 'Hedef Geri Dönüşüm Oranı', 
+                          'Mevcut Geri Dönüşüm Oranı', 'Çevresel Etki', 'Ekonomik Faydalar']
+                
+                for col, header in enumerate(headers, 1):
+                    cell = ws_projects.cell(row=1, column=col, value=header)
+                    cell.font = Font(bold=True)
+                    cell.fill = PatternFill(start_color="CCCCCC", end_color="CCCCCC", fill_type="solid")
+                
+                for row, project in enumerate(recycling_projects, 2):
+                    ws_projects.cell(row=row, column=1, value=project.get('project_name', ''))
+                    ws_projects.cell(row=row, column=2, value=project.get('project_type', ''))
+                    ws_projects.cell(row=row, column=3, value=project.get('waste_types', ''))
+                    ws_projects.cell(row=row, column=4, value=project.get('start_date', ''))
+                    ws_projects.cell(row=row, column=5, value=project.get('end_date', ''))
+                    ws_projects.cell(row=row, column=6, value=project.get('status', ''))
+                    ws_projects.cell(row=row, column=7, value=project.get('investment_amount', 0))
+                    ws_projects.cell(row=row, column=8, value=project.get('expected_savings', 0))
+                    ws_projects.cell(row=row, column=9, value=project.get('recycling_rate_before', 0))
+                    ws_projects.cell(row=row, column=10, value=project.get('recycling_rate_target', 0))
+                    ws_projects.cell(row=row, column=11, value=project.get('current_recycling_rate', 0))
+                    ws_projects.cell(row=row, column=12, value=project.get('environmental_impact', ''))
+                    ws_projects.cell(row=row, column=13, value=project.get('economic_benefits', ''))
+            
+            # Excel dosyasını kaydet
+            filename = f"atik_yonetimi_raporu_{company_id}_{period}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            reports_dir = os.path.join(base_dir, 'data', 'companies', str(company_id), 'reports')
+            os.makedirs(reports_dir, exist_ok=True)
+            filepath = os.path.join(reports_dir, filename)
+            
+            wb.save(filepath)
+            print(f"[OK] Excel atik yonetimi raporu olusturuldu: {filepath}")
+            
+            # Veritabanına kaydet
+            self.waste_manager.save_waste_report(company_id, f"Excel Atık Yönetimi Raporu - {period}", 
+                                               "Excel", period, json.dumps({
+                                                   'metrics': metrics,
+                                                   'record_count': len(waste_records),
+                                                   'target_count': len(waste_targets),
+                                                   'project_count': len(recycling_projects)
+                                               }), filepath)
+            
+            return filepath
+            
+        except ImportError:
+            print("[UYARI] openpyxl yuklu degil. Excel rapor olusturulamadi.")
+            return None
+        except Exception as e:
+            print(f"[HATA] Excel atik yonetimi raporu olusturulurken hata: {e}")
+            return None
+    
+    def generate_csv_report(self, company_id: int, period: str) -> Optional[str]:
+        """CSV atık yönetimi raporu oluştur"""
+        try:
+            import csv
+
+            # Veri toplama
+            waste_records = self.waste_manager.get_waste_records(company_id, period)
+            
+            if not waste_records:
+                print("[UYARI] Atik kaydi bulunamadi.")
+                return None
+            
+            # CSV dosyasını oluştur
+            filename = f"atik_kayitlari_{company_id}_{period}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+            filepath = os.path.join("reports", filename)
+            
+            # reports klasörünü oluştur
+            os.makedirs("reports", exist_ok=True)
+            
+            with open(filepath, 'w', newline='', encoding='utf-8') as csvfile:
+                fieldnames = ['Atık Kodu', 'Atık Adı', 'Miktar', 'Birim', 'Kategori', 
+                             'Tehlikeli Seviye', 'Geri Dönüşüm Potansiyeli', 'Geri Dönüşüm Oranı', 
+                             'Bertaraf Yöntemi', 'Kaynak Konumu', 'Oluşum Kaynağı', 
+                             'Bertaraf Maliyeti', 'Karbon Ayak İzi', 'Veri Kalitesi', 
+                             'Kanıt Dosyası', 'Notlar', 'Oluşturma Tarihi']
+                
+                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+                writer.writeheader()
+                
+                for record in waste_records:
+                    writer.writerow({
+                        'Atık Kodu': record.get('waste_code', ''),
+                        'Atık Adı': record.get('waste_name', ''),
+                        'Miktar': record.get('quantity', 0),
+                        'Birim': record.get('unit', ''),
+                        'Kategori': record.get('waste_category', ''),
+                        'Tehlikeli Seviye': record.get('hazard_level', ''),
+                        'Geri Dönüşüm Potansiyeli': record.get('recycling_potential', ''),
+                        'Geri Dönüşüm Oranı': record.get('recycling_rate', 0),
+                        'Bertaraf Yöntemi': record.get('disposal_method', ''),
+                        'Kaynak Konumu': record.get('source_location', ''),
+                        'Oluşum Kaynağı': record.get('generation_source', ''),
+                        'Bertaraf Maliyeti': record.get('disposal_cost', 0),
+                        'Karbon Ayak İzi': record.get('carbon_footprint', 0),
+                        'Veri Kalitesi': record.get('data_quality', ''),
+                        'Kanıt Dosyası': record.get('evidence_file', ''),
+                        'Notlar': record.get('notes', ''),
+                        'Oluşturma Tarihi': record.get('created_at', '')
+                    })
+            
+            print(f"[OK] CSV atik yonetimi raporu olusturuldu: {filepath}")
+            
+            # Veritabanına kaydet
+            self.waste_manager.save_waste_report(company_id, f"CSV Atık Kayıtları - {period}", 
+                                               "CSV", period, json.dumps({
+                                                   'record_count': len(waste_records)
+                                               }), filepath)
+            
+            return filepath
+            
+        except Exception as e:
+            print(f"[HATA] CSV atik yonetimi raporu olusturulurken hata: {e}")
+            return None
+    
+    def save_waste_report(self, company_id: int, report_name: str, report_type: str, 
+                         period: str, report_data: str, file_path: str = None) -> int:
+        """Atık raporunu veritabanına kaydet"""
+        try:
+            conn = self.waste_manager.get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                INSERT INTO waste_reports 
+                (company_id, report_name, report_type, period, report_data, file_path)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (company_id, report_name, report_type, period, report_data, file_path))
+            
+            report_id = cursor.lastrowid
+            conn.commit()
+            print(f"[OK] Atik raporu veritabanina kaydedildi: {report_name}")
+            return report_id
+            
+        except Exception as e:
+            print(f"[HATA] Atik raporu kaydedilirken hata: {e}")
+            return None
+        finally:
+            conn.close()
+    
+    def get_waste_reports(self, company_id: int) -> List[Dict]:
+        """Atık raporlarını getir"""
+        try:
+            conn = self.waste_manager.get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                SELECT * FROM waste_reports 
+                WHERE company_id = ?
+                ORDER BY generated_at DESC
+            """, (company_id,))
+            
+            columns = [description[0] for description in cursor.description]
+            results = []
+            
+            for row in cursor.fetchall():
+                results.append(dict(zip(columns, row)))
+            
+            return results
+            
+        except Exception as e:
+            print(f"[HATA] Atik raporlari getirilirken hata: {e}")
+            return []
+        finally:
+            conn.close()

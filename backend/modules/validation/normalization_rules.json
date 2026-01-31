@@ -1,0 +1,33 @@
+{
+  "energy_units": {
+    "mwh": 1.0,
+    "kwh": 0.001,
+    "gj": 0.2777777778
+  },
+  "water_units": {
+    "m3": 1.0,
+    "m^3": 1.0,
+    "liter": 0.001,
+    "litre": 0.001,
+    "l": 0.001
+  },
+  "emissions_units": {
+    "tco2e": 1.0,
+    "ton": 1.0,
+    "tonne": 1.0,
+    "kgco2e": 0.001,
+    "kg": 0.001,
+    "kt": 1000.0,
+    "mt": 1000000.0
+  },
+  "indicator_mapping": {
+    "energy_total": "GRI 302-1",
+    "energy_intensity": "GRI 302-3",
+    "water_consumption": "GRI 303-3",
+    "water_withdrawal": "GRI 303-1",
+    "water_discharge": "GRI 303-2",
+    "scope1": "GRI 305-1",
+    "scope2": "GRI 305-2",
+    "scope3": "GRI 305-3"
+  }
+}

@@ -1,0 +1,332 @@
+{
+  "climate_change": [
+    {
+      "id": "C1.1",
+      "code": "C1.1",
+      "category": "Governance",
+      "text_en": "Does your organization have board-level oversight of climate-related issues?",
+      "text_tr": "Kuruluşunuzun iklimle ilgili konularda yönetim kurulu düzeyinde gözetimi var mı?",
+      "type": "text",
+      "weight": 1.0
+    },
+    {
+      "id": "C1.2",
+      "code": "C1.2",
+      "category": "Governance",
+      "text_en": "Please provide details of your organization's climate change governance structure.",
+      "text_tr": "Lütfen kuruluşunuzun iklim değişikliği yönetişim yapısının ayrıntılarını verin.",
+      "type": "text",
+      "weight": 1.0
+    },
+    {
+      "id": "C1.3",
+      "code": "C1.3",
+      "category": "Governance",
+      "text_en": "Do you provide incentives for the management of climate-related issues?",
+      "text_tr": "İklimle ilgili konuların yönetimi için teşvik sağlıyor musunuz?",
+      "type": "text",
+      "weight": 1.0
+    },
+    {
+      "id": "C2.1",
+      "code": "C2.1",
+      "category": "Strategy",
+      "text_en": "Have you identified any climate-related risks with the potential to have a substantive financial or strategic impact on your business?",
+      "text_tr": "İşletmeniz üzerinde önemli bir finansal veya stratejik etkiye sahip olma potansiyeli taşıyan iklimle ilgili riskler belirlediniz mi?",
+      "type": "text",
+      "weight": 1.0
+    },
+    {
+      "id": "C2.2",
+      "code": "C2.2",
+      "category": "Strategy",
+      "text_en": "How do you define short-, medium- and long-term time horizons?",
+      "text_tr": "Kısa, orta ve uzun vadeli zaman dilimlerini nasıl tanımlıyorsunuz?",
+      "type": "text",
+      "weight": 1.0
+    },
+    {
+      "id": "C2.3",
+      "code": "C2.3",
+      "category": "Strategy",
+      "text_en": "How do you assess the potential impact of climate-related risks and opportunities on your business?",
+      "text_tr": "İklimle ilgili risklerin ve fırsatların işletmeniz üzerindeki potansiyel etkisini nasıl değerlendiriyorsunuz?",
+      "type": "text",
+      "weight": 1.0
+    },
+    {
+      "id": "C3.1",
+      "code": "C3.1",
+      "category": "Risk Management",
+      "text_en": "Do you have a process for identifying, assessing, and managing climate-related risks?",
+      "text_tr": "İklimle ilgili riskleri belirleme, değerlendirme ve yönetme süreciniz var mı?",
+      "type": "text",
+      "weight": 1.0
+    },
+    {
+      "id": "C3.2",
+      "code": "C3.2",
+      "category": "Risk Management",
+      "text_en": "How do you prioritize climate-related risks?",
+      "text_tr": "İklimle ilgili riskleri nasıl önceliklendiriyorsunuz?",
+      "type": "text",
+      "weight": 1.0
+    },
+    {
+      "id": "C3.3",
+      "code": "C3.3",
+      "category": "Risk Management",
+      "text_en": "How do you monitor climate-related risks?",
+      "text_tr": "İklimle ilgili riskleri nasıl izliyorsunuz?",
+      "type": "text",
+      "weight": 1.0
+    },
+    {
+      "id": "C4.1",
+      "code": "C4.1",
+      "category": "Metrics and Targets",
+      "text_en": "Do you have a process for identifying, assessing, and managing climate-related opportunities?",
+      "text_tr": "İklimle ilgili fırsatları belirleme, değerlendirme ve yönetme süreciniz var mı?",
+      "type": "text",
+      "weight": 1.0
+    },
+    {
+      "id": "C4.2",
+      "code": "C4.2",
+      "category": "Metrics and Targets",
+      "text_en": "What is your organization's total gross global Scope 1 and Scope 2 greenhouse gas emissions?",
+      "text_tr": "Kuruluşunuzun toplam brüt küresel Kapsam 1 ve Kapsam 2 sera gazı emisyonları nedir?",
+      "type": "text",
+      "weight": 1.0
+    },
+    {
+      "id": "C4.3",
+      "code": "C4.3",
+      "category": "Metrics and Targets",
+      "text_en": "What is your organization's total gross global Scope 3 greenhouse gas emissions?",
+      "text_tr": "Kuruluşunuzun toplam brüt küresel Kapsam 3 sera gazı emisyonları nedir?",
+      "type": "text",
+      "weight": 1.0
+    }
+  ],
+  "water_security": [
+    {
+      "id": "W1.1",
+      "code": "W1.1",
+      "category": "Governance",
+      "text_en": "Does your organization have board-level oversight of water-related issues?",
+      "text_tr": "Kuruluşunuzun suyla ilgili konularda yönetim kurulu düzeyinde gözetimi var mı?",
+      "type": "text",
+      "weight": 1.0
+    },
+    {
+      "id": "W1.2",
+      "code": "W1.2",
+      "category": "Governance",
+      "text_en": "Please provide details of your organization's water governance structure.",
+      "text_tr": "Lütfen kuruluşunuzun su yönetişim yapısının ayrıntılarını verin.",
+      "type": "text",
+      "weight": 1.0
+    },
+    {
+      "id": "W1.3",
+      "code": "W1.3",
+      "category": "Governance",
+      "text_en": "Do you provide incentives for the management of water-related issues?",
+      "text_tr": "Suyla ilgili konuların yönetimi için teşvik sağlıyor musunuz?",
+      "type": "text",
+      "weight": 1.0
+    },
+    {
+      "id": "W2.1",
+      "code": "W2.1",
+      "category": "Strategy",
+      "text_en": "Have you identified any water-related risks with the potential to have a substantive financial or strategic impact on your business?",
+      "text_tr": "İşletmeniz üzerinde önemli bir finansal veya stratejik etkiye sahip olma potansiyeli taşıyan suyla ilgili riskler belirlediniz mi?",
+      "type": "text",
+      "weight": 1.0
+    },
+    {
+      "id": "W2.2",
+      "code": "W2.2",
+      "category": "Strategy",
+      "text_en": "How do you assess the potential impact of water-related risks and opportunities on your business?",
+      "text_tr": "Suyla ilgili risklerin ve fırsatların işletmeniz üzerindeki potansiyel etkisini nasıl değerlendiriyorsunuz?",
+      "type": "text",
+      "weight": 1.0
+    },
+    {
+      "id": "W2.3",
+      "code": "W2.3",
+      "category": "Strategy",
+      "text_en": "What water-related opportunities have you identified?",
+      "text_tr": "Hangi suyla ilgili fırsatları belirlediniz?",
+      "type": "text",
+      "weight": 1.0
+    },
+    {
+      "id": "W3.1",
+      "code": "W3.1",
+      "category": "Risk Management",
+      "text_en": "Do you have a process for identifying, assessing, and managing water-related risks?",
+      "text_tr": "Suyla ilgili riskleri belirleme, değerlendirme ve yönetme süreciniz var mı?",
+      "type": "text",
+      "weight": 1.0
+    },
+    {
+      "id": "W3.2",
+      "code": "W3.2",
+      "category": "Risk Management",
+      "text_en": "How do you prioritize water-related risks?",
+      "text_tr": "Suyla ilgili riskleri nasıl önceliklendiriyorsunuz?",
+      "type": "text",
+      "weight": 1.0
+    },
+    {
+      "id": "W3.3",
+      "code": "W3.3",
+      "category": "Risk Management",
+      "text_en": "How do you monitor water-related risks?",
+      "text_tr": "Suyla ilgili riskleri nasıl izliyorsunuz?",
+      "type": "text",
+      "weight": 1.0
+    },
+    {
+      "id": "W4.1",
+      "code": "W4.1",
+      "category": "Metrics and Targets",
+      "text_en": "What is your organization's total water withdrawal?",
+      "text_tr": "Kuruluşunuzun toplam su çekimi nedir?",
+      "type": "text",
+      "weight": 1.0
+    },
+    {
+      "id": "W4.2",
+      "code": "W4.2",
+      "category": "Metrics and Targets",
+      "text_en": "What is your organization's total water consumption?",
+      "text_tr": "Kuruluşunuzun toplam su tüketimi nedir?",
+      "type": "text",
+      "weight": 1.0
+    },
+    {
+      "id": "W4.3",
+      "code": "W4.3",
+      "category": "Metrics and Targets",
+      "text_en": "What actions are you taking to address water-related risks and opportunities?",
+      "text_tr": "Su ile ilgili riskleri ve fırsatları ele almak için hangi önlemleri alıyorsunuz?",
+      "type": "text",
+      "weight": 1.0
+    }
+  ],
+  "forests": [
+    {
+      "id": "F1.1",
+      "code": "F1.1",
+      "category": "Governance",
+      "text_en": "Does your organization have board-level oversight of forest-related issues?",
+      "text_tr": "Kuruluşunuzun ormanla ilgili konularda yönetim kurulu düzeyinde gözetimi var mı?",
+      "type": "text",
+      "weight": 1.0
+    },
+    {
+      "id": "F1.2",
+      "code": "F1.2",
+      "category": "Governance",
+      "text_en": "Please provide details of your organization's forest governance structure.",
+      "text_tr": "Lütfen kuruluşunuzun orman yönetişim yapısının ayrıntılarını verin.",
+      "type": "text",
+      "weight": 1.0
+    },
+    {
+      "id": "F1.3",
+      "code": "F1.3",
+      "category": "Governance",
+      "text_en": "Do you provide incentives for the management of forest-related issues?",
+      "text_tr": "Ormanla ilgili konuların yönetimi için teşvik sağlıyor musunuz?",
+      "type": "text",
+      "weight": 1.0
+    },
+    {
+      "id": "F2.1",
+      "code": "F2.1",
+      "category": "Strategy",
+      "text_en": "Have you identified any forest-related risks with the potential to have a substantive financial or strategic impact on your business?",
+      "text_tr": "İşletmeniz üzerinde önemli bir finansal veya stratejik etkiye sahip olma potansiyeli taşıyan ormanla ilgili riskler belirlediniz mi?",
+      "type": "text",
+      "weight": 1.0
+    },
+    {
+      "id": "F2.2",
+      "code": "F2.2",
+      "category": "Strategy",
+      "text_en": "How do you assess the potential impact of forest-related risks and opportunities on your business?",
+      "text_tr": "Ormanla ilgili risklerin ve fırsatların işletmeniz üzerindeki potansiyel etkisini nasıl değerlendiriyorsunuz?",
+      "type": "text",
+      "weight": 1.0
+    },
+    {
+      "id": "F2.3",
+      "code": "F2.3",
+      "category": "Strategy",
+      "text_en": "What forest-related opportunities have you identified?",
+      "text_tr": "Ormanla ilgili hangi fırsatları belirlediniz?",
+      "type": "text",
+      "weight": 1.0
+    },
+    {
+      "id": "F3.1",
+      "code": "F3.1",
+      "category": "Risk Management",
+      "text_en": "Do you have a process for identifying, assessing, and managing forest-related risks?",
+      "text_tr": "Ormanla ilgili riskleri belirleme, değerlendirme ve yönetme süreciniz var mı?",
+      "type": "text",
+      "weight": 1.0
+    },
+    {
+      "id": "F3.2",
+      "code": "F3.2",
+      "category": "Risk Management",
+      "text_en": "How do you prioritize forest-related risks?",
+      "text_tr": "Ormanla ilgili riskleri nasıl önceliklendiriyorsunuz?",
+      "type": "text",
+      "weight": 1.0
+    },
+    {
+      "id": "F3.3",
+      "code": "F3.3",
+      "category": "Risk Management",
+      "text_en": "How do you monitor forest-related risks?",
+      "text_tr": "Ormanla ilgili riskleri nasıl izliyorsunuz?",
+      "type": "text",
+      "weight": 1.0
+    },
+    {
+      "id": "F4.1",
+      "code": "F4.1",
+      "category": "Metrics and Targets",
+      "text_en": "What is your organization's total forest footprint?",
+      "text_tr": "Kuruluşunuzun toplam orman ayak izi nedir?",
+      "type": "text",
+      "weight": 1.0
+    },
+    {
+      "id": "F4.2",
+      "code": "F4.2",
+      "category": "Metrics and Targets",
+      "text_en": "Do you have any forest-related targets?",
+      "text_tr": "Ormanla ilgili herhangi bir hedefiniz var mı?",
+      "type": "text",
+      "weight": 1.0
+    },
+    {
+      "id": "F4.3",
+      "code": "F4.3",
+      "category": "Metrics and Targets",
+      "text_en": "What actions are you taking to address forest-related risks and opportunities?",
+      "text_tr": "Ormanla ilgili riskleri ve fırsatları ele almak için hangi önlemleri alıyorsunuz?",
+      "type": "text",
+      "weight": 1.0
+    }
+  ]
+}

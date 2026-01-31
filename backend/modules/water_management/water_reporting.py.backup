@@ -1,0 +1,507 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+SU RAPORLAMA SINIFI
+Su ayak izi raporları ve analiz çıktıları
+"""
+
+import json
+import os
+from datetime import datetime
+from typing import Dict, List, Union
+
+try:
+    from docx import Document
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.shared import Inches, Pt, RGBColor
+    DOCX_AVAILABLE = True
+except ImportError:
+    DOCX_AVAILABLE = False
+    print("[UYARI] python-docx yuklu degil. DOCX raporlar olusturulamaz.")
+
+try:
+    import openpyxl
+    import pandas as pd
+    from openpyxl.styles import Alignment, Font, PatternFill
+    EXCEL_AVAILABLE = True
+except ImportError:
+    EXCEL_AVAILABLE = False
+    print("[UYARI] openpyxl yuklu degil. Excel raporlar olusturulamaz.")
+
+from .water_manager import WaterManager
+
+
+def _add_turkish_paragraph(doc, text, style=None, font_name='Calibri', font_size=11):
+    """Türkçe karakterleri destekleyen paragraf ekle"""
+    para = doc.add_paragraph(text, style=style)
+    for run in para.runs:
+        run.font.name = font_name
+        run.font.size = Pt(font_size)
+    return para
+
+def _add_turkish_heading(doc, text, level=1, font_name='Calibri'):
+    """Türkçe karakterleri destekleyen başlık ekle"""
+    heading = doc.add_heading(text, level=level)
+    for run in heading.runs:
+        run.font.name = font_name
+    return heading
+
+
+class WaterReporting:
+    """Su raporlama sınıfı - ISO 14046 ve GRI uyumlu"""
+    
+    def __init__(self, db_path: str = "data/sdg_desktop.sqlite") -> None:
+        self.db_path = db_path
+        self.manager = WaterManager(db_path)
+    
+    def generate_water_footprint_report(self, company_id: int, period: str, 
+                                      include_scope3: bool = False) -> str:
+        """
+        Su ayak izi raporu oluştur (DOCX)
+        
+        Returns:
+            Rapor dosya yolu
+        """
+        if not DOCX_AVAILABLE:
+            raise ImportError("python-docx kütüphanesi gerekli")
+        
+        # Su ayak izi hesapla
+        footprint_data = self.manager.calculate_water_footprint(company_id, period)
+        
+        if not footprint_data:
+            raise ValueError("Su ayak izi verisi bulunamadı")
+        
+        # Rapor dosyası oluştur
+        report_filename = f"water_footprint_report_{company_id}_{period}.docx"
+        report_path = os.path.join("data/exports", report_filename)
+        
+        # Klasör yoksa oluştur
+        os.makedirs(os.path.dirname(report_path), exist_ok=True)
+        
+        # Dokuman oluştur
+        doc = Document()
+        
+        # Başlık
+        title = doc.add_heading('SU AYAK İZİ RAPORU', 0)
+        title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        
+        # Alt başlık
+        subtitle = doc.add_paragraph(f'Raporlama Dönemi: {period}')
+        subtitle.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        subtitle.runs[0].font.size = Pt(14)
+        
+        doc.add_paragraph(f'Rapor Tarihi: {datetime.now().strftime("%d.%m.%Y")}')
+        doc.add_paragraph(f'Raporlama Standardı: ISO 14046')
+        
+        doc.add_page_break()
+        
+        # 1. Yönetici Özeti
+        doc.add_heading('1. YÖNETİCİ ÖZETİ', 1)
+        doc.add_paragraph(
+            f"Bu rapor, {period} yılı su ayak izi envanterini ISO 14046 standartlarına "
+            f"uygun olarak sunmaktadır."
+        )
+        
+        doc.add_paragraph(f"\nToplam Su Ayak İzi: {footprint_data['total_water_footprint']:.2f} m³")
+        doc.add_paragraph(f"  • Mavi Su: {footprint_data['total_blue_water']:.2f} m³")
+        doc.add_paragraph(f"  • Yeşil Su: {footprint_data['total_green_water']:.2f} m³")
+        doc.add_paragraph(f"  • Gri Su: {footprint_data['total_grey_water']:.2f} m³")
+        
+        # 2. Metodoloji
+        doc.add_heading('2. METODOLOJİ', 1)
+        doc.add_paragraph(
+            "Su ayak izi hesaplamaları ISO 14046:2014 standardına uygun olarak yapılmıştır. "
+            "Water Footprint Network metodolojisi kullanılmıştır."
+        )
+        
+        # 3. Su Ayak İzi Sonuçları
+        doc.add_heading('3. SU AYAK İZİ SONUÇLARI', 1)
+        
+        # 3.1 Toplam Sonuçlar
+        doc.add_heading('3.1 Toplam Sonuçlar', 2)
+        
+        results_table = doc.add_table(rows=4, cols=3)
+        results_table.style = 'Table Grid'
+        
+        # Tablo başlıkları
+        hdr_cells = results_table.rows[0].cells
+        hdr_cells[0].text = 'Su Türü'
+        hdr_cells[1].text = 'Miktar (m³)'
+        hdr_cells[2].text = 'Yüzde (%)'
+        
+        # Veriler
+        total = footprint_data['total_water_footprint']
+        blue_pct = (footprint_data['total_blue_water'] / total * 100) if total > 0 else 0
+        green_pct = (footprint_data['total_green_water'] / total * 100) if total > 0 else 0
+        grey_pct = (footprint_data['total_grey_water'] / total * 100) if total > 0 else 0
+        
+        data_rows = [
+            ['Mavi Su', f"{footprint_data['total_blue_water']:.2f}", f"{blue_pct:.1f}%"],
+            ['Yeşil Su', f"{footprint_data['total_green_water']:.2f}", f"{green_pct:.1f}%"],
+            ['Gri Su', f"{footprint_data['total_grey_water']:.2f}", f"{grey_pct:.1f}%"],
+            ['TOPLAM', f"{total:.2f}", "100.0%"]
+        ]
+        
+        for i, row_data in enumerate(data_rows, 1):
+            row_cells = results_table.rows[i].cells
+            for j, cell_data in enumerate(row_data):
+                row_cells[j].text = cell_data
+        
+        # 3.2 Tüketim Türüne Göre Dağılım
+        doc.add_heading('3.2 Tüketim Türüne Göre Dağılım', 2)
+        
+        breakdown_by_type = footprint_data.get('breakdown_by_type', {})
+        if breakdown_by_type:
+            type_table = doc.add_table(rows=len(breakdown_by_type) + 1, cols=5)
+            type_table.style = 'Table Grid'
+            
+            # Başlıklar
+            type_hdr = type_table.rows[0].cells
+            type_hdr[0].text = 'Tüketim Türü'
+            type_hdr[1].text = 'Mavi Su (m³)'
+            type_hdr[2].text = 'Yeşil Su (m³)'
+            type_hdr[3].text = 'Gri Su (m³)'
+            type_hdr[4].text = 'Toplam (m³)'
+            
+            # Veriler
+            for i, (cons_type, data) in enumerate(breakdown_by_type.items(), 1):
+                type_row = type_table.rows[i].cells
+                type_row[0].text = cons_type.title()
+                type_row[1].text = f"{data['blue_water']:.2f}"
+                type_row[2].text = f"{data['green_water']:.2f}"
+                type_row[3].text = f"{data['grey_water']:.2f}"
+                type_row[4].text = f"{data['total']:.2f}"
+        
+        # 4. Verimlilik Metrikleri
+        doc.add_heading('4. VERİMLİLİK METRİKLERİ', 1)
+        
+        efficiency_metrics = footprint_data.get('efficiency_metrics', {})
+        if efficiency_metrics:
+            doc.add_paragraph(f"Ortalama Verimlilik Oranı: {efficiency_metrics.get('average_efficiency_ratio', 0):.3f}")
+            doc.add_paragraph(f"Ortalama Geri Dönüşüm Oranı: {efficiency_metrics.get('average_recycling_rate', 0):.3f}")
+            doc.add_paragraph(f"Toplam Kayıt Sayısı: {efficiency_metrics.get('total_records', 0)}")
+        
+        # 5. SDG 6 İlerlemesi
+        doc.add_heading('5. SDG 6 İLERLEMESİ', 1)
+        doc.add_paragraph(
+            "Su ayak izi yönetimi, Birleşmiş Milletler Sürdürülebilir Kalkınma Hedefi 6 "
+            "(Temiz Su ve Sanitasyon) ile doğrudan ilgilidir."
+        )
+        
+        # 6. Öneriler
+        doc.add_heading('6. ÖNERİLER', 1)
+        
+        recommendations = [
+            "Su tüketimini azaltmak için verimlilik projeleri uygulayın",
+            "Gri su geri dönüşüm sistemleri kurun",
+            "Su kalitesi izleme programlarını güçlendirin",
+            "Çalışanlara su tasarrufu konusunda eğitim verin",
+            "Su ayak izi hesaplamalarını düzenli olarak güncelleyin"
+        ]
+        
+        for i, rec in enumerate(recommendations, 1):
+            doc.add_paragraph(f"{i}. {rec}")
+        
+        # Dokumanı kaydet
+        doc.save(report_path)
+        
+        return report_path
+    
+    def generate_excel_report(self, company_id: int, period: str) -> str:
+        """Excel su ayak izi raporu oluştur"""
+        if not EXCEL_AVAILABLE:
+            raise ImportError("openpyxl kütüphanesi gerekli")
+        
+        # Su ayak izi hesapla
+        footprint_data = self.manager.calculate_water_footprint(company_id, period)
+        
+        if not footprint_data:
+            raise ValueError("Su ayak izi verisi bulunamadı")
+        
+        # Excel dosyası oluştur
+        report_filename = f"water_footprint_report_{company_id}_{period}.xlsx"
+        report_path = os.path.join("data/exports", report_filename)
+        
+        # Klasör yoksa oluştur
+        os.makedirs(os.path.dirname(report_path), exist_ok=True)
+        
+        # Excel workbook oluştur
+        wb = openpyxl.Workbook()
+        
+        # Stil tanımları
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+        header_alignment = Alignment(horizontal="center", vertical="center")
+        
+        # 1. Özet Sayfası
+        ws_summary = wb.active
+        ws_summary.title = "Su Ayak İzi Özeti"
+        
+        # Başlık
+        ws_summary['A1'] = f"SU AYAK İZİ RAPORU - {period}"
+        ws_summary['A1'].font = Font(size=16, bold=True)
+        ws_summary.merge_cells('A1:D1')
+        
+        # Tarih
+        ws_summary['A2'] = f"Rapor Tarihi: {datetime.now().strftime('%d.%m.%Y')}"
+        ws_summary['A2'].font = Font(size=10)
+        
+        # Boş satır
+        ws_summary['A3'] = ""
+        
+        # Toplam sonuçlar
+        ws_summary['A4'] = "TOPLAM SU AYAK İZİ SONUÇLARI"
+        ws_summary['A4'].font = Font(size=12, bold=True)
+        
+        # Tablo başlıkları
+        headers = ["Su Türü", "Miktar (m³)", "Yüzde (%)"]
+        for col, header in enumerate(headers, 1):
+            cell = ws_summary.cell(row=5, column=col, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = header_alignment
+        
+        # Veriler
+        total = footprint_data['total_water_footprint']
+        blue_pct = (footprint_data['total_blue_water'] / total * 100) if total > 0 else 0
+        green_pct = (footprint_data['total_green_water'] / total * 100) if total > 0 else 0
+        grey_pct = (footprint_data['total_grey_water'] / total * 100) if total > 0 else 0
+        
+        data_rows = [
+            ["Mavi Su", footprint_data['total_blue_water'], f"{blue_pct:.1f}%"],
+            ["Yeşil Su", footprint_data['total_green_water'], f"{green_pct:.1f}%"],
+            ["Gri Su", footprint_data['total_grey_water'], f"{grey_pct:.1f}%"],
+            ["TOPLAM", total, "100.0%"]
+        ]
+        
+        for row, data in enumerate(data_rows, 6):
+            for col, value in enumerate(data, 1):
+                ws_summary.cell(row=row, column=col, value=value)
+        
+        # 2. Tüketim Türü Dağılımı Sayfası
+        ws_breakdown = wb.create_sheet("Tüketim Türü Dağılımı")
+        
+        # Başlık
+        ws_breakdown['A1'] = "TÜKETİM TÜRÜNE GÖRE DAĞILIM"
+        ws_breakdown['A1'].font = Font(size=14, bold=True)
+        ws_breakdown.merge_cells('A1:F1')
+        
+        # Tablo başlıkları
+        breakdown_headers = ["Tüketim Türü", "Mavi Su (m³)", "Yeşil Su (m³)", "Gri Su (m³)", "Toplam (m³)"]
+        for col, header in enumerate(breakdown_headers, 1):
+            cell = ws_breakdown.cell(row=3, column=col, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = header_alignment
+        
+        # Veriler
+        breakdown_by_type = footprint_data.get('breakdown_by_type', {})
+        row = 4
+        for cons_type, data in breakdown_by_type.items():
+            ws_breakdown.cell(row=row, column=1, value=cons_type.title())
+            ws_breakdown.cell(row=row, column=2, value=data['blue_water'])
+            ws_breakdown.cell(row=row, column=3, value=data['green_water'])
+            ws_breakdown.cell(row=row, column=4, value=data['grey_water'])
+            ws_breakdown.cell(row=row, column=5, value=data['total'])
+            row += 1
+        
+        # 3. Verimlilik Metrikleri Sayfası
+        ws_efficiency = wb.create_sheet("Verimlilik Metrikleri")
+        
+        # Başlık
+        ws_efficiency['A1'] = "VERİMLİLİK METRİKLERİ"
+        ws_efficiency['A1'].font = Font(size=14, bold=True)
+        ws_efficiency.merge_cells('A1:B1')
+        
+        # Metrikler
+        efficiency_metrics = footprint_data.get('efficiency_metrics', {})
+        metrics_data = [
+            ["Ortalama Verimlilik Oranı", efficiency_metrics.get('average_efficiency_ratio', 0)],
+            ["Ortalama Geri Dönüşüm Oranı", efficiency_metrics.get('average_recycling_rate', 0)],
+            ["Toplam Kayıt Sayısı", efficiency_metrics.get('total_records', 0)],
+            ["Yüksek Kalite Veri", efficiency_metrics.get('high_quality_data', 0)],
+            ["Orta Kalite Veri", efficiency_metrics.get('medium_quality_data', 0)],
+            ["Düşük Kalite Veri", efficiency_metrics.get('low_quality_data', 0)]
+        ]
+        
+        row = 3
+        for metric_name, metric_value in metrics_data:
+            ws_efficiency.cell(row=row, column=1, value=metric_name)
+            ws_efficiency.cell(row=row, column=2, value=metric_value)
+            row += 1
+        
+        # Sütun genişliklerini ayarla
+        for ws in [ws_summary, ws_breakdown, ws_efficiency]:
+            for column in ws.columns:
+                max_length = 0
+                column_letter = column[0].column_letter
+                for cell in column:
+                    try:
+                        if len(str(cell.value)) > max_length:
+                            max_length = len(str(cell.value))
+                    except Exception as e:
+                        pass
+                adjusted_width = min(max_length + 2, 50)
+                ws.column_dimensions[column_letter].width = adjusted_width
+        
+        # Excel dosyasını kaydet
+        wb.save(report_path)
+        
+        return report_path
+    
+    def generate_sdg_6_progress_report(self, company_id: int, period: str) -> Dict:
+        """SDG 6 ilerleme raporu oluştur"""
+        try:
+            # Su ayak izi hesapla
+            footprint_data = self.manager.calculate_water_footprint(company_id, period)
+            
+            if not footprint_data:
+                return {}
+            
+            # SDG 6 bileşenleri
+            sdg_6_components = {
+                'access_to_drinking_water': 95,    # Varsayılan değer
+                'access_to_sanitation': 90,        # Varsayılan değer
+                'water_quality': 85,               # Su kalitesi skorlarından
+                'water_efficiency': 80,            # Verimlilik metriklerinden
+                'water_governance': 75             # Varsayılan değer
+            }
+            
+            # Verimlilik metriklerini SDG 6 skoruna dönüştür
+            efficiency_metrics = footprint_data.get('efficiency_metrics', {})
+            avg_efficiency = efficiency_metrics.get('average_efficiency_ratio', 0.5)
+            avg_recycling = efficiency_metrics.get('average_recycling_rate', 0.2)
+            
+            # Verimlilik skorunu hesapla (0-100)
+            efficiency_score = min(100, (avg_efficiency + avg_recycling) * 50)
+            sdg_6_components['water_efficiency'] = efficiency_score
+            
+            # Su kalitesi skorunu hesapla (örnek)
+            quality_score = 85  # Gerçek uygulamada kalite ölçümlerinden hesaplanır
+            sdg_6_components['water_quality'] = quality_score
+            
+            # Toplam SDG 6 skoru
+            total_score = sum(sdg_6_components.values()) / len(sdg_6_components)
+            
+            return {
+                'period': period,
+                'sdg_6_score': round(total_score, 1),
+                'target_2030': 100.0,
+                'progress_percentage': round(total_score, 1),
+                'component_scores': sdg_6_components,
+                'water_footprint_summary': {
+                    'total_water_footprint': footprint_data['total_water_footprint'],
+                    'blue_water': footprint_data['total_blue_water'],
+                    'green_water': footprint_data['total_green_water'],
+                    'grey_water': footprint_data['total_grey_water']
+                },
+                'efficiency_metrics': efficiency_metrics,
+                'calculated_at': datetime.now().isoformat()
+            }
+            
+        except Exception as e:
+            print(f"SDG 6 ilerleme raporu hatası: {e}")
+            return {}
+    
+    def export_water_data_to_csv(self, company_id: int, period: str, data_type: str = 'consumption') -> str:
+        """Su verilerini CSV olarak dışa aktar"""
+        try:
+            if data_type == 'consumption':
+                data = self.manager.get_water_consumption(company_id, period)
+                filename = f"water_consumption_{company_id}_{period}.csv"
+            elif data_type == 'targets':
+                data = self.manager.get_water_targets(company_id)
+                filename = f"water_targets_{company_id}_{period}.csv"
+            elif data_type == 'projects':
+                data = self.manager.get_efficiency_projects(company_id)
+                filename = f"water_projects_{company_id}_{period}.csv"
+            elif data_type == 'quality':
+                data = self.manager.get_quality_measurements(company_id)
+                filename = f"water_quality_{company_id}_{period}.csv"
+            else:
+                raise ValueError("Geçersiz veri türü")
+            
+            if not data:
+                raise ValueError("Dışa aktarılacak veri bulunamadı")
+            
+            # CSV dosya yolu (firma bazlı)
+            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            csv_path = os.path.join(base_dir, "data", "companies", str(company_id), "exports", filename)
+            os.makedirs(os.path.dirname(csv_path), exist_ok=True)
+            
+            # CSV oluştur
+            import csv
+            with open(csv_path, 'w', newline='', encoding='utf-8') as csvfile:
+                if data:
+                    fieldnames = data[0].keys()
+                    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+                    writer.writeheader()
+                    writer.writerows(data)
+            
+            return csv_path
+            
+        except Exception as e:
+            print(f"CSV dışa aktarma hatası: {e}")
+            return ""
+    
+    def generate_water_trend_report(self, company_id: int, years: List[str]) -> Dict:
+        """Su tüketimi trend raporu oluştur"""
+        try:
+            trend_data = []
+            
+            for year in years:
+                footprint_data = self.manager.calculate_water_footprint(company_id, year)
+                if footprint_data:
+                    trend_data.append({
+                        'year': year,
+                        'total_consumption': footprint_data['total_water_footprint'],
+                        'blue_water': footprint_data['total_blue_water'],
+                        'green_water': footprint_data['total_green_water'],
+                        'grey_water': footprint_data['total_grey_water']
+                    })
+            
+            if len(trend_data) < 2:
+                return {'error': 'Trend analizi için yeterli veri yok'}
+            
+            # Trend hesaplama
+            total_change = 0
+            annual_changes = {}
+            
+            for i in range(1, len(trend_data)):
+                current_year = trend_data[i]['year']
+                previous_year = trend_data[i-1]['year']
+                
+                current_total = trend_data[i]['total_consumption']
+                previous_total = trend_data[i-1]['total_consumption']
+                
+                if previous_total > 0:
+                    change_percentage = ((current_total - previous_total) / previous_total) * 100
+                else:
+                    change_percentage = 0
+                
+                annual_changes[current_year] = round(change_percentage, 1)
+                total_change += change_percentage
+            
+            # Ortalama trend
+            avg_change = total_change / (len(trend_data) - 1)
+            
+            # Trend yönü
+            if avg_change > 2:
+                trend_direction = 'increasing'
+            elif avg_change < -2:
+                trend_direction = 'decreasing'
+            else:
+                trend_direction = 'stable'
+            
+            return {
+                'trend_direction': trend_direction,
+                'trend_percentage': round(avg_change, 1),
+                'annual_changes': annual_changes,
+                'trend_data': trend_data,
+                'years_analyzed': years,
+                'calculated_at': datetime.now().isoformat()
+            }
+            
+        except Exception as e:
+            print(f"Trend raporu hatası: {e}")
+            return {}

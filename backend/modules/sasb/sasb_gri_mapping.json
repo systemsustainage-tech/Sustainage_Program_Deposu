@@ -1,0 +1,168 @@
+{
+  "sasb_gri_mappings": [
+    {
+      "sasb_code": "TC-SI-230a.1",
+      "sasb_topic": "Data Security",
+      "gri_standard": "GRI 418",
+      "gri_disclosure": "418-1",
+      "gri_title": "Müşteri Gizliliği İhlalleri",
+      "mapping_strength": "Strong",
+      "notes": "Her iki standart da veri güvenliği ihlallerini raporlar"
+    },
+    {
+      "sasb_code": "TC-SI-330a.1",
+      "sasb_topic": "Employee Diversity",
+      "gri_standard": "GRI 405",
+      "gri_disclosure": "405-1",
+      "gri_title": "Çeşitlilik",
+      "mapping_strength": "Strong",
+      "notes": "Cinsiyet çeşitliliği metriği"
+    },
+    {
+      "sasb_code": "IF-EU-110a.1",
+      "sasb_topic": "GHG Emissions",
+      "gri_standard": "GRI 305",
+      "gri_disclosure": "305-1",
+      "gri_title": "Scope 1 Emisyonlar",
+      "mapping_strength": "Strong",
+      "notes": "Doğrudan sera gazı emisyonları"
+    },
+    {
+      "sasb_code": "EM-EP-110a.1",
+      "sasb_topic": "GHG Emissions",
+      "gri_standard": "GRI 305",
+      "gri_disclosure": "305-1",
+      "gri_title": "Scope 1 Emisyonlar",
+      "mapping_strength": "Strong",
+      "notes": "Petrol ve gaz sektörü emisyonları"
+    },
+    {
+      "sasb_code": "TR-AU-410a.1",
+      "sasb_topic": "Fuel Economy",
+      "gri_standard": "GRI 302",
+      "gri_disclosure": "302-5",
+      "gri_title": "Enerji Gereksinimlerinde Azaltma",
+      "mapping_strength": "Moderate",
+      "notes": "Ürün enerji verimliliği"
+    },
+    {
+      "sasb_code": "FB-FR-250a.1",
+      "sasb_topic": "Food Safety",
+      "gri_standard": "GRI 416",
+      "gri_disclosure": "416-2",
+      "gri_title": "Ürün Güvenliği İhlalleri",
+      "mapping_strength": "Strong",
+      "notes": "Gıda güvenliği ihlalleri"
+    },
+    {
+      "sasb_code": "CG-AA-430b.1",
+      "sasb_topic": "Labor Conditions",
+      "gri_standard": "GRI 414",
+      "gri_disclosure": "414-1",
+      "gri_title": "Tedarikçi Sosyal Değerlendirmesi",
+      "mapping_strength": "Strong",
+      "notes": "Tedarik zinciri çalışma koşulları"
+    },
+    {
+      "sasb_code": "CG-AA-440a.1",
+      "sasb_topic": "Raw Materials",
+      "gri_standard": "GRI 301",
+      "gri_disclosure": "301-2",
+      "gri_title": "Geri Dönüştürülmüş Malzeme",
+      "mapping_strength": "Moderate",
+      "notes": "Sürdürülebilir hammadde kullanımı"
+    },
+    {
+      "sasb_code": "HC-BP-250a.1",
+      "sasb_topic": "Drug Safety",
+      "gri_standard": "GRI 416",
+      "gri_disclosure": "416-2",
+      "gri_title": "Ürün Güvenliği İhlalleri",
+      "mapping_strength": "Strong",
+      "notes": "İlaç güvenliği ve geri çağırmalar"
+    },
+    {
+      "sasb_code": "RE-DE-130a.1",
+      "sasb_topic": "Energy Management",
+      "gri_standard": "GRI 302",
+      "gri_disclosure": "302-1",
+      "gri_title": "Enerji Tüketimi",
+      "mapping_strength": "Strong",
+      "notes": "Bina enerji tüketimi"
+    },
+    {
+      "sasb_code": "IF-WU-440a.1",
+      "sasb_topic": "Water Supply",
+      "gri_standard": "GRI 303",
+      "gri_disclosure": "303-3",
+      "gri_title": "Su Çekimi",
+      "mapping_strength": "Strong",
+      "notes": "Su kaynakları yönetimi"
+    },
+    {
+      "sasb_code": "FN-CB-240a.1",
+      "sasb_topic": "Financial Inclusion",
+      "gri_standard": "GRI 203",
+      "gri_disclosure": "203-2",
+      "gri_title": "Dolaylı Ekonomik Etkiler",
+      "mapping_strength": "Moderate",
+      "notes": "Finansal kapsayıcılık etkileri"
+    },
+    {
+      "sasb_code": "FN-IN-450a.1",
+      "sasb_topic": "Environmental Risk",
+      "gri_standard": "GRI 201",
+      "gri_disclosure": "201-2",
+      "gri_title": "İklim Değişikliği Finansal Etkileri",
+      "mapping_strength": "Strong",
+      "notes": "İklim riskine maruz sigorta portföyü"
+    },
+    {
+      "sasb_code": "CN-CM-110a.1",
+      "sasb_topic": "GHG Emissions",
+      "gri_standard": "GRI 305",
+      "gri_disclosure": "305-1",
+      "gri_title": "Scope 1 Emisyonlar",
+      "mapping_strength": "Strong",
+      "notes": "İnşaat malzemeleri üretim emisyonları"
+    },
+    {
+      "sasb_code": "SV-PS-230a.1",
+      "sasb_topic": "Data Security",
+      "gri_standard": "GRI 418",
+      "gri_disclosure": "418-1",
+      "gri_title": "Müşteri Gizliliği",
+      "mapping_strength": "Strong",
+      "notes": "Profesyonel hizmetlerde veri güvenliği"
+    },
+    {
+      "sasb_code": "TC-IM-220a.1",
+      "sasb_topic": "User Privacy",
+      "gri_standard": "GRI 418",
+      "gri_disclosure": "418-1",
+      "gri_title": "Müşteri Gizliliği",
+      "mapping_strength": "Strong",
+      "notes": "İnternet medya kullanıcı gizliliği"
+    },
+    {
+      "sasb_code": "TC-EC-230a.1",
+      "sasb_topic": "Data Security",
+      "gri_standard": "GRI 418",
+      "gri_disclosure": "418-1",
+      "gri_title": "Müşteri Gizliliği",
+      "mapping_strength": "Strong",
+      "notes": "E-ticaret veri güvenliği"
+    }
+  ],
+  "mapping_legend": {
+    "Strong": "Doğrudan eşleşme, aynı metriği ölçer",
+    "Moderate": "Benzer konular, farklı perspektifler",
+    "Weak": "İlgili ama farklı ölçüm yöntemleri"
+  },
+  "metadata": {
+    "total_mappings": 17,
+    "coverage": "Temel SASB metriklerinin GRI ile eşleşmesi",
+    "note": "Daha fazla mapping eklenebilir"
+  }
+}
+

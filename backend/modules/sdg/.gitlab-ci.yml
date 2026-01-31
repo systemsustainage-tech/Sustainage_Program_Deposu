@@ -1,0 +1,98 @@
+stages:
+  - lint
+  - typecheck
+  - test
+  - deadcode
+  - sast
+  - sonar
+
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+
+cache:
+  paths:
+    - .cache/pip
+
+lint:
+  stage: lint
+  image: python:3.12
+  script:
+    - python -m pip install --upgrade pip
+    - pip install ruff
+    - python -m ruff check . | tee ruff_report.txt || true
+  artifacts:
+    when: always
+    paths:
+      - ruff_report.txt
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+
+typecheck:
+  stage: typecheck
+  image: python:3.12
+  script:
+    - python -m pip install --upgrade pip
+    - pip install mypy
+    - python -m mypy --config-file mypy.ini sdg_data_collection.py sdg_data_collection_gui.py | tee mypy_report.txt
+  artifacts:
+    when: always
+    paths:
+      - mypy_report.txt
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+
+test:
+  stage: test
+  image: python:3.12
+  script:
+    - python -m pip install --upgrade pip
+    - pip install -r requirements.txt || true
+    - pip install pytest pytest-cov || true
+    - pytest -q --maxfail=1 --disable-warnings || true
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+
+deadcode:
+  stage: deadcode
+  image: python:3.12
+  script:
+    - python -m pip install --upgrade pip
+    - pip install vulture
+    - vulture . --min-confidence 85 --exclude "archive/**,**/backup/**,**/md_backup_*/**,**/docs/**" | tee vulture_report.txt || true
+  artifacts:
+    when: always
+    paths:
+      - vulture_report.txt
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+
+sast_bandit:
+  stage: sast
+  image: python:3.12
+  script:
+    - python -m pip install --upgrade pip
+    - pip install bandit
+    - bandit -r . -ll -q -f txt -o bandit_report.txt || true
+  artifacts:
+    when: always
+    paths:
+      - bandit_report.txt
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+
+sonar:
+  stage: sonar
+  image: sonarsource/sonar-scanner-cli:latest
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push" && $SONAR_TOKEN && $SONAR_HOST_URL
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $SONAR_TOKEN && $SONAR_HOST_URL
+  script:
+    - sonar-scanner \
+      -Dsonar.login=$SONAR_TOKEN \
+      -Dsonar.host.url=$SONAR_HOST_URL \
+      -Dsonar.qualitygate.wait=true

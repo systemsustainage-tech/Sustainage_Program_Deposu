@@ -1,0 +1,217 @@
+{
+  "transition_risks": {
+    "policy_and_legal": [
+      {
+        "risk_name": "Karbon Fiyatlandırma Mekanizmaları",
+        "risk_description": "Karbon vergisi veya emisyon ticaret sistemlerinin uygulanması, işletme maliyetlerini artırabilir.",
+        "sector": "All",
+        "typical_likelihood": "High",
+        "typical_impact": "High",
+        "example_controls": "Emisyon azaltma programları, yenilenebilir enerjiye geçiş, enerji verimliliği yatırımları",
+        "reference": "IEA Net Zero 2050"
+      },
+      {
+        "risk_name": "Düzenleyici Gereksinimlerdeki Artış",
+        "risk_description": "İklim raporlama, açıklama ve uyum gereksinimlerinin artması operasyonel karmaşıklık yaratır.",
+        "sector": "All",
+        "typical_likelihood": "Very High",
+        "typical_impact": "Medium",
+        "example_controls": "Uyum programları, düzenli izleme, TCFD raporlama",
+        "reference": "EU Taxonomy, CSRD"
+      },
+      {
+        "risk_name": "Fosil Yakıt Teşviklerinin Kaldırılması",
+        "risk_description": "Fosil yakıt sübvansiyonlarının azaltılması veya kaldırılması enerji maliyetlerini artırır.",
+        "sector": "Energy, Manufacturing",
+        "typical_likelihood": "Medium",
+        "typical_impact": "High",
+        "example_controls": "Enerji çeşitlendirmesi, verimlilik iyileştirmeleri",
+        "reference": "IPCC AR6"
+      },
+      {
+        "risk_name": "Dava Riskleri",
+        "risk_description": "İklim değişikliğine katkıdan dolayı yasal sorumluluk ve tazminat davaları.",
+        "sector": "Energy, Finance",
+        "typical_likelihood": "Medium",
+        "typical_impact": "Very High",
+        "example_controls": "Risk yönetimi, açıklama şeffaflığı, azaltma stratejileri",
+        "reference": "Climate litigation cases"
+      }
+    ],
+    "technology": [
+      {
+        "risk_name": "Düşük Emisyonlu Teknolojiye Geçiş Maliyeti",
+        "risk_description": "Yeni teknolojilere yatırım için yüksek sermaye gereksinimleri.",
+        "sector": "All",
+        "typical_likelihood": "High",
+        "typical_impact": "High",
+        "example_controls": "Teknoloji yol haritası, aşamalı geçiş planı, AR-GE yatırımları",
+        "reference": "IEA Technology Perspectives"
+      },
+      {
+        "risk_name": "Mevcut Teknolojilerin Eskimesi",
+        "risk_description": "Karbon yoğun varlıkların değer kaybetmesi (stranded assets).",
+        "sector": "Energy, Manufacturing",
+        "typical_likelihood": "High",
+        "typical_impact": "Very High",
+        "example_controls": "Portföy çeşitlendirmesi, varlık yenileme planı",
+        "reference": "Carbon Tracker Initiative"
+      },
+      {
+        "risk_name": "Yeni Teknolojilerde Başarısızlık Riski",
+        "risk_description": "Yeni teknolojilerin beklenen performansı gösterememesi.",
+        "sector": "All",
+        "typical_likelihood": "Medium",
+        "typical_impact": "Medium",
+        "example_controls": "Pilot projeler, teknoloji değerlendirmesi, yedek planlar",
+        "reference": "Technology Readiness Levels"
+      }
+    ],
+    "market": [
+      {
+        "risk_name": "Müşteri Tercihlerindeki Değişim",
+        "risk_description": "Düşük karbonlu ürünlere olan talebin artması, geleneksel ürünlere talebin azalması.",
+        "sector": "All",
+        "typical_likelihood": "High",
+        "typical_impact": "High",
+        "example_controls": "Ürün portföyü yenileme, sürdürülebilir ürün geliştirme",
+        "reference": "Consumer trends"
+      },
+      {
+        "risk_name": "Hammadde Fiyatlarında Dalgalanma",
+        "risk_description": "İklim politikalarının hammadde fiyatlarına etkisi.",
+        "sector": "Manufacturing",
+        "typical_likelihood": "High",
+        "típical_impact": "Medium",
+        "example_controls": "Tedarik zinciri çeşitlendirmesi, geri dönüşüm programları",
+        "reference": "Commodity markets"
+      },
+      {
+        "risk_name": "Sektör Belirsizliği",
+        "risk_description": "İklim politikalarının gelecekteki piyasa yapısı üzerindeki belirsizliği.",
+        "sector": "All",
+        "typical_likelihood": "High",
+        "typical_impact": "Medium",
+        "example_controls": "Senaryo planlama, esneklik stratejileri",
+        "reference": "NGFS scenarios"
+      }
+    ],
+    "reputation": [
+      {
+        "risk_name": "Paydaş Algısında Olumsuzluk",
+        "risk_description": "İklim performansının yetersiz görülmesi marka değerine zarar verir.",
+        "sector": "All",
+        "typical_likelihood": "High",
+        "typical_impact": "High",
+        "example_controls": "Şeffaf raporlama, hedef belirleme, iletişim stratejisi",
+        "reference": "ESG ratings"
+      },
+      {
+        "risk_name": "Yatırımcı Endişeleri",
+        "risk_description": "İklim risklerine yetersiz yanıt yatırımcı güvenini azaltır.",
+        "sector": "All",
+        "typical_likelihood": "High",
+        "typical_impact": "High",
+        "example_controls": "Yatırımcı iletişimi, TCFD açıklaması, hedef belirleme",
+        "reference": "Investor expectations"
+      },
+      {
+        "risk_name": "Sektörel Stigmatizasyon",
+        "risk_description": "Karbon yoğun sektörlere yönelik olumsuz algı.",
+        "sector": "Energy, Aviation",
+        "typical_likelihood": "Medium",
+        "typical_impact": "High",
+        "example_controls": "Dönüşüm stratejisi, yenilikçi çözümler, şeffaflık",
+        "reference": "Social license to operate"
+      }
+    ]
+  },
+  "physical_risks": {
+    "acute": [
+      {
+        "risk_name": "Aşırı Hava Olayları (Fırtına, Sel)",
+        "risk_description": "Şiddetli fırtınalar ve seller fiziksel varlıklara ve operasyonlara zarar verir.",
+        "sector": "All",
+        "typical_likelihood": "Medium",
+        "typical_impact": "Very High",
+        "example_controls": "Risk değerlendirmesi, afet planlaması, sigorta, altyapı güçlendirme",
+        "reference": "IPCC SREX"
+      },
+      {
+        "risk_name": "Orman Yangınları",
+        "risk_description": "Artan sıcaklık ve kuraklık orman yangını riskini artırır.",
+        "sector": "Forestry, Real Estate",
+        "typical_likelihood": "Medium",
+        "typical_impact": "High",
+        "example_controls": "Yangın önleme sistemleri, erken uyarı, afet planı",
+        "reference": "Wildfire risk models"
+      },
+      {
+        "risk_name": "Kuraklık",
+        "risk_description": "Su kıtlığı üretim ve operasyonları kesintiye uğratır.",
+        "sector": "Agriculture, Manufacturing",
+        "typical_likelihood": "High",
+        "typical_impact": "Very High",
+        "example_controls": "Su yönetimi, verimli kullanım, alternatif kaynaklar",
+        "reference": "WRI Aqueduct"
+      },
+      {
+        "risk_name": "Aşırı Sıcaklık Dalgaları",
+        "risk_description": "Sıcaklık artışı çalışan sağlığını ve operasyonel verimliliği etkiler.",
+        "sector": "All",
+        "typical_likelihood": "High",
+        "typical_impact": "Medium",
+        "example_controls": "Soğutma sistemleri, esnek çalışma saatleri, sağlık programları",
+        "reference": "Heat stress indices"
+      }
+    ],
+    "chronic": [
+      {
+        "risk_name": "Ortalama Sıcaklık Artışı",
+        "risk_description": "Uzun vadeli sıcaklık artışı operasyonel verimliliği düşürür.",
+        "sector": "All",
+        "typical_likelihood": "Very High",
+        "typical_impact": "Medium",
+        "example_controls": "Uyum stratejileri, iklim dayanıklı altyapı",
+        "reference": "IPCC AR6"
+      },
+      {
+        "risk_name": "Su Stresi",
+        "risk_description": "Kronik su kıtlığı üretimi sürekli olarak etkiler.",
+        "sector": "Agriculture, Food, Textile",
+        "typical_likelihood": "High",
+        "typical_impact": "Very High",
+        "example_controls": "Su geri kazanımı, verimlilik, alternatif kaynaklar",
+        "reference": "WRI Water Risk Atlas"
+      },
+      {
+        "risk_name": "Deniz Seviyesi Yükselmesi",
+        "risk_description": "Kıyı tesislerinin risk altında kalması.",
+        "sector": "Real Estate, Ports",
+        "typical_likelihood": "Medium",
+        "typical_impact": "Very High",
+        "example_controls": "Tesis taşınması, koruma duvarları, sigorta",
+        "reference": "NOAA Sea Level Rise"
+      },
+      {
+        "risk_name": "Yağış Paternlerindeki Değişim",
+        "risk_description": "Değişen yağış rejimleri tarımsal üretimi ve su kaynaklarını etkiler.",
+        "sector": "Agriculture, Utilities",
+        "typical_likelihood": "High",
+        "typical_impact": "High",
+        "example_controls": "Dayanıklı çeşitler, sulama sistemleri, depolama",
+        "reference": "Climate models"
+      },
+      {
+        "risk_name": "Biyoçeşitlilik Kaybı",
+        "risk_description": "Ekosistem hizmetlerinin azalması operasyonları etkiler.",
+        "sector": "Agriculture, Forestry, Tourism",
+        "typical_likelihood": "High",
+        "typical_impact": "High",
+        "example_controls": "Biyoçeşitlilik koruma programları, sürdürülebilir kaynaklar",
+        "reference": "IPBES"
+      }
+    ]
+  }
+}
+
