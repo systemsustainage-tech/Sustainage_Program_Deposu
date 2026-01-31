@@ -1,0 +1,14 @@
+Sector: Utilities
+Topic: Water and electricity distribution
+Disclosure U1: Water Consumption and Efficiency
+Requirement: Total water withdrawn and efficiency measures
+Metric: Water intensity per customer
+
+Scope: Geographic coverage and reporting boundaries
+Disclosure U2: Grid Reliability and Resilience
+Requirement: Outage frequency and duration metrics
+Metric: SAIFI/SAIDI
+
+Sector Considerations:
+- Aging infrastructure
+- Climate resilience plans
