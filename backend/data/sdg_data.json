@@ -1,0 +1,126 @@
+{
+  "goals": [
+    {
+      "goal_number": 1,
+      "title_en": "No Poverty",
+      "title_tr": "Yoksulluğa Son",
+      "description": "End poverty in all its forms everywhere",
+      "icon": "🏚️"
+    },
+    {
+      "goal_number": 2,
+      "title_en": "Zero Hunger",
+      "title_tr": "Açlığa Son",
+      "description": "End hunger, achieve food security and improved nutrition",
+      "icon": "🌾"
+    },
+    {
+      "goal_number": 3,
+      "title_en": "Good Health and Well-being",
+      "title_tr": "Sağlıklı Yaşam",
+      "description": "Ensure healthy lives and promote well-being for all",
+      "icon": "❤️"
+    },
+    {
+      "goal_number": 4,
+      "title_en": "Quality Education",
+      "title_tr": "Nitelikli Eğitim",
+      "description": "Ensure inclusive and equitable quality education",
+      "icon": "📚"
+    },
+    {
+      "goal_number": 5,
+      "title_en": "Gender Equality",
+      "title_tr": "Toplumsal Cinsiyet Eşitliği",
+      "description": "Achieve gender equality and empower all women and girls",
+      "icon": "⚖️"
+    },
+    {
+      "goal_number": 6,
+      "title_en": "Clean Water and Sanitation",
+      "title_tr": "Temiz Su ve Sanitasyon",
+      "description": "Ensure availability and sustainable management of water",
+      "icon": "💧"
+    },
+    {
+      "goal_number": 7,
+      "title_en": "Affordable and Clean Energy",
+      "title_tr": "Erişilebilir ve Temiz Enerji",
+      "description": "Ensure access to affordable, reliable, sustainable energy",
+      "icon": "⚡"
+    },
+    {
+      "goal_number": 8,
+      "title_en": "Decent Work and Economic Growth",
+      "title_tr": "İnsana Yakışır İş ve Ekonomik Büyüme",
+      "description": "Promote sustained, inclusive and sustainable economic growth",
+      "icon": "💼"
+    },
+    {
+      "goal_number": 9,
+      "title_en": "Industry, Innovation and Infrastructure",
+      "title_tr": "Sanayi, Yenilikçilik ve Altyapı",
+      "description": "Build resilient infrastructure, promote inclusive industrialization",
+      "icon": "🏗️"
+    },
+    {
+      "goal_number": 10,
+      "title_en": "Reduced Inequalities",
+      "title_tr": "Eşitsizliklerin Azaltılması",
+      "description": "Reduce inequality within and among countries",
+      "icon": "⚖️"
+    },
+    {
+      "goal_number": 11,
+      "title_en": "Sustainable Cities and Communities",
+      "title_tr": "Sürdürülebilir Şehirler ve Topluluklar",
+      "description": "Make cities and human settlements inclusive, safe, resilient",
+      "icon": "🏙️"
+    },
+    {
+      "goal_number": 12,
+      "title_en": "Responsible Consumption and Production",
+      "title_tr": "Sorumlu Üretim ve Tüketim",
+      "description": "Ensure sustainable consumption and production patterns",
+      "icon": "♻️"
+    },
+    {
+      "goal_number": 13,
+      "title_en": "Climate Action",
+      "title_tr": "İklim Eylemi",
+      "description": "Take urgent action to combat climate change",
+      "icon": "🌍"
+    },
+    {
+      "goal_number": 14,
+      "title_en": "Life Below Water",
+      "title_tr": "Sudaki Yaşam",
+      "description": "Conserve and sustainably use the oceans, seas and marine resources",
+      "icon": "🌊"
+    },
+    {
+      "goal_number": 15,
+      "title_en": "Life on Land",
+      "title_tr": "Karasal Yaşam",
+      "description": "Protect, restore and promote sustainable use of terrestrial ecosystems",
+      "icon": "🌳"
+    },
+    {
+      "goal_number": 16,
+      "title_en": "Peace, Justice and Strong Institutions",
+      "title_tr": "Barış, Adalet ve Güçlü Kurumlar",
+      "description": "Promote peaceful and inclusive societies for sustainable development",
+      "icon": "⚖️"
+    },
+    {
+      "goal_number": 17,
+      "title_en": "Partnerships for the Goals",
+      "title_tr": "Amaçlar İçin Ortaklıklar",
+      "description": "Strengthen the means of implementation and revitalize partnerships",
+      "icon": "🤝"
+    }
+  ],
+  "version": "2030 Agenda",
+  "last_updated": "2024-10-26"
+}
+

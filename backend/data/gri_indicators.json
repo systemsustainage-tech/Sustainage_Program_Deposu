@@ -1,0 +1,147 @@
+{
+  "indicators": [
+    {
+      "code": "GRI 2-1",
+      "title_en": "Organizational details",
+      "title_tr": "Organizasyonel detaylar",
+      "category": "General Disclosures",
+      "description": "Name, nature of ownership, legal form, location of headquarters, countries of operation"
+    },
+    {
+      "code": "GRI 2-6",
+      "title_en": "Activities, value chain and other business relationships",
+      "title_tr": "Faaliyetler, değer zinciri ve diğer iş ilişkileri",
+      "category": "General Disclosures",
+      "description": "Sectors, value chain, business relationships"
+    },
+    {
+      "code": "GRI 2-9",
+      "title_en": "Governance structure and composition",
+      "title_tr": "Yönetişim yapısı ve kompozisyonu",
+      "category": "General Disclosures",
+      "description": "Governance structure, composition, responsibilities"
+    },
+    {
+      "code": "GRI 201-1",
+      "title_en": "Direct economic value generated and distributed",
+      "title_tr": "Yaratılan ve dağıtılan doğrudan ekonomik değer",
+      "category": "Economic",
+      "description": "Economic value generated, distributed to stakeholders"
+    },
+    {
+      "code": "GRI 201-2",
+      "title_en": "Financial implications of climate change",
+      "title_tr": "İklim değişikliğinin finansal etkileri",
+      "category": "Economic",
+      "description": "Risks and opportunities posed by climate change"
+    },
+    {
+      "code": "GRI 205-1",
+      "title_en": "Operations assessed for risks related to corruption",
+      "title_tr": "Yolsuzluk riski açısından değerlendirilen operasyonlar",
+      "category": "Economic",
+      "description": "Operations assessed for corruption risks"
+    },
+    {
+      "code": "GRI 302-1",
+      "title_en": "Energy consumption within the organization",
+      "title_tr": "Organizasyon içi enerji tüketimi",
+      "category": "Environmental",
+      "description": "Total fuel consumption, electricity, heating, cooling, steam"
+    },
+    {
+      "code": "GRI 302-3",
+      "title_en": "Energy intensity",
+      "title_tr": "Enerji yoğunluğu",
+      "category": "Environmental",
+      "description": "Energy intensity ratio"
+    },
+    {
+      "code": "GRI 303-3",
+      "title_en": "Water withdrawal",
+      "title_tr": "Su çekimi",
+      "category": "Environmental",
+      "description": "Water withdrawal by source"
+    },
+    {
+      "code": "GRI 303-5",
+      "title_en": "Water consumption",
+      "title_tr": "Su tüketimi",
+      "category": "Environmental",
+      "description": "Total water consumption"
+    },
+    {
+      "code": "GRI 305-1",
+      "title_en": "Direct (Scope 1) GHG emissions",
+      "title_tr": "Doğrudan (Kapsam 1) sera gazı emisyonları",
+      "category": "Environmental",
+      "description": "Gross direct GHG emissions in metric tons of CO2 equivalent"
+    },
+    {
+      "code": "GRI 305-2",
+      "title_en": "Energy indirect (Scope 2) GHG emissions",
+      "title_tr": "Enerji dolaylı (Kapsam 2) sera gazı emisyonları",
+      "category": "Environmental",
+      "description": "Gross location-based and market-based energy indirect GHG emissions"
+    },
+    {
+      "code": "GRI 305-3",
+      "title_en": "Other indirect (Scope 3) GHG emissions",
+      "title_tr": "Diğer dolaylı (Kapsam 3) sera gazı emisyonları",
+      "category": "Environmental",
+      "description": "Gross other indirect GHG emissions in metric tons of CO2 equivalent"
+    },
+    {
+      "code": "GRI 306-3",
+      "title_en": "Waste generated",
+      "title_tr": "Oluşturulan atık",
+      "category": "Environmental",
+      "description": "Total weight of waste generated and significant waste-related impacts"
+    },
+    {
+      "code": "GRI 306-4",
+      "title_en": "Waste diverted from disposal",
+      "title_tr": "Bertaraftan yönlendirilen atık",
+      "category": "Environmental",
+      "description": "Total weight of waste diverted from disposal"
+    },
+    {
+      "code": "GRI 401-1",
+      "title_en": "New employee hires and employee turnover",
+      "title_tr": "Yeni işe alınan çalışanlar ve işten ayrılmalar",
+      "category": "Social",
+      "description": "Total number and rate of new employee hires and employee turnover"
+    },
+    {
+      "code": "GRI 403-9",
+      "title_en": "Work-related injuries",
+      "title_tr": "İşle ilgili yaralanmalar",
+      "category": "Social",
+      "description": "Type and rate of work-related injuries, ill health, fatalities"
+    },
+    {
+      "code": "GRI 404-1",
+      "title_en": "Average hours of training per year per employee",
+      "title_tr": "Çalışan başına yıllık ortalama eğitim saati",
+      "category": "Social",
+      "description": "Average hours of training per employee"
+    },
+    {
+      "code": "GRI 405-1",
+      "title_en": "Diversity of governance bodies and employees",
+      "title_tr": "Yönetişim organları ve çalışanların çeşitliliği",
+      "category": "Social",
+      "description": "Percentage of individuals in governance bodies and employees by diversity category"
+    },
+    {
+      "code": "GRI 413-1",
+      "title_en": "Operations with local community engagement",
+      "title_tr": "Yerel topluluk katılımı olan operasyonlar",
+      "category": "Social",
+      "description": "Operations with implemented local community engagement programs"
+    }
+  ],
+  "version": "GRI Standards 2021",
+  "last_updated": "2024-10-26"
+}
+

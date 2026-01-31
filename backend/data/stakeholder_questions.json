@@ -1,0 +1,51 @@
+{
+    "employees": {
+        "name": "Çalışanlar",
+        "questions": [
+            {"text": "İş yerinde iş sağlığı ve güvenliği önlemlerinin yeterli olduğunu düşünüyor musunuz?", "type": "scale_1_5", "category": "Social"},
+            {"text": "Şirketin çalışanlara sunduğu eğitim ve gelişim fırsatlarından memnun musunuz?", "type": "scale_1_5", "category": "Social"},
+            {"text": "Şirket içinde fırsat eşitliği ve adil davranma ilkelerinin uygulandığını düşünüyor musunuz?", "type": "scale_1_5", "category": "Social"},
+            {"text": "Şirketin çevresel sürdürülebilirlik (geri dönüşüm, enerji tasarrufu vb.) uygulamalarını yeterli buluyor musunuz?", "type": "scale_1_5", "category": "Environmental"},
+            {"text": "Şirketin etik kuralları ve davranış kodları hakkında yeterli bilgiye sahip misiniz?", "type": "yes_no", "category": "Governance"},
+            {"text": "Şirketin sürdürülebilirlik hedeflerine katkıda bulunmak için teşvik edildiğinizi hissediyor musunuz?", "type": "scale_1_5", "category": "Governance"}
+        ]
+    },
+    "customers": {
+        "name": "Müşteriler",
+        "questions": [
+            {"text": "Satın aldığınız ürünlerin/hizmetlerin çevresel etkileri (ambalaj, üretim süreci vb.) sizin için ne kadar önemlidir?", "type": "scale_1_5", "category": "Environmental"},
+            {"text": "Şirketin ürün güvenliği ve kalitesi konusundaki hassasiyetini nasıl değerlendiriyorsunuz?", "type": "scale_1_5", "category": "Social"},
+            {"text": "Şirketin müşteri verilerinin gizliliği ve güvenliği konusundaki uygulamalarına güveniyor musunuz?", "type": "scale_1_5", "category": "Governance"},
+            {"text": "Şirketin toplumsal sorumluluk projelerini ve topluma katkılarını yeterli buluyor musunuz?", "type": "scale_1_5", "category": "Social"},
+            {"text": "Sürdürülebilir ürünler için ek ücret ödemeye ne kadar isteklisiniz?", "type": "scale_1_5", "category": "Economic"}
+        ]
+    },
+    "suppliers": {
+        "name": "Tedarikçiler",
+        "questions": [
+            {"text": "Kendi operasyonlarınızda karbon ayak izinizi ölçüyor ve raporluyor musunuz?", "type": "yes_no", "category": "Environmental"},
+            {"text": "Çalışanlarınız için adil çalışma koşulları ve İSG standartlarını tam olarak sağlıyor musunuz?", "type": "yes_no", "category": "Social"},
+            {"text": "Şirketimizle olan iş ilişkilerinizde etik kurallara ve şeffaflığa ne kadar önem verildiğini düşünüyorsunuz?", "type": "scale_1_5", "category": "Governance"},
+            {"text": "ISO 14001 (Çevre) veya ISO 45001 (İSG) gibi sertifikalara sahip misiniz?", "type": "yes_no", "category": "Governance"},
+            {"text": "Tedarik zincirinizde çocuk işçi veya zorla çalıştırma olmadığını garanti edebiliyor musunuz?", "type": "yes_no", "category": "Social"}
+        ]
+    },
+    "community": {
+        "name": "Yerel Toplum",
+        "questions": [
+            {"text": "Şirketin yerel çevreye (hava, su, gürültü vb.) olan etkilerini nasıl değerlendiriyorsunuz?", "type": "scale_1_5", "category": "Environmental"},
+            {"text": "Şirketin yerel istihdama katkısını yeterli buluyor musunuz?", "type": "scale_1_5", "category": "Economic"},
+            {"text": "Şirketin yerel halkla iletişimi ve şeffaflığı ne düzeydedir?", "type": "scale_1_5", "category": "Governance"},
+            {"text": "Şirketin desteklediği sosyal sorumluluk projelerinin bölgeye faydalı olduğunu düşünüyor musunuz?", "type": "scale_1_5", "category": "Social"}
+        ]
+    },
+    "investors": {
+        "name": "Yatırımcılar",
+        "questions": [
+            {"text": "Şirketin ESG (Çevresel, Sosyal, Yönetişim) risklerini yönetme başarısını nasıl değerlendiriyorsunuz?", "type": "scale_1_5", "category": "Governance"},
+            {"text": "Şirketin uzun vadeli sürdürülebilirlik stratejisinin finansal performansa olumlu katkı sağlayacağına inanıyor musunuz?", "type": "scale_1_5", "category": "Economic"},
+            {"text": "Şirketin iklim değişikliği ile ilgili risk ve fırsatları raporlamasını şeffaf ve yeterli buluyor musunuz?", "type": "scale_1_5", "category": "Environmental"},
+            {"text": "Yönetim kurulunun çeşitliliği ve bağımsızlığı konusundaki görüşünüz nedir?", "type": "scale_1_5", "category": "Governance"}
+        ]
+    }
+}

@@ -1,0 +1,100 @@
+{
+  "standards": [
+    {
+      "code": "GRI 11",
+      "title_en": "Oil and Gas Sector 2021",
+      "title_tr": "Petrol ve Gaz Sektörü 2021",
+      "category": "Sector",
+      "sector": "Oil & Gas",
+      "description": "Oil and Gas Sector Standard"
+    },
+    {
+      "code": "GRI 12",
+      "title_en": "Coal Sector 2022",
+      "title_tr": "Kömür Sektörü 2022",
+      "category": "Sector",
+      "sector": "Coal",
+      "description": "Coal Sector Standard"
+    },
+    {
+      "code": "GRI 13",
+      "title_en": "Agriculture, Aquaculture and Fishing Sectors 2022",
+      "title_tr": "Tarım, Su Ürünleri ve Balıkçılık Sektörleri 2022",
+      "category": "Sector",
+      "sector": "Agriculture",
+      "description": "Agriculture, Aquaculture and Fishing Sectors Standard"
+    },
+    {
+      "code": "GRI 14",
+      "title_en": "Mining Sector 2024",
+      "title_tr": "Madencilik Sektörü 2024",
+      "category": "Sector",
+      "sector": "Mining",
+      "description": "Mining Sector Standard"
+    },
+    {
+      "code": "GRI 101",
+      "title_en": "Biodiversity 2024",
+      "title_tr": "Biyoçeşitlilik 2024",
+      "category": "Topic",
+      "sector": "General",
+      "description": "Biodiversity Standard (replaces GRI 304)"
+    },
+    {
+      "code": "GRI 302-1",
+      "title_en": "Energy consumption within the organization (2025 Update)",
+      "title_tr": "Organizasyon içi enerji tüketimi (2025 Güncellemesi)",
+      "category": "Environmental",
+      "sector": "General",
+      "description": "Energy consumption within the organization"
+    },
+    {
+      "code": "GRI 305-1",
+      "title_en": "Direct (Scope 1) GHG emissions (2025 Update)",
+      "title_tr": "Doğrudan (Kapsam 1) sera gazı emisyonları (2025 Güncellemesi)",
+      "category": "Environmental",
+      "sector": "General",
+      "description": "Direct GHG emissions"
+    },
+    {
+      "code": "GRI 305-2",
+      "title_en": "Energy indirect (Scope 2) GHG emissions (2025 Update)",
+      "title_tr": "Enerji dolaylı (Kapsam 2) sera gazı emisyonları (2025 Güncellemesi)",
+      "category": "Environmental",
+      "sector": "General",
+      "description": "Energy indirect GHG emissions"
+    },
+    {
+      "code": "GRI 305-3",
+      "title_en": "Other indirect (Scope 3) GHG emissions (2025 Update)",
+      "title_tr": "Diğer dolaylı (Kapsam 3) sera gazı emisyonları (2025 Güncellemesi)",
+      "category": "Environmental",
+      "sector": "General",
+      "description": "Other indirect GHG emissions"
+    },
+    {
+      "code": "GRI 306-1",
+      "title_en": "Waste generation and significant waste-related impacts",
+      "title_tr": "Atık oluşumu ve atıkla ilgili önemli etkiler",
+      "category": "Environmental",
+      "sector": "General",
+      "description": "Waste generation impacts"
+    },
+    {
+      "code": "GRI 306-2",
+      "title_en": "Management of significant waste-related impacts",
+      "title_tr": "Atıkla ilgili önemli etkilerin yönetimi",
+      "category": "Environmental",
+      "sector": "General",
+      "description": "Management of waste impacts"
+    },
+    {
+      "code": "GRI 403-1",
+      "title_en": "Occupational health and safety management system",
+      "title_tr": "İş sağlığı ve güvenliği yönetim sistemi",
+      "category": "Social",
+      "sector": "General",
+      "description": "OHS management system"
+    }
+  ]
+}
