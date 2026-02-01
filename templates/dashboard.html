@@ -96,8 +96,32 @@
     <!-- Recent Activities -->
     <div class="col-lg-8 mb-3">
         <div class="card h-100 shadow-sm border-0">
-            <div class="card-header bg-white border-0 py-3">
+            <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0"><i class="bi bi-clock-history text-primary me-2"></i>{{ lang('recent_activities', 'Son Aktiviteler') }}</h5>
+                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#activityFilters" aria-expanded="false" aria-controls="activityFilters">
+                    <i class="bi bi-filter"></i> {{ lang('filter', 'Filtrele') }}
+                </button>
+            </div>
+            <div class="collapse {% if start_date or end_date or module_filter %}show{% endif %}" id="activityFilters">
+                <div class="card-body bg-light border-bottom">
+                    <form action="{{ url_for('dashboard') }}" method="get" class="row g-2 align-items-end">
+                        <div class="col-md-3">
+                            <label class="form-label small text-muted mb-1">{{ lang('start_date', 'Başlangıç') }}</label>
+                            <input type="date" class="form-control form-control-sm" name="start_date" value="{{ start_date }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small text-muted mb-1">{{ lang('end_date', 'Bitiş') }}</label>
+                            <input type="date" class="form-control form-control-sm" name="end_date" value="{{ end_date }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small text-muted mb-1">{{ lang('module_action', 'Modül / İşlem') }}</label>
+                            <input type="text" class="form-control form-control-sm" name="module" value="{{ module_filter or '' }}" placeholder="{{ lang('search_placeholder', 'Ara...') }}">
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-sm btn-primary w-100"><i class="bi bi-search"></i></button>
+                        </div>
+                    </form>
+                </div>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">

@@ -1386,7 +1386,8 @@ def dashboard():
         logging.error(f"Dashboard social stats error: {e}")
     
     try:
-        return render_template('dashboard.html', stats=stats, top_material_topics=top_material_topics, esrs_stats=esrs_stats, module_stats=module_stats, recent_activities=recent_activities, pending_actions=pending_actions, social_stats=social_stats, social_chart_data=social_chart_data)
+        return render_template('dashboard.html', stats=stats, top_material_topics=top_material_topics, esrs_stats=esrs_stats, module_stats=module_stats, recent_activities=recent_activities, pending_actions=pending_actions, social_stats=social_stats, social_chart_data=social_chart_data,
+                            start_date=start_date, end_date=end_date, module_filter=module_filter)
     except Exception as e:
         import traceback
         logging.error(f"Template rendering error: {traceback.format_exc()}")

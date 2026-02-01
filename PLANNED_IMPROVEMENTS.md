@@ -46,7 +46,7 @@
 - [x] **Supply Chain Advanced Features**
   - Implement Bulk Risk Import (Excel/CSV).
   - Add Real-time Risk Alerts system.
-- [ ] **Dashboard Advanced Filtering**
+- [x] **Dashboard Advanced Filtering**
   - Add Date Range and Module-specific filters.
 - [ ] **Mobile Responsiveness Check**
   - Verify all new forms and tables on mobile view.
