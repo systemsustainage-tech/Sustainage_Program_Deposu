@@ -1,6 +1,7 @@
 {% extends "base.html" %}
+{% from "includes/pagination.html" import render_pagination %}
 
-{% block title %}{{ _('surveys_title', 'Surveys') }} - SDG{% endblock %}
+{% block title %}{{ lang('surveys_title', 'Surveys') }} - SDG{% endblock %}
 
 {% block content %}
 <!-- Delete Confirmation Modal -->
@@ -8,17 +9,17 @@
 <div class="modal-dialog">
 <div class="modal-content">
 <div class="modal-header">
-<h5 class="modal-title">{{ _('delete_survey', 'Anketi Sil') }}</h5>
+<h5 class="modal-title">{{ lang('delete_survey', 'Anketi Sil') }}</h5>
 <button class="btn-close" data-bs-dismiss="modal" type="button"></button>
 </div>
 <div class="modal-body">
-<p>{{ _('confirm_delete_survey', 'Bu anketi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.') }}</p>
+<p>{{ lang('confirm_delete_survey', 'Bu anketi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.') }}</p>
 <p class="fw-bold" id="deleteSurveyTitle"></p>
 </div>
 <div class="modal-footer">
-<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ _('cancel', 'İptal') }}</button>
+<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ lang('cancel', 'İptal') }}</button>
 <form action="" id="deleteSurveyForm" method="POST" style="display: inline;">
-<button class="btn btn-danger" type="submit">{{ _('delete', 'Sil') }}</button>
+<button class="btn btn-danger" type="submit">{{ lang('delete', 'Sil') }}</button>
 </form>
 </div>
 </div>
@@ -35,14 +36,14 @@ function confirmDelete(id, title) {
 <div class="row mb-4">
 <div class="col-md-12">
 <div class="d-flex justify-content-between align-items-center">
-<h1><i class="fas fa-cube me-2"></i>{{ _('surveys_title', 'Anket Yönetimi') }}</h1>
+<h1><i class="fas fa-cube me-2"></i>{{ lang('surveys_title', 'Anket Yönetimi') }}</h1>
 <div>
 <span class="badge bg-{{ 'success' if manager_available else 'secondary' }}">
-                    {{ _('module_active_badge', 'Aktif') if manager_available else _('module_passive_badge', 'Pasif') }}
+                    {{ lang('module_active_badge', 'Aktif') if manager_available else _('module_passive_badge', 'Pasif') }}
                 </span>
-<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}</button></div>
 </div>
-<p class="lead text-muted">{{ _('surveys_desc', 'Paydaş anketlerini oluşturun ve yönetin.') }}</p>
+<p class="lead text-muted">{{ lang('surveys_desc', 'Paydaş anketlerini oluşturun ve yönetin.') }}</p>
 </div>
 </div>
 <div class="row">
@@ -57,14 +58,14 @@ function confirmDelete(id, title) {
                             <div class="col-12 mb-4">
 <div class="card">
 <div class="card-header">
-<h5 class="mb-0">{{ _('statistics', 'İstatistikler') }}</h5>
+<h5 class="mb-0">{{ lang('statistics', 'İstatistikler') }}</h5>
 </div>
 <div class="card-body">
 <div class="row">
                                             {% for key, value in stats.items() %}
                                             <div class="col-md-3 mb-3">
 <div class="border rounded p-3 text-center bg-light">
-<h6 class="text-muted text-uppercase small">{{ _(key) }}</h6>
+<h6 class="text-muted text-uppercase small">{{ lang(key) }}</h6>
 <h3 class="mb-0 text-primary">{{ value }}</h3>
 </div>
 </div>
@@ -73,14 +74,42 @@ function confirmDelete(id, title) {
 </div>
 </div>
 </div>
-                                {% endif %}
+                            {% endif %}
+
+    <!-- Filtreleme Alanı -->
+    <div class="col-12 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-body py-3">
+                <form method="get" action="{{ url_for('surveys_module') }}" class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <label for="search" class="form-label small text-muted">{{ lang('search', 'Ara') }}</label>
+                        <input type="text" class="form-control form-control-sm" id="search" name="search" value="{{ search or '' }}" placeholder="{{ lang('survey_search_placeholder', 'Anket başlığı ara...') }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="status" class="form-label small text-muted">{{ lang('status_label', 'Durum') }}</label>
+                        <select class="form-select form-select-sm" id="status" name="status">
+                            <option value="">{{ lang('all_statuses', 'Tümü') }}</option>
+                            <option value="active" {% if status_filter == 'active' %}selected{% endif %}>{{ lang('status_active', 'Aktif') }}</option>
+                            <option value="passive" {% if status_filter == 'passive' %}selected{% endif %}>{{ lang('status_passive', 'Pasif') }}</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-search"></i> {{ lang('filter', 'Filtrele') }}</button>
+                        {% if search or status_filter %}
+                        <a href="{{ url_for('surveys_module') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-x-circle"></i> {{ lang('clear', 'Temizle') }}</a>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
     
                                 <div class="col-12">
 <div class="card">
 <div class="card-header d-flex justify-content-between align-items-center">
-<h5 class="mb-0">{{ _('records', 'Kayıtlar') }}</h5>
+<h5 class="mb-0">{{ lang('records', 'Kayıtlar') }}</h5>
 <button class="btn btn-sm btn-primary" data-bs-target="#addSurveyModal" data-bs-toggle="modal">
-<i class="fas fa-plus"></i> {{ _('add_new', 'Yeni Ekle') }}
+<i class="fas fa-plus"></i> {{ lang('add_new', 'Yeni Ekle') }}
                                         </button>
 </div>
 <div class="card-body">
@@ -89,11 +118,11 @@ function confirmDelete(id, title) {
 <table class="table table-hover">
 <thead>
 <tr>
-<th>{{ _('survey_title_col', 'Anket Başlığı') }}</th>
-<th>{{ _('status', 'Durum') }}</th>
-<th>{{ _('response_count', 'Yanıt Sayısı') }}</th>
-<th>{{ _('created_at', 'Oluşturulma Tarihi') }}</th>
-<th class="text-end">{{ _('actions', 'İşlemler') }}</th>
+<th>{{ lang('survey_title_col', 'Anket Başlığı') }}</th>
+<th>{{ lang('status_label', 'Durum') }}</th>
+<th>{{ lang('response_count', 'Yanıt Sayısı') }}</th>
+<th>{{ lang('created_at', 'Oluşturulma Tarihi') }}</th>
+<th class="text-end">{{ lang('actions', 'İşlemler') }}</th>
 </tr>
 </thead>
 <tbody>
@@ -106,24 +135,24 @@ function confirmDelete(id, title) {
 </td>
 <td>
                                                                 {% if record['status'] == 'Aktif' %}
-                                                                    <span class="badge bg-success">{{ _('active', 'Aktif') }}</span>
+                                                                    <span class="badge bg-success">{{ lang('active', 'Aktif') }}</span>
                                                                 {% else %}
-                                                                    <span class="badge bg-secondary">{{ _('passive', 'Pasif') }}</span>
+                                                                    <span class="badge bg-secondary">{{ lang('passive', 'Pasif') }}</span>
                                                                 {% endif %}
                                                             </td>
 <td>{{ record['response_count'] }}</td>
 <td>{{ record['created_at'] }}</td>
 <td class="text-end">
 <a class="btn btn-sm btn-outline-primary" href="{{ url_for('survey_detail', survey_id=record['id']) }}">
-<i class="fas fa-cog"></i> {{ _('manage', 'Yönet') }}
+<i class="fas fa-cog"></i> {{ lang('manage', 'Yönet') }}
                                                                 </a>
                                                                 {% if record['token'] %}
                                                                 <a class="btn btn-sm btn-outline-success ms-1" href="{{ url_for('public_survey', token=record['token']) }}" target="_blank">
-<i class="fas fa-external-link-alt"></i> {{ _('view', 'Görüntüle') }}
+<i class="fas fa-external-link-alt"></i> {{ lang('view', 'Görüntüle') }}
                                                                 </a>
                                                                 {% endif %}
                                                                 <button class="btn btn-sm btn-outline-danger ms-1" onclick="confirmDelete('{{ record['id'] }}', '{{ record['survey_title'] }}')" type="button">
-<i class="fas fa-trash"></i> {{ _('delete', 'Sil') }}
+<i class="fas fa-trash"></i> {{ lang('delete', 'Sil') }}
                                                                 </button>
 </td>
 </tr>
@@ -131,9 +160,12 @@ function confirmDelete(id, title) {
                                                     </tbody>
 </table>
 </div>
+{% if pagination %}
+{{ render_pagination(pagination, 'surveys_module') }}
+{% endif %}
                                             {% else %}
                                                 <div class="text-center py-4">
-<p class="text-muted mb-0">{{ _('no_records_found', 'Henüz kayıt bulunamadı.') }}</p>
+<p class="text-muted mb-0">{{ lang('no_records_found', 'Henüz kayıt bulunamadı.') }}</p>
 </div>
                                             {% endif %}
                                         </div>
@@ -142,9 +174,9 @@ function confirmDelete(id, title) {
                             
                             {% if not records and not stats %}
                                 <div class="col-12 text-center py-5">
-<p class="text-muted">{{ _('no_data_msg', 'Henüz anket verisi bulunamadı.') }}</p>
+<p class="text-muted">{{ lang('no_data_msg', 'Henüz anket verisi bulunamadı.') }}</p>
 <button class="btn btn-primary" data-bs-target="#addSurveyModal" data-bs-toggle="modal">
-<i class="fas fa-plus"></i> {{ _('add_first_survey', 'İlk Anketi Oluştur') }}
+<i class="fas fa-plus"></i> {{ lang('add_first_survey', 'İlk Anketi Oluştur') }}
                                     </button>
 </div>
                             {% endif %}
@@ -153,9 +185,9 @@ function confirmDelete(id, title) {
                         <!-- Fallback to Under Construction if no data -->
 <div class="text-center py-5">
 <i class="bi bi-cone-striped display-1 text-warning mb-3"></i>
-<h3>{{ _('module_under_construction') }}</h3>
-<p class="text-muted">{{ _('module_coming_soon_desc', 'Bu modülün web arayüzü entegrasyonu devam etmektedir.') }}</p>
-<p class="small text-muted">{{ _('no_data_msg', 'Veri bulunamadı veya modül henüz aktif değil.') }}</p>
+<h3>{{ lang('module_under_construction') }}</h3>
+<p class="text-muted">{{ lang('module_coming_soon_desc', 'Bu modülün web arayüzü entegrasyonu devam etmektedir.') }}</p>
+<p class="small text-muted">{{ lang('no_data_msg', 'Veri bulunamadı veya modül henüz aktif değil.') }}</p>
 </div>
                     {% endif %}
 
@@ -168,64 +200,64 @@ function confirmDelete(id, title) {
 <div class="modal-dialog">
 <div class="modal-content">
 <div class="modal-header">
-<h5 class="modal-title">{{ _('create_new_survey', 'Yeni Anket Oluştur') }}</h5>
+<h5 class="modal-title">{{ lang('create_new_survey', 'Yeni Anket Oluştur') }}</h5>
 <button class="btn-close" data-bs-dismiss="modal" type="button"></button>
 </div>
 <form action="{{ url_for('add_survey') }}" method="POST">
 <div class="modal-body">
 <div class="mb-3">
-<label class="form-label">{{ _('select_template', 'Şablon Seç (İsteğe Bağlı)') }}</label>
+<label class="form-label">{{ lang('select_template', 'Şablon Seç (İsteğe Bağlı)') }}</label>
 <select class="form-select" name="template_id">
-<option value="">{{ _('blank_survey', 'Boş Anket') }}</option>
+<option value="">{{ lang('blank_survey', 'Boş Anket') }}</option>
                             {% if templates %}
                                 {% for template in templates %}
                                     <option value="{{ template.id }}">
                                         {{ template.name }} 
                                         {% if template.question_count %}
-                                            ({{ template.question_count }} {{ _('questions_count', 'Soru') }})
+                                            ({{ template.question_count }} {{ lang('questions_count', 'Soru') }})
                                         {% endif %}
                                     </option>
                                 {% endfor %}
                             {% endif %}
                         </select>
-<div class="form-text">{{ _('template_help', 'Bir şablon seçerseniz, ilgili sorular otomatik olarak yüklenecektir.') }}</div>
+<div class="form-text">{{ lang('template_help', 'Bir şablon seçerseniz, ilgili sorular otomatik olarak yüklenecektir.') }}</div>
 </div>
 <div class="mb-3">
-<label class="form-label">{{ _('stakeholder_group', 'Katılımcı Bilgileri - Paydaş Grubu') }} <span class="text-danger">*</span></label>
+<label class="form-label">{{ lang('stakeholder_group', 'Katılımcı Bilgileri - Paydaş Grubu') }} <span class="text-danger">*</span></label>
 <select class="form-select" name="stakeholder_group" required="">
-<option value="">{{ _('select_stakeholder_group', 'Paydaş Grubu Seçiniz') }}</option>
+<option value="">{{ lang('select_stakeholder_group', 'Paydaş Grubu Seçiniz') }}</option>
                             {% if stakeholder_groups %}
                                 {% for key, name in stakeholder_groups.items() %}
                                     <option value="{{ key }}">{{ name }}</option>
                                 {% endfor %}
                             {% else %}
                                 <!-- Fallback if JSON fails to load -->
-<option value="employees">{{ _('employees', 'Çalışanlar') }}</option>
-<option value="customers">{{ _('customers', 'Müşteriler') }}</option>
-<option value="suppliers">{{ _('suppliers', 'Tedarikçiler') }}</option>
-<option value="community">{{ _('community', 'Yerel Toplum') }}</option>
-<option value="investors">{{ _('investors', 'Yatırımcılar') }}</option>
+<option value="employees">{{ lang('employees', 'Çalışanlar') }}</option>
+<option value="customers">{{ lang('customers', 'Müşteriler') }}</option>
+<option value="suppliers">{{ lang('suppliers', 'Tedarikçiler') }}</option>
+<option value="community">{{ lang('community', 'Yerel Toplum') }}</option>
+<option value="investors">{{ lang('investors', 'Yatırımcılar') }}</option>
                             {% endif %}
                         </select>
-<div class="form-text">{{ _('stakeholder_help', 'Seçilen paydaş grubuna özel sorular (Çevresel, Sosyal, vb.) otomatik olarak eklenecektir.') }}</div>
+<div class="form-text">{{ lang('stakeholder_help', 'Seçilen paydaş grubuna özel sorular (Çevresel, Sosyal, vb.) otomatik olarak eklenecektir.') }}</div>
 </div>
 <div class="mb-3">
-<label class="form-label">{{ _('survey_title', 'Anket Başlığı') }}</label>
+<label class="form-label">{{ lang('survey_title', 'Anket Başlığı') }}</label>
 <input class="form-control" name="survey_title" required="" type="text"/>
 </div>
 <div class="mb-3">
-<label class="form-label">{{ _('description', 'Açıklama') }}</label>
+<label class="form-label">{{ lang('description', 'Açıklama') }}</label>
 <textarea class="form-control" name="survey_description" rows="3"></textarea>
 </div>
 <!-- Hidden or optional target groups since we use stakeholder group -->
 <div class="mb-3 d-none">
-<label class="form-label">{{ _('target_groups', 'Hedef Gruplar') }}</label>
+<label class="form-label">{{ lang('target_groups', 'Hedef Gruplar') }}</label>
 <input class="form-control" name="target_groups" type="text"/>
 </div>
 </div>
 <div class="modal-footer">
-<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ _('cancel', 'İptal') }}</button>
-<button class="btn btn-primary" type="submit">{{ _('create', 'Oluştur') }}</button>
+<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ lang('cancel', 'İptal') }}</button>
+<button class="btn btn-primary" type="submit">{{ lang('create', 'Oluştur') }}</button>
 </div>
 </form>
 </div>

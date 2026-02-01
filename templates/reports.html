@@ -1,17 +1,17 @@
 {% extends "base.html" %}
 
-{% block title %}{{ _('reports_page_title') }} - SDG{% endblock %}
+{% block title %}{{ lang('reports_page_title') }} - SDG{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-    <h1 class="h2">{{ _('reports_page_title') }}</h1>
+    <h1 class="h2">{{ lang('reports_page_title') }}</h1>
     <div class="btn-toolbar mb-2 mb-md-0">
         {% if session.role|lower in ['admin', 'super_admin', 'test admin'] %}
         <a class="btn btn-sm btn-primary me-2" href="{{ url_for('report_add') }}">
-            <i class="bi bi-file-earmark-plus"></i> {{ _('btn_create_report') }}
+            <i class="bi bi-file-earmark-plus"></i> {{ lang('btn_create_report') }}
         </a>
         <a class="btn btn-sm btn-outline-primary me-2" href="{{ url_for('unified_report') }}">
-            <i class="bi bi-layers"></i> {{ _('btn_unified_report') }}
+            <i class="bi bi-layers"></i> {{ lang('btn_unified_report') }}
         </a>
         <form action="{{ url_for('generate_sustainability_md_report') }}" class="d-inline d-flex align-items-center" method="POST">
             <input name="reporting_period" type="hidden" value="{{ session.reporting_period or '' }}"/>
@@ -20,21 +20,60 @@
                 <option value="pdf">PDF</option>
             </select>
             <button class="btn btn-sm btn-outline-success" type="submit">
-                <i class="bi bi-journal-text"></i> {{ _('btn_ai_sustainability_report') }}
+                <i class="bi bi-journal-text"></i> {{ lang('btn_ai_sustainability_report') }}
             </button>
         </form>
         {% endif %}
-        <button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button>
+        <button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}</button>
     </div>
 </div>
+
+<!-- Filtreleme Formu -->
+<div class="card mb-3 border-0 shadow-sm">
+    <div class="card-body py-2">
+        <form action="{{ url_for('reports') }}" method="GET" class="row g-2 align-items-center">
+            <div class="col-auto">
+                <label for="type" class="col-form-label text-muted small">Rapor Tipi:</label>
+            </div>
+            <div class="col-auto">
+                <select name="type" id="type" class="form-select form-select-sm">
+                    <option value="">Tümü</option>
+                    <option value="sustainability" {% if filter_type == 'sustainability' %}selected{% endif %}>Sürdürülebilirlik</option>
+                    <option value="audit" {% if filter_type == 'audit' %}selected{% endif %}>Denetim</option>
+                    <option value="custom" {% if filter_type == 'custom' %}selected{% endif %}>Özel</option>
+                    <option value="unified" {% if filter_type == 'unified' %}selected{% endif %}>Birleşik</option>
+                </select>
+            </div>
+            <div class="col-auto">
+                <label for="start_date" class="col-form-label text-muted small">Başlangıç:</label>
+            </div>
+            <div class="col-auto">
+                <input type="date" name="start_date" id="start_date" class="form-control form-control-sm" value="{{ filter_start_date }}">
+            </div>
+            <div class="col-auto">
+                <label for="end_date" class="col-form-label text-muted small">Bitiş:</label>
+            </div>
+            <div class="col-auto">
+                <input type="date" name="end_date" id="end_date" class="form-control form-control-sm" value="{{ filter_end_date }}">
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-sm btn-outline-primary"><i class="bi bi-filter"></i> Filtrele</button>
+                {% if filter_type or filter_start_date or filter_end_date %}
+                <a href="{{ url_for('reports') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-x-circle"></i> Temizle</a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+
 <div class="table-responsive">
     <table class="table table-striped table-hover">
         <thead>
             <tr>
-                <th>{{ _('report_name_col') }}</th>
-                <th>{{ _('report_type_col') }}</th>
-                <th>{{ _('date') }}</th>
-                <th>{{ _('actions') }}</th>
+                <th>{{ lang('report_name_col') }}</th>
+                <th>{{ lang('report_type_col') }}</th>
+                <th>{{ lang('date') }}</th>
+                <th>{{ lang('actions') }}</th>
             </tr>
         </thead>
         <tbody>
@@ -44,18 +83,18 @@
                 <td>{{ report['report_type'] or report['type'] }}</td>
                 <td>{{ report['created_at'] }}</td>
                 <td>
-                    <a class="btn btn-sm btn-outline-info" href="{{ url_for('view_report', report_id=report['id']) }}" target="_blank" title="{{ _('view') }}"><i class="bi bi-eye"></i></a>
-                    <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('report_download', report_id=report['id']) }}" title="{{ _('download') }}"><i class="bi bi-download"></i></a>
+                    <a class="btn btn-sm btn-outline-info" href="{{ url_for('view_report', report_id=report['id']) }}" target="_blank" title="{{ lang('view') }}"><i class="bi bi-eye"></i></a>
+                    <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('report_download', report_id=report['id']) }}" title="{{ lang('download') }}"><i class="bi bi-download"></i></a>
                     {% if session.role|lower in ['admin', 'super_admin', 'test admin'] %}
-                    <form action="{{ url_for('report_delete', report_id=report['id']) }}" method="POST" onsubmit="return confirm('{{ _('confirm_delete_report') }}');" style="display:inline;">
-                        <button class="btn btn-sm btn-outline-danger" title="{{ _('delete') }}" type="submit"><i class="bi bi-trash"></i></button>
+                    <form action="{{ url_for('report_delete', report_id=report['id']) }}" method="POST" onsubmit="return confirm('{{ lang('confirm_delete_report') }}');" style="display:inline;">
+                        <button class="btn btn-sm btn-outline-danger" title="{{ lang('delete') }}" type="submit"><i class="bi bi-trash"></i></button>
                     </form>
                     {% endif %}
                 </td>
             </tr>
             {% else %}
             <tr>
-                <td class="text-center" colspan="4">{{ _('no_reports_msg') }}</td>
+                <td class="text-center" colspan="4">{{ lang('no_reports_msg') }}</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -63,7 +102,9 @@
 </div>
 
 {% from "includes/pagination.html" import render_pagination %}
-{{ render_pagination(pagination, 'reports') }}
+{% if pagination %}
+    {{ render_pagination(pagination, 'reports') }}
+{% endif %}
 
 <!-- Feedback Modal -->
 <div class="modal fade" id="feedbackModal" tabindex="-1" aria-hidden="true">

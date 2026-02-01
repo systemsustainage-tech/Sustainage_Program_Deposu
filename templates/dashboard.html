@@ -8,17 +8,17 @@
         <div class="card shadow-sm border-0">
             <div class="card-body d-flex justify-content-between align-items-center">
                 <div>
-                    <h2 class="mb-0">{{ _('dashboard_welcome') }}, <span class="text-primary">{{ session.user }}</span></h2>
+                    <h2 class="mb-0">{{ lang('dashboard_welcome') }}, <span class="text-primary">{{ session.user }}</span></h2>
                     <p class="text-muted mb-0">
-                        <i class="bi bi-shield-lock-fill"></i> {{ _('dashboard_role') }}: {{ session.get('role', 'Kullanıcı') }}
+                        <i class="bi bi-shield-lock-fill"></i> {{ lang('dashboard_role') }}: {{ session.get('role', 'Kullanıcı') }}
                     </p>
                 </div>
                 <div class="btn-toolbar gap-2">
                     <span class="badge bg-success rounded-pill p-2">
-                        <i class="bi bi-wifi"></i> {{ _('system_online') }}
+                        <i class="bi bi-wifi"></i> {{ lang('system_online') }}
                     </span>
                     <button class="btn btn-sm btn-outline-secondary" onclick="history.back()">
-                        <i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}
+                        <i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}
                     </button>
                 </div>
             </div>
@@ -38,7 +38,7 @@
         <div class="card h-100 border-0 shadow-sm text-center">
             <div class="card-body">
                 <div class="display-4 text-primary mb-2"><i class="bi bi-people-fill"></i></div>
-                <h5 class="card-title">{{ _('users_title') }}</h5>
+                <h5 class="card-title">{{ lang('users_title') }}</h5>
                 <h2 class="fw-bold">{{ stats.user_count if stats.user_count is not none else '-' }}</h2>
                 <a href="{{ url_for('users') }}" class="stretched-link"></a>
             </div>
@@ -48,7 +48,7 @@
         <div class="card h-100 border-0 shadow-sm text-center">
             <div class="card-body">
                 <div class="display-4 text-success mb-2"><i class="bi bi-building"></i></div>
-                <h5 class="card-title">{{ _('companies_title') }}</h5>
+                <h5 class="card-title">{{ lang('companies_title') }}</h5>
                 <h2 class="fw-bold">{{ stats.company_count }}</h2>
                 <a href="{{ url_for('companies') }}" class="stretched-link"></a>
             </div>
@@ -58,7 +58,7 @@
         <div class="card h-100 border-0 shadow-sm text-center">
             <div class="card-body">
                 <div class="display-4 text-info mb-2"><i class="bi bi-file-earmark-text-fill"></i></div>
-                <h5 class="card-title">{{ _('reports_title') }}</h5>
+                <h5 class="card-title">{{ lang('reports_title') }}</h5>
                 <h2 class="fw-bold">{{ stats.report_count }}</h2>
                 <a href="{{ url_for('reports') }}" class="stretched-link"></a>
             </div>
@@ -73,7 +73,7 @@
         <div class="card h-100 border-0 shadow-sm text-center">
             <div class="card-body">
                 <i class="bi bi-clipboard-data fs-1 text-primary mb-2"></i>
-                <h5 class="card-title">{{ _('active_surveys') }}</h5>
+                <h5 class="card-title">{{ lang('active_surveys') }}</h5>
                 <h2 class="fw-bold">{{ stats.active_surveys }}</h2>
                 <a href="{{ url_for('surveys_module') }}" class="stretched-link"></a>
             </div>
@@ -83,9 +83,93 @@
         <div class="card h-100 border-0 shadow-sm text-center">
             <div class="card-body">
                 <i class="bi bi-chat-left-text fs-1 text-success mb-2"></i>
-                <h5 class="card-title">{{ _('total_responses') }}</h5>
+                <h5 class="card-title">{{ lang('total_responses') }}</h5>
                 <h2 class="fw-bold">{{ stats.total_responses }}</h2>
                 <a href="{{ url_for('surveys_module') }}" class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Widgets: Recent Activities & Pending Actions -->
+<div class="row mb-4">
+    <!-- Recent Activities -->
+    <div class="col-lg-8 mb-3">
+        <div class="card h-100 shadow-sm border-0">
+            <div class="card-header bg-white border-0 py-3">
+                <h5 class="card-title mb-0"><i class="bi bi-clock-history text-primary me-2"></i>{{ lang('recent_activities', 'Son Aktiviteler') }}</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th scope="col" class="ps-4">{{ lang('user', 'Kullanıcı') }}</th>
+                                <th scope="col">{{ lang('action', 'İşlem') }}</th>
+                                <th scope="col">{{ lang('date', 'Tarih') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if recent_activities %}
+                                {% for activity in recent_activities %}
+                                <tr>
+                                    <td class="ps-4">
+                                        <div class="d-flex align-items-center">
+                                            <div class="rounded-circle bg-light text-primary d-flex align-items-center justify-content-center me-2" style="width: 35px; height: 35px; font-weight: bold;">
+                                                {{ activity.username[0] | upper if activity.username else '?' }}
+                                            </div>
+                                            <span class="fw-bold text-dark">{{ activity.username }}</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-light text-dark border">{{ activity.action }}</span>
+                                        <small class="text-muted d-block mt-1">{{ activity.details }}</small>
+                                    </td>
+                                    <td class="text-muted small">{{ activity.timestamp }}</td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                            <tr>
+                                <td colspan="3" class="text-center py-4 text-muted">
+                                    {{ lang('no_recent_activity', 'Henüz aktivite yok.') }}
+                                </td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pending Actions -->
+    <div class="col-lg-4 mb-3">
+        <div class="card h-100 shadow-sm border-0">
+            <div class="card-header bg-white border-0 py-3">
+                <h5 class="card-title mb-0"><i class="bi bi-exclamation-circle text-warning me-2"></i>{{ lang('pending_actions', 'Bekleyen İşler') }}</h5>
+            </div>
+            <div class="card-body">
+                {% if pending_actions %}
+                <div class="list-group list-group-flush">
+                    {% for action in pending_actions %}
+                    <a href="{{ action.link }}" class="list-group-item list-group-item-action d-flex align-items-center p-3 border-0 mb-2 rounded bg-light" style="transition: all 0.2s;">
+                        <div class="rounded bg-{{ action.type }} text-white d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px; min-width: 40px;">
+                            <i class="bi bi-bell-fill"></i>
+                        </div>
+                        <div class="flex-fill">
+                            <h6 class="mb-0 fw-bold text-dark">{{ action.title }}</h6>
+                            <small class="text-muted">{{ action.desc }}</small>
+                        </div>
+                        <i class="bi bi-chevron-right text-muted"></i>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-check-circle fs-1 text-success mb-3"></i>
+                    <p class="text-muted">{{ lang('all_caught_up', 'Harika! Bekleyen işiniz yok.') }}</p>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -94,17 +178,17 @@
 <!-- SÜRDÜRÜLEBİLİRLİK MODÜLLERİ (19 MODÜL) -->
 <div class="row mb-4">
     <div class="col-12 mb-3">
-        <h4 class="text-muted border-bottom pb-2"><i class="bi bi-grid-fill me-2"></i>{{ _('sustainability_modules') }}</h4>
+        <h4 class="text-muted border-bottom pb-2"><i class="bi bi-grid-fill me-2"></i>{{ lang('sustainability_modules') }}</h4>
     </div>
     
     <!-- Çevresel (Environmental) -->
-    <div class="col-12"><h6 class="text-success mb-3">{{ _('module_environmental') }}</h6></div>
+    <div class="col-12"><h6 class="text-success mb-3">{{ lang('module_environmental') }}</h6></div>
     
     <div class="col-md-2 mb-3">
         <div class="card h-100 text-center border-0 shadow-sm hover-card">
             <div class="card-body">
                 <i class="bi bi-cloud-haze2 fs-1 text-success mb-2"></i>
-                <h6 class="card-title">{{ _('module_carbon') }}</h6>
+                <h6 class="card-title">{{ lang('module_carbon') }}</h6>
                 <div class="progress mt-2 mb-1" style="height: 5px;">
                     <div class="progress-bar bg-success" role="progressbar" style="width: {{ module_stats.get('carbon', 0) }}%" aria-valuenow="{{ module_stats.get('carbon', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
@@ -117,7 +201,7 @@
         <div class="card h-100 text-center border-0 shadow-sm hover-card">
             <div class="card-body">
                 <i class="bi bi-lightning-charge fs-1 text-warning mb-2"></i>
-                <h6 class="card-title">{{ _('module_energy') }}</h6>
+                <h6 class="card-title">{{ lang('module_energy') }}</h6>
                 <div class="progress mt-2 mb-1" style="height: 5px;">
                     <div class="progress-bar bg-success" role="progressbar" style="width: {{ module_stats.get('energy', 0) }}%" aria-valuenow="{{ module_stats.get('energy', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
@@ -130,7 +214,7 @@
         <div class="card h-100 text-center border-0 shadow-sm hover-card">
             <div class="card-body">
                 <i class="bi bi-recycle fs-1 text-secondary mb-2"></i>
-                <h6 class="card-title">{{ _('module_waste') }}</h6>
+                <h6 class="card-title">{{ lang('module_waste') }}</h6>
                 <div class="progress mt-2 mb-1" style="height: 5px;">
                     <div class="progress-bar bg-success" role="progressbar" style="width: {{ module_stats.get('waste', 0) }}%" aria-valuenow="{{ module_stats.get('waste', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
@@ -143,7 +227,7 @@
         <div class="card h-100 text-center border-0 shadow-sm hover-card">
             <div class="card-body">
                 <i class="bi bi-droplet fs-1 text-info mb-2"></i>
-                <h6 class="card-title">{{ _('module_water') }}</h6>
+                <h6 class="card-title">{{ lang('module_water') }}</h6>
                 <div class="progress mt-2 mb-1" style="height: 5px;">
                     <div class="progress-bar bg-success" role="progressbar" style="width: {{ module_stats.get('water', 0) }}%" aria-valuenow="{{ module_stats.get('water', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
@@ -156,7 +240,7 @@
         <div class="card h-100 text-center border-0 shadow-sm hover-card">
             <div class="card-body">
                 <i class="bi bi-tree fs-1 text-success mb-2"></i>
-                <h6 class="card-title">{{ _('module_biodiversity') }}</h6>
+                <h6 class="card-title">{{ lang('module_biodiversity') }}</h6>
                 <div class="progress mt-2 mb-1" style="height: 5px;">
                     <div class="progress-bar bg-success" role="progressbar" style="width: {{ module_stats.get('biodiversity', 0) }}%" aria-valuenow="{{ module_stats.get('biodiversity', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
@@ -167,13 +251,13 @@
     </div>
 
     <!-- Sosyal & Yönetişim (Social & Governance) -->
-    <div class="col-12 mt-3"><h6 class="text-primary mb-3">{{ _('module_social_governance') }}</h6></div>
+    <div class="col-12 mt-3"><h6 class="text-primary mb-3">{{ lang('module_social_governance') }}</h6></div>
     
     <div class="col-md-2 mb-3">
         <div class="card h-100 text-center border-0 shadow-sm hover-card">
             <div class="card-body">
                 <i class="bi bi-people fs-1 text-info mb-2"></i>
-                <h6 class="card-title">{{ _('module_social_impact') }}</h6>
+                <h6 class="card-title">{{ lang('module_social_impact') }}</h6>
                 <div class="progress mt-2 mb-1" style="height: 5px;">
                     <div class="progress-bar bg-success" role="progressbar" style="width: {{ module_stats.get('social', 0) }}%" aria-valuenow="{{ module_stats.get('social', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
@@ -186,7 +270,7 @@
         <div class="card h-100 text-center border-0 shadow-sm hover-card">
             <div class="card-body">
                 <i class="bi bi-bank fs-1 text-secondary mb-2"></i>
-                <h6 class="card-title">{{ _('module_corporate_governance') }}</h6>
+                <h6 class="card-title">{{ lang('module_corporate_governance') }}</h6>
                 <div class="progress mt-2 mb-1" style="height: 5px;">
                     <div class="progress-bar bg-success" role="progressbar" style="width: {{ module_stats.get('governance', 0) }}%" aria-valuenow="{{ module_stats.get('governance', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
@@ -199,7 +283,7 @@
         <div class="card h-100 text-center border-0 shadow-sm hover-card">
             <div class="card-body">
                 <i class="bi bi-truck fs-1 text-warning mb-2"></i>
-                <h6 class="card-title">{{ _('module_supply_chain') }}</h6>
+                <h6 class="card-title">{{ lang('module_supply_chain') }}</h6>
                 <div class="progress mt-2 mb-1" style="height: 5px;">
                     <div class="progress-bar bg-success" role="progressbar" style="width: {{ module_stats.get('supply_chain', 0) }}%" aria-valuenow="{{ module_stats.get('supply_chain', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
@@ -212,7 +296,7 @@
         <div class="card h-100 text-center border-0 shadow-sm hover-card">
             <div class="card-body">
                 <i class="bi bi-cash-coin fs-1 text-success mb-2"></i>
-                <h6 class="card-title">{{ _('module_economic_value') }}</h6>
+                <h6 class="card-title">{{ lang('module_economic_value') }}</h6>
                 <div class="progress mt-2 mb-1" style="height: 5px;">
                     <div class="progress-bar bg-success" role="progressbar" style="width: {{ module_stats.get('economic', 0) }}%" aria-valuenow="{{ module_stats.get('economic', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
@@ -223,13 +307,13 @@
     </div>
 
     <!-- Çerçeveler & Standartlar (Frameworks & Standards) -->
-    <div class="col-12 mt-3"><h6 class="text-danger mb-3">{{ _('module_frameworks') }}</h6></div>
+    <div class="col-12 mt-3"><h6 class="text-danger mb-3">{{ lang('module_frameworks') }}</h6></div>
     
     <div class="col-md-2 mb-3">
         <div class="card h-100 text-center border-0 shadow-sm hover-card">
             <div class="card-body">
                 <i class="bi bi-bar-chart-steps fs-1 text-primary mb-2"></i>
-                <h6 class="card-title">{{ _('module_esg_score') }}</h6>
+                <h6 class="card-title">{{ lang('module_esg_score') }}</h6>
                 <div class="progress mt-2 mb-1" style="height: 5px;">
                     <div class="progress-bar bg-success" role="progressbar" style="width: {{ module_stats.get('esg', 0) }}%" aria-valuenow="{{ module_stats.get('esg', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
@@ -242,7 +326,7 @@
         <div class="card h-100 text-center border-0 shadow-sm hover-card">
             <div class="card-body">
                 <i class="bi bi-globe-europe-africa fs-1 text-danger mb-2"></i>
-                <h6 class="card-title">{{ _('module_cbam') }}</h6>
+                <h6 class="card-title">{{ lang('module_cbam') }}</h6>
                 <div class="progress mt-2 mb-1" style="height: 5px;">
                     <div class="progress-bar bg-success" role="progressbar" style="width: {{ module_stats.get('cbam', 0) }}%" aria-valuenow="{{ module_stats.get('cbam', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
@@ -255,7 +339,7 @@
         <div class="card h-100 text-center border-0 shadow-sm hover-card">
             <div class="card-body">
                 <i class="bi bi-file-earmark-check fs-1 text-primary mb-2"></i>
-                <h6 class="card-title">{{ _('module_csrd') }}</h6>
+                <h6 class="card-title">{{ lang('module_csrd') }}</h6>
                 <div class="progress mt-2 mb-1" style="height: 5px;">
                     <div class="progress-bar bg-success" role="progressbar" style="width: {{ module_stats.get('csrd', 0) }}%" aria-valuenow="{{ module_stats.get('csrd', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
@@ -268,7 +352,7 @@
         <div class="card h-100 text-center border-0 shadow-sm hover-card">
             <div class="card-body">
                 <i class="bi bi-diagram-3 fs-1 text-success mb-2"></i>
-                <h6 class="card-title">{{ _('module_eu_taxonomy') }}</h6>
+                <h6 class="card-title">{{ lang('module_eu_taxonomy') }}</h6>
                 <div class="progress mt-2 mb-1" style="height: 5px;">
                     <div class="progress-bar bg-success" role="progressbar" style="width: {{ module_stats.get('taxonomy', 0) }}%" aria-valuenow="{{ module_stats.get('taxonomy', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
@@ -281,7 +365,7 @@
         <div class="card h-100 text-center border-0 shadow-sm hover-card">
             <div class="card-body">
                 <i class="bi bi-journal-text fs-1 text-info mb-2"></i>
-                <h6 class="card-title">{{ _('module_gri') }}</h6>
+                <h6 class="card-title">{{ lang('module_gri') }}</h6>
                 <div class="progress mt-2 mb-1" style="height: 5px;">
                     <div class="progress-bar bg-success" role="progressbar" style="width: {{ module_stats.get('gri', 0) }}%" aria-valuenow="{{ module_stats.get('gri', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
@@ -294,7 +378,7 @@
         <div class="card h-100 text-center border-0 shadow-sm hover-card">
             <div class="card-body">
                 <i class="bi bi-bullseye fs-1 text-danger mb-2"></i>
-                <h6 class="card-title">{{ _('module_sdg') }}</h6>
+                <h6 class="card-title">{{ lang('module_sdg') }}</h6>
                 <div class="progress mt-2 mb-1" style="height: 5px;">
                     <div class="progress-bar bg-success" role="progressbar" style="width: {{ module_stats.get('sdg', 0) }}%" aria-valuenow="{{ module_stats.get('sdg', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
@@ -307,7 +391,7 @@
         <div class="card h-100 text-center border-0 shadow-sm hover-card">
             <div class="card-body">
                 <i class="bi bi-file-earmark-richtext fs-1 text-primary mb-2"></i>
-                <h6 class="card-title">{{ _('module_esrs') }}</h6>
+                <h6 class="card-title">{{ lang('module_esrs') }}</h6>
                 <div class="progress mt-2 mb-1" style="height: 5px;">
                     <div class="progress-bar bg-success" role="progressbar" style="width: {{ module_stats.get('esrs', 0) }}%" aria-valuenow="{{ module_stats.get('esrs', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
@@ -318,13 +402,13 @@
     </div>
     
     <!-- İleri Raporlama (Advanced Reporting) -->
-    <div class="col-12 mt-3"><h6 class="text-secondary mb-3">{{ _('module_advanced_reporting') }}</h6></div>
+    <div class="col-12 mt-3"><h6 class="text-secondary mb-3">{{ lang('module_advanced_reporting') }}</h6></div>
     
     <div class="col-md-2 mb-3">
         <div class="card h-100 text-center border-0 shadow-sm hover-card">
             <div class="card-body">
                 <i class="bi bi-sort-numeric-down fs-1 text-warning mb-2"></i>
-                <h6 class="card-title">{{ _('module_prioritization') }}</h6>
+                <h6 class="card-title">{{ lang('module_prioritization') }}</h6>
                 <div class="progress mt-2 mb-1" style="height: 5px;">
                     <div class="progress-bar bg-success" role="progressbar" style="width: {{ module_stats.get('prioritization', 0) }}%" aria-valuenow="{{ module_stats.get('prioritization', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
@@ -338,7 +422,7 @@
         <div class="card h-100 text-center border-0 shadow-sm hover-card">
             <div class="card-body">
                 <i class="bi bi-file-earmark-spreadsheet fs-1 text-primary mb-2"></i>
-                <h6 class="card-title">{{ _('module_ifrs') }}</h6>
+                <h6 class="card-title">{{ lang('module_ifrs') }}</h6>
                 <div class="progress mt-2 mb-1" style="height: 5px;">
                     <div class="progress-bar bg-success" role="progressbar" style="width: {{ module_stats.get('ifrs', 0) }}%" aria-valuenow="{{ module_stats.get('ifrs', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
@@ -351,7 +435,7 @@
         <div class="card h-100 text-center border-0 shadow-sm hover-card">
             <div class="card-body">
                 <i class="bi bi-cloud-sun fs-1 text-warning mb-2"></i>
-                <h6 class="card-title">{{ _('module_tcfd') }}</h6>
+                <h6 class="card-title">{{ lang('module_tcfd') }}</h6>
                 <div class="progress mt-2 mb-1" style="height: 5px;">
                     <div class="progress-bar bg-success" role="progressbar" style="width: {{ module_stats.get('tcfd', 0) }}%" aria-valuenow="{{ module_stats.get('tcfd', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
@@ -364,7 +448,7 @@
         <div class="card h-100 text-center border-0 shadow-sm hover-card">
             <div class="card-body">
                 <i class="bi bi-flower1 fs-1 text-success mb-2"></i>
-                <h6 class="card-title">{{ _('module_tnfd') }}</h6>
+                <h6 class="card-title">{{ lang('module_tnfd') }}</h6>
                 <div class="progress mt-2 mb-1" style="height: 5px;">
                     <div class="progress-bar bg-success" role="progressbar" style="width: {{ module_stats.get('tnfd', 0) }}%" aria-valuenow="{{ module_stats.get('tnfd', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
@@ -377,7 +461,7 @@
         <div class="card h-100 text-center border-0 shadow-sm hover-card">
             <div class="card-body">
                 <i class="bi bi-building-check fs-1 text-dark mb-2"></i>
-                <h6 class="card-title">{{ _('module_cdp') }}</h6>
+                <h6 class="card-title">{{ lang('module_cdp') }}</h6>
                 <div class="progress mt-2 mb-1" style="height: 5px;">
                     <div class="progress-bar bg-success" role="progressbar" style="width: {{ module_stats.get('cdp', 0) }}%" aria-valuenow="{{ module_stats.get('cdp', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
@@ -394,7 +478,7 @@
     <div class="col-md-4 mb-3">
         <div class="card shadow-sm border-0 h-100">
             <div class="card-header bg-white border-0">
-                <h5 class="mb-0"><i class="bi bi-list-ol"></i> {{ _('top_material_topics') }}</h5>
+                <h5 class="mb-0"><i class="bi bi-list-ol"></i> {{ lang('top_material_topics') }}</h5>
             </div>
             <div class="card-body">
                 {% if top_material_topics %}
@@ -407,10 +491,10 @@
                     {% endfor %}
                 </ul>
                 {% else %}
-                <p class="text-muted text-center py-3">{{ _('no_material_topics') }}</p>
+                <p class="text-muted text-center py-3">{{ lang('no_material_topics') }}</p>
                 {% endif %}
                 <div class="text-center mt-3">
-                    <a href="{{ url_for('prioritization_module') }}" class="btn btn-sm btn-outline-primary">{{ _('view_details') }}</a>
+                    <a href="{{ url_for('prioritization_module') }}" class="btn btn-sm btn-outline-primary">{{ lang('view_details') }}</a>
                 </div>
             </div>
         </div>
@@ -420,17 +504,17 @@
     <div class="col-md-4 mb-3">
         <div class="card shadow-sm border-0 h-100">
             <div class="card-header bg-white border-0">
-                <h5 class="mb-0"><i class="bi bi-check-circle"></i> {{ _('esrs_status') }}</h5>
+                <h5 class="mb-0"><i class="bi bi-check-circle"></i> {{ lang('esrs_status') }}</h5>
             </div>
             <div class="card-body">
                 <div class="d-flex align-items-center justify-content-center h-100 flex-column">
                     <h3 class="display-6 fw-bold text-success">{{ esrs_stats.completion_rate }}%</h3>
-                    <p class="text-muted">{{ _('completion_rate') }}</p>
+                    <p class="text-muted">{{ lang('completion_rate') }}</p>
                     <div class="progress w-75 mt-2" style="height: 10px;">
                         <div class="progress-bar bg-success" role="progressbar" style="width: {{ esrs_stats.completion_rate }}%" aria-valuenow="{{ esrs_stats.completion_rate }}" aria-valuemin="0" aria-valuemax="100"></div>
                     </div>
                     <div class="text-center mt-4">
-                        <a href="{{ url_for('esrs_module') }}" class="btn btn-sm btn-outline-success">{{ _('view_details') }}</a>
+                        <a href="{{ url_for('esrs_module') }}" class="btn btn-sm btn-outline-success">{{ lang('view_details') }}</a>
                     </div>
                 </div>
             </div>
@@ -441,10 +525,24 @@
     <div class="col-md-4 mb-3">
         <div class="card shadow-sm border-0 h-100">
             <div class="card-header bg-white border-0">
-                <h5 class="mb-0"><i class="bi bi-pie-chart-fill"></i> {{ _('chart_emission_dist') }}</h5>
+                <h5 class="mb-0"><i class="bi bi-pie-chart-fill"></i> {{ lang('chart_emission_dist') }}</h5>
             </div>
             <div class="card-body">
                 <canvas id="emissionsChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ISO 26000 Sosyal Performans -->
+<div class="row mb-4">
+    <div class="col-md-6 mb-3">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0"><i class="bi bi-people"></i> {{ lang('social_performance', 'Sosyal Performans (ISO 26000)') }}</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="socialPerformanceChart"></canvas>
             </div>
         </div>
     </div>
@@ -455,7 +553,7 @@
     <div class="col-12">
         <div class="card shadow-sm border-0 h-100">
             <div class="card-header bg-white border-0">
-                <h5 class="mb-0"><i class="bi bi-graph-up"></i> {{ _('chart_emission_trend') }}</h5>
+                <h5 class="mb-0"><i class="bi bi-graph-up"></i> {{ lang('chart_emission_trend') }}</h5>
             </div>
             <div class="card-body">
                 <canvas id="trendChart" height="80"></canvas>
@@ -471,7 +569,7 @@
     new Chart(emissionsCtx, {
         type: 'doughnut',
         data: {
-            labels: ["{{ _('scope_1') }}", "{{ _('scope_2') }}", "{{ _('scope_3') }}"],
+            labels: ["{{ lang('scope_1') }}", "{{ lang('scope_2') }}", "{{ lang('scope_3') }}"],
             datasets: [{
                 data: [30, 45, 25],
                 backgroundColor: ['#ff6384', '#36a2eb', '#ffce56']
@@ -479,13 +577,55 @@
         }
     });
     
+    // ISO 26000 Social Performance Radar Chart
+    const socialCtx = document.getElementById('socialPerformanceChart').getContext('2d');
+    new Chart(socialCtx, {
+        type: 'radar',
+        data: {
+            labels: [
+                "{{ lang('satisfaction', 'Memnuniyet') }}", 
+                "{{ lang('training', 'Eğitim') }}", 
+                "{{ lang('ohs', 'İSG') }}", 
+                "{{ lang('human_rights', 'İnsan Hakları') }}", 
+                "{{ lang('fair_labor', 'Adil Çalışma') }}"
+            ],
+            datasets: [{
+                label: "{{ lang('social_score', 'Sosyal Skor') }}",
+                data: {{ social_chart_data | tojson }},
+                fill: true,
+                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                borderColor: 'rgb(54, 162, 235)',
+                pointBackgroundColor: 'rgb(54, 162, 235)',
+                pointBorderColor: '#fff',
+                pointHoverBackgroundColor: '#fff',
+                pointHoverBorderColor: 'rgb(54, 162, 235)'
+            }]
+        },
+        options: {
+            elements: {
+                line: {
+                    borderWidth: 3
+                }
+            },
+            scales: {
+                r: {
+                    angleLines: {
+                        display: true
+                    },
+                    suggestedMin: 0,
+                    suggestedMax: 100
+                }
+            }
+        }
+    });
+
     const trendCtx = document.getElementById('trendChart').getContext('2d');
     new Chart(trendCtx, {
         type: 'line',
         data: {
-            labels: ["{{ _('month_jan') }}", "{{ _('month_feb') }}", "{{ _('month_mar') }}", "{{ _('month_apr') }}", "{{ _('month_may') }}", "{{ _('month_jun') }}"],
+            labels: ["{{ lang('month_jan') }}", "{{ lang('month_feb') }}", "{{ lang('month_mar') }}", "{{ lang('month_apr') }}", "{{ lang('month_may') }}", "{{ lang('month_jun') }}"],
             datasets: [{
-                label: "{{ _('emission_tco2e') }}",
+                label: "{{ lang('emission_tco2e') }}",
                 data: [65, 59, 80, 81, 56, 55],
                 borderColor: '#4bc0c0',
                 fill: false

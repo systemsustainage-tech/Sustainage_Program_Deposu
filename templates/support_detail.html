@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - SDG{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="card shadow mb-4">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">
+                    <span class="badge bg-secondary me-2">#{{ ticket.id }}</span>
+                    {{ ticket.subject }}
+                </h4>
+                <div>
+                    <span class="badge {% if ticket.status == 'open' %}bg-info text-dark{% elif ticket.status == 'answered' %}bg-primary{% else %}bg-secondary{% endif %} me-2">
+                        {{ ticket.status|upper }}
+                    </span>
+                    <a href="{{ url_for('support_dashboard') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i> Geri</a>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <strong>Kategori:</strong> 
+                        {% if ticket.category == 'technical' %}Teknik Sorun
+                        {% elif ticket.category == 'account' %}Hesap İşlemleri
+                        {% elif ticket.category == 'data' %}Veri Girişi
+                        {% elif ticket.category == 'report' %}Raporlama
+                        {% else %}Diğer{% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <strong>Öncelik:</strong>
+                        {% if ticket.priority == 'high' %}<span class="text-danger">Yüksek</span>
+                        {% elif ticket.priority == 'medium' %}<span class="text-warning">Orta</span>
+                        {% elif ticket.priority == 'low' %}<span class="text-success">Düşük</span>
+                        {% else %}{{ ticket.priority }}{% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <strong>Tarih:</strong> {{ ticket.created_at[:16] }}
+                    </div>
+                </div>
+                <div class="p-3 bg-light rounded border">
+                    {{ ticket.message }}
+                </div>
+            </div>
+        </div>
+
+        <h5 class="mb-3">Yanıtlar</h5>
+        {% if ticket.replies %}
+            {% for reply in ticket.replies %}
+            <div class="card shadow-sm mb-3 {% if reply.is_admin %}border-primary{% endif %}">
+                <div class="card-header {% if reply.is_admin %}bg-primary text-white{% else %}bg-light{% endif %} d-flex justify-content-between">
+                    <span>
+                        <i class="bi {% if reply.is_admin %}bi-shield-check{% else %}bi-person{% endif %} me-1"></i>
+                        <strong>{{ reply.user_name if reply.user_name else ( 'Destek Ekibi' if reply.is_admin else 'Kullanıcı') }}</strong>
+                    </span>
+                    <small>{{ reply.created_at[:16] }}</small>
+                </div>
+                <div class="card-body">
+                    {{ reply.message }}
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p class="text-muted text-center mb-4">Henüz bir yanıt yok.</p>
+        {% endif %}
+
+        {% if ticket.status != 'closed' %}
+        <div class="card shadow mt-4">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="bi bi-reply"></i> Yanıt Gönder</h6>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    <div class="mb-3">
+                        <textarea class="form-control" name="message" rows="4" placeholder="Mesajınız..." required></textarea>
+                    </div>
+                    <div class="d-flex justify-content-end">
+                        <button type="submit" class="btn btn-primary">Gönder</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

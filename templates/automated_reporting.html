@@ -1,20 +1,20 @@
 {% extends "base.html" %}
 
-{% block title %}{{ _('automated_reporting_title', 'Automated Reporting') }} - SDG{% endblock %}
+{% block title %}{{ lang('automated_reporting_title', 'Automated Reporting') }} - SDG{% endblock %}
 
 {% block content %}
 
 <div class="row mb-4">
 <div class="col-md-12">
 <div class="d-flex justify-content-between align-items-center">
-<h1><i class="fas fa-cube me-2"></i>{{ _('automated_reporting_title', 'Automated Reporting') }}</h1>
+<h1><i class="fas fa-cube me-2"></i>{{ lang('automated_reporting_title', 'Automated Reporting') }}</h1>
 <div>
 <span class="badge bg-{{ 'success' if manager_available else 'secondary' }}">
-                    {{ _('module_active_badge') if manager_available else _('module_passive_badge') }}
+                    {{ lang('module_active_badge') if manager_available else _('module_passive_badge') }}
                 </span>
-<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}</button></div>
 </div>
-<p class="lead text-muted">{{ _('automated_reporting_desc', 'Module description for Automated Reporting') }}</p>
+<p class="lead text-muted">{{ lang('automated_reporting_desc', 'Module description for Automated Reporting') }}</p>
 </div>
 </div>
 <div class="row">
@@ -29,7 +29,7 @@
                             <div class="col-12 mb-4">
 <div class="card">
 <div class="card-header">
-<h5 class="mb-0">{{ _('statistics', 'İstatistikler') }}</h5>
+<h5 class="mb-0">{{ lang('statistics', 'İstatistikler') }}</h5>
 </div>
 <div class="card-body">
 <div class="row">
@@ -51,9 +51,9 @@
                             <div class="col-12">
 <div class="card">
 <div class="card-header d-flex justify-content-between align-items-center">
-<h5 class="mb-0">{{ _('records', 'Kayıtlar') }}</h5>
+<h5 class="mb-0">{{ lang('records', 'Kayıtlar') }}</h5>
 <button class="btn btn-sm btn-primary">
-<i class="fas fa-plus"></i> {{ _('add_new', 'Yeni Ekle') }}
+<i class="fas fa-plus"></i> {{ lang('add_new', 'Yeni Ekle') }}
                                         </button>
 </div>
 <div class="card-body">
@@ -66,7 +66,7 @@
                                                             <th>{{ col|replace('_', ' ')|title }}</th>
                                                             {% endfor %}
                                                         {% else %}
-                                                            <th>{{ _('details', 'Detaylar') }}</th>
+                                                            <th>{{ lang('details', 'Detaylar') }}</th>
                                                         {% endif %}
                                                     </tr>
 </thead>
@@ -98,9 +98,9 @@
                         <!-- Fallback to Under Construction if no data -->
 <div class="text-center py-5">
 <i class="bi bi-cone-striped display-1 text-warning mb-3"></i>
-<h3>{{ _('module_under_construction') }}</h3>
-<p class="text-muted">{{ _('module_coming_soon_desc', 'Bu modülün web arayüzü entegrasyonu devam etmektedir.') }}</p>
-<p class="small text-muted">{{ _('no_data_msg', 'Veri bulunamadı veya modül henüz aktif değil.') }}</p>
+<h3>{{ lang('module_under_construction') }}</h3>
+<p class="text-muted">{{ lang('module_coming_soon_desc', 'Bu modülün web arayüzü entegrasyonu devam etmektedir.') }}</p>
+<p class="small text-muted">{{ lang('no_data_msg', 'Veri bulunamadı veya modül henüz aktif değil.') }}</p>
 </div>
                     {% endif %}
 

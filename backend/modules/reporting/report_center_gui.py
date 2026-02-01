@@ -593,7 +593,7 @@ class ReportCenterGUI:
         # Önizleme alanı (basit metin gösterimi)
         preview_text = tk.Text(preview_win, wrap='word', height=15)
         preview_text.pack(fill='both', expand=True, padx=20, pady=10)
-        preview_text.insert('1.0', f"{self.lm.tr('report', 'Rapor')}: {report['report_name']}\n\n"
+        preview_text.insert('1.0', f"{self.lm.tr("report_label", "Rapor")}: {report['report_name']}\n\n"
                                   f"{self.lm.tr('file_path', 'Dosya yolu')}: {report['file_path']}\n\n"
                                   + self.lm.tr('use_open_button', "Tam önizleme için 'Aç' butonunu kullanın."))
         preview_text.config(state='disabled')

@@ -169,6 +169,36 @@ class SectorBenchmarkDatabase:
         finally:
             conn.close()
 
+    def get_all_metrics_for_sector(self, sector_code: str, data_year: int = 2024) -> Dict[str, Dict]:
+        """Sektörün tüm metriklerini getirir (Trend bilgisi ile birlikte)"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        try:
+            # Sektör ortalamaları ve trend bilgisini birleştir
+            cursor.execute("""
+                SELECT a.*, t.trend_direction, t.yoy_change
+                FROM sector_averages a
+                LEFT JOIN sector_trends t 
+                ON a.sector_code = t.sector_code 
+                AND a.metric_code = t.metric_code 
+                AND a.data_year = t.year
+                WHERE a.sector_code = ? AND a.data_year = ?
+            """, (sector_code, data_year))
+
+            columns = [col[0] for col in cursor.description]
+            results = {}
+            for row in cursor.fetchall():
+                data = dict(zip(columns, row))
+                results[data['metric_code']] = data
+            return results
+
+        except Exception as e:
+            logging.error(f"Sektör metrikleri getirme hatasi: {e}")
+            return {}
+        finally:
+            conn.close()
+
     def _populate_benchmark_data(self) -> None:
         """Benchmark verilerini doldur - GERÇEK VERİLER"""
         conn = sqlite3.connect(self.db_path)

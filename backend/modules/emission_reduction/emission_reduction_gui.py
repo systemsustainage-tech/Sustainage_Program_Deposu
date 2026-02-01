@@ -626,7 +626,7 @@ class EmissionReductionGUI:
         summary += f"{self.lm.tr('company_id', 'Şirket ID')}: {self.company_id}\n"
         summary += self.lm.tr("report_detail_hint", "Detaylı rapor için:\nSol menü → Raporlar → Emisyon Raporu")
 
-        messagebox.showinfo(self.lm.tr("report", "Rapor"), summary)
+        messagebox.showinfo(self.lm.tr("report_label", "Rapor"), summary)
 
     def export_to_excel(self) -> None:
         """Excel'e aktar"""

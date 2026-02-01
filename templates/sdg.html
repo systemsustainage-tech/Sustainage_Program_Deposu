@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{{ _('sdg_title') }} - SDG Platform{% endblock %}
+{% block title %}{{ lang('sdg_title') }} - SDG Platform{% endblock %}
 
 {% block content %}
 
@@ -56,14 +56,14 @@
 <div class="col-12">
 <div class="d-flex justify-content-between align-items-center">
 <div>
-<h1 class="h3 mb-0 text-gray-800"><i class="fas fa-globe-americas me-2"></i>{{ _('sdg_title') }}</h1>
-<p class="text-muted small mb-0">{{ _('sdg_desc') }}</p>
+<h1 class="h3 mb-0 text-gray-800"><i class="fas fa-globe-americas me-2"></i>{{ lang('sdg_title') }}</h1>
+<p class="text-muted small mb-0">{{ lang('sdg_desc') }}</p>
 </div>
 <div>
 <span class="badge bg-{{ 'success' if manager_available else 'danger' }}">
-                        {{ _('module_active_badge') if manager_available else _('module_passive_badge') }}
+                        {{ lang('module_active_badge') if manager_available else _('module_passive_badge') }}
                     </span>
-<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}</button></div>
 </div>
 </div>
 </div>
@@ -74,7 +74,7 @@
 <div class="card-body">
 <div class="row no-gutters align-items-center">
 <div class="col mr-2">
-<div class="text-xs font-weight-bold text-primary text-uppercase mb-1">{{ _('sdg_total_goals') }}</div>
+<div class="text-xs font-weight-bold text-primary text-uppercase mb-1">{{ lang('sdg_total_goals') }}</div>
 <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.total_goals }}</div>
 </div>
 <div class="col-auto">
@@ -89,7 +89,7 @@
 <div class="card-body">
 <div class="row no-gutters align-items-center">
 <div class="col mr-2">
-<div class="text-xs font-weight-bold text-success text-uppercase mb-1">{{ _('sdg_completed_actions') }}</div>
+<div class="text-xs font-weight-bold text-success text-uppercase mb-1">{{ lang('sdg_completed_actions') }}</div>
 <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.completed_actions }}</div>
 </div>
 <div class="col-auto">
@@ -104,7 +104,7 @@
 <div class="card-body">
 <div class="row no-gutters align-items-center">
 <div class="col mr-2">
-<div class="text-xs font-weight-bold text-info text-uppercase mb-1">{{ _('sdg_avg_progress') }}</div>
+<div class="text-xs font-weight-bold text-info text-uppercase mb-1">{{ lang('sdg_avg_progress') }}</div>
 <div class="row no-gutters align-items-center">
 <div class="col-auto">
 <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800">%{{ stats.avg_progress }}</div>
@@ -129,7 +129,7 @@
 <div class="col-12">
 <div class="card shadow">
 <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-<h6 class="m-0 font-weight-bold text-primary">{{ _('sdg_goal_selection') }}</h6>
+<h6 class="m-0 font-weight-bold text-primary">{{ lang('sdg_goal_selection') }}</h6>
 <form action="{{ url_for('sdg_module') }}" id="sdgForm" method="POST">
 <input name="save_selections" type="hidden" value="1"/>
 <div id="hiddenInputs">
@@ -138,7 +138,7 @@
                             {% endfor %}
                         </div>
 <button class="btn btn-primary btn-sm" type="submit">
-<i class="fas fa-save me-1"></i> {{ _('sdg_save_selections', 'Seçimleri Kaydet') }}
+<i class="fas fa-save me-1"></i> {{ lang('sdg_save_selections', 'Seçimleri Kaydet') }}
                         </button>
 </form>
 </div>
@@ -146,7 +146,7 @@
 <div class="row">
 <!-- Left Panel: Available Goals -->
 <div class="col-md-6">
-<h5 class="panel-title text-center"><i class="fas fa-list me-2"></i>{{ _('sdg_available_goals') }}</h5>
+<h5 class="panel-title text-center"><i class="fas fa-list me-2"></i>{{ lang('sdg_available_goals') }}</h5>
 <div class="goal-list" id="availableGoalsList">
                                 {% for goal in all_goals %}
                                     {% if goal.id not in selected_ids %}
@@ -165,7 +165,7 @@
 </div>
 <!-- Right Panel: Selected Goals -->
 <div class="col-md-6">
-<h5 class="panel-title text-center text-success"><i class="fas fa-check-square me-2"></i>{{ _('sdg_selected_goals') }}</h5>
+<h5 class="panel-title text-center text-success"><i class="fas fa-check-square me-2"></i>{{ lang('sdg_selected_goals') }}</h5>
 <div class="goal-list" id="selectedGoalsList">
                                 {% for goal in all_goals %}
                                     {% if goal.id in selected_ids %}
@@ -216,7 +216,7 @@
                                         <div class="d-flex align-items-center">
                                             <i class="fas fa-link me-3 fs-4"></i>
                                             <div>
-                                                <strong>{{ _('related_module') }}:</strong>
+                                                <strong>{{ lang('related_module') }}:</strong>
                                                 <span class="ms-1">{{ detail.module_link.name }}</span>
                                             </div>
                                         </div>
@@ -285,11 +285,11 @@
 <div class="col-12">
 <div class="card shadow mb-4">
 <div class="card-header py-3">
-<h6 class="m-0 font-weight-bold text-primary">{{ _('recent_data') }}</h6>
+<h6 class="m-0 font-weight-bold text-primary">{{ lang('recent_data') }}</h6>
 </div>
 <div class="card-body">
 <div class="table-responsive">
-<table cellspacing="0" class="table table-bordered" width="100%">
+<table cellspacing="0" class="table table-bordered" width="100%" id="dataTable">
 <thead>
 <tr>
 <th>Tarih</th>
@@ -299,21 +299,15 @@
 </tr>
 </thead>
 <tbody>
-                                {% if recent_data %}
-                                    {% for item in recent_data %}
-                                    <tr>
+                            {% for item in recent_data %}
+                            <tr>
 <td>{{ item.created_at[:10] }}</td>
 <td>{{ item.indicator_name }}</td>
 <td><span class="badge bg-primary">{{ item.value }}</span></td>
 <td>{{ item.action }}</td>
 </tr>
-                                    {% endfor %}
-                                {% else %}
-                                    <tr>
-<td class="text-center" colspan="4">{{ _('no_data_yet') }}</td>
-</tr>
-                                {% endif %}
-                            </tbody>
+                            {% endfor %}
+                        </tbody>
 </table>
 </div>
 </div>
@@ -325,7 +319,7 @@
 <div class="modal-dialog">
 <div class="modal-content">
 <div class="modal-header">
-<h5 class="modal-title" id="addSDGDataModalLabel">{{ _('btn_add_data') }}</h5>
+<h5 class="modal-title" id="addSDGDataModalLabel">{{ lang('btn_add_data') }}</h5>
 <button aria-label="Close" class="btn-close" data-bs-dismiss="modal" type="button"></button>
 </div>
 <form action="{{ url_for('sdg_add') }}" method="POST">
@@ -336,19 +330,19 @@
 <span class="fw-bold" id="modal_indicator_display"></span>
 </div>
 <div class="mb-3">
-<label class="form-label" for="year">{{ _('year') }}</label>
+<label class="form-label" for="year">{{ lang('year') }}</label>
 <input class="form-control" id="year" name="year" required="" type="number" value="2025"/>
 </div>
 <div class="mb-3">
-<label class="form-label" for="value">{{ _('value') }} <span class="text-muted small" id="modal_unit_display"></span></label>
+<label class="form-label" for="value">{{ lang('value') }} <span class="text-muted small" id="modal_unit_display"></span></label>
 <input class="form-control" id="value" name="value" required="" step="0.01" type="number"/>
 </div>
 <div class="mb-3">
-<label class="form-label" for="progress_pct">{{ _('progress_pct') }} (0-100)</label>
+<label class="form-label" for="progress_pct">{{ lang('progress_pct') }} (0-100)</label>
 <input class="form-control" id="progress_pct" max="100" min="0" name="progress_pct" type="number"/>
 </div>
 <div class="mb-3">
-<label class="form-label" for="status">{{ _('status') }}</label>
+<label class="form-label" for="status">{{ lang('status_label') }}</label>
 <select class="form-select" id="status" name="status">
 <option value="Başlanmadı">Başlanmadı</option>
 <option value="Devam Ediyor">Devam Ediyor</option>
@@ -356,13 +350,13 @@
 </select>
 </div>
 <div class="mb-3">
-<label class="form-label" for="action">{{ _('description') }} / Aksiyon</label>
+<label class="form-label" for="action">{{ lang('description') }} / Aksiyon</label>
 <textarea class="form-control" id="action" name="action" rows="3"></textarea>
 </div>
 </div>
 <div class="modal-footer">
-<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ _('cancel') }}</button>
-<button class="btn btn-primary" type="submit">{{ _('save') }}</button>
+<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ lang('cancel') }}</button>
+<button class="btn btn-primary" type="submit">{{ lang('save') }}</button>
 </div>
 </form>
 </div>

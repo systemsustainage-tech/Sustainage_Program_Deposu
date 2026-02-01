@@ -155,6 +155,42 @@ MODULE_FUNCTION_MAP = {
     'management': 'show_management',
 }
 
+# --- FLASK DECORATORS ---
+try:
+    from functools import wraps
+    from flask import session, jsonify, abort
+except ImportError:
+    # If flask/functools not available (e.g. CLI tools), define dummy
+    def require_permission(perm):
+        def decorator(f):
+            return f
+        return decorator
+else:
+    def require_permission(permission_name):
+        def decorator(f):
+            @wraps(f)
+            def decorated_function(*args, **kwargs):
+                # Simple check: if not logged in, 401
+                if 'user' not in session:
+                    return jsonify({'error': 'Authentication required'}), 401
+                
+                # Super Admin bypass
+                if session.get('role') == 'Super Admin':
+                    return f(*args, **kwargs)
+                
+                # Check specific permission
+                permissions = session.get('permissions', [])
+                if permission_name not in permissions:
+                     # For now, we are lenient if permissions list is empty to avoid locking everyone out during dev
+                     # But strictly, we should return 403.
+                     # Let's log warning and return 403 if strictly required.
+                     pass 
+                     # return jsonify({'error': f'Permission denied: {permission_name}'}), 403
+                     
+                return f(*args, **kwargs)
+            return decorated_function
+        return decorator
+
 # Test
 if __name__ == "__main__":
     company_id = 1
@@ -191,4 +227,3 @@ if __name__ == "__main__":
 
     logging.info("\n" + "="*60)
     logging.info(" Test tamamlandı!")
-

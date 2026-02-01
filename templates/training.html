@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+{% from "includes/pagination.html" import render_pagination %}
+
+{% block title %}{{ lang('training_title', 'Eğitim Yönetimi') }} - SDG{% endblock %}
+
+{% block content %}
+
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1><i class="fas fa-graduation-cap me-2"></i>{{ lang('training_title', 'Eğitim Yönetimi') }}</h1>
+            <div>
+                <span class="badge bg-{{ 'success' if manager_available else 'danger' }}">
+                    {{ lang('module_active_badge') if manager_available else _('module_passive_badge') }}
+                </span>
+                <button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}</button>
+            </div>
+        </div>
+        <p class="lead text-muted">{{ lang('training_desc', 'Kurumsal eğitim programlarını ve çalışan katılımlarını yönetin.') }}</p>
+    </div>
+</div>
+
+{% if manager_available %}
+
+<div class="row">
+    <!-- Programs Section -->
+    <div class="col-md-12 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-book me-2"></i>{{ lang('training_programs', 'Eğitim Programları') }}</h5>
+                <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addProgramModal">
+                    <i class="fas fa-plus me-1"></i> {{ lang('add_new', 'Yeni Ekle') }}
+                </button>
+            </div>
+            <div class="card-body">
+                {% if programs %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>{{ lang('title', 'Başlık') }}</th>
+                                <th>{{ lang('type', 'Tür') }}</th>
+                                <th>{{ lang('duration', 'Süre (dk)') }}</th>
+                                <th>{{ lang('created_at', 'Oluşturulma Tarihi') }}</th>
+                                <th>{{ lang('actions', 'İşlemler') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for program in programs %}
+                            <tr>
+                                <td>
+                                    <strong>{{ program.title }}</strong>
+                                    <br>
+                                    <small class="text-muted">{{ program.description }}</small>
+                                </td>
+                                <td>
+                                    {% if program.training_type == 'online' %}
+                                    <span class="badge bg-info">Online</span>
+                                    {% else %}
+                                    <span class="badge bg-warning">Yüz Yüze</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ program.duration_minutes }}</td>
+                                <td>{{ program.created_at }}</td>
+                                <td>
+                                    {% if program.content_url %}
+                                    <a href="{{ program.content_url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-external-link-alt"></i>
+                                    </a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% if pagination %}
+                {{ render_pagination(pagination, 'training_module') }}
+                {% endif %}
+                {% else %}
+                <div class="alert alert-info">
+                    {{ lang('no_programs', 'Henüz kayıtlı bir eğitim programı bulunmuyor.') }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Records Section -->
+    <div class="col-md-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-user-check me-2"></i>{{ lang('training_records', 'Eğitim Kayıtları') }}</h5>
+                <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addRecordModal">
+                    <i class="fas fa-plus me-1"></i> {{ lang('add_record', 'Kayıt Ekle') }}
+                </button>
+            </div>
+            <div class="card-body">
+                {% if records %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>{{ lang('participant', 'Katılımcı') }}</th>
+                                <th>{{ lang('training', 'Eğitim') }}</th>
+                                <th>{{ lang('status_label', 'Durum') }}</th>
+                                <th>{{ lang('score', 'Puan') }}</th>
+                                <th>{{ lang('completion_date', 'Tamamlanma Tarihi') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for record in records %}
+                            <tr>
+                                <td>{{ record.participant_name }}</td>
+                                <td>{{ record.training_title }}</td>
+                                <td>
+                                    {% if record.status == 'completed' %}
+                                    <span class="badge bg-success">{{ lang('completed', 'Tamamlandı') }}</span>
+                                    {% elif record.status == 'failed' %}
+                                    <span class="badge bg-danger">{{ lang('failed', 'Başarısız') }}</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">{{ lang('assigned', 'Atandı') }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ record.score if record.score is not none else '-' }}</td>
+                                <td>{{ record.completion_date if record.completion_date else '-' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    {{ lang('no_records', 'Henüz bir eğitim kaydı bulunmuyor.') }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Program Modal -->
+<div class="modal fade" id="addProgramModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ lang('add_training_program', 'Yeni Eğitim Programı Ekle') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('training_add_program') }}" method="post">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">{{ lang('title', 'Başlık') }}</label>
+                        <input type="text" class="form-control" name="title" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ lang('description', 'Açıklama') }}</label>
+                        <textarea class="form-control" name="description" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ lang('type', 'Tür') }}</label>
+                        <select class="form-select" name="training_type">
+                            <option value="online">Online</option>
+                            <option value="in_person">{{ lang('in_person', 'Yüz Yüze') }}</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ lang('duration_minutes', 'Süre (Dakika)') }}</label>
+                        <input type="number" class="form-control" name="duration_minutes" value="60">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ lang('content_url', 'İçerik Bağlantısı') }}</label>
+                        <input type="url" class="form-control" name="content_url">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ lang('cancel', 'İptal') }}</button>
+                    <button type="submit" class="btn btn-primary">{{ lang('save', 'Kaydet') }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Add Record Modal -->
+<div class="modal fade" id="addRecordModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ lang('add_training_record', 'Yeni Eğitim Kaydı Ekle') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('training_add_record') }}" method="post">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">{{ lang('training', 'Eğitim') }}</label>
+                        <select class="form-select" name="training_id" required>
+                            {% for program in programs %}
+                            <option value="{{ program.id }}">{{ program.title }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ lang('participant', 'Katılımcı Adı') }}</label>
+                        <input type="text" class="form-control" name="participant_name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ lang('status_label', 'Durum') }}</label>
+                        <select class="form-select" name="status">
+                            <option value="assigned">{{ lang('assigned', 'Atandı') }}</option>
+                            <option value="completed">{{ lang('completed', 'Tamamlandı') }}</option>
+                            <option value="failed">{{ lang('failed', 'Başarısız') }}</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ lang('score', 'Puan (0-100)') }}</label>
+                        <input type="number" class="form-control" name="score" min="0" max="100">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ lang('cancel', 'İptal') }}</button>
+                    <button type="submit" class="btn btn-primary">{{ lang('save', 'Kaydet') }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% else %}
+<div class="alert alert-warning">
+    <i class="fas fa-exclamation-triangle me-2"></i> {{ lang('manager_not_initialized', 'Eğitim Modülü başlatılamadı.') }}
+</div>
+{% endif %}
+
+{% endblock %}

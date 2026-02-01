@@ -38,7 +38,8 @@ class UserManager:
         self.lm = LanguageManager()
         self._ensure_schema()
         # Email servisini örnek olarak tut (testlerde patch edilebilsin)
-        self.email_service = EmailService()
+        # Pass db_path to allow loading config from DB
+        self.email_service = EmailService(db_path=self.db_path)
 
     def get_companies(self) -> List[Dict]:
         """Tüm şirketleri getir"""
@@ -146,6 +147,24 @@ class UserManager:
         except Exception as e:
             logging.error(f"Error fetching role permissions: {e}")
             return []
+        finally:
+            conn.close()
+
+    def log_audit(self, company_id: int, user_id: Optional[int], action: str, resource_type: str, resource_id: Optional[str] = None, details: Optional[str] = None, ip_address: Optional[str] = None) -> bool:
+        """Denetim izi kaydı oluştur"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                INSERT INTO audit_logs (company_id, user_id, action, resource_type, resource_id, details, ip_address)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (company_id, user_id, action, resource_type, resource_id, details, ip_address))
+            conn.commit()
+            return True
+        except Exception as e:
+            conn.rollback()
+            logging.error(f"Error logging audit: {e}")
+            return False
         finally:
             conn.close()
 
@@ -666,8 +685,14 @@ class UserManager:
                     pass
 
             # Audit log
+            audit_company_id = 1
+            if 'company_ids' in user_data and user_data['company_ids']:
+                 audit_company_id = user_data['company_ids'][0]
+            elif 'company_id' in user_data:
+                 audit_company_id = user_data['company_id']
+
             self._log_audit(cursor, created_by, 'create', 'user', int(user_id if user_id is not None else -1),
-                           None, {'username': user_data['username']})
+                           None, {'username': user_data['username']}, company_id=audit_company_id)
 
             conn.commit()
 
@@ -993,7 +1018,13 @@ class UserManager:
 
             # Audit log
             new_user = self.get_user_by_id(user_id)
-            self._log_audit(cursor, updated_by, 'update', 'user', user_id, old_user, new_user)
+            
+            # Fetch company_id for audit
+            cursor.execute("SELECT company_id FROM user_companies WHERE user_id = ? ORDER BY is_primary DESC LIMIT 1", (user_id,))
+            row = cursor.fetchone()
+            audit_company_id = row[0] if row else None
+            
+            self._log_audit(cursor, updated_by, 'update', 'user', user_id, old_user, new_user, company_id=audit_company_id)
 
             conn.commit()
 
@@ -1049,11 +1080,16 @@ class UserManager:
                 UPDATE user_roles SET is_active = 0 WHERE user_id = ?
             """, (user_id,))
 
-            conn.commit()
-
             # Audit log
+            # Fetch company_id for audit
+            cursor.execute("SELECT company_id FROM user_companies WHERE user_id = ? ORDER BY is_primary DESC LIMIT 1", (user_id,))
+            row = cursor.fetchone()
+            audit_company_id = row[0] if row else None
+
             self._log_audit(cursor, deleted_by, 'delete', 'user', user_id,
-                           {'is_active': True}, {'is_active': False})
+                           {'is_active': True}, {'is_active': False}, company_id=audit_company_id)
+
+            conn.commit()
 
             return True
 
@@ -1103,24 +1139,34 @@ class UserManager:
             conn.close()
 
     # Rol İşlemleri
-    def get_roles(self) -> List[Dict]:
-        """Rolleri getir"""
+    def get_roles(self, company_id: Optional[int] = None) -> List[Dict]:
+        """Rolleri getir (Sistem rolleri + Şirket rolleri)"""
         conn = self.get_connection()
         cursor = conn.cursor()
 
         try:
-            cursor.execute("""
+            query = """
                 SELECT r.id, r.name, r.display_name, r.description, r.is_system_role,
-                       r.is_active, r.created_at, r.updated_at,
+                       r.is_active, r.created_at, r.updated_at, r.company_id,
                        COUNT(DISTINCT ur.user_id) as user_count,
                        COUNT(DISTINCT rp.permission_id) as permission_count
                 FROM roles r
                 LEFT JOIN user_roles ur ON r.id = ur.role_id AND ur.is_active = 1
                 LEFT JOIN role_permissions rp ON r.id = rp.role_id
                 WHERE r.is_active = 1
+            """
+            params = []
+            
+            if company_id:
+                query += " AND (r.is_system_role = 1 OR r.company_id = ?)"
+                params.append(company_id)
+            
+            query += """
                 GROUP BY r.id
                 ORDER BY r.name
-            """)
+            """
+            
+            cursor.execute(query, params)
 
             columns = [description[0] for description in cursor.description]
             roles = []
@@ -1173,127 +1219,6 @@ class UserManager:
         finally:
             conn.close()
 
-    def get_role_by_id(self, role_id: int) -> Optional[Dict]:
-        """ID ile rol getir"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-        try:
-            cursor.execute("""
-                SELECT id, name, display_name, description, is_system_role, is_active, created_at, updated_at
-                FROM roles WHERE id = ?
-            """, (role_id,))
-            row = cursor.fetchone()
-            if row:
-                columns = [d[0] for d in cursor.description]
-                return dict(zip(columns, row))
-            return None
-        except Exception as e:
-            logging.error(f"Error fetching role: {e}")
-            return None
-        finally:
-            conn.close()
-
-    def create_role(self, role_data: Dict, created_by: Optional[int] = None) -> int:
-        """Yeni rol oluştur"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-        try:
-            cursor.execute("""
-                INSERT INTO roles (name, display_name, description, is_system_role, is_active, created_by, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (
-                role_data['name'],
-                role_data.get('display_name', role_data['name']),
-                role_data.get('description', ''),
-                int(role_data.get('is_system_role', 0)),
-                int(role_data.get('is_active', 1)),
-                created_by,
-                datetime.now().isoformat()
-            ))
-            role_id = cursor.lastrowid
-            
-            # Yetkileri ekle
-            if 'permission_ids' in role_data:
-                for perm_id in role_data['permission_ids']:
-                    cursor.execute("INSERT OR IGNORE INTO role_permissions (role_id, permission_id, granted_by) VALUES (?, ?, ?)",
-                                   (role_id, perm_id, created_by))
-            
-            conn.commit()
-            return role_id
-        except Exception as e:
-            conn.rollback()
-            logging.error(f"Error creating role: {e}")
-            return -1
-        finally:
-            conn.close()
-
-    def update_role_full(self, role_id: int, role_data: Dict, updated_by: Optional[int] = None) -> bool:
-        """Rol güncelle"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-        try:
-            # Update fields
-            fields = []
-            values = []
-            for col in ['name', 'display_name', 'description', 'is_active']:
-                if col in role_data:
-                    fields.append(f"{col} = ?")
-                    values.append(role_data[col])
-            
-            if fields:
-                fields.append("updated_by = ?")
-                fields.append("updated_at = ?")
-                values.extend([updated_by, datetime.now().isoformat()])
-                values.append(role_id)
-                cursor.execute(f"UPDATE roles SET {', '.join(fields)} WHERE id = ?", values)
-
-            # Update permissions if provided
-            if 'permission_ids' in role_data:
-                cursor.execute("DELETE FROM role_permissions WHERE role_id = ?", (role_id,))
-                for perm_id in role_data['permission_ids']:
-                    cursor.execute("INSERT INTO role_permissions (role_id, permission_id, granted_by) VALUES (?, ?, ?)",
-                                   (role_id, perm_id, updated_by))
-            
-            conn.commit()
-            return True
-        except Exception as e:
-            conn.rollback()
-            logging.error(f"Error updating role: {e}")
-            return False
-        finally:
-            conn.close()
-
-    def delete_role(self, role_id: int) -> bool:
-        """Rol sil (sistem rolleri silinemez)"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-        try:
-            cursor.execute("SELECT is_system_role FROM roles WHERE id = ?", (role_id,))
-            row = cursor.fetchone()
-            if row and row[0]:
-                return False # System role cannot be deleted
-            
-            cursor.execute("DELETE FROM role_permissions WHERE role_id = ?", (role_id,))
-            cursor.execute("DELETE FROM user_roles WHERE role_id = ?", (role_id,))
-            cursor.execute("DELETE FROM roles WHERE id = ?", (role_id,))
-            conn.commit()
-            return True
-        except Exception as e:
-            conn.rollback()
-            logging.error(f"Error deleting role: {e}")
-            return False
-        finally:
-            conn.close()
-
-    def get_role_permissions(self, role_id: int) -> List[int]:
-        """Rolün yetki ID'lerini getir"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-        try:
-            cursor.execute("SELECT permission_id FROM role_permissions WHERE role_id = ?", (role_id,))
-            return [row[0] for row in cursor.fetchall()]
-        finally:
-            conn.close()
 
     # --- Rol CRUD ve Yetki Atama Metodları ---
     def get_role_by_id(self, role_id: int) -> Optional[Dict]:
@@ -1305,7 +1230,7 @@ class UserManager:
             cursor.execute(
                 """
                 SELECT id, name, display_name, description, is_system_role,
-                       is_active, created_at, updated_at
+                       is_active, created_at, updated_at, company_id
                 FROM roles
                 WHERE id = ?
                 """,
@@ -1330,8 +1255,8 @@ class UserManager:
         try:
             cursor.execute(
                 """
-                INSERT INTO roles (name, display_name, description, is_system_role, is_active, created_by, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO roles (name, display_name, description, is_system_role, is_active, created_by, created_at, company_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     role_data["name"],
@@ -1341,6 +1266,7 @@ class UserManager:
                     int(bool(role_data.get("is_active", True))),
                     created_by,
                     datetime.now().isoformat(),
+                    role_data.get("company_id")
                 ),
             )
             role_id = cursor.lastrowid
@@ -1367,6 +1293,7 @@ class UserManager:
                 int(role_id if role_id is not None else -1),
                 None,
                 {"name": role_data["name"], "display_name": role_data.get("display_name")},
+                company_id=role_data.get("company_id")
             )
 
             return int(role_id if role_id is not None else -1)
@@ -1377,7 +1304,7 @@ class UserManager:
         finally:
             conn.close()
 
-    def update_role_simple(self, role_id: int, role_data: Dict, updated_by: Optional[int] = None) -> bool:
+    def update_role_full(self, role_id: int, role_data: Dict, updated_by: Optional[int] = None) -> bool:
         """Rol güncelle"""
         conn = self.get_connection()
         cursor = conn.cursor()
@@ -1422,10 +1349,13 @@ class UserManager:
                         (role_id, pid, updated_by),
                     )
 
-            conn.commit()
-
             new_role = self.get_role_by_id(role_id)
-            self._log_audit(cursor, updated_by, "update", "role", role_id, old_role, new_role)
+            # Fetch company_id from old_role if available, or new_role
+            cid = old_role.get('company_id') if old_role else (new_role.get('company_id') if new_role else None)
+            
+            self._log_audit(cursor, updated_by, "update", "role", role_id, old_role, new_role, company_id=cid)
+            
+            conn.commit()
             return True
         except Exception as e:
             conn.rollback()
@@ -1454,8 +1384,6 @@ class UserManager:
                 """,
                 (deleted_by, datetime.now().isoformat(), role_id),
             )
-            conn.commit()
-
             self._log_audit(
                 cursor,
                 deleted_by,
@@ -1464,7 +1392,10 @@ class UserManager:
                 role_id,
                 {"is_active": True},
                 {"is_active": False},
+                company_id=role.get('company_id')
             )
+            
+            conn.commit()
             return True
         except Exception as e:
             conn.rollback()
@@ -1876,7 +1807,7 @@ class UserManager:
             conn.close()
 
     def _log_audit(self, cursor, user_id: Optional[int], action: str, resource_type: str,
-                   resource_id: int, old_values: Optional[Dict] = None, new_values: Optional[Dict] = None) -> None:
+                   resource_id: int, old_values: Optional[Dict] = None, new_values: Optional[Dict] = None, company_id: Optional[int] = None) -> None:
         """Audit log kaydet - Schema uyumlu versiyon"""
         try:
             old_str = json.dumps(old_values, ensure_ascii=False) if old_values else None
@@ -1886,15 +1817,16 @@ class UserManager:
             
             cursor.execute("""
                 INSERT INTO audit_logs 
-                (user_id, action, resource_type, resource_id, old_values, new_values)
-                VALUES (?, ?, ?, ?, ?, ?)
+                (user_id, action, resource_type, resource_id, old_values, new_values, company_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
             """, (
                 user_id,
                 action,
                 resource_type,
                 resource_id,
                 old_str,
-                new_str
+                new_str,
+                company_id
             ))
         except Exception as e:
             # Audit log hatası programı durdurmasın ama loglansın
@@ -2089,125 +2021,4 @@ class UserManager:
 
     # removed duplicate get_role_permissions (see above at 1089)
 
-    def create_role_simple(self, role_data: Dict, created_by: Optional[int] = None) -> bool:
-        """Yeni rol oluştur"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
 
-        try:
-            cursor.execute("""
-                INSERT INTO roles (name, display_name, description, is_system_role, is_active, created_by, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-            """, (
-                role_data['name'],
-                role_data.get('display_name', role_data['name']),
-                role_data.get('description', ''),
-                role_data.get('is_system_role', False),
-                role_data.get('is_active', True),
-                created_by
-            ))
-
-            conn.commit()
-            return True
-
-        except Exception as e:
-            logging.error(f"Rol oluşturulurken hata: {e}")
-            conn.rollback()
-            return False
-        finally:
-            conn.close()
-
-    def update_role(self, role_id: int, role_data: Dict, updated_by: Optional[int] = None) -> bool:
-        """Rol güncelle"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
-        try:
-            cursor.execute("""
-                UPDATE roles 
-                SET role_name = ?, description = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP
-                WHERE id = ?
-            """, (
-                role_data['role_name'],
-                role_data.get('description', ''),
-                role_data.get('is_active', True),
-                role_id
-            ))
-
-            conn.commit()
-            return True
-
-        except Exception as e:
-            logging.error(f"Rol güncellenirken hata: {e}")
-            conn.rollback()
-            return False
-        finally:
-            conn.close()
-
-    def delete_role_simple(self, role_id: int) -> bool:
-        """Rol sil"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
-        try:
-            # Önce rol-permission ilişkilerini sil
-            cursor.execute("DELETE FROM role_permissions WHERE role_id = ?", (role_id,))
-
-            # Sonra rolü sil
-            cursor.execute("DELETE FROM roles WHERE id = ?", (role_id,))
-
-            conn.commit()
-            return True
-
-        except Exception as e:
-            logging.error(self.lm.tr("log_role_permission_assignment_error", "Rol yetkileri atanırken hata: {}").format(e))
-            conn.rollback()
-            return False
-        finally:
-            conn.close()
-
-    def assign_role_to_user(self, user_id: int, role_id: int) -> bool:
-        """Kullanıcıya rol ata"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
-        try:
-            # Önce mevcut rolü kaldır
-            cursor.execute("DELETE FROM user_roles WHERE user_id = ?", (user_id,))
-
-            # Yeni rolü ata
-            cursor.execute("""
-                INSERT INTO user_roles (user_id, role_id, assigned_at)
-                VALUES (?, ?, CURRENT_TIMESTAMP)
-            """, (user_id, role_id))
-
-            conn.commit()
-            return True
-
-        except Exception as e:
-            logging.error(f"Kullanıcıya rol atanırken hata: {e}")
-            conn.rollback()
-            return False
-        finally:
-            conn.close()
-
-    def remove_role_from_user(self, user_id: int, role_id: int) -> bool:
-        """Kullanıcıdan rol kaldır"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
-        try:
-            cursor.execute("""
-                DELETE FROM user_roles 
-                WHERE user_id = ? AND role_id = ?
-            """, (user_id, role_id))
-
-            conn.commit()
-            return True
-
-        except Exception as e:
-            logging.error(f"Kullanıcıdan rol kaldırılırken hata: {e}")
-            conn.rollback()
-            return False
-        finally:
-            conn.close()

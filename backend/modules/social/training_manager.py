@@ -101,6 +101,21 @@ class TrainingManager:
         finally:
             conn.close()
 
+    def check_program_exists(self, company_id: int, program_name: str, period_year: int) -> bool:
+        """Check if a training program already exists"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                SELECT 1 FROM training_programs 
+                WHERE company_id = ? AND program_name = ? AND period_year = ?
+            """, (company_id, program_name, period_year))
+            return cursor.fetchone() is not None
+        except Exception:
+            return False
+        finally:
+            conn.close()
+
     def add_training_program(self, company_id: int, program_name: str, program_type: str,
                            target_audience: str = None, duration_hours: float = None,
                            cost_per_participant: float = None, max_participants: int = None,

@@ -1,20 +1,20 @@
 {% extends "base.html" %}
 
-{% block title %}{{ _('carbon_title') }} - SDG Platform{% endblock %}
+{% block title %}{{ lang('carbon_title') }} - SDG Platform{% endblock %}
 
 {% block content %}
 
 <div class="row mb-4">
 <div class="col-md-12">
 <div class="d-flex justify-content-between align-items-center">
-<h1><i class="fas fa-smog me-2"></i>{{ _('carbon_title') }}</h1>
+<h1><i class="fas fa-smog me-2"></i>{{ lang('carbon_title') }}</h1>
 <div>
 <span class="badge bg-{{ 'success' if manager_available else 'danger' }}">
-                    {{ _('module_active') if manager_available else _('module_passive') }}
+                    {{ lang('module_active') if manager_available else _('module_passive') }}
                 </span>
-<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}</button></div>
 </div>
-<p class="lead text-muted">{{ _('carbon_desc') }}</p>
+<p class="lead text-muted">{{ lang('carbon_desc') }}</p>
 </div>
 </div>
 
@@ -25,12 +25,12 @@
 <div class="card bg-light border-0">
 <div class="card-body d-flex justify-content-between align-items-center">
 <div>
-<h5 class="card-title text-muted mb-0">{{ _('total_carbon_footprint') }}</h5>
+<h5 class="card-title text-muted mb-0">{{ lang('total_carbon_footprint') }}</h5>
 <h2 class="display-4 fw-bold text-dark mb-0">{{ "{:,.2f}".format(stats.total_co2e) }} <span class="fs-4 text-muted">kg CO2e</span></h2>
 </div>
 <div class="text-end">
 <button class="btn btn-primary btn-lg" data-bs-target="#addCarbonModal" data-bs-toggle="modal" type="button">
-<i class="bi bi-plus-lg"></i> {{ _('add_new', 'Yeni Ekle') }}
+<i class="bi bi-plus-lg"></i> {{ lang('add_new', 'Yeni Ekle') }}
                     </button>
 </div>
 </div>
@@ -42,11 +42,11 @@
 <div class="card h-100 border-0 shadow-sm">
 <div class="card-body text-center">
 <i class="fas fa-fire fa-3x text-danger mb-3"></i>
-<h5 class="card-title">{{ _('scope_1_title') }}</h5>
+<h5 class="card-title">{{ lang('scope_1_title') }}</h5>
 <h3 class="fw-bold my-3">{{ "{:,.2f}".format(stats.scope1) }} <small class="text-muted fs-6">kg CO2e</small></h3>
-<p class="card-text text-muted small">{{ _('scope_1_desc') }}</p>
+<p class="card-text text-muted small">{{ lang('scope_1_desc') }}</p>
 <button class="btn btn-sm btn-outline-primary mt-2" data-bs-target="#addCarbonModal" data-bs-toggle="modal" onclick="setCarbonScope('Scope 1')" type="button">
-                    {{ _('btn_add_data') }}
+                    {{ lang('btn_add_data') }}
                 </button>
 </div>
 </div>
@@ -55,11 +55,11 @@
 <div class="card h-100 border-0 shadow-sm">
 <div class="card-body text-center">
 <i class="fas fa-bolt fa-3x text-warning mb-3"></i>
-<h5 class="card-title">{{ _('scope_2_title') }}</h5>
+<h5 class="card-title">{{ lang('scope_2_title') }}</h5>
 <h3 class="fw-bold my-3">{{ "{:,.2f}".format(stats.scope2) }} <small class="text-muted fs-6">kg CO2e</small></h3>
-<p class="card-text text-muted small">{{ _('scope_2_desc') }}</p>
+<p class="card-text text-muted small">{{ lang('scope_2_desc') }}</p>
 <button class="btn btn-sm btn-outline-primary mt-2" data-bs-target="#addCarbonModal" data-bs-toggle="modal" onclick="setCarbonScope('Scope 2')" type="button">
-                    {{ _('btn_add_data') }}
+                    {{ lang('btn_add_data') }}
                 </button>
 </div>
 </div>
@@ -68,11 +68,11 @@
 <div class="card h-100 border-0 shadow-sm">
 <div class="card-body text-center">
 <i class="fas fa-plane fa-3x text-info mb-3"></i>
-<h5 class="card-title">{{ _('scope_3_title') }}</h5>
+<h5 class="card-title">{{ lang('scope_3_title') }}</h5>
 <h3 class="fw-bold my-3">{{ "{:,.2f}".format(stats.scope3) }} <small class="text-muted fs-6">kg CO2e</small></h3>
-<p class="card-text text-muted small">{{ _('scope_3_desc') }}</p>
+<p class="card-text text-muted small">{{ lang('scope_3_desc') }}</p>
 <button class="btn btn-sm btn-outline-primary mt-2" data-bs-target="#addCarbonModal" data-bs-toggle="modal" onclick="setCarbonScope('Scope 3')" type="button">
-                    {{ _('btn_add_data') }}
+                    {{ lang('btn_add_data') }}
                 </button>
 </div>
 </div>
@@ -83,19 +83,19 @@
 <div class="col-12">
 <div class="card shadow-sm border-0">
 <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
-<h5 class="mb-0">{{ _('recent_data_entries') }}</h5>
+<h5 class="mb-0">{{ lang('recent_data_entries') }}</h5>
 </div>
 <div class="table-responsive">
 <table class="table table-hover align-middle mb-0">
 <thead class="table-light">
 <tr>
-<th>{{ _('table_scope') }}</th>
-<th>{{ _('table_category') }}</th>
-<th>{{ _('table_quantity') }}</th>
-<th>{{ _('table_unit') }}</th>
-<th>{{ _('table_emissions') }} (kg CO2e)</th>
-<th>{{ _('table_period') }}</th>
-<th>{{ _('table_date') }}</th>
+<th>{{ lang('table_scope') }}</th>
+<th>{{ lang('table_category') }}</th>
+<th>{{ lang('table_quantity') }}</th>
+<th>{{ lang('table_unit') }}</th>
+<th>{{ lang('table_emissions') }} (kg CO2e)</th>
+<th>{{ lang('table_period') }}</th>
+<th>{{ lang('table_date') }}</th>
 </tr>
 </thead>
 <tbody>
@@ -111,7 +111,7 @@
 </tr>
                         {% else %}
                         <tr>
-<td class="text-center py-4 text-muted" colspan="7">{{ _('no_data_yet') }}</td>
+<td class="text-center py-4 text-muted" colspan="7">{{ lang('no_data_yet') }}</td>
 </tr>
                         {% endfor %}
                     </tbody>
@@ -123,8 +123,8 @@
 
 {% else %}
 <div class="alert alert-warning">
-<h4 class="alert-heading">{{ _('module_load_error') }}</h4>
-<p>Karbon Yönetimi {{ _('module_unavailable') }}</p>
+<h4 class="alert-heading">{{ lang('module_load_error') }}</h4>
+<p>Karbon Yönetimi {{ lang('module_unavailable') }}</p>
 </div>
 {% endif %}
 
@@ -133,14 +133,14 @@
 <div class="modal-dialog">
 <div class="modal-content">
 <div class="modal-header">
-<h5 class="modal-title">{{ _('add_new_carbon', 'Yeni Karbon Emisyonu Ekle') }}</h5>
+<h5 class="modal-title">{{ lang('add_new_carbon', 'Yeni Karbon Emisyonu Ekle') }}</h5>
 <button aria-label="Close" class="btn-close" data-bs-dismiss="modal" type="button"></button>
 </div>
 <form action="{{ url_for('data_add') }}" method="POST">
 <input name="data_type" type="hidden" value="carbon"/>
 <div class="modal-body">
 <div class="mb-3">
-<label class="form-label" for="scope">{{ _('scope', 'Kapsam') }}</label>
+<label class="form-label" for="scope">{{ lang('scope', 'Kapsam') }}</label>
 <select class="form-select" id="scope" name="scope" onchange="updateSourceTypeOptions()" required="">
 <option value="Scope 1">Scope 1 (Doğrudan)</option>
 <option value="Scope 2">Scope 2 (Dolaylı Enerji)</option>
@@ -148,7 +148,7 @@
 </select>
 </div>
 <div class="mb-3">
-<label class="form-label" for="source_type">{{ _('source_type', 'Kaynak/Yakıt Türü') }}</label>
+<label class="form-label" for="source_type">{{ lang('source_type', 'Kaynak/Yakıt Türü') }}</label>
 <input class="form-control" id="source_type" list="sourceTypeOptions" name="source_type" placeholder="Örn: Doğalgaz, Elektrik, Uçak Yolculuğu" required="" type="text"/>
 <datalist id="sourceTypeOptions">
 <!-- Options will be populated by JS -->
@@ -156,11 +156,11 @@
 </div>
 <div class="row">
 <div class="col-md-6 mb-3">
-<label class="form-label" for="amount">{{ _('amount', 'Miktar') }}</label>
+<label class="form-label" for="amount">{{ lang('amount', 'Miktar') }}</label>
 <input class="form-control" id="amount" name="amount" required="" step="0.01" type="number"/>
 </div>
 <div class="col-md-6 mb-3">
-<label class="form-label" for="unit">{{ _('unit', 'Birim') }}</label>
+<label class="form-label" for="unit">{{ lang('unit', 'Birim') }}</label>
 <select class="form-select" id="unit" name="unit" required="">
 <option value="m3">m3</option>
 <option value="liter">Litre</option>
@@ -171,13 +171,13 @@
 </div>
 </div>
 <div class="mb-3">
-<label class="form-label" for="date">{{ _('date', 'Tarih') }}</label>
+<label class="form-label" for="date">{{ lang('date', 'Tarih') }}</label>
 <input class="form-control" id="date" name="date" required="" type="date"/>
 </div>
 </div>
 <div class="modal-footer">
-<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ _('btn_cancel', 'İptal') }}</button>
-<button class="btn btn-primary" type="submit">{{ _('btn_save', 'Kaydet') }}</button>
+<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ lang('btn_cancel', 'İptal') }}</button>
+<button class="btn btn-primary" type="submit">{{ lang('btn_save', 'Kaydet') }}</button>
 </div>
 </form>
 </div>

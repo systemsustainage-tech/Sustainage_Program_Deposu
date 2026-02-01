@@ -102,6 +102,26 @@ class StakeholderManager:
                 )
             """)
 
+            # Eksik kolon kontrolü ve ekleme (stakeholder_group)
+            try:
+                cursor.execute("PRAGMA table_info(stakeholder_surveys)")
+                columns = [info[1] for info in cursor.fetchall()]
+                
+                if 'stakeholder_group' not in columns:
+                    cursor.execute("ALTER TABLE stakeholder_surveys ADD COLUMN stakeholder_group TEXT DEFAULT 'Genel'")
+                    logging.info("stakeholder_surveys tablosuna stakeholder_group kolonu eklendi.")
+                
+                if 'response_rate' not in columns:
+                    cursor.execute("ALTER TABLE stakeholder_surveys ADD COLUMN response_rate REAL")
+                    logging.info("stakeholder_surveys tablosuna response_rate kolonu eklendi.")
+                    
+                if 'overall_satisfaction' not in columns:
+                    cursor.execute("ALTER TABLE stakeholder_surveys ADD COLUMN overall_satisfaction REAL")
+                    logging.info("stakeholder_surveys tablosuna overall_satisfaction kolonu eklendi.")
+
+            except Exception as e:
+                logging.error(f"Kolon ekleme hatası: {e}")
+
             # Anket Şablonları
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS stakeholder_survey_templates (

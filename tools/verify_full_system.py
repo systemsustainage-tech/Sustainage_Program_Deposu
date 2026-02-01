@@ -94,7 +94,8 @@ def check_modules():
         '/esg', '/csrd', '/eu_taxonomy', '/issb', '/iirc', '/esrs', '/tcfd', '/tnfd', '/cdp',
         '/gri', '/sasb', '/ungc', '/sdg',
         '/reports', '/users', '/companies', '/prioritization', '/targets',
-        '/surveys', '/cbam', '/lca', '/realtime', '/biodiversity', '/regulation'
+        '/surveys', '/cbam', '/lca', '/realtime', '/biodiversity', '/regulation', '/benchmark', '/training',
+        '/human_rights', '/labor', '/consumer', '/community'
     ]
     
     failed_modules = []

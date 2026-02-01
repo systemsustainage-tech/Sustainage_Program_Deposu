@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Dict, List
 from config.database import DB_PATH
+from backend.modules.prioritization.prioritization_manager import PrioritizationManager
 
 
 @dataclass

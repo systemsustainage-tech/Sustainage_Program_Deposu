@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 
-{% block title %}{{ _('user_edit_title') if user else _('user_new_title') }} - SDG{% endblock %}
+{% block title %}{{ lang('user_edit_title') if user else _('user_new_title') }} - SDG{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-<h1 class="h2">{{ _('user_edit_title') if user else _('user_new_title') }}</h1>
+<h1 class="h2">{{ lang('user_edit_title') if user else _('user_new_title') }}</h1>
 <div class="btn-toolbar mb-2 mb-md-0">
 
-<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}</button></div>
 </div>
 <div class="row justify-content-center">
 <div class="col-md-8">
@@ -16,19 +16,19 @@
 <form method="POST">
 <div class="row g-3">
 <div class="col-md-6">
-<label class="form-label" for="username">{{ _('lbl_username') }}</label>
+<label class="form-label" for="username">{{ lang('lbl_username') }}</label>
 <input type="text" class="form-control" id="username" name="username" value="{{ user.username if user else '' }}" required {% if user %}readonly{% endif %}>
 </div>
 <div class="col-md-6">
-<label class="form-label" for="email">{{ _('lbl_email') }}</label>
+<label class="form-label" for="email">{{ lang('lbl_email') }}</label>
 <input class="form-control" id="email" name="email" type="email" value="{{ user.email if user else '' }}"/>
 </div>
 <div class="col-md-6">
-<label class="form-label" for="full_name">{{ _('lbl_fullname') }}</label>
+<label class="form-label" for="full_name">{{ lang('lbl_fullname') }}</label>
 <input class="form-control" id="full_name" name="full_name" type="text" value="{{ user.full_name if user else '' }}"/>
 </div>
 <div class="col-md-6">
-<label class="form-label" for="roles">{{ _('lbl_roles', 'Roller') }}</label>
+<label class="form-label" for="roles">{{ lang('lbl_roles', 'Roller') }}</label>
 <select class="form-select" id="roles" name="roles" multiple size="5">
     {% if roles %}
         {% for role in roles %}
@@ -40,21 +40,21 @@
         {% endfor %}
     {% else %}
         {# Fallback for legacy support #}
-        <option value="user" {% if user and user.role == 'user' %}selected{% endif %}>{{ _('role_user') }}</option>
-        <option value="admin" {% if user and user.role == 'admin' %}selected{% endif %}>{{ _('role_admin') }}</option>
-        <option value="manager" {% if user and user.role == 'manager' %}selected{% endif %}>{{ _('role_manager') }}</option>
+        <option value="user" {% if user and user.role == 'user' %}selected{% endif %}>{{ lang('role_user') }}</option>
+        <option value="admin" {% if user and user.role == 'admin' %}selected{% endif %}>{{ lang('role_admin') }}</option>
+        <option value="manager" {% if user and user.role == 'manager' %}selected{% endif %}>{{ lang('role_manager') }}</option>
     {% endif %}
 </select>
-<div class="form-text text-muted">{{ _('help_multi_select', 'Birden fazla seçim yapmak için Ctrl tuşuna basılı tutun.') }}</div>
+<div class="form-text text-muted">{{ lang('help_multi_select', 'Birden fazla seçim yapmak için Ctrl tuşuna basılı tutun.') }}</div>
 </div>
 <div class="col-md-6">
-<label class="form-label" for="password">{{ _('lbl_password') }} {{ _('lbl_password_hint') if user else '' }}</label>
+<label class="form-label" for="password">{{ lang('lbl_password') }} {{ lang('lbl_password_hint') if user else '' }}</label>
 <input type="password" class="form-control" id="password" name="password" {% if not user %}required{% endif %}>
 </div>
 <div class="col-md-6">
-<label class="form-label" for="department">{{ _('lbl_department') }}</label>
+<label class="form-label" for="department">{{ lang('lbl_department') }}</label>
 <select class="form-select" id="department" name="department">
-<option value="">{{ _('select_department') if _('select_department') != 'select_department' else 'Departman Seçin' }}</option>
+<option value="">{{ lang('select_department') if _('select_department') != 'select_department' else 'Departman Seçin' }}</option>
                                 {% set departments = ['İnsan Kaynakları', 'Bilgi İşlem', 'Finans', 'Muhasebe', 'Üretim', 'Satış', 'Pazarlama', 'Lojistik', 'Yönetim', 'Kalite', 'Hukuk', 'İdari İşler', 'Teknik Servis', 'Sürdürülebilirlik', 'Ar-Ge'] %}
                                 {% for dept in departments %}
                                 <option value="{{ dept }}" {% if user and user.department == dept %}selected{% endif %}>{{ dept }}</option>
@@ -69,7 +69,7 @@
                             </select>
 </div>
 <div class="col-md-6">
-<label class="form-label" for="companies">{{ _('lbl_companies', 'Şirketler') }}</label>
+<label class="form-label" for="companies">{{ lang('lbl_companies', 'Şirketler') }}</label>
 <select class="form-select" id="companies" name="companies" multiple size="5">
     {% if companies %}
         {% for company in companies %}
@@ -83,17 +83,17 @@
         <option value="1" selected>Default Company</option>
     {% endif %}
 </select>
-<div class="form-text text-muted">{{ _('help_multi_select', 'Birden fazla seçim yapmak için Ctrl tuşuna basılı tutun.') }}</div>
+<div class="form-text text-muted">{{ lang('help_multi_select', 'Birden fazla seçim yapmak için Ctrl tuşuna basılı tutun.') }}</div>
 </div>
 <div class="col-12">
 <div class="form-check form-switch">
 <input class="form-check-input" type="checkbox" id="is_active" name="is_active" {% if not user or user.is_active %}checked{% endif %}>
-<label class="form-check-label" for="is_active">{{ _('lbl_user_active') }}</label>
+<label class="form-check-label" for="is_active">{{ lang('lbl_user_active') }}</label>
 </div>
 </div>
 <div class="col-12 text-end">
 <button class="btn btn-primary" type="submit">
-<i class="bi bi-save"></i> {{ _('btn_save') }}
+<i class="bi bi-save"></i> {{ lang('btn_save') }}
                             </button>
 </div>
 </div>

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{{ _('gov_title') }} - SDG{% endblock %}
+{% block title %}{{ lang('gov_title') }} - SDG{% endblock %}
 
 {% block content %}
 
@@ -8,22 +8,22 @@
 <div class="col-md-12">
 <div class="card shadow-sm border-0">
 <div class="card-body">
-<div class="d-flex justify-content-between align-items-center mb-3"><h2 class="mb-0"><i class="bi bi-bank"></i> {{ _('governance_title') }}</h2><button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
-<p class="text-muted mt-2">{{ _('gov_board_members') }}, {{ _('gov_ethics_compliance') }}</p>
+<div class="d-flex justify-content-between align-items-center mb-3"><h2 class="mb-0"><i class="bi bi-bank"></i> {{ lang('governance_title') }}</h2><button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}</button></div>
+<p class="text-muted mt-2">{{ lang('gov_board_members') }}, {{ lang('gov_ethics_compliance') }}</p>
                 {% if manager_available %}
                 <div class="alert alert-success mt-3">
-<i class="bi bi-check-circle-fill"></i> {{ _('gov_manager_active') }}
+<i class="bi bi-check-circle-fill"></i> {{ lang('gov_manager_active') }}
                 </div>
 <div class="row mt-4">
 <div class="col-md-6 mb-3">
 <div class="card h-100 shadow-sm">
 <div class="card-body text-center">
 <i class="bi bi-person-lines-fill display-4 text-dark mb-3"></i>
-<h5>{{ _('gov_board_members') }}</h5>
+<h5>{{ lang('gov_board_members') }}</h5>
 <h3 class="fw-bold">{{ stats.board_members }}</h3>
-<p class="text-muted small">{{ _('gov_board_members_stat') }}</p>
+<p class="text-muted small">{{ lang('gov_board_members_stat') }}</p>
 <button class="btn btn-sm btn-outline-dark" data-bs-target="#addBoardMemberModal" data-bs-toggle="modal" type="button">
-                                    {{ _('btn_add_data') }}
+                                    {{ lang('btn_add_data') }}
                                 </button>
 </div>
 </div>
@@ -32,11 +32,11 @@
 <div class="card h-100 shadow-sm">
 <div class="card-body text-center">
 <i class="bi bi-shield-check display-4 text-info mb-3"></i>
-<h5>{{ _('gov_ethics_compliance') }}</h5>
+<h5>{{ lang('gov_ethics_compliance') }}</h5>
 <h3 class="fw-bold">{{ stats.ethics_training }}</h3>
-<p class="text-muted small">{{ _('gov_training_hours') }}</p>
+<p class="text-muted small">{{ lang('gov_training_hours') }}</p>
 <button class="btn btn-sm btn-outline-info" data-bs-target="#addEthicsModal" data-bs-toggle="modal" type="button">
-                                    {{ _('btn_add_data') }}
+                                    {{ lang('btn_add_data') }}
                                 </button>
 </div>
 </div>
@@ -47,16 +47,16 @@
 <div class="col-12">
 <div class="card border-0 shadow-sm">
 <div class="card-header bg-light">
-<h5 class="mb-0"><i class="bi bi-clock-history"></i> {{ _('recent_activities') }}</h5>
+<h5 class="mb-0"><i class="bi bi-clock-history"></i> {{ lang('recent_activities') }}</h5>
 </div>
 <div class="card-body p-0">
 <div class="table-responsive">
 <table class="table table-hover mb-0">
 <thead class="table-light">
 <tr>
-<th>{{ _('col_type') }}</th>
-<th>{{ _('col_detail') }}</th>
-<th>{{ _('col_date') }}</th>
+<th>{{ lang('col_type') }}</th>
+<th>{{ lang('col_detail') }}</th>
+<th>{{ lang('col_date') }}</th>
 </tr>
 </thead>
 <tbody>
@@ -64,11 +64,11 @@
                                             <tr>
 <td>
                                                     {% if item.type == 'board' %}
-                                                    <span class="badge bg-dark">{{ _('gov_board') }}</span>
+                                                    <span class="badge bg-dark">{{ lang('gov_board') }}</span>
                                                     {% elif item.type == 'committee' %}
-                                                    <span class="badge bg-secondary">{{ _('gov_committee') }}</span>
+                                                    <span class="badge bg-secondary">{{ lang('gov_committee') }}</span>
                                                     {% elif item.type == 'ethics' %}
-                                                    <span class="badge bg-info">{{ _('gov_ethics') }}</span>
+                                                    <span class="badge bg-info">{{ lang('gov_ethics') }}</span>
                                                     {% else %}
                                                     {{ item.type }}
                                                     {% endif %}
@@ -78,7 +78,7 @@
 </tr>
                                             {% else %}
                                             <tr>
-<td class="text-center text-muted py-3" colspan="3">{{ _('no_data_yet') }}</td>
+<td class="text-center text-muted py-3" colspan="3">{{ lang('no_data_yet') }}</td>
 </tr>
                                             {% endfor %}
                                         </tbody>
@@ -90,7 +90,7 @@
 </div>
                 {% else %}
                 <div class="alert alert-warning mt-3">
-<i class="bi bi-exclamation-triangle-fill"></i> {{ _('manager_failed') }}
+<i class="bi bi-exclamation-triangle-fill"></i> {{ lang('manager_failed') }}
                 </div>
                 {% endif %}
             </div>
@@ -103,7 +103,7 @@
 <div class="modal-dialog">
 <div class="modal-content">
 <div class="modal-header">
-<h5 class="modal-title">{{ _('gov_add_member', 'Yönetim Kurulu Üyesi Ekle') }}</h5>
+<h5 class="modal-title">{{ lang('gov_add_member', 'Yönetim Kurulu Üyesi Ekle') }}</h5>
 <button class="btn-close" data-bs-dismiss="modal" type="button"></button>
 </div>
 <form action="{{ url_for('data_add') }}" method="POST">
@@ -111,44 +111,44 @@
 <input name="data_type" type="hidden" value="governance"/>
 <input name="governance_category" type="hidden" value="board"/>
 <div class="mb-3">
-<label class="form-label">{{ _('gov_member_name', 'Ad Soyad') }}</label>
+<label class="form-label">{{ lang('gov_member_name', 'Ad Soyad') }}</label>
 <input class="form-control" name="member_name" required="" type="text"/>
 </div>
 <div class="mb-3">
-<label class="form-label">{{ _('gov_position', 'Pozisyon') }}</label>
+<label class="form-label">{{ lang('gov_position', 'Pozisyon') }}</label>
 <input class="form-control" name="position" required="" type="text"/>
 </div>
 <div class="mb-3">
-<label class="form-label">{{ _('gov_member_type', 'Üye Tipi') }}</label>
+<label class="form-label">{{ lang('gov_member_type', 'Üye Tipi') }}</label>
 <select class="form-select" name="member_type">
-<option value="Executive">{{ _('gov_executive', 'İcracı (Executive)') }}</option>
-<option value="Non-Executive">{{ _('gov_non_executive', 'İcracı Olmayan (Non-Executive)') }}</option>
-<option value="Independent">{{ _('gov_independent', 'Bağımsız (Independent)') }}</option>
+<option value="Executive">{{ lang('gov_executive', 'İcracı (Executive)') }}</option>
+<option value="Non-Executive">{{ lang('gov_non_executive', 'İcracı Olmayan (Non-Executive)') }}</option>
+<option value="Independent">{{ lang('gov_independent', 'Bağımsız (Independent)') }}</option>
 </select>
 </div>
 <div class="mb-3">
-<label class="form-label">{{ _('gov_independence', 'Bağımsızlık Durumu') }}</label>
+<label class="form-label">{{ lang('gov_independence', 'Bağımsızlık Durumu') }}</label>
 <select class="form-select" name="independence_status">
-<option value="Yes">{{ _('yes', 'Evet') }}</option>
-<option value="No">{{ _('no', 'Hayır') }}</option>
+<option value="Yes">{{ lang('yes', 'Evet') }}</option>
+<option value="No">{{ lang('no', 'Hayır') }}</option>
 </select>
 </div>
 <div class="mb-3">
-<label class="form-label">{{ _('gender', 'Cinsiyet') }}</label>
+<label class="form-label">{{ lang('gender', 'Cinsiyet') }}</label>
 <select class="form-select" name="gender">
-<option value="Female">{{ _('female', 'Kadın') }}</option>
-<option value="Male">{{ _('male', 'Erkek') }}</option>
-<option value="Other">{{ _('other', 'Diğer') }}</option>
+<option value="Female">{{ lang('female', 'Kadın') }}</option>
+<option value="Male">{{ lang('male', 'Erkek') }}</option>
+<option value="Other">{{ lang('other', 'Diğer') }}</option>
 </select>
 </div>
 <div class="mb-3">
-<label class="form-label">{{ _('gov_expertise', 'Uzmanlık Alanı') }}</label>
+<label class="form-label">{{ lang('gov_expertise', 'Uzmanlık Alanı') }}</label>
 <input class="form-control" name="expertise_area" type="text"/>
 </div>
 </div>
 <div class="modal-footer">
-<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ _('btn_cancel', 'İptal') }}</button>
-<button class="btn btn-primary" type="submit">{{ _('btn_save', 'Kaydet') }}</button>
+<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ lang('btn_cancel', 'İptal') }}</button>
+<button class="btn btn-primary" type="submit">{{ lang('btn_save', 'Kaydet') }}</button>
 </div>
 </form>
 </div>
@@ -159,7 +159,7 @@
 <div class="modal-dialog">
 <div class="modal-content">
 <div class="modal-header">
-<h5 class="modal-title">{{ _('gov_add_ethics', 'Etik Eğitimi Ekle') }}</h5>
+<h5 class="modal-title">{{ lang('gov_add_ethics', 'Etik Eğitimi Ekle') }}</h5>
 <button class="btn-close" data-bs-dismiss="modal" type="button"></button>
 </div>
 <form action="{{ url_for('data_add') }}" method="POST">
@@ -167,25 +167,25 @@
 <input name="data_type" type="hidden" value="governance"/>
 <input name="governance_category" type="hidden" value="ethics"/>
 <div class="mb-3">
-<label class="form-label">{{ _('gov_training_name', 'Eğitim Adı') }}</label>
+<label class="form-label">{{ lang('gov_training_name', 'Eğitim Adı') }}</label>
 <input class="form-control" name="training_name" required="" type="text"/>
 </div>
 <div class="mb-3">
-<label class="form-label">{{ _('gov_participants', 'Katılımcı Sayısı') }}</label>
+<label class="form-label">{{ lang('gov_participants', 'Katılımcı Sayısı') }}</label>
 <input class="form-control" name="participants" required="" type="number"/>
 </div>
 <div class="mb-3">
-<label class="form-label">{{ _('gov_total_hours', 'Toplam Süre (Saat)') }}</label>
+<label class="form-label">{{ lang('gov_total_hours', 'Toplam Süre (Saat)') }}</label>
 <input class="form-control" name="total_hours" required="" step="0.1" type="number"/>
 </div>
 <div class="mb-3">
-<label class="form-label">{{ _('description', 'Açıklama') }}</label>
+<label class="form-label">{{ lang('description', 'Açıklama') }}</label>
 <textarea class="form-control" name="description" rows="2"></textarea>
 </div>
 </div>
 <div class="modal-footer">
-<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ _('btn_cancel', 'İptal') }}</button>
-<button class="btn btn-primary" type="submit">{{ _('btn_save', 'Kaydet') }}</button>
+<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ lang('btn_cancel', 'İptal') }}</button>
+<button class="btn btn-primary" type="submit">{{ lang('btn_save', 'Kaydet') }}</button>
 </div>
 </form>
 </div>

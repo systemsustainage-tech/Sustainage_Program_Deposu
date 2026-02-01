@@ -1,17 +1,17 @@
 {% extends "base.html" %}
 
-{% block title %}{{ _('admin_settings_title') }}{% endblock %}
+{% block title %}{{ lang('admin_settings_title') }}{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <div>
-        <h1 class="h2">{{ _('admin_settings_title') }}</h1>
+        <h1 class="h2">{{ lang('admin_settings_title') }}</h1>
         <p class="text-muted mb-0">
-            {{ _('admin_settings_desc') }}
+            {{ lang('admin_settings_desc') }}
         </p>
     </div>
     <div class="btn-toolbar mb-2 mb-md-0">
-        <button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button>
+        <button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}</button>
     </div>
 </div>
 
@@ -19,32 +19,32 @@
     <div class="col-lg-6">
         <div class="card border-0 shadow-sm mb-4">
             <div class="card-header">
-                <h5 class="mb-0">{{ _('general_settings') }}</h5>
+                <h5 class="mb-0">{{ lang('general_settings') }}</h5>
             </div>
             <div class="card-body">
                 <form method="post">
                     <input name="action" type="hidden" value="save_settings"/>
                     <div class="mb-3">
-                        <label class="form-label">{{ _('app_name') }}</label>
+                        <label class="form-label">{{ lang('app_name') }}</label>
                         <input class="form-control" name="app_name" type="text" value="{{ settings.app_name or 'SUSTAINAGE SDG' }}"/>
-                        <div class="form-text">{{ _('app_name_help') }}</div>
+                        <div class="form-text">{{ lang('app_name_help') }}</div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">{{ _('default_language') }}</label>
+                        <label class="form-label">{{ lang('default_language') }}</label>
                         <select class="form-select" name="default_language">
-                            <option value="" {% if not settings.default_language %}selected{% endif %}>{{ _('auto') }}</option>
-                            <option value="tr" {% if settings.default_language == 'tr' %}selected{% endif %}>{{ _('turkish') }}</option>
-                            <option value="en" {% if settings.default_language == 'en' %}selected{% endif %}>{{ _('english') }}</option>
+                            <option value="" {% if not settings.default_language %}selected{% endif %}>{{ lang('auto') }}</option>
+                            <option value="tr" {% if settings.default_language == 'tr' %}selected{% endif %}>{{ lang('turkish') }}</option>
+                            <option value="en" {% if settings.default_language == 'en' %}selected{% endif %}>{{ lang('english') }}</option>
                         </select>
-                        <div class="form-text">{{ _('default_lang_help') }}</div>
+                        <div class="form-text">{{ lang('default_lang_help') }}</div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">{{ _('system_email') }}</label>
+                        <label class="form-label">{{ lang('system_email') }}</label>
                         <input class="form-control" name="support_email" type="email" value="{{ settings.support_email }}"/>
-                        <div class="form-text">{{ _('system_email_help') }}</div>
+                        <div class="form-text">{{ lang('system_email_help') }}</div>
                     </div>
                     <button class="btn btn-success" type="submit">
-                        <i class="bi bi-save"></i> {{ _('btn_save_settings') }}
+                        <i class="bi bi-save"></i> {{ lang('btn_save_settings') }}
                     </button>
                 </form>
             </div>
@@ -53,33 +53,33 @@
     <div class="col-lg-6">
         <div class="card border-0 shadow-sm mb-4">
             <div class="card-header">
-                <h5 class="mb-0">{{ _('backup_logging') }}</h5>
+                <h5 class="mb-0">{{ lang('backup_logging') }}</h5>
             </div>
             <div class="card-body">
                 <form method="post">
                     <input name="action" type="hidden" value="save_settings"/>
                     <div class="form-check form-switch mb-3">
                         <input class="form-check-input" id="autoBackupSwitch" name="auto_backup_enabled" type="checkbox" value="1" {% if settings.auto_backup_enabled == '1' %}checked{% endif %}/>
-                        <label class="form-check-label" for="autoBackupSwitch">{{ _('auto_backup_active') }}</label>
+                        <label class="form-check-label" for="autoBackupSwitch">{{ lang('auto_backup_active') }}</label>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">{{ _('auto_backup_time') }}</label>
+                        <label class="form-label">{{ lang('auto_backup_time') }}</label>
                         <input class="form-control" name="auto_backup_hour" placeholder="02:00" type="text" value="{{ settings.auto_backup_hour }}"/>
-                        <div class="form-text">{{ _('auto_backup_time_help') }}</div>
+                        <div class="form-text">{{ lang('auto_backup_time_help') }}</div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">{{ _('log_level') }}</label>
+                        <label class="form-label">{{ lang('log_level') }}</label>
                         <select class="form-select" name="log_level">
-                            <option value="" {% if not settings.log_level %}selected{% endif %}>{{ _('default') }}</option>
+                            <option value="" {% if not settings.log_level %}selected{% endif %}>{{ lang('default') }}</option>
                             <option value="DEBUG" {% if settings.log_level == 'DEBUG' %}selected{% endif %}>DEBUG</option>
                             <option value="INFO" {% if settings.log_level == 'INFO' %}selected{% endif %}>INFO</option>
                             <option value="WARNING" {% if settings.log_level == 'WARNING' %}selected{% endif %}>WARNING</option>
                             <option value="ERROR" {% if settings.log_level == 'ERROR' %}selected{% endif %}>ERROR</option>
                         </select>
-                        <div class="form-text">{{ _('log_level_help') }}</div>
+                        <div class="form-text">{{ lang('log_level_help') }}</div>
                     </div>
                     <button class="btn btn-success" type="submit">
-                        <i class="bi bi-save"></i> {{ _('btn_save_settings') }}
+                        <i class="bi bi-save"></i> {{ lang('btn_save_settings') }}
                     </button>
                 </form>
             </div>

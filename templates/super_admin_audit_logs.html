@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 
-{% block title %}{{ _('audit_logs_title', 'Audit Logları') }}{% endblock %}
+{% block title %}{{ lang('audit_logs_title', 'Audit Logları') }}{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
 <div>
-<h1 class="h2">{{ _('audit_logs_title', 'Audit Logları') }}</h1>
+<h1 class="h2">{{ lang('audit_logs_title', 'Audit Logları') }}</h1>
 <p class="text-muted mb-0">
             Giriş denemeleri ve kritik sistem işlemlerinin geçmişi.
         </p>
@@ -15,8 +15,32 @@
 <a class="btn btn-sm btn-outline-primary" href="{{ url_for('super_admin_audit_logs') }}">
 <i class="bi bi-arrow-repeat"></i> Yenile
         </a>
-<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}</button></div>
 </div>
+
+<!-- Filtreleme Alanı -->
+<div class="card mb-4 shadow-sm">
+    <div class="card-body">
+        <form method="get" action="{{ url_for('super_admin_audit_logs') }}" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label for="search" class="form-label">{{ lang('search', 'Ara') }}</label>
+                <input type="text" class="form-control" id="search" name="search" value="{{ search or '' }}" placeholder="{{ lang('audit_search_placeholder', 'Kullanıcı, İşlem...') }}">
+            </div>
+            <div class="col-md-3">
+                <label for="start_date" class="form-label">{{ lang('start_date', 'Başlangıç Tarihi') }}</label>
+                <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date or '' }}">
+            </div>
+            <div class="col-md-3">
+                <label for="end_date" class="form-label">{{ lang('end_date', 'Bitiş Tarihi') }}</label>
+                <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date or '' }}">
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100"><i class="bi bi-filter"></i> {{ lang('filter', 'Filtrele') }}</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <div class="card border-0 shadow-sm">
 <div class="card-header d-flex justify-content-between align-items-center">
 <h5 class="mb-0">Son Audit Kayıtları</h5>
@@ -54,6 +78,8 @@
 </table>
 </div>
 </div>
+{% from "includes/pagination.html" import render_pagination %}
+{{ render_pagination(pagination, 'super_admin_audit_logs') }}
 </div>
 
 {% endblock %}

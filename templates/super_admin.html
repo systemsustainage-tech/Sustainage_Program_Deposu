@@ -1,18 +1,18 @@
 {% extends "base.html" %}
 
-{% block title %}{{ _('admin_panel', 'Super Admin Paneli') }}{% endblock %}
+{% block title %}{{ lang('admin_panel', 'Super Admin Paneli') }}{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <div>
-        <h1 class="h2">{{ _('admin_panel', 'Super Admin Paneli') }}</h1>
+        <h1 class="h2">{{ lang('admin_panel', 'Super Admin Paneli') }}</h1>
         <p class="text-muted mb-0">
-            <i class="bi bi-shield-lock-fill"></i> {{ _('admin_panel_desc', 'Sistem yöneticileri için gelişmiş ayarlar ve kullanıcı yönetimi.') }}
+            <i class="bi bi-shield-lock-fill"></i> {{ lang('admin_panel_desc', 'Sistem yöneticileri için gelişmiş ayarlar ve kullanıcı yönetimi.') }}
         </p>
     </div>
     <div class="btn-toolbar mb-2 mb-md-0">
         
-        <button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button>
+        <button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}</button>
     </div>
 </div>
 <div class="row g-4 mb-4">
@@ -20,7 +20,7 @@
         <div class="card h-100 border-0 shadow-sm text-center">
             <div class="card-body">
                 <div class="display-4 text-primary mb-2"><i class="bi bi-people-fill"></i></div>
-                <h5 class="card-title">{{ _('users_title', 'Kullanıcılar') }}</h5>
+                <h5 class="card-title">{{ lang('users_title', 'Kullanıcılar') }}</h5>
                 <h2 class="fw-bold">{{ stats.user_count if stats.user_count is not none else '-' }}</h2>
                 <a class="stretched-link" href="{{ url_for('users') }}"></a>
             </div>
@@ -30,7 +30,7 @@
         <div class="card h-100 border-0 shadow-sm text-center">
             <div class="card-body">
                 <div class="display-4 text-success mb-2"><i class="bi bi-building"></i></div>
-                <h5 class="card-title">{{ _('companies_title', 'Şirketler') }}</h5>
+                <h5 class="card-title">{{ lang('companies_title', 'Şirketler') }}</h5>
                 <h2 class="fw-bold">{{ stats.company_count if stats.company_count is not none else '-' }}</h2>
                 <a class="stretched-link" href="{{ url_for('companies') }}"></a>
             </div>
@@ -40,7 +40,7 @@
         <div class="card h-100 border-0 shadow-sm text-center">
             <div class="card-body">
                 <div class="display-4 text-info mb-2"><i class="bi bi-file-earmark-text-fill"></i></div>
-                <h5 class="card-title">{{ _('reports_title', 'Raporlar') }}</h5>
+                <h5 class="card-title">{{ lang('reports_title', 'Raporlar') }}</h5>
                 <h2 class="fw-bold">{{ stats.report_count if stats.report_count is not none else '-' }}</h2>
                 <a class="stretched-link" href="{{ url_for('reports') }}"></a>
             </div>
@@ -55,11 +55,11 @@
                 <div class="d-flex align-items-center mb-2">
                     <div class="display-6 text-warning me-2"><i class="bi bi-shield-lock"></i></div>
                     <div>
-                        <h5 class="card-title mb-0">{{ _('admin_menu_ip', 'IP Kontrolü') }}</h5>
-                        <small class="text-muted">{{ _('admin_menu_ip_desc', 'Whitelist / Blacklist yönetimi') }}</small>
+                        <h5 class="card-title mb-0">{{ lang('admin_menu_ip', 'IP Kontrolü') }}</h5>
+                        <small class="text-muted">{{ lang('admin_menu_ip_desc', 'Whitelist / Blacklist yönetimi') }}</small>
                     </div>
                 </div>
-                <a class="btn btn-sm btn-outline-primary mt-2" href="{{ url_for('super_admin_ip') }}">{{ _('btn_open', 'Aç') }}</a>
+                <a class="btn btn-sm btn-outline-primary mt-2" href="{{ url_for('super_admin_ip') }}">{{ lang('btn_open', 'Aç') }}</a>
             </div>
         </div>
     </div>
@@ -70,11 +70,11 @@
                 <div class="d-flex align-items-center mb-2">
                     <div class="display-6 text-info me-2"><i class="bi bi-speedometer2"></i></div>
                     <div>
-                        <h5 class="card-title mb-0">{{ _('admin_menu_rate', 'Rate Limiting') }}</h5>
-                        <small class="text-muted">{{ _('admin_menu_rate_desc', 'Limitler ve aktif kayıtlar') }}</small>
+                        <h5 class="card-title mb-0">{{ lang('admin_menu_rate', 'Rate Limiting') }}</h5>
+                        <small class="text-muted">{{ lang('admin_menu_rate_desc', 'Limitler ve aktif kayıtlar') }}</small>
                     </div>
                 </div>
-                <a class="btn btn-sm btn-outline-primary mt-2" href="{{ url_for('super_admin_rate') }}">{{ _('btn_open', 'Aç') }}</a>
+                <a class="btn btn-sm btn-outline-primary mt-2" href="{{ url_for('super_admin_rate') }}">{{ lang('btn_open', 'Aç') }}</a>
             </div>
         </div>
     </div>
@@ -85,11 +85,11 @@
                 <div class="d-flex align-items-center mb-2">
                     <div class="display-6 text-success me-2"><i class="bi bi-activity"></i></div>
                     <div>
-                        <h5 class="card-title mb-0">{{ _('admin_menu_monitor', 'Monitoring') }}</h5>
-                        <small class="text-muted">{{ _('admin_menu_monitor_desc', 'Canlı sistem ve güvenlik istatistikleri') }}</small>
+                        <h5 class="card-title mb-0">{{ lang('admin_menu_monitor', 'Monitoring') }}</h5>
+                        <small class="text-muted">{{ lang('admin_menu_monitor_desc', 'Canlı sistem ve güvenlik istatistikleri') }}</small>
                     </div>
                 </div>
-                <a class="btn btn-sm btn-outline-primary mt-2" href="{{ url_for('super_admin_monitoring') }}">{{ _('btn_open', 'Aç') }}</a>
+                <a class="btn btn-sm btn-outline-primary mt-2" href="{{ url_for('super_admin_monitoring') }}">{{ lang('btn_open', 'Aç') }}</a>
             </div>
         </div>
     </div>
@@ -101,11 +101,11 @@
                 <div class="d-flex align-items-center mb-2">
                     <div class="display-6 text-danger me-2"><i class="bi bi-key-fill"></i></div>
                     <div>
-                        <h5 class="card-title mb-0">{{ _('admin_menu_license', 'Lisans Yönetimi') }}</h5>
-                        <small class="text-muted">{{ _('admin_menu_license_desc', 'Lisans oluşturma ve durum takibi') }}</small>
+                        <h5 class="card-title mb-0">{{ lang('admin_menu_license', 'Lisans Yönetimi') }}</h5>
+                        <small class="text-muted">{{ lang('admin_menu_license_desc', 'Lisans oluşturma ve durum takibi') }}</small>
                     </div>
                 </div>
-                <a class="btn btn-sm btn-outline-primary mt-2" href="{{ url_for('super_admin_licenses') }}">{{ _('btn_open', 'Aç') }}</a>
+                <a class="btn btn-sm btn-outline-primary mt-2" href="{{ url_for('super_admin_licenses') }}">{{ lang('btn_open', 'Aç') }}</a>
             </div>
         </div>
     </div>
@@ -118,11 +118,11 @@
                 <div class="d-flex align-items-center mb-2">
                     <div class="display-6 text-secondary me-2"><i class="bi bi-bar-chart-fill"></i></div>
                     <div>
-                        <h5 class="card-title mb-0">{{ _('admin_menu_stats', 'Sistem İstatistikleri') }}</h5>
-                        <small class="text-muted">{{ _('admin_menu_stats_desc', 'Tablo, kullanıcı ve firma sayıları') }}</small>
+                        <h5 class="card-title mb-0">{{ lang('admin_menu_stats', 'Sistem İstatistikleri') }}</h5>
+                        <small class="text-muted">{{ lang('admin_menu_stats_desc', 'Tablo, kullanıcı ve firma sayıları') }}</small>
                     </div>
                 </div>
-                <a class="btn btn-sm btn-outline-primary mt-2" href="{{ url_for('super_admin_system_stats') }}">{{ _('btn_open', 'Aç') }}</a>
+                <a class="btn btn-sm btn-outline-primary mt-2" href="{{ url_for('super_admin_system_stats') }}">{{ lang('btn_open', 'Aç') }}</a>
             </div>
         </div>
     </div>
@@ -132,11 +132,11 @@
                 <div class="d-flex align-items-center mb-2">
                     <div class="display-6 text-secondary me-2"><i class="bi bi-search"></i></div>
                     <div>
-                        <h5 class="card-title mb-0">{{ _('admin_menu_audit', 'Audit Logları') }}</h5>
-                        <small class="text-muted">{{ _('admin_menu_audit_desc', 'Giriş ve sistem işlemleri geçmişi') }}</small>
+                        <h5 class="card-title mb-0">{{ lang('admin_menu_audit', 'Audit Logları') }}</h5>
+                        <small class="text-muted">{{ lang('admin_menu_audit_desc', 'Giriş ve sistem işlemleri geçmişi') }}</small>
                     </div>
                 </div>
-                <a class="btn btn-sm btn-outline-primary mt-2" href="{{ url_for('super_admin_audit_logs') }}">{{ _('btn_open', 'Aç') }}</a>
+                <a class="btn btn-sm btn-outline-primary mt-2" href="{{ url_for('super_admin_audit_logs') }}">{{ lang('btn_open', 'Aç') }}</a>
             </div>
         </div>
     </div>
@@ -146,11 +146,11 @@
                 <div class="d-flex align-items-center mb-2">
                     <div class="display-6 text-secondary me-2"><i class="bi bi-terminal-dash"></i></div>
                     <div>
-                        <h5 class="card-title mb-0">{{ _('admin_menu_logs', 'Sistem Logları') }}</h5>
-                        <small class="text-muted">{{ _('admin_menu_logs_desc', 'Uygulama ve sistem log kayıtları') }}</small>
+                        <h5 class="card-title mb-0">{{ lang('admin_menu_logs', 'Sistem Logları') }}</h5>
+                        <small class="text-muted">{{ lang('admin_menu_logs_desc', 'Uygulama ve sistem log kayıtları') }}</small>
                     </div>
                 </div>
-                <a class="btn btn-sm btn-outline-primary mt-2" href="{{ url_for('super_admin_system_logs') }}">{{ _('btn_open', 'Aç') }}</a>
+                <a class="btn btn-sm btn-outline-primary mt-2" href="{{ url_for('super_admin_system_logs') }}">{{ lang('btn_open', 'Aç') }}</a>
             </div>
         </div>
     </div>
@@ -160,11 +160,11 @@
                 <div class="d-flex align-items-center mb-2">
                     <div class="display-6 text-primary me-2"><i class="bi bi-shield-check"></i></div>
                     <div>
-                        <h5 class="card-title mb-0">{{ _('admin_menu_2fa', '2FA Yönetimi') }}</h5>
-                        <small class="text-muted">{{ _('admin_menu_2fa_desc', 'İki faktörlü doğrulama ayarları') }}</small>
+                        <h5 class="card-title mb-0">{{ lang('admin_menu_2fa', '2FA Yönetimi') }}</h5>
+                        <small class="text-muted">{{ lang('admin_menu_2fa_desc', 'İki faktörlü doğrulama ayarları') }}</small>
                     </div>
                 </div>
-                <a class="btn btn-sm btn-outline-primary mt-2" href="{{ url_for('super_admin_twofa') }}">{{ _('btn_open', 'Aç') }}</a>
+                <a class="btn btn-sm btn-outline-primary mt-2" href="{{ url_for('super_admin_twofa') }}">{{ lang('btn_open', 'Aç') }}</a>
             </div>
         </div>
     </div>
@@ -174,11 +174,11 @@
                 <div class="d-flex align-items-center mb-2">
                     <div class="display-6 text-warning me-2"><i class="bi bi-hdd-stack"></i></div>
                     <div>
-                        <h5 class="card-title mb-0">{{ _('admin_menu_backup', 'Yedekleme') }}</h5>
-                        <small class="text-muted">{{ _('admin_menu_backup_desc', 'Veritabanı ve dosya yedekleri') }}</small>
+                        <h5 class="card-title mb-0">{{ lang('admin_menu_backup', 'Yedekleme') }}</h5>
+                        <small class="text-muted">{{ lang('admin_menu_backup_desc', 'Veritabanı ve dosya yedekleri') }}</small>
                     </div>
                 </div>
-                <a class="btn btn-sm btn-outline-primary mt-2" href="{{ url_for('super_admin_backup') }}">{{ _('btn_open', 'Aç') }}</a>
+                <a class="btn btn-sm btn-outline-primary mt-2" href="{{ url_for('super_admin_backup') }}">{{ lang('btn_open', 'Aç') }}</a>
             </div>
         </div>
     </div>
@@ -188,11 +188,11 @@
                 <div class="d-flex align-items-center mb-2">
                     <div class="display-6 text-info me-2"><i class="bi bi-speedometer"></i></div>
                     <div>
-                        <h5 class="card-title mb-0">{{ _('admin_menu_performance', 'Performans') }}</h5>
-                        <small class="text-muted">{{ _('admin_menu_performance_desc', 'Veritabanı ve sistem performansı') }}</small>
+                        <h5 class="card-title mb-0">{{ lang('admin_menu_performance', 'Performans') }}</h5>
+                        <small class="text-muted">{{ lang('admin_menu_performance_desc', 'Veritabanı ve sistem performansı') }}</small>
                     </div>
                 </div>
-                <a class="btn btn-sm btn-outline-primary mt-2" href="{{ url_for('super_admin_performance') }}">{{ _('btn_open', 'Aç') }}</a>
+                <a class="btn btn-sm btn-outline-primary mt-2" href="{{ url_for('super_admin_performance') }}">{{ lang('btn_open', 'Aç') }}</a>
             </div>
         </div>
     </div>
@@ -204,11 +204,11 @@
                 <div class="d-flex align-items-center mb-2">
                     <div class="display-6 text-primary me-2"><i class="bi bi-gear-wide-connected"></i></div>
                     <div>
-                        <h5 class="card-title mb-0">{{ _('admin_menu_settings', 'Sistem Ayarları') }}</h5>
-                        <small class="text-muted">{{ _('admin_menu_settings_desc', 'Genel sistem ve uygulama ayarları') }}</small>
+                        <h5 class="card-title mb-0">{{ lang('admin_menu_settings', 'Sistem Ayarları') }}</h5>
+                        <small class="text-muted">{{ lang('admin_menu_settings_desc', 'Genel sistem ve uygulama ayarları') }}</small>
                     </div>
                 </div>
-                <a class="btn btn-sm btn-outline-primary mt-2" href="{{ url_for('super_admin_settings') }}">{{ _('btn_open', 'Aç') }}</a>
+                <a class="btn btn-sm btn-outline-primary mt-2" href="{{ url_for('super_admin_settings') }}">{{ lang('btn_open', 'Aç') }}</a>
             </div>
         </div>
     </div>
@@ -218,11 +218,11 @@
                 <div class="d-flex align-items-center mb-2">
                     <div class="display-6 text-warning me-2"><i class="bi bi-tools"></i></div>
                     <div>
-                        <h5 class="card-title mb-0">{{ _('admin_menu_maintenance', 'Bakım & Onarım') }}</h5>
-                        <small class="text-muted">{{ _('admin_menu_maintenance_desc', 'Veritabanı ve sistem bakım özeti') }}</small>
+                        <h5 class="card-title mb-0">{{ lang('admin_menu_maintenance', 'Bakım & Onarım') }}</h5>
+                        <small class="text-muted">{{ lang('admin_menu_maintenance_desc', 'Veritabanı ve sistem bakım özeti') }}</small>
                     </div>
                 </div>
-                <a class="btn btn-sm btn-outline-primary mt-2" href="{{ url_for('super_admin_maintenance') }}">{{ _('btn_open', 'Aç') }}</a>
+                <a class="btn btn-sm btn-outline-primary mt-2" href="{{ url_for('super_admin_maintenance') }}">{{ lang('btn_open', 'Aç') }}</a>
             </div>
         </div>
     </div>
@@ -232,11 +232,11 @@
                 <div class="d-flex align-items-center mb-2">
                     <div class="display-6 text-danger me-2"><i class="bi bi-shield-shaded"></i></div>
                     <div>
-                        <h5 class="card-title mb-0">{{ _('admin_menu_security', 'Güvenlik Ayarları') }}</h5>
-                        <small class="text-muted">{{ _('admin_menu_security_desc', 'Güvenlik politikaları ve oturum ayarları') }}</small>
+                        <h5 class="card-title mb-0">{{ lang('admin_menu_security', 'Güvenlik Ayarları') }}</h5>
+                        <small class="text-muted">{{ lang('admin_menu_security_desc', 'Güvenlik politikaları ve oturum ayarları') }}</small>
                     </div>
                 </div>
-                <a class="btn btn-sm btn-outline-primary mt-2" href="{{ url_for('super_admin_security') }}">{{ _('btn_open', 'Aç') }}</a>
+                <a class="btn btn-sm btn-outline-primary mt-2" href="{{ url_for('super_admin_security') }}">{{ lang('btn_open', 'Aç') }}</a>
             </div>
         </div>
     </div>

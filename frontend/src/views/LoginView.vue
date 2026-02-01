@@ -10,6 +10,8 @@ const loading = ref(false);
 const router = useRouter();
 const authStore = useAuthStore();
 
+import { t as $t } from '../plugins/i18n';
+
 const handleLogin = async () => {
   error.value = '';
   loading.value = true;
@@ -33,11 +35,11 @@ const handleLogin = async () => {
       authStore.login(data.user);
       router.push('/');
     } else {
-      error.value = data.error || 'Giriş başarısız.';
+      error.value = data.error || $t('login_failed');
     }
   } catch (err) {
     console.error('Login error:', err);
-    error.value = 'Sunucu hatası oluştu.';
+    error.value = $t('server_error');
   } finally {
     loading.value = false;
   }
@@ -50,7 +52,7 @@ const handleLogin = async () => {
       <div class="col-md-6 col-lg-4">
         <div class="card shadow-sm">
           <div class="card-header bg-primary text-white">
-            <h4 class="mb-0">Sustainage Giriş</h4>
+            <h4 class="mb-0">{{ $t('login_title') }}</h4>
           </div>
           <div class="card-body">
             <div v-if="error" class="alert alert-danger" role="alert">
@@ -59,7 +61,7 @@ const handleLogin = async () => {
             
             <form @submit.prevent="handleLogin">
               <div class="mb-3">
-                <label for="username" class="form-label">Kullanıcı Adı</label>
+                <label for="username" class="form-label">{{ $t('username') }}</label>
                 <input 
                   type="text" 
                   class="form-control" 
@@ -70,7 +72,7 @@ const handleLogin = async () => {
                 >
               </div>
               <div class="mb-3">
-                <label for="password" class="form-label">Şifre</label>
+                <label for="password" class="form-label">{{ $t('password') }}</label>
                 <input 
                   type="password" 
                   class="form-control" 
@@ -82,13 +84,13 @@ const handleLogin = async () => {
               <div class="d-grid gap-2">
                 <button type="submit" class="btn btn-primary" :disabled="loading">
                   <span v-if="loading" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                  {{ loading ? 'Giriş Yapılıyor...' : 'Giriş Yap' }}
+                  {{ loading ? $t('logging_in') : $t('login_button') }}
                 </button>
               </div>
             </form>
           </div>
           <div class="card-footer text-center text-muted">
-            <small>&copy; 2026 Sustainage</small>
+            <small>{{ $t('copyright_sustainage') }}</small>
           </div>
         </div>
       </div>

@@ -1,45 +1,45 @@
 {% extends "base.html" %}
 
-{% block title %}{{ _('cdp_settings_title', 'CDP Puanlama Ayarları') }} - SDG{% endblock %}
+{% block title %}{{ lang('cdp_settings_title', 'CDP Puanlama Ayarları') }} - SDG{% endblock %}
 
 {% block content %}
 
 <div class="row mb-4">
     <div class="col-md-12">
         <div class="d-flex justify-content-between align-items-center">
-            <h1><i class="fas fa-sliders-h me-2"></i>{{ _('cdp_settings_title', 'CDP Puanlama Ayarları') }}</h1>
-            <a href="{{ url_for('cdp_module') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</a>
+            <h1><i class="fas fa-sliders-h me-2"></i>{{ lang('cdp_settings_title', 'CDP Puanlama Ayarları') }}</h1>
+            <a href="{{ url_for('cdp_module') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}</a>
         </div>
-        <p class="lead text-muted">{{ _('cdp_settings_desc', 'CDP modülü için puanlama ağırlıklarını yapılandırın.') }}</p>
+        <p class="lead text-muted">{{ lang('cdp_settings_desc', 'CDP modülü için puanlama ağırlıklarını yapılandırın.') }}</p>
     </div>
 </div>
 
 <div class="card shadow-sm mb-4">
     <div class="card-header bg-white py-3">
-        <h5 class="mb-0">{{ _('weighting_scheme', 'Ağırlıklandırma Şeması') }}</h5>
+        <h5 class="mb-0">{{ lang('weighting_scheme', 'Ağırlıklandırma Şeması') }}</h5>
     </div>
     <div class="card-body">
         <form action="{{ url_for('cdp_settings_update_scheme') }}" method="POST" class="row g-3 align-items-center">
             <div class="col-auto">
-                <label for="schemeSelect" class="col-form-label">{{ _('current_scheme', 'Mevcut Şema') }}:</label>
+                <label for="schemeSelect" class="col-form-label">{{ lang('current_scheme', 'Mevcut Şema') }}:</label>
             </div>
             <div class="col-auto">
                 <select class="form-select" id="schemeSelect" name="scheme">
-                    <option value="Standard" {{ 'selected' if current_scheme == 'Standard' else '' }}>{{ _('scheme_standard', 'Standart (Varsayılan)') }}</option>
-                    <option value="Custom" {{ 'selected' if current_scheme == 'Custom' else '' }}>{{ _('scheme_custom', 'Özel (Kullanıcı Tanımlı)') }}</option>
+                    <option value="Standard" {{ 'selected' if current_scheme == 'Standard' else '' }}>{{ lang('scheme_standard', 'Standart (Varsayılan)') }}</option>
+                    <option value="Custom" {{ 'selected' if current_scheme == 'Custom' else '' }}>{{ lang('scheme_custom', 'Özel (Kullanıcı Tanımlı)') }}</option>
                 </select>
             </div>
             <div class="col-auto">
-                <button type="submit" class="btn btn-primary">{{ _('btn_update', 'Güncelle') }}</button>
+                <button type="submit" class="btn btn-primary">{{ lang('btn_update', 'Güncelle') }}</button>
             </div>
             {% if current_scheme == 'Standard' %}
             <div class="col-auto">
-                <small class="text-muted">{{ _('standard_scheme_info', 'Standart şema, CDP metodolojisine dayalı varsayılan ağırlıkları kullanır.') }}</small>
+                <small class="text-muted">{{ lang('standard_scheme_info', 'Standart şema, CDP metodolojisine dayalı varsayılan ağırlıkları kullanır.') }}</small>
             </div>
             {% else %}
             <div class="col-auto ms-auto">
-                <form action="{{ url_for('cdp_settings_reset') }}" method="POST" onsubmit="return confirm('{{ _('confirm_reset', 'Tüm ağırlıklar standart değerlere sıfırlanacak. Emin misiniz?') }}');">
-                    <button type="submit" class="btn btn-warning">{{ _('btn_reset_standard', 'Standart Ayarlara Sıfırla') }}</button>
+                <form action="{{ url_for('cdp_settings_reset') }}" method="POST" onsubmit="return confirm('{{ lang('confirm_reset', 'Tüm ağırlıklar standart değerlere sıfırlanacak. Emin misiniz?') }}');">
+                    <button type="submit" class="btn btn-warning">{{ lang('btn_reset_standard', 'Standart Ayarlara Sıfırla') }}</button>
                 </form>
             </div>
             {% endif %}
@@ -52,13 +52,13 @@
     <div class="card-header bg-white py-3">
         <ul class="nav nav-tabs card-header-tabs" id="cdpTabs" role="tablist">
             <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="climate-tab" data-bs-toggle="tab" data-bs-target="#climate" type="button" role="tab" aria-controls="climate" aria-selected="true">{{ _('cdp_module_climate', 'İklim Değişikliği') }}</button>
+                <button class="nav-link active" id="climate-tab" data-bs-toggle="tab" data-bs-target="#climate" type="button" role="tab" aria-controls="climate" aria-selected="true">{{ lang('cdp_module_climate', 'İklim Değişikliği') }}</button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="water-tab" data-bs-toggle="tab" data-bs-target="#water" type="button" role="tab" aria-controls="water" aria-selected="false">{{ _('cdp_module_water', 'Su Güvenliği') }}</button>
+                <button class="nav-link" id="water-tab" data-bs-toggle="tab" data-bs-target="#water" type="button" role="tab" aria-controls="water" aria-selected="false">{{ lang('cdp_module_water', 'Su Güvenliği') }}</button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="forests-tab" data-bs-toggle="tab" data-bs-target="#forests" type="button" role="tab" aria-controls="forests" aria-selected="false">{{ _('cdp_module_forests', 'Ormanlar') }}</button>
+                <button class="nav-link" id="forests-tab" data-bs-toggle="tab" data-bs-target="#forests" type="button" role="tab" aria-controls="forests" aria-selected="false">{{ lang('cdp_module_forests', 'Ormanlar') }}</button>
             </li>
         </ul>
     </div>
@@ -75,9 +75,9 @@
                             <thead>
                                 <tr>
                                     <th style="width: 10%">ID</th>
-                                    <th style="width: 15%">{{ _('category', 'Kategori') }}</th>
-                                    <th style="width: 55%">{{ _('question', 'Soru') }}</th>
-                                    <th style="width: 20%">{{ _('weight', 'Ağırlık') }}</th>
+                                    <th style="width: 15%">{{ lang('category', 'Kategori') }}</th>
+                                    <th style="width: 55%">{{ lang('question', 'Soru') }}</th>
+                                    <th style="width: 20%">{{ lang('weight', 'Ağırlık') }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -96,7 +96,7 @@
                     </div>
                     
                     <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-3">
-                        <button type="submit" class="btn btn-success"><i class="fas fa-save me-2"></i>{{ _('btn_save_weights', 'Ağırlıkları Kaydet') }}</button>
+                        <button type="submit" class="btn btn-success"><i class="fas fa-save me-2"></i>{{ lang('btn_save_weights', 'Ağırlıkları Kaydet') }}</button>
                     </div>
                 </form>
             </div>

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{{ _('company_edit_title') if company else _('company_new_title') }} - SDG{% endblock %}
+{% block title %}{{ lang('company_edit_title') if company else _('company_new_title') }} - SDG{% endblock %}
 
 {% block styles %}
 <style>
@@ -23,10 +23,10 @@
 
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-<h1 class="h2">{{ _('company_edit_title') if company else _('company_add_title') }}</h1>
+<h1 class="h2">{{ lang('company_edit_title') if company else _('company_add_title') }}</h1>
 <div class="btn-toolbar mb-2 mb-md-0">
 
-<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}</button></div>
 </div>
 <form method="POST">
 <div class="row">
@@ -64,7 +64,7 @@
                         </a>
 <div class="p-3 border-top">
 <button class="btn btn-primary w-100" type="submit">
-<i class="bi bi-save"></i> {{ _('btn_save') }}
+<i class="bi bi-save"></i> {{ lang('btn_save') }}
                             </button>
 </div>
 </div>
@@ -79,7 +79,7 @@
 <h4 class="section-title">Firma Bilgileri</h4>
 <div class="row g-3">
 <div class="col-md-6">
-<label class="form-label" for="sirket_adi">{{ _('lbl_company_name') }}</label>
+<label class="form-label" for="sirket_adi">{{ lang('lbl_company_name') }}</label>
 <input class="form-control" id="sirket_adi" name="sirket_adi" required="" type="text" value="{{ company.sirket_adi or company.name or '' }}"/>
 </div>
 <div class="col-md-6">
@@ -87,7 +87,7 @@
 <input class="form-control" id="ticari_unvan" name="ticari_unvan" type="text" value="{{ company.ticari_unvan or '' }}"/>
 </div>
 <div class="col-md-6">
-<label class="form-label" for="vergi_no">{{ _('lbl_tax_number') }}</label>
+<label class="form-label" for="vergi_no">{{ lang('lbl_tax_number') }}</label>
 <input class="form-control" id="vergi_no" name="vergi_no" type="text" value="{{ company.vergi_no or company.tax_number or '' }}"/>
 </div>
 <div class="col-md-6">
@@ -113,7 +113,7 @@
 <div class="col-12">
 <div class="form-check form-switch">
 <input class="form-check-input" id="aktif" name="aktif" type="checkbox" {% if company and (company.aktif or company.is_active) %}checked{% endif %}/>
-<label class="form-check-label" for="aktif">{{ _('lbl_company_active') }}</label>
+<label class="form-check-label" for="aktif">{{ lang('lbl_company_active') }}</label>
 </div>
 </div>
 </div>
@@ -125,7 +125,7 @@
 <h4 class="section-title">Sektör ve Konum</h4>
 <div class="row g-3">
 <div class="col-md-6">
-<label class="form-label" for="sektor">{{ _('lbl_sector') }}</label>
+<label class="form-label" for="sektor">{{ lang('lbl_sector') }}</label>
 <input class="form-control" id="sektor" name="sektor" type="text" value="{{ company.sektor or company.sector or '' }}"/>
 </div>
 <div class="col-md-6">
@@ -229,7 +229,7 @@
 </div>
 <div class="d-grid gap-2 d-md-flex justify-content-md-end mb-5">
 <button class="btn btn-primary btn-lg px-5" type="submit">
-<i class="bi bi-save"></i> {{ _('btn_save') }}
+<i class="bi bi-save"></i> {{ lang('btn_save') }}
                 </button>
 </div>
 </div>

@@ -1,24 +1,24 @@
 {% extends "base.html" %}
 
-{% block title %}{{ _('btn_add_data') }} - {{ _('supply_chain_title') }}{% endblock %}
+{% block title %}{{ lang('btn_add_data') }} - {{ lang('supply_chain_title') }}{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-8">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h4 class="mb-0">{{ _('btn_add_data') }} - {{ _('sc_suppliers') }}</h4>
-                <button class="btn btn-sm btn-outline-secondary" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button>
+                <h4 class="mb-0">{{ lang('btn_add_data') }} - {{ lang('sc_suppliers') }}</h4>
+                <button class="btn btn-sm btn-outline-secondary" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}</button>
             </div>
             <div class="card-body">
                 <form method="post" class="needs-validation" novalidate>
                     <div class="mb-3">
-                        <label class="form-label">{{ _('sc_supplier_name') }}</label>
+                        <label class="form-label">{{ lang('sc_supplier_name') }}</label>
                         <input type="text" class="form-control" name="supplier_name" required>
                     </div>
                     
                     <div class="mb-3">
-                        <label class="form-label">{{ _('sc_supplier_type') }}</label>
+                        <label class="form-label">{{ lang('sc_supplier_type') }}</label>
                         <select class="form-select" name="supplier_type">
                             <option value="raw_material">Hammadde</option>
                             <option value="service">Hizmet</option>
@@ -28,17 +28,17 @@
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">{{ _('sc_country') }}</label>
+                        <label class="form-label">{{ lang('sc_country') }}</label>
                         <input type="text" class="form-control" name="country">
                     </div>
 
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">{{ _('sc_score') }} (0-100)</label>
+                            <label class="form-label">{{ lang('sc_score') }} (0-100)</label>
                             <input type="number" class="form-control" name="sustainability_score" min="0" max="100" step="0.1">
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">{{ _('sc_risk') }}</label>
+                            <label class="form-label">{{ lang('sc_risk') }}</label>
                             <select class="form-select" name="risk_level">
                                 <option value="low">Düşük</option>
                                 <option value="medium">Orta</option>
@@ -48,8 +48,8 @@
                     </div>
 
                     <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                        <a href="{{ url_for('supply_chain_module') }}" class="btn btn-light">{{ _('common.btn_cancel') }}</a>
-                        <button type="submit" class="btn btn-primary">{{ _('common.btn_save') }}</button>
+                        <a href="{{ url_for('supply_chain_module') }}" class="btn btn-light">{{ lang('common.btn_cancel') }}</a>
+                        <button type="submit" class="btn btn-primary">{{ lang('common.btn_save') }}</button>
                     </div>
                 </form>
             </div>

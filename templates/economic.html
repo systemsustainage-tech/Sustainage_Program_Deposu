@@ -1,220 +1,97 @@
 {% extends "base.html" %}
 
-{% block title %}{{ _('economic_title') }} - SDG{% endblock %}
+{% block title %}{{ lang('economic_page_title', 'Ekonomik Performans & Yatırım Analizi') }}{% endblock %}
 
 {% block content %}
 
 <div class="row mb-4">
-<div class="col-md-12">
-<div class="d-flex justify-content-between align-items-center">
-<h1><i class="fas fa-coins me-2"></i>{{ _('economic_title') }}</h1>
-<div>
-<span class="badge bg-{{ 'success' if manager_available else 'danger' }}">
-                    {{ _('module_active_badge') if manager_available else _('module_passive_badge') }}
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1><i class="fas fa-chart-line me-2"></i>{{ lang('economic_header', 'Ekonomik Performans') }}</h1>
+            <div>
+                <span class="badge bg-{{ 'success' if manager_available else 'danger' }}">
+                    {{ lang('module_active') if manager_available else _('module_passive') }}
                 </span>
-<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
-</div>
-<p class="lead text-muted">{{ _('eco_desc') }}</p>
-</div>
+                <button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}</button>
+            </div>
+        </div>
+        <p class="lead text-muted">{{ lang('economic_lead', 'Finansal performans takibi ve yatırım getiri analizi (ROI, Payback Period).') }}</p>
+    </div>
 </div>
 
 {% if manager_available %}
 <div class="row mb-4">
-<div class="col-md-4 mb-4">
-<div class="card h-100 shadow-sm">
-<div class="card-body text-center">
-<i class="fas fa-coins fa-3x text-primary mb-3"></i>
-<h5 class="card-title">{{ _('eco_revenue') }}</h5>
-<h3 class="fw-bold">{{ stats.revenue }} TL</h3>
-<p class="card-text text-muted">{{ _('eco_revenue_desc') }}</p>
-<button class="btn btn-primary mt-2 w-100" data-bs-target="#addRevenueModal" data-bs-toggle="modal" type="button">
-                    {{ _('btn_add_data') }}
-                </button>
-</div>
-</div>
-</div>
-<div class="col-md-4 mb-4">
-<div class="card h-100 shadow-sm">
-<div class="card-body text-center">
-<i class="fas fa-cloud-sun-rain fa-3x text-warning mb-3"></i>
-<h5 class="card-title">{{ _('eco_climate_risk') }}</h5>
-<h3 class="fw-bold">{{ stats.climate_impact }} TL</h3>
-<p class="card-text text-muted">{{ _('eco_financial_impact') }}</p>
-<button class="btn btn-warning mt-2 w-100" data-bs-target="#addTCFDModal" data-bs-toggle="modal" type="button">
-                    {{ _('btn_add_data') }}
-                </button>
-</div>
-</div>
-</div>
-<div class="col-md-4 mb-4">
-<div class="card h-100 shadow-sm">
-<div class="card-body text-center">
-<i class="fas fa-hand-holding-usd fa-3x text-success mb-3"></i>
-<h5 class="card-title">{{ _('eco_tax_mgmt') }}</h5>
-<h3 class="fw-bold">{{ stats.tax_paid }} TL</h3>
-<p class="card-text text-muted">{{ _('eco_tax_paid') }}</p>
-<button class="btn btn-success mt-2 w-100" data-bs-target="#addTaxModal" data-bs-toggle="modal" type="button">
-                    {{ _('btn_add_data') }}
-                </button>
-</div>
-</div>
-</div>
-</div>
-<!-- Recent Data Table -->
-<div class="row">
-<div class="col-md-12">
-<div class="card">
-<div class="card-header">
-<h5 class="mb-0">{{ _('recent_data') if _('recent_data') != 'recent_data' else 'Son Veriler' }}</h5>
-</div>
-<div class="card-body">
-<div class="table-responsive">
-<table class="table table-hover">
-<thead>
-<tr>
-<th>{{ _('eco_category') }}</th>
-<th>{{ _('eco_amount') }}</th>
-<th>{{ _('eco_year') }}</th>
-<th>{{ _('eco_description') }}</th>
-<th>{{ _('date') if _('date') != 'date' else 'Tarih' }}</th>
-</tr>
-</thead>
-<tbody>
-                            {% if recent_data %}
-                                {% for item in recent_data %}
-                                <tr>
-<td>
-                                        {% if item.data_type == 'revenue' %}
-                                            <span class="badge bg-primary">{{ _('eco_revenue') }}</span>
-                                        {% elif item.data_type == 'risk' %}
-                                            <span class="badge bg-warning text-dark">{{ _('eco_climate_risk') }}</span>
-                                        {% elif item.data_type == 'tax' %}
-                                            <span class="badge bg-success">{{ _('eco_tax_mgmt') }}</span>
-                                        {% else %}
-                                            {{ item.data_type }}
-                                        {% endif %}
-                                    </td>
-<td>{{ item.amount }} TL</td>
-<td>{{ item.year }}</td>
-<td>{{ item.description }}</td>
-<td>{{ item.created_at[:10] }}</td>
-</tr>
-                                {% endfor %}
-                            {% else %}
-                                <tr>
-<td class="text-center text-muted" colspan="5">{{ _('no_data_available') }}</td>
-</tr>
-                            {% endif %}
-                        </tbody>
-</table>
-</div>
-</div>
-</div>
-</div>
-</div>
-
-<!-- Investment Projects Section -->
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="card shadow-sm">
-            <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">{{ _('eco_investment_projects', 'Yatırım Projeleri ve Maliyet-Fayda Analizi') }}</h5>
-                <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addInvestmentModal">
-                    <i class="fas fa-plus me-1"></i> {{ _('add_investment_project', 'Proje Ekle') }}
+    <!-- Yatırım Ekleme Kartı -->
+    <div class="col-md-12 mb-4">
+        <div class="card h-100 shadow-sm border-0">
+            <div class="card-body d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="card-title mb-1">{{ lang('new_investment_project', 'Yeni Yatırım Projesi') }}</h5>
+                    <p class="card-text text-muted mb-0">{{ lang('new_investment_desc', 'Maliyet-fayda analizi için yeni bir proje tanımlayın.') }}</p>
+                </div>
+                <button class="btn btn-success" data-bs-target="#addInvestmentModal" data-bs-toggle="modal">
+                    <i class="fas fa-plus me-1"></i> {{ lang('add_project', 'Proje Ekle') }}
                 </button>
             </div>
-            <div class="card-body">
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">{{ lang('investment_projects', 'Yatırım Projeleri') }}</h5>
+            </div>
+            <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle">
-                        <thead>
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
                             <tr>
-                                <th>{{ _('project_name', 'Proje Adı') }}</th>
-                                <th>{{ _('initial_investment', 'İlk Yatırım') }}</th>
-                                <th>{{ _('start_date', 'Başlangıç Tarihi') }}</th>
-                                <th>{{ _('npv', 'NPV') }}</th>
-                                <th>{{ _('roi', 'ROI') }} (%)</th>
-                                <th>{{ _('payback_period', 'Geri Ödeme Süresi') }} (Yıl)</th>
-                                <th>{{ _('actions', 'İşlemler') }}</th>
+                                <th>{{ lang('project_name', 'Proje Adı') }}</th>
+                                <th>{{ lang('initial_investment', 'Yatırım Tutarı') }}</th>
+                                <th>{{ lang('start_date', 'Başlangıç') }}</th>
+                                <th>{{ lang('roi', 'ROI (%)') }}</th>
+                                <th>{{ lang('payback', 'Geri Ödeme') }}</th>
+                                <th>{{ lang('npv', 'NPV') }}</th>
+                                <th>{{ lang('actions', 'İşlemler') }}</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% if investment_projects %}
-                                {% for project in investment_projects %}
-                                <tr>
-                                    <td>
-                                        <strong>{{ project.project_name }}</strong><br>
-                                        <small class="text-muted">{{ project.description }}</small>
-                                    </td>
-                                    <td>{{ project.initial_investment }} TL</td>
-                                    <td>{{ project.start_date }}</td>
-                                    <td>
-                                        {% if project.npv is not none %}
-                                            <span class="{{ 'text-success' if project.npv > 0 else 'text-danger' }}">
-                                                {{ "%.2f"|format(project.npv) }}
-                                            </span>
-                                        {% else %}
-                                            -
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if project.roi is not none %}
-                                            <span class="{{ 'text-success' if project.roi > 0 else 'text-danger' }}">
-                                                {{ "%.1f"|format(project.roi) }}%
-                                            </span>
-                                        {% else %}
-                                            -
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if project.payback_period is not none %}
-                                            {{ "%.1f"|format(project.payback_period) }}
-                                        {% else %}
-                                            -
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#addCashFlowModal{{ project.id }}">
-                                            <i class="fas fa-money-bill-wave"></i> {{ _('cash_flow', 'Nakit Akışı Ekle') }}
-                                        </button>
-                                        <!-- Cash Flow Modal per Project -->
-                                        <div class="modal fade" id="addCashFlowModal{{ project.id }}" tabindex="-1">
-                                            <div class="modal-dialog">
-                                                <div class="modal-content">
-                                                    <div class="modal-header">
-                                                        <h5 class="modal-title">{{ _('add_cash_flow', 'Nakit Akışı Ekle') }} - {{ project.project_name }}</h5>
-                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                    </div>
-                                                    <form action="{{ url_for('economic_add') }}" method="POST">
-                                                        <div class="modal-body">
-                                                            <input type="hidden" name="data_type" value="cash_flow">
-                                                            <input type="hidden" name="project_id" value="{{ project.id }}">
-                                                            <div class="mb-3">
-                                                                <label class="form-label">{{ _('year', 'Yıl (Proje Başlangıcından Sonraki Yıl)') }}</label>
-                                                                <input type="number" class="form-control" name="year" min="1" required>
-                                                                <small class="text-muted">Örn: 1. yıl, 2. yıl...</small>
-                                                            </div>
-                                                            <div class="mb-3">
-                                                                <label class="form-label">{{ _('cash_flow_amount', 'Nakit Akışı (TL)') }}</label>
-                                                                <input type="number" step="0.01" class="form-control" name="cash_flow" required>
-                                                                <small class="text-muted">Pozitif (gelir) veya negatif (gider) değer.</small>
-                                                            </div>
-                                                        </div>
-                                                        <div class="modal-footer">
-                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('btn_cancel', 'İptal') }}</button>
-                                                            <button type="submit" class="btn btn-primary">{{ _('btn_save', 'Kaydet') }}</button>
-                                                        </div>
-                                                    </form>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                </tr>
-                                {% endfor %}
+                            {% for project in projects %}
+                            <tr>
+                                <td>
+                                    <strong>{{ project.project_name }}</strong><br>
+                                    <small class="text-muted">{{ project.description }}</small>
+                                </td>
+                                <td>{{ project.initial_investment }}</td>
+                                <td>{{ project.start_date }}</td>
+                                <td>
+                                    {% if project.roi is not none %}
+                                        <span class="badge bg-{{ 'success' if project.roi > 0 else 'warning' }}">
+                                            {{ "%.2f"|format(project.roi) }}%
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ "%.1f"|format(project.payback_period) if project.payback_period else '-' }} {{ lang('years', 'Yıl') }}</td>
+                                <td>{{ "%.2f"|format(project.npv) if project.npv else '-' }}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary" 
+                                            onclick="openCashFlowModal({{ project.id }}, '{{ project.project_name }}')"
+                                            title="{{ lang('add_cash_flow', 'Nakit Akışı Ekle') }}">
+                                        <i class="fas fa-coins"></i>
+                                    </button>
+                                </td>
+                            </tr>
                             {% else %}
-                                <tr>
-                                    <td colspan="7" class="text-center text-muted">{{ _('no_projects', 'Henüz proje eklenmemiş.') }}</td>
-                                </tr>
-                            {% endif %}
+                            <tr>
+                                <td colspan="7" class="text-center py-4 text-muted">
+                                    {{ lang('no_projects', 'Henüz yatırım projesi bulunmuyor.') }}
+                                </td>
+                            </tr>
+                            {% endfor %}
                         </tbody>
                     </table>
                 </div>
@@ -223,192 +100,101 @@
     </div>
 </div>
 
-<!-- Add Investment Project Modal -->
-<div class="modal fade" id="addInvestmentModal" tabindex="-1">
+<!-- Add Investment Modal -->
+<div class="modal fade" id="addInvestmentModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">{{ _('add_investment_project', 'Yatırım Projesi Ekle') }}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <h5 class="modal-title">{{ lang('add_new_investment', 'Yeni Yatırım Projesi Ekle') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form action="{{ url_for('economic_add') }}" method="POST">
+            <form action="{{ url_for('data_add', type='economic') }}" method="POST">
                 <div class="modal-body">
-                    <input type="hidden" name="data_type" value="investment_project">
+                    <input type="hidden" name="data_type" value="economic">
+                    <input type="hidden" name="action" value="add_project">
+                    
                     <div class="mb-3">
-                        <label class="form-label">{{ _('project_name', 'Proje Adı') }}</label>
+                        <label class="form-label">{{ lang('project_name', 'Proje Adı') }}</label>
                         <input type="text" class="form-control" name="project_name" required>
                     </div>
+                    
                     <div class="mb-3">
-                        <label class="form-label">{{ _('description', 'Açıklama') }}</label>
-                        <textarea class="form-control" name="description" rows="2"></textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">{{ _('initial_investment', 'İlk Yatırım Tutarı (TL)') }}</label>
+                        <label class="form-label">{{ lang('initial_investment', 'İlk Yatırım Tutarı') }}</label>
                         <input type="number" step="0.01" class="form-control" name="initial_investment" required>
                     </div>
+                    
                     <div class="mb-3">
-                        <label class="form-label">{{ _('start_date', 'Başlangıç Tarihi') }}</label>
+                        <label class="form-label">{{ lang('start_date', 'Başlangıç Tarihi') }}</label>
                         <input type="date" class="form-control" name="start_date" required>
                     </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">{{ _('discount_rate', 'İskonto Oranı') }} (0.10 = %10)</label>
-                            <input type="number" step="0.01" class="form-control" name="discount_rate" value="0.10">
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">{{ _('duration_years', 'Süre (Yıl)') }}</label>
-                            <input type="number" class="form-control" name="duration_years" value="5">
-                        </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">{{ lang('discount_rate', 'İskonto Oranı (Örn: 0.10)') }}</label>
+                        <input type="number" step="0.01" class="form-control" name="discount_rate" value="0.10">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">{{ lang('description', 'Açıklama') }}</label>
+                        <textarea class="form-control" name="description" rows="2"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('btn_cancel', 'İptal') }}</button>
-                    <button type="submit" class="btn btn-primary">{{ _('btn_save', 'Kaydet') }}</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ lang('cancel', 'İptal') }}</button>
+                    <button type="submit" class="btn btn-primary">{{ lang('save', 'Kaydet') }}</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-<!-- Revenue Modal -->
-<div class="modal fade" id="addRevenueModal" tabindex="-1">
-<div class="modal-dialog">
-<div class="modal-content">
-<div class="modal-header">
-<h5 class="modal-title">{{ _('eco_add_revenue', 'Gelir ve Dağıtım Verisi Ekle') }}</h5>
-<button class="btn-close" data-bs-dismiss="modal" type="button"></button>
-</div>
-<form action="{{ url_for('economic_add') }}" method="POST">
-<div class="modal-body">
-<input name="data_type" type="hidden" value="value_distribution"/>
-<div class="mb-3">
-<label class="form-label">{{ _('year', 'Yıl') }}</label>
-<input class="form-control" name="year" required="" type="number" value="2024"/>
-</div>
-<div class="mb-3">
-<label class="form-label">{{ _('eco_total_revenue', 'Toplam Gelir (TL)') }}</label>
-<input class="form-control" name="revenue" required="" step="0.01" type="number"/>
-</div>
-<div class="mb-3">
-<label class="form-label">{{ _('eco_operating_costs', 'Faaliyet Giderleri (TL)') }}</label>
-<input class="form-control" name="operating_costs" step="0.01" type="number" value="0"/>
-</div>
-<div class="mb-3">
-<label class="form-label">{{ _('eco_wages', 'Çalışan Maaş ve Yan Hakları (TL)') }}</label>
-<input class="form-control" name="employee_wages" step="0.01" type="number" value="0"/>
-</div>
-<div class="mb-3">
-<label class="form-label">{{ _('eco_capital_payments', 'Sermaye Sağlayıcılara Ödemeler (TL)') }}</label>
-<input class="form-control" name="payments_capital" step="0.01" type="number" value="0"/>
-</div>
-<div class="mb-3">
-<label class="form-label">{{ _('eco_gov_payments', 'Devlete Ödemeler (TL)') }}</label>
-<input class="form-control" name="payments_gov" step="0.01" type="number" value="0"/>
-</div>
-<div class="mb-3">
-<label class="form-label">{{ _('eco_community_investments', 'Toplumsal Yatırımlar (TL)') }}</label>
-<input class="form-control" name="community_investments" step="0.01" type="number" value="0"/>
-</div>
-</div>
-<div class="modal-footer">
-<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ _('btn_cancel', 'İptal') }}</button>
-<button class="btn btn-primary" type="submit">{{ _('btn_save', 'Kaydet') }}</button>
-</div>
-</form>
-</div>
-</div>
-</div>
-<!-- Tax Modal -->
-<div class="modal fade" id="addTaxModal" tabindex="-1">
-<div class="modal-dialog">
-<div class="modal-content">
-<div class="modal-header">
-<h5 class="modal-title">{{ _('eco_add_tax', 'Vergi Verisi Ekle') }}</h5>
-<button class="btn-close" data-bs-dismiss="modal" type="button"></button>
-</div>
-<form action="{{ url_for('data_add') }}" method="POST">
-<div class="modal-body">
-<input name="data_type" type="hidden" value="economic"/>
-<input name="economic_category" type="hidden" value="tax"/>
-<div class="mb-3">
-<label class="form-label">{{ _('year', 'Yıl') }}</label>
-<input class="form-control" name="year" required="" type="number" value="2024"/>
-</div>
-<div class="mb-3">
-<label class="form-label">{{ _('eco_corporate_tax', 'Kurumlar Vergisi (TL)') }}</label>
-<input class="form-control" name="corporate_tax" step="0.01" type="number" value="0"/>
-</div>
-<div class="mb-3">
-<label class="form-label">{{ _('eco_payroll_tax', 'Bordro Vergisi (TL)') }}</label>
-<input class="form-control" name="payroll_tax" step="0.01" type="number" value="0"/>
-</div>
-<div class="mb-3">
-<label class="form-label">{{ _('eco_vat_collected', 'KDV (Toplanan) (TL)') }}</label>
-<input class="form-control" name="vat_collected" step="0.01" type="number" value="0"/>
-</div>
-<div class="mb-3">
-<label class="form-label">{{ _('eco_property_tax', 'Emlak Vergisi (TL)') }}</label>
-<input class="form-control" name="property_tax" step="0.01" type="number" value="0"/>
-</div>
-<div class="mb-3">
-<label class="form-label">{{ _('eco_other_taxes', 'Diğer Vergiler (TL)') }}</label>
-<input class="form-control" name="other_taxes" step="0.01" type="number" value="0"/>
-</div>
-</div>
-<div class="modal-footer">
-<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ _('btn_cancel', 'İptal') }}</button>
-<button class="btn btn-primary" type="submit">{{ _('btn_save', 'Kaydet') }}</button>
-</div>
-</form>
-</div>
-</div>
-</div>
-<!-- TCFD Modal -->
-<div class="modal fade" id="addTCFDModal" tabindex="-1">
-<div class="modal-dialog">
-<div class="modal-content">
-<div class="modal-header">
-<h5 class="modal-title">{{ _('eco_add_tcfd', 'TCFD (İklim Riski) Verisi Ekle') }}</h5>
-<button class="btn-close" data-bs-dismiss="modal" type="button"></button>
-</div>
-<form action="{{ url_for('data_add') }}" method="POST">
-<div class="modal-body">
-<input name="data_type" type="hidden" value="tcfd"/>
-<div class="mb-3">
-<label class="form-label">{{ _('year', 'Yıl') }}</label>
-<input class="form-control" name="year" required="" type="number" value="2024"/>
-</div>
-<div class="mb-3">
-<label class="form-label">{{ _('category', 'Kategori') }}</label>
-<select class="form-select" name="category">
-<option value="Governance">{{ _('tcfd_governance', 'Yönetişim (Governance)') }}</option>
-<option value="Strategy">{{ _('tcfd_strategy', 'Strateji (Strategy)') }}</option>
-<option value="Risk Management">{{ _('tcfd_risk_mgmt', 'Risk Yönetimi (Risk Management)') }}</option>
-<option value="Metrics &amp; Targets">{{ _('tcfd_metrics', 'Metrikler ve Hedefler (Metrics &amp; Targets)') }}</option>
-</select>
-</div>
-<div class="mb-3">
-<label class="form-label">{{ _('description', 'Açıklama') }}</label>
-<textarea class="form-control" name="disclosure" required="" rows="3"></textarea>
-</div>
-<div class="mb-3">
-<label class="form-label">{{ _('eco_financial_impact', 'Finansal Etki') }}</label>
-<textarea class="form-control" name="impact" rows="2"></textarea>
-</div>
-</div>
-<div class="modal-footer">
-<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ _('btn_cancel', 'İptal') }}</button>
-<button class="btn btn-primary" type="submit">{{ _('btn_save', 'Kaydet') }}</button>
-</div>
-</form>
-</div>
-</div>
+<!-- Add Cash Flow Modal -->
+<div class="modal fade" id="addCashFlowModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ lang('add_cash_flow', 'Nakit Akışı Ekle') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('data_add', type='economic') }}" method="POST">
+                <div class="modal-body">
+                    <input type="hidden" name="data_type" value="economic">
+                    <input type="hidden" name="action" value="add_cash_flow">
+                    <input type="hidden" name="project_id" id="cf_project_id">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">{{ lang('project', 'Proje') }}</label>
+                        <input type="text" class="form-control" id="cf_project_name" readonly>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">{{ lang('year_offset', 'Yıl (Proje Başlangıcından Sonra)') }}</label>
+                        <input type="number" class="form-control" name="year" placeholder="1, 2, 3..." required>
+                        <div class="form-text">{{ lang('year_help', '1 = 1. Yıl, 2 = 2. Yıl...') }}</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">{{ lang('cash_flow_amount', 'Nakit Akışı Tutarı') }}</label>
+                        <input type="number" step="0.01" class="form-control" name="cash_flow" required>
+                        <div class="form-text">{{ lang('cash_flow_help', 'Pozitif değer giriniz (Getiri).') }}</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ lang('cancel', 'İptal') }}</button>
+                    <button type="submit" class="btn btn-primary">{{ lang('save', 'Kaydet') }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
-{% else %}
-<div class="alert alert-warning">
-<h4 class="alert-heading">{{ _('module_failed_title') }}</h4>
-<p>{{ _('module_failed_desc') }}</p>
-</div>
+<script>
+function openCashFlowModal(projectId, projectName) {
+    document.getElementById('cf_project_id').value = projectId;
+    document.getElementById('cf_project_name').value = projectName;
+    var myModal = new bootstrap.Modal(document.getElementById('addCashFlowModal'));
+    myModal.show();
+}
+</script>
+
 {% endif %}
 {% endblock %}

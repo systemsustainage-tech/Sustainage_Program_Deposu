@@ -1,20 +1,20 @@
 {% extends "base.html" %}
 
-{% block title %}{{ _('csrd_title') }} - SDG Platform{% endblock %}
+{% block title %}{{ lang('csrd_title') }} - SDG Platform{% endblock %}
 
 {% block content %}
 
 <div class="row mb-4">
 <div class="col-md-12">
 <div class="d-flex justify-content-between align-items-center">
-<h1><i class="fas fa-book-reader me-2"></i>{{ _('csrd_title') }}</h1>
+<h1><i class="fas fa-book-reader me-2"></i>{{ lang('csrd_title') }}</h1>
 <div>
 <span class="badge bg-{{ 'success' if manager_available else 'danger' }}">
-                    {{ _('module_active_badge') if manager_available else _('module_passive_badge') }}
+                    {{ lang('module_active_badge') if manager_available else _('module_passive_badge') }}
                 </span>
-<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}</button></div>
 </div>
-<p class="lead text-muted">{{ _('csrd_desc') }}</p>
+<p class="lead text-muted">{{ lang('csrd_desc') }}</p>
 </div>
 </div>
 
@@ -24,55 +24,55 @@
 <div class="list-group">
 <a aria-current="true" class="list-group-item list-group-item-action active" href="#">
 <div class="d-flex w-100 justify-content-between">
-<h5 class="mb-1">{{ _('csrd_esrs_general') }}</h5>
+<h5 class="mb-1">{{ lang('csrd_esrs_general') }}</h5>
 </div>
-<p class="mb-1">{{ _('csrd_esrs_general_desc') }}</p>
+<p class="mb-1">{{ lang('csrd_esrs_general_desc') }}</p>
 </a>
 <a class="list-group-item list-group-item-action" href="#">
 <div class="d-flex w-100 justify-content-between">
-<h5 class="mb-1">{{ _('csrd_esrs_env') }}</h5>
+<h5 class="mb-1">{{ lang('csrd_esrs_env') }}</h5>
 </div>
-<p class="mb-1">{{ _('csrd_esrs_env_desc') }}</p>
+<p class="mb-1">{{ lang('csrd_esrs_env_desc') }}</p>
 </a>
 <a class="list-group-item list-group-item-action" href="#">
 <div class="d-flex w-100 justify-content-between">
-<h5 class="mb-1">{{ _('csrd_esrs_social') }}</h5>
+<h5 class="mb-1">{{ lang('csrd_esrs_social') }}</h5>
 </div>
-<p class="mb-1">{{ _('csrd_esrs_social_desc') }}</p>
+<p class="mb-1">{{ lang('csrd_esrs_social_desc') }}</p>
 </a>
 <a class="list-group-item list-group-item-action" href="#">
 <div class="d-flex w-100 justify-content-between">
-<h5 class="mb-1">{{ _('csrd_esrs_gov') }}</h5>
+<h5 class="mb-1">{{ lang('csrd_esrs_gov') }}</h5>
 </div>
-<p class="mb-1">{{ _('csrd_esrs_gov_desc') }}</p>
+<p class="mb-1">{{ lang('csrd_esrs_gov_desc') }}</p>
 </a>
 </div>
 </div>
 <div class="col-md-8">
 <div class="card mb-4">
 <div class="card-header">
-                {{ _('csrd_materiality_title') }} (Double Materiality)
+                {{ lang('csrd_materiality_title') }} (Double Materiality)
             </div>
 <div class="card-body">
-<p>{{ _('csrd_materiality_desc') }}</p>
-<a class="btn btn-primary" href="{{ url_for('csrd_materiality') }}">{{ _('btn_start_analysis') }}</a>
+<p>{{ lang('csrd_materiality_desc') }}</p>
+<a class="btn btn-primary" href="{{ url_for('csrd_materiality') }}">{{ lang('btn_start_analysis') }}</a>
 </div>
 </div>
 
         {% if materiality %}
         <div class="card">
 <div class="card-header">
-                {{ _('csrd_matrix') }}
+                {{ lang('csrd_matrix') }}
             </div>
 <div class="card-body">
 <div class="table-responsive">
 <table class="table">
 <thead>
 <tr>
-<th>{{ _('csrd_topic') }}</th>
-<th>{{ _('csrd_impact_score') }}</th>
-<th>{{ _('csrd_financial_score') }}</th>
-<th>{{ _('csrd_rationale') }}</th>
+<th>{{ lang('csrd_topic') }}</th>
+<th>{{ lang('csrd_impact_score') }}</th>
+<th>{{ lang('csrd_financial_score') }}</th>
+<th>{{ lang('csrd_rationale') }}</th>
 </tr>
 </thead>
 <tbody>
@@ -106,8 +106,8 @@
 </div>
 {% else %}
 <div class="alert alert-warning">
-<h4 class="alert-heading">{{ _('module_failed_title') }}</h4>
-<p>{{ _('module_failed_desc') }}</p>
+<h4 class="alert-heading">{{ lang('module_failed_title') }}</h4>
+<p>{{ lang('module_failed_desc') }}</p>
 </div>
 {% endif %}
 {% endblock %}

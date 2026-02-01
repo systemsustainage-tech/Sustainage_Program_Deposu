@@ -1,36 +1,36 @@
 {% extends "base.html" %}
 
-{% block title %}{{ _('admin_ip_control') }}{% endblock %}
+{% block title %}{{ lang('admin_ip_control') }}{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
 <div>
-<h1 class="h2">{{ _('admin_ip_control') }}</h1>
+<h1 class="h2">{{ lang('admin_ip_control') }}</h1>
 <p class="text-muted mb-0">
-            {{ _('admin_ip_desc') }}
+            {{ lang('admin_ip_desc') }}
         </p>
 </div>
 <div class="btn-toolbar mb-2 mb-md-0">
 
-<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}</button></div>
 </div>
 <div class="row g-4 mb-4">
 <div class="col-md-4">
 <div class="card border-0 shadow-sm">
 <div class="card-body">
-<h5 class="card-title mb-3">{{ _('summary') }}</h5>
+<h5 class="card-title mb-3">{{ lang('summary') }}</h5>
 <ul class="list-unstyled mb-0">
 <li class="mb-2">
 <span class="badge bg-success me-2">{{ stats.whitelist_count }}</span>
-                        {{ _('whitelist_records') }}
+                        {{ lang('whitelist_records') }}
                     </li>
 <li class="mb-2">
 <span class="badge bg-danger me-2">{{ stats.blacklist_count }}</span>
-                        {{ _('blacklist_records') }}
+                        {{ lang('blacklist_records') }}
                     </li>
 <li>
 <span class="badge bg-warning text-dark me-2">{{ stats.auto_blocked }}</span>
-                        {{ _('auto_blocked_count') }}
+                        {{ lang('auto_blocked_count') }}
                     </li>
 </ul>
 </div>
@@ -41,29 +41,29 @@
 <div class="col-lg-6">
 <div class="card border-0 shadow-sm mb-4">
 <div class="card-header">
-<h5 class="mb-0">{{ _('whitelist_add') }}</h5>
+<h5 class="mb-0">{{ lang('whitelist_add') }}</h5>
 </div>
 <div class="card-body">
 <form method="post">
 <input name="action" type="hidden" value="add_whitelist"/>
 <div class="mb-3">
-<label class="form-label">{{ _('ip_address') }}</label>
+<label class="form-label">{{ lang('ip_address') }}</label>
 <input class="form-control" name="ip_address" placeholder="192.168.1.10" type="text"/>
 </div>
 <div class="mb-3">
-<label class="form-label">{{ _('description') }}</label>
+<label class="form-label">{{ lang('description') }}</label>
 <input class="form-control" name="description" placeholder="Ofis ağı, VPN vb." type="text"/>
 </div>
 <button class="btn btn-success" type="submit">
-<i class="bi bi-plus-circle"></i> {{ _('btn_add_whitelist') }}
+<i class="bi bi-plus-circle"></i> {{ lang('btn_add_whitelist') }}
                     </button>
 </form>
 </div>
 </div>
 <div class="card border-0 shadow-sm">
 <div class="card-header d-flex justify-content-between align-items-center">
-<h5 class="mb-0">{{ _('whitelist_records_title') }}</h5>
-<span class="badge bg-secondary">{{ whitelist|length }} {{ _('record') }}</span>
+<h5 class="mb-0">{{ lang('whitelist_records_title') }}</h5>
+<span class="badge bg-secondary">{{ whitelist|length }} {{ lang('record') }}</span>
 </div>
 <div class="card-body p-0">
 <div class="table-responsive">
@@ -71,10 +71,10 @@
 <thead class="table-light">
 <tr>
 <th>ID</th>
-<th>{{ _('ip_address') }}</th>
-<th>{{ _('description') }}</th>
-<th>{{ _('added_by') }}</th>
-<th>{{ _('table_date') }}</th>
+<th>{{ lang('ip_address') }}</th>
+<th>{{ lang('description') }}</th>
+<th>{{ lang('added_by') }}</th>
+<th>{{ lang('table_date') }}</th>
 <th></th>
 </tr>
 </thead>
@@ -90,7 +90,7 @@
 <form class="d-inline" method="post">
 <input name="action" type="hidden" value="remove_whitelist"/>
 <input name="ip_address" type="hidden" value="{{ item.ip }}"/>
-<button class="btn btn-sm btn-outline-danger" onclick="return confirm('{{ _('confirm_remove_whitelist') }}');" type="submit">
+<button class="btn btn-sm btn-outline-danger" onclick="return confirm('{{ lang('confirm_remove_whitelist') }}');" type="submit">
 <i class="bi bi-trash"></i>
 </button>
 </form>

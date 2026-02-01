@@ -10,10 +10,6 @@ if project_root not in sys.path:
 
 from config.database import DB_PATH
 
-# FORCE DB_PATH for remote environment to ensure correct DB is used
-if os.path.exists('/var/www/sustainage/backend/data/sdg_desktop.sqlite'):
-    DB_PATH = '/var/www/sustainage/backend/data/sdg_desktop.sqlite'
-
 def migrate():
     print(f"Migrating LCA tables to {DB_PATH}...")
     

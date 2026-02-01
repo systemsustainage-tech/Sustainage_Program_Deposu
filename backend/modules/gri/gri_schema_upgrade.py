@@ -43,6 +43,17 @@ class GRISchemaUpgrade:
                 )
             """)
 
+            # Check and add effective_date column to gri_standards if missing
+            cursor.execute("PRAGMA table_info(gri_standards)")
+            columns = [info[1] for info in cursor.fetchall()]
+            if 'effective_date' not in columns:
+                cursor.execute("ALTER TABLE gri_standards ADD COLUMN effective_date TEXT")
+                logging.info("Added effective_date column to gri_standards")
+            
+            if 'version' not in columns:
+                cursor.execute("ALTER TABLE gri_standards ADD COLUMN version TEXT")
+                logging.info("Added version column to gri_standards")
+
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS gri_indicators (
                     id INTEGER PRIMARY KEY,

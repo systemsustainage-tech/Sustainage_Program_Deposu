@@ -9,114 +9,114 @@
             <div class="card-body p-4">
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h3 class="mb-0"><i class="bi bi-currency-exchange text-success"></i> {{ title }}</h3>
-                    <button class="btn btn-sm btn-outline-secondary" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}</button>
                 </div>
                 
                 <form method="post" class="needs-validation" novalidate>
                     <input type="hidden" name="data_type" value="{{ data_type }}">
                     
                     {% if data_type == 'value_distribution' %}
-                    <h5 class="mb-3 text-muted">{{ _('eco_dist_title') }}</h5>
+                    <h5 class="mb-3 text-muted">{{ lang('eco_dist_title') }}</h5>
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
-                            <label class="form-label">{{ _('year') }}</label>
+                            <label class="form-label">{{ lang('year') }}</label>
                             <input type="number" class="form-control" name="year" value="2024" required>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">{{ _('total_revenue') }}</label>
+                            <label class="form-label">{{ lang('total_revenue') }}</label>
                             <input type="number" step="0.01" class="form-control" name="revenue" required>
                         </div>
                     </div>
                     
-                    <h6 class="mt-4 text-muted">{{ _('dist_eco_value') }}</h6>
+                    <h6 class="mt-4 text-muted">{{ lang('dist_eco_value') }}</h6>
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
-                            <label class="form-label">{{ _('operating_costs') }}</label>
+                            <label class="form-label">{{ lang('operating_costs') }}</label>
                             <input type="number" step="0.01" class="form-control" name="operating_costs">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">{{ _('employee_wages') }}</label>
+                            <label class="form-label">{{ lang('employee_wages') }}</label>
                             <input type="number" step="0.01" class="form-control" name="employee_wages">
                         </div>
                     </div>
                     
                     <div class="row g-3 mb-3">
                         <div class="col-md-4">
-                            <label class="form-label">{{ _('payments_to_capital') }}</label>
+                            <label class="form-label">{{ lang('payments_to_capital') }}</label>
                             <input type="number" step="0.01" class="form-control" name="payments_capital">
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label">{{ _('payments_to_gov') }}</label>
+                            <label class="form-label">{{ lang('payments_to_gov') }}</label>
                             <input type="number" step="0.01" class="form-control" name="payments_gov">
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label">{{ _('community_investments') }}</label>
+                            <label class="form-label">{{ lang('community_investments') }}</label>
                             <input type="number" step="0.01" class="form-control" name="community_investments">
                         </div>
                     </div>
 
                     {% elif data_type == 'financial_performance' %}
-                    <h5 class="mb-3 text-muted">{{ _('financial_perf') }}</h5>
+                    <h5 class="mb-3 text-muted">{{ lang('financial_perf') }}</h5>
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
-                            <label class="form-label">{{ _('total_assets') }}</label>
+                            <label class="form-label">{{ lang('total_assets') }}</label>
                             <input type="number" step="0.01" class="form-control" name="total_assets">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">{{ _('total_liabilities') }}</label>
+                            <label class="form-label">{{ lang('total_liabilities') }}</label>
                             <input type="number" step="0.01" class="form-control" name="total_liabilities">
                         </div>
                     </div>
                     <div class="row g-3 mb-3">
                         <div class="col-md-4">
-                            <label class="form-label">{{ _('net_profit') }}</label>
+                            <label class="form-label">{{ lang('net_profit') }}</label>
                             <input type="number" step="0.01" class="form-control" name="net_profit">
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label">{{ _('ebitda') }}</label>
+                            <label class="form-label">{{ lang('ebitda') }}</label>
                             <input type="number" step="0.01" class="form-control" name="ebitda">
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label">{{ _('roe') }}</label>
+                            <label class="form-label">{{ lang('roe') }}</label>
                             <input type="number" step="0.01" class="form-control" name="roe" disabled placeholder="Otomatik hesaplanır">
                         </div>
                     </div>
                     
                     {% elif data_type == 'tax' %}
-                    <h5 class="mb-3 text-muted">{{ _('eco_tax_mgmt') }}</h5>
+                    <h5 class="mb-3 text-muted">{{ lang('eco_tax_mgmt') }}</h5>
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
-                            <label class="form-label">{{ _('year') }}</label>
+                            <label class="form-label">{{ lang('year') }}</label>
                             <input type="number" class="form-control" name="year" value="2024" required>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">{{ _('eco_corporate_tax') }}</label>
+                            <label class="form-label">{{ lang('eco_corporate_tax') }}</label>
                             <input type="number" step="0.01" class="form-control" name="corporate_tax" required>
                         </div>
                     </div>
                     <div class="row g-3 mb-3">
                         <div class="col-md-3">
-                            <label class="form-label">{{ _('eco_payroll_tax') }}</label>
+                            <label class="form-label">{{ lang('eco_payroll_tax') }}</label>
                             <input type="number" step="0.01" class="form-control" name="payroll_tax">
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label">{{ _('eco_vat') }}</label>
+                            <label class="form-label">{{ lang('eco_vat') }}</label>
                             <input type="number" step="0.01" class="form-control" name="vat_collected">
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label">{{ _('eco_property_tax') }}</label>
+                            <label class="form-label">{{ lang('eco_property_tax') }}</label>
                             <input type="number" step="0.01" class="form-control" name="property_tax">
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label">{{ _('eco_other_tax') }}</label>
+                            <label class="form-label">{{ lang('eco_other_tax') }}</label>
                             <input type="number" step="0.01" class="form-control" name="other_taxes">
                         </div>
                     </div>
                     {% endif %}
 
                     <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
-                        <a href="{{ url_for('economic_module') }}" class="btn btn-outline-secondary me-md-2">{{ _('common.btn_cancel') }}</a>
-                        <button type="submit" class="btn btn-success"><i class="bi bi-save"></i> {{ _('common.btn_save') }}</button>
+                        <a href="{{ url_for('economic_module') }}" class="btn btn-outline-secondary me-md-2">{{ lang('common.btn_cancel') }}</a>
+                        <button type="submit" class="btn btn-success"><i class="bi bi-save"></i> {{ lang('common.btn_save') }}</button>
                     </div>
                 </form>
             </div>

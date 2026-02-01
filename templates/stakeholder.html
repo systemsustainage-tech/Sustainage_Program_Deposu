@@ -1,20 +1,20 @@
 {% extends "base.html" %}
 
-{% block title %}{{ _('stakeholder_title', 'Stakeholder') }} - SDG{% endblock %}
+{% block title %}{{ lang('stakeholder_title', 'Stakeholder') }} - SDG{% endblock %}
 
 {% block content %}
 
 <div class="row mb-4">
 <div class="col-md-12">
 <div class="d-flex justify-content-between align-items-center">
-<h1><i class="fas fa-cube me-2"></i>{{ _('stakeholder_title', 'Stakeholder') }}</h1>
+<h1><i class="fas fa-cube me-2"></i>{{ lang('stakeholder_title', 'Stakeholder') }}</h1>
 <div>
 <span class="badge bg-{{ 'success' if manager_available else 'secondary' }}">
-                    {{ _('module_active_badge', 'Aktif') if manager_available else _('module_passive_badge', 'Pasif') }}
+                    {{ lang('module_active_badge', 'Aktif') if manager_available else _('module_passive_badge', 'Pasif') }}
                 </span>
-<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}</button></div>
 </div>
-<p class="lead text-muted">{{ _('stakeholder_desc', 'Paydaş katılımı ve yönetimi modülü.') }}</p>
+<p class="lead text-muted">{{ lang('stakeholder_desc', 'Paydaş katılımı ve yönetimi modülü.') }}</p>
 </div>
 </div>
 <div class="row">
@@ -29,7 +29,7 @@
                             <div class="col-12 mb-4">
 <div class="card">
 <div class="card-header">
-<h5 class="mb-0">{{ _('statistics', 'İstatistikler') }}</h5>
+<h5 class="mb-0">{{ lang('statistics', 'İstatistikler') }}</h5>
 </div>
 <div class="card-body">
 <div class="row">
@@ -37,7 +37,7 @@
                                                 {% if key != 'sdg_performance' %}
                                                 <div class="col-md-3 mb-3">
 <div class="border rounded p-3 text-center bg-light">
-<h6 class="text-muted text-uppercase small">{{ _(key) }}</h6>
+<h6 class="text-muted text-uppercase small">{{ lang(key) }}</h6>
 <h3 class="mb-0 text-primary">{{ value }}</h3>
 </div>
 </div>
@@ -48,13 +48,13 @@
                                         {% if stats.sdg_performance %}
                                         <div class="row mt-4">
 <div class="col-12">
-<h6 class="text-primary mb-3"><i class="bi bi-graph-up"></i> {{ _('stakeholder_sdg_scores', 'Öne Çıkan SDG Performans Skorları (Anket Bazlı)') }}</h6>
+<h6 class="text-primary mb-3"><i class="bi bi-graph-up"></i> {{ lang('stakeholder_sdg_scores', 'Öne Çıkan SDG Performans Skorları (Anket Bazlı)') }}</h6>
 <div class="row">
                                                     {% for sdg, score in stats.sdg_performance.items() %}
                                                     <div class="col-md-2 mb-3">
 <div class="card h-100 border-0 shadow-sm text-center">
 <div class="card-body">
-<img alt="{{ sdg }}" class="img-fluid mb-2" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" src="/static/img/sdg/{{ sdg }}.png" style="max-height: 60px;"/>
+<img alt="{{ sdg }}" class="img-fluid mb-2" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" src="/static/img/sdg/{{ sdg }}.png?v={{ app_version }}" style="max-height: 60px;"/>
 <div class="fw-bold text-secondary" style="display:none;">{{ sdg }}</div>
 <div class="h4 mb-0 text-success">{{ score }}</div>
 <small class="text-muted">/ 5.0</small>
@@ -75,9 +75,9 @@
                             <div class="col-12">
 <div class="card">
 <div class="card-header d-flex justify-content-between align-items-center">
-<h5 class="mb-0">{{ _('records', 'Kayıtlar') }}</h5>
+<h5 class="mb-0">{{ lang('records', 'Kayıtlar') }}</h5>
 <button class="btn btn-sm btn-primary" data-bs-target="#addStakeholderModal" data-bs-toggle="modal">
-<i class="fas fa-plus"></i> {{ _('add_new', 'Yeni Ekle') }}
+<i class="fas fa-plus"></i> {{ lang('add_new', 'Yeni Ekle') }}
                                         </button>
 </div>
 <div class="card-body">
@@ -91,7 +91,7 @@
                                                             <th>{{ col|replace('_', ' ')|title }}</th>
                                                             {% endfor %}
                                                         {% else %}
-                                                            <th>{{ _('details', 'Detaylar') }}</th>
+                                                            <th>{{ lang('details', 'Detaylar') }}</th>
                                                         {% endif %}
                                                     </tr>
 </thead>
@@ -116,7 +116,7 @@
 </div>
                                         {% else %}
                                             <div class="text-center py-4">
-<p class="text-muted mb-0">{{ _('no_records_found', 'Henüz kayıt bulunamadı.') }}</p>
+<p class="text-muted mb-0">{{ lang('no_records_found', 'Henüz kayıt bulunamadı.') }}</p>
 </div>
                                         {% endif %}
                                     </div>
@@ -125,9 +125,9 @@
                             
                             {% if not records and not stats and false %}
                                 <div class="col-12 text-center py-5">
-<p class="text-muted">{{ _('no_data_msg', 'Veri bulunamadı.') }}</p>
+<p class="text-muted">{{ lang('no_data_msg', 'Veri bulunamadı.') }}</p>
 <button class="btn btn-primary" data-bs-target="#addStakeholderModal" data-bs-toggle="modal">
-<i class="fas fa-plus"></i> {{ _('add_first_record', 'İlk Kaydı Ekle') }}
+<i class="fas fa-plus"></i> {{ lang('add_first_record', 'İlk Kaydı Ekle') }}
                                     </button>
 </div>
                             {% endif %}
@@ -136,9 +136,9 @@
                         <!-- Fallback to Under Construction if no data -->
 <div class="text-center py-5">
 <i class="bi bi-cone-striped display-1 text-warning mb-3"></i>
-<h3>{{ _('module_under_construction') }}</h3>
-<p class="text-muted">{{ _('module_coming_soon_desc', 'Bu modülün web arayüzü entegrasyonu devam etmektedir.') }}</p>
-<p class="small text-muted">{{ _('no_data_msg', 'Veri bulunamadı veya modül henüz aktif değil.') }}</p>
+<h3>{{ lang('module_under_construction') }}</h3>
+<p class="text-muted">{{ lang('module_coming_soon_desc', 'Bu modülün web arayüzü entegrasyonu devam etmektedir.') }}</p>
+<p class="small text-muted">{{ lang('no_data_msg', 'Veri bulunamadı veya modül henüz aktif değil.') }}</p>
 </div>
                     {% endif %}
 
@@ -151,60 +151,60 @@
 <div class="modal-dialog">
 <div class="modal-content">
 <div class="modal-header">
-<h5 class="modal-title">{{ _('add_new_stakeholder', 'Yeni Paydaş Ekle') }}</h5>
+<h5 class="modal-title">{{ lang('add_new_stakeholder', 'Yeni Paydaş Ekle') }}</h5>
 <button class="btn-close" data-bs-dismiss="modal" type="button"></button>
 </div>
 <form action="{{ url_for('add_stakeholder') }}" method="POST">
 <div class="modal-body">
 <div class="mb-3">
-<label class="form-label">{{ _('stakeholder_name', 'Paydaş Adı') }}</label>
+<label class="form-label">{{ lang('stakeholder_name', 'Paydaş Adı') }}</label>
 <input class="form-control" name="stakeholder_name" required="" type="text"/>
 </div>
 <div class="mb-3">
-<label class="form-label">{{ _('stakeholder_type', 'Paydaş Tipi') }}</label>
+<label class="form-label">{{ lang('stakeholder_type', 'Paydaş Tipi') }}</label>
 <select class="form-select" name="stakeholder_type">
-<option value="internal">{{ _('internal', 'İç Paydaş') }}</option>
-<option value="external">{{ _('external', 'Dış Paydaş') }}</option>
+<option value="internal">{{ lang('internal', 'İç Paydaş') }}</option>
+<option value="external">{{ lang('external', 'Dış Paydaş') }}</option>
 </select>
 </div>
 <div class="mb-3">
-<label class="form-label">{{ _('organization', 'Kurum/Organizasyon') }}</label>
+<label class="form-label">{{ lang('organization', 'Kurum/Organizasyon') }}</label>
 <input class="form-control" name="organization" type="text"/>
 </div>
 <div class="mb-3">
-<label class="form-label">{{ _('contact_person', 'İletişim Kişisi') }}</label>
+<label class="form-label">{{ lang('contact_person', 'İletişim Kişisi') }}</label>
 <input class="form-control" name="contact_person" type="text"/>
 </div>
 <div class="mb-3">
-<label class="form-label">{{ _('email', 'E-posta') }}</label>
+<label class="form-label">{{ lang('email', 'E-posta') }}</label>
 <input class="form-control" name="contact_email" type="email"/>
 </div>
 <div class="mb-3">
-<label class="form-label">{{ _('phone', 'Telefon') }}</label>
+<label class="form-label">{{ lang('phone', 'Telefon') }}</label>
 <input class="form-control" name="contact_phone" type="text"/>
 </div>
 <div class="row">
 <div class="col-6 mb-3">
-<label class="form-label">{{ _('influence_level', 'Etki Düzeyi') }}</label>
+<label class="form-label">{{ lang('influence_level', 'Etki Düzeyi') }}</label>
 <select class="form-select" name="influence_level">
-<option value="High">{{ _('high', 'Yüksek') }}</option>
-<option value="Medium">{{ _('medium', 'Orta') }}</option>
-<option value="Low">{{ _('low', 'Düşük') }}</option>
+<option value="High">{{ lang('high', 'Yüksek') }}</option>
+<option value="Medium">{{ lang('medium', 'Orta') }}</option>
+<option value="Low">{{ lang('low', 'Düşük') }}</option>
 </select>
 </div>
 <div class="col-6 mb-3">
-<label class="form-label">{{ _('interest_level', 'İlgi Düzeyi') }}</label>
+<label class="form-label">{{ lang('interest_level', 'İlgi Düzeyi') }}</label>
 <select class="form-select" name="interest_level">
-<option value="High">{{ _('high', 'Yüksek') }}</option>
-<option value="Medium">{{ _('medium', 'Orta') }}</option>
-<option value="Low">{{ _('low', 'Düşük') }}</option>
+<option value="High">{{ lang('high', 'Yüksek') }}</option>
+<option value="Medium">{{ lang('medium', 'Orta') }}</option>
+<option value="Low">{{ lang('low', 'Düşük') }}</option>
 </select>
 </div>
 </div>
 </div>
 <div class="modal-footer">
-<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ _('cancel', 'İptal') }}</button>
-<button class="btn btn-primary" type="submit">{{ _('save', 'Kaydet') }}</button>
+<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ lang('cancel', 'İptal') }}</button>
+<button class="btn btn-primary" type="submit">{{ lang('save', 'Kaydet') }}</button>
 </div>
 </form>
 </div>

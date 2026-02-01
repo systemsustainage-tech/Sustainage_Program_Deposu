@@ -2,6 +2,7 @@
 import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import DashboardChart from '../components/DashboardChart.vue';
+import { t as $t } from '../plugins/i18n';
 
 const stats = ref(null);
 const loading = ref(true);
@@ -15,7 +16,7 @@ const chartData = computed(() => {
     labels: stats.value.modules.map(m => m.name),
     datasets: [
       {
-        label: 'Performans Skoru',
+        label: $t('performance_score'),
         backgroundColor: '#41B883',
         data: stats.value.modules.map(m => m.score)
       }
@@ -33,7 +34,7 @@ const fetchStats = async () => {
     }
     
     if (!response.ok) {
-      throw new Error('Veri alınamadı');
+      throw new Error($t('data_fetch_error'));
     }
     
     const data = await response.json();
@@ -43,7 +44,7 @@ const fetchStats = async () => {
     stats.value = data;
   } catch (err) {
     console.error('Dashboard error:', err);
-    error.value = 'Dashboard verileri yüklenirken hata oluştu.';
+    error.value = $t('dashboard_load_error');
   } finally {
     loading.value = false;
   }
@@ -57,25 +58,25 @@ onMounted(() => {
 <template>
   <div class="home">
     <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-      <h1 class="h2">Dashboard</h1>
+      <h1 class="h2">{{ $t('dashboard_title') }}</h1>
       <div class="btn-toolbar mb-2 mb-md-0">
         <div class="btn-group me-2">
-          <button type="button" class="btn btn-sm btn-outline-secondary">Paylaş</button>
-          <button type="button" class="btn btn-sm btn-outline-secondary">Dışa Aktar</button>
+          <button type="button" class="btn btn-sm btn-outline-secondary">{{ $t('share_button') }}</button>
+          <button type="button" class="btn btn-sm btn-outline-secondary">{{ $t('export_button') }}</button>
         </div>
       </div>
     </div>
 
     <div v-if="loading" class="text-center my-5">
       <div class="spinner-border text-primary" role="status">
-        <span class="visually-hidden">Yükleniyor...</span>
+        <span class="visually-hidden">{{ $t('loading') }}</span>
       </div>
-      <p class="mt-2">Veriler yükleniyor...</p>
+      <p class="mt-2">{{ $t('loading_data') }}</p>
     </div>
 
     <div v-else-if="error" class="alert alert-danger" role="alert">
       {{ error }}
-      <button class="btn btn-link" @click="fetchStats">Tekrar Dene</button>
+      <button class="btn btn-link" @click="fetchStats">{{ $t('retry_button') }}</button>
     </div>
 
     <div v-else class="dashboard-content">
@@ -83,7 +84,7 @@ onMounted(() => {
       <div v-if="stats.alerts > 0" class="alert alert-warning d-flex align-items-center" role="alert">
         <i class="bi bi-exclamation-triangle-fill me-2"></i>
         <div>
-          {{ stats.alerts }} adet bekleyen bildiriminiz var.
+          {{ stats.alerts }} {{ $t('pending_alerts_suffix') }}
         </div>
       </div>
 
@@ -94,7 +95,7 @@ onMounted(() => {
             <div class="card-header d-flex justify-content-between align-items-center">
               <h5 class="my-0 font-weight-normal">{{ module.name }}</h5>
               <span class="badge" :class="{'bg-success': module.status === 'Active', 'bg-warning text-dark': module.status === 'Pending'}">
-                {{ module.status === 'Active' ? 'Aktif' : 'Beklemede' }}
+                {{ module.status === 'Active' ? $t('status_active') : $t('status_pending') }}
               </span>
             </div>
             <div class="card-body">

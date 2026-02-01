@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - SDG{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card shadow">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h4 class="mb-0"><i class="bi bi-headset"></i> {{ title }}</h4>
+                <a href="{{ url_for('support_create') }}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Yeni Talep Oluştur</a>
+            </div>
+            <div class="card-body">
+                {% if tickets %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Konu</th>
+                                <th>Kategori</th>
+                                <th>Öncelik</th>
+                                <th>Durum</th>
+                                <th>Tarih</th>
+                                <th>İşlem</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ticket in tickets %}
+                            <tr>
+                                <td>{{ ticket.id }}</td>
+                                <td>{{ ticket.subject }}</td>
+                                <td>
+                                    {% if ticket.category == 'technical' %}Teknik Sorun
+                                    {% elif ticket.category == 'account' %}Hesap İşlemleri
+                                    {% elif ticket.category == 'data' %}Veri Girişi
+                                    {% elif ticket.category == 'report' %}Raporlama
+                                    {% else %}Diğer{% endif %}
+                                </td>
+                                <td>
+                                    {% if ticket.priority == 'high' %}<span class="badge bg-danger">Yüksek</span>
+                                    {% elif ticket.priority == 'medium' %}<span class="badge bg-warning text-dark">Orta</span>
+                                    {% elif ticket.priority == 'low' %}<span class="badge bg-success">Düşük</span>
+                                    {% else %}<span class="badge bg-secondary">{{ ticket.priority }}</span>{% endif %}
+                                </td>
+                                <td>
+                                    {% if ticket.status == 'open' %}<span class="badge bg-info text-dark">Açık</span>
+                                    {% elif ticket.status == 'answered' %}<span class="badge bg-primary">Yanıtlandı</span>
+                                    {% elif ticket.status == 'closed' %}<span class="badge bg-secondary">Kapalı</span>
+                                    {% else %}<span class="badge bg-light text-dark">{{ ticket.status }}</span>{% endif %}
+                                </td>
+                                <td>{{ ticket.created_at[:16] }}</td>
+                                <td>
+                                    <a href="{{ url_for('support_detail', ticket_id=ticket.id) }}" class="btn btn-sm btn-outline-primary">Görüntüle</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                {% if total_pages > 1 %}
+                <nav aria-label="Page navigation" class="mt-4">
+                    <ul class="pagination justify-content-center">
+                        {% if page > 1 %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('support_dashboard', page=page-1) }}" aria-label="Previous">
+                                <span aria-hidden="true">&laquo;</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                        
+                        {% for p in range(1, total_pages + 1) %}
+                        <li class="page-item {% if p == page %}active{% endif %}">
+                            <a class="page-link" href="{{ url_for('support_dashboard', page=p) }}">{{ p }}</a>
+                        </li>
+                        {% endfor %}
+                        
+                        {% if page < total_pages %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('support_dashboard', page=page+1) }}" aria-label="Next">
+                                <span aria-hidden="true">&raquo;</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+
+                {% else %}
+                <div class="alert alert-info">
+                    Henüz bir destek talebiniz bulunmamaktadır.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

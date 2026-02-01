@@ -18,94 +18,250 @@
 
 <div class="row mb-4">
     <div class="col-md-4">
-        <div class="card shadow-sm border-0 h-100">
-            <div class="card-header">
-                <h5 class="mb-0">Genel Bilgiler</h5>
+        <!-- Scorecard Summary -->
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Tedarikçi Karnesi</h5>
             </div>
             <div class="card-body">
                 <ul class="list-group list-group-flush">
                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                        Risk Skoru
-                        {% if supplier.risk_score < 30 %}
+                        Sürdürülebilirlik Skoru
+                        {% if supplier.risk_score >= 70 %}
                         <span class="badge bg-success rounded-pill">{{ supplier.risk_score|round(1) }}</span>
-                        {% elif supplier.risk_score < 70 %}
+                        {% elif supplier.risk_score >= 40 %}
                         <span class="badge bg-warning text-dark rounded-pill">{{ supplier.risk_score|round(1) }}</span>
                         {% else %}
                         <span class="badge bg-danger rounded-pill">{{ supplier.risk_score|round(1) }}</span>
                         {% endif %}
                     </li>
+                    {% if scorecard.audit_stats %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Denetim Ortalaması
+                        <span class="badge bg-info text-dark rounded-pill">{{ scorecard.audit_stats.avg_audit_score|round(1) }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Toplam Uygunsuzluk
+                        <span class="badge bg-secondary rounded-pill">{{ scorecard.audit_stats.total_nc }}</span>
+                    </li>
+                    {% endif %}
                     <li class="list-group-item">
                         <strong>İletişim:</strong><br>
                         {{ supplier.contact_info }}
                     </li>
-                    <li class="list-group-item">
-                        <strong>Sektör:</strong> {{ supplier.sector }}
-                    </li>
-                    <li class="list-group-item">
-                        <strong>Bölge:</strong> {{ supplier.region }}
-                    </li>
                 </ul>
+            </div>
+        </div>
+
+        <!-- High Risks Warning -->
+        {% if scorecard.high_risks %}
+        <div class="card shadow-sm border-0 mb-4 border-start border-danger border-5">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Kritik Riskler</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    {% for risk in scorecard.high_risks %}
+                    <li class="list-group-item">
+                        <strong>{{ risk.risk_category }}</strong><br>
+                        <small>{{ risk.description }}</small>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Recommendations -->
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="fas fa-lightbulb me-2 text-warning"></i>Önerilen Aksiyonlar</h5>
+            </div>
+            <div class="card-body">
+                {% if recommendations %}
+                    <ul class="list-group list-group-flush">
+                        {% for rec in recommendations %}
+                            <li class="list-group-item"><i class="fas fa-check-circle me-2 text-primary"></i>{{ rec }}</li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted mb-0">Şu an için özel bir aksiyon önerisi bulunmuyor.</p>
+                {% endif %}
             </div>
         </div>
     </div>
     
     <div class="col-md-8">
         <div class="card shadow-sm border-0 h-100">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Değerlendirme Geçmişi</h5>
-                <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addAssessmentModal">
-                    <i class="fas fa-clipboard-check"></i> Yeni Değerlendirme
-                </button>
+            <div class="card-header">
+                <ul class="nav nav-tabs card-header-tabs" id="myTab" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="assessments-tab" data-bs-toggle="tab" data-bs-target="#assessments" type="button" role="tab">Değerlendirmeler</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="audits-tab" data-bs-toggle="tab" data-bs-target="#audits" type="button" role="tab">Denetimler (Audits)</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="risks-tab" data-bs-toggle="tab" data-bs-target="#risks" type="button" role="tab">Risk Analizi</button>
+                    </li>
+                </ul>
             </div>
             <div class="card-body">
-                {% if assessments %}
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle">
-                        <thead>
-                            <tr>
-                                <th>Tarih</th>
-                                <th>Risk Seviyesi</th>
-                                <th>Skor</th>
-                                <th>Detaylar</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for assessment in assessments %}
-                            <tr>
-                                <td>{{ assessment.assessment_date }}</td>
-                                <td>
-                                    {% if assessment.risk_level == 'Low' %}
-                                    <span class="badge bg-success">Düşük</span>
-                                    {% elif assessment.risk_level == 'Medium' %}
-                                    <span class="badge bg-warning text-dark">Orta</span>
-                                    {% else %}
-                                    <span class="badge bg-danger">Yüksek</span>
-                                    {% endif %}
-                                </td>
-                                <td>{{ assessment.score }}</td>
-                                <td>
-                                    <!-- JSON details rendering simplified -->
-                                    <button class="btn btn-sm btn-outline-info" type="button" data-bs-toggle="collapse" data-bs-target="#detail{{ assessment.id }}">
-                                        Göster
-                                    </button>
-                                </td>
-                            </tr>
-                            <tr class="collapse" id="detail{{ assessment.id }}">
-                                <td colspan="4">
-                                    <div class="card card-body bg-light">
-                                        <pre class="mb-0">{{ assessment.details | tojson(indent=2) }}</pre>
-                                    </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                <div class="tab-content" id="myTabContent">
+                    
+                    <!-- Assessments Tab -->
+                    <div class="tab-pane fade show active" id="assessments" role="tabpanel">
+                        <div class="d-flex justify-content-end mb-3">
+                            <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addAssessmentModal">
+                                <i class="fas fa-clipboard-check"></i> Yeni Değerlendirme
+                            </button>
+                        </div>
+                        {% if assessments %}
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Tarih</th>
+                                        <th>Risk Seviyesi</th>
+                                        <th>Skor</th>
+                                        <th>Detaylar</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for assessment in assessments %}
+                                    <tr>
+                                        <td>{{ assessment.assessment_date }}</td>
+                                        <td>
+                                            {% if assessment.risk_level == 'Low' %}
+                                            <span class="badge bg-success">Düşük</span>
+                                            {% elif assessment.risk_level == 'Medium' %}
+                                            <span class="badge bg-warning text-dark">Orta</span>
+                                            {% else %}
+                                            <span class="badge bg-danger">Yüksek</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ assessment.score }}</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-info" type="button" data-bs-toggle="collapse" data-bs-target="#detail{{ assessment.id }}">
+                                                Göster
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr class="collapse" id="detail{{ assessment.id }}">
+                                        <td colspan="4">
+                                            <div class="card card-body bg-light">
+                                                <pre class="mb-0">{{ assessment.details | tojson(indent=2) }}</pre>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info">Henüz bir değerlendirme yapılmamış.</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Audits Tab -->
+                    <div class="tab-pane fade" id="audits" role="tabpanel">
+                        <div class="d-flex justify-content-end mb-3">
+                            <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addAuditModal">
+                                <i class="fas fa-search-plus"></i> Yeni Denetim Ekle
+                            </button>
+                        </div>
+                        {% if audits %}
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Tarih</th>
+                                        <th>Tür</th>
+                                        <th>Denetçi</th>
+                                        <th>Skor</th>
+                                        <th>Uygunsuzluk</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for audit in audits %}
+                                    <tr>
+                                        <td>{{ audit.audit_date }}</td>
+                                        <td>{{ audit.audit_type }}</td>
+                                        <td>{{ audit.auditor_name }}</td>
+                                        <td>{{ audit.audit_score }}</td>
+                                        <td>
+                                            {% if audit.non_conformities > 0 %}
+                                            <span class="badge bg-danger">{{ audit.non_conformities }}</span>
+                                            {% else %}
+                                            <span class="badge bg-success">0</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="5" class="text-muted small">
+                                            <em>Bulgular: {{ audit.findings }}</em>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info">Henüz bir denetim kaydı bulunmuyor.</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Risks Tab -->
+                    <div class="tab-pane fade" id="risks" role="tabpanel">
+                        <div class="d-flex justify-content-end mb-3">
+                            <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#addRiskModal">
+                                <i class="fas fa-exclamation-circle"></i> Yeni Risk Ekle
+                            </button>
+                        </div>
+                        {% if risks %}
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Kategori</th>
+                                        <th>Açıklama</th>
+                                        <th>Olasılık (1-5)</th>
+                                        <th>Etki (1-5)</th>
+                                        <th>Risk Skoru</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for risk in risks %}
+                                    <tr>
+                                        <td>{{ risk.risk_category }}</td>
+                                        <td>{{ risk.description }}</td>
+                                        <td>{{ risk.probability }}</td>
+                                        <td>{{ risk.impact }}</td>
+                                        <td>
+                                            {% if risk.risk_score >= 15 %}
+                                            <span class="badge bg-danger">{{ risk.risk_score }} (Kritik)</span>
+                                            {% elif risk.risk_score >= 8 %}
+                                            <span class="badge bg-warning text-dark">{{ risk.risk_score }} (Orta)</span>
+                                            {% else %}
+                                            <span class="badge bg-success">{{ risk.risk_score }} (Düşük)</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="5" class="text-muted small">
+                                            <em>Önlem Planı: {{ risk.mitigation_plan }}</em>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info">Henüz bir risk kaydı bulunmuyor.</div>
+                        {% endif %}
+                    </div>
+
                 </div>
-                {% else %}
-                <div class="alert alert-info">
-                    Henüz bir değerlendirme yapılmamış.
-                </div>
-                {% endif %}
             </div>
         </div>
     </div>
@@ -135,30 +291,25 @@
                             </select>
                         </div>
                     </div>
-                    
                     <h6 class="mt-4 mb-3">Değerlendirme Kriterleri (0-100 Puan)</h6>
-                    
                     <div class="mb-3 row">
                         <label class="col-sm-8 col-form-label">Çevresel Uyum (ISO 14001 vb.)</label>
                         <div class="col-sm-4">
                             <input type="number" class="form-control" name="env_score" min="0" max="100" required>
                         </div>
                     </div>
-                    
                     <div class="mb-3 row">
                         <label class="col-sm-8 col-form-label">İşçi Hakları ve İnsan Hakları</label>
                         <div class="col-sm-4">
                             <input type="number" class="form-control" name="social_score" min="0" max="100" required>
                         </div>
                     </div>
-                    
                     <div class="mb-3 row">
                         <label class="col-sm-8 col-form-label">Yönetişim ve Etik</label>
                         <div class="col-sm-4">
                             <input type="number" class="form-control" name="gov_score" min="0" max="100" required>
                         </div>
                     </div>
-                    
                     <div class="mb-3">
                         <label class="form-label">Notlar / Eksiklikler</label>
                         <textarea class="form-control" name="notes" rows="3"></textarea>
@@ -172,4 +323,101 @@
         </div>
     </div>
 </div>
+
+<!-- Add Audit Modal -->
+<div class="modal fade" id="addAuditModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="{{ url_for('supply_chain_add_audit', supplier_id=supplier.id) }}" method="POST">
+                <div class="modal-header">
+                    <h5 class="modal-title">Yeni Denetim Ekle</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Denetim Tarihi</label>
+                        <input type="date" class="form-control" name="audit_date" value="{{ today_date }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Denetim Türü</label>
+                        <select class="form-select" name="audit_type">
+                            <option value="On-site">Yerinde (On-site)</option>
+                            <option value="Remote">Uzaktan (Remote)</option>
+                            <option value="Third-party">3. Taraf</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Denetçi Adı</label>
+                        <input type="text" class="form-control" name="auditor_name">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Denetim Skoru (0-100)</label>
+                        <input type="number" class="form-control" name="audit_score" min="0" max="100" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Bulunan Uygunsuzluk Sayısı</label>
+                        <input type="number" class="form-control" name="non_conformities" min="0" value="0">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Bulgular / Notlar</label>
+                        <textarea class="form-control" name="findings" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-primary">Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Add Risk Modal -->
+<div class="modal fade" id="addRiskModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="{{ url_for('supply_chain_add_risk', supplier_id=supplier.id) }}" method="POST">
+                <div class="modal-header">
+                    <h5 class="modal-title">Yeni Risk Ekle</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Risk Kategorisi</label>
+                        <select class="form-select" name="risk_category">
+                            <option value="Environmental">Çevresel</option>
+                            <option value="Social">Sosyal / İşçi Hakları</option>
+                            <option value="Governance">Yönetişim / Etik</option>
+                            <option value="Financial">Finansal</option>
+                            <option value="Operational">Operasyonel</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Risk Açıklaması</label>
+                        <textarea class="form-control" name="description" rows="2" required></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Olasılık (1-5)</label>
+                            <input type="number" class="form-control" name="probability" min="1" max="5" value="1" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Etki (1-5)</label>
+                            <input type="number" class="form-control" name="impact" min="1" max="5" value="1" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Önlem / Azaltma Planı</label>
+                        <textarea class="form-control" name="mitigation_plan" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-danger">Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 {% endblock %}

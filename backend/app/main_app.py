@@ -3443,7 +3443,7 @@ class MainApp:
         report_dir = os.path.join(self.base_dir, 'reports')
         os.makedirs(report_dir, exist_ok=True)
         doc = Document()
-        doc.add_heading(f'{report_type} {self.lm.tr("report", "Raporu")} ({year})', level=1)
+        doc.add_heading(f'{report_type} {self.lm.tr("report_suffix", "Raporu")} ({year})', level=1)
         doc.add_paragraph(self.lm.tr('auto_generated_report_msg', 'Bu rapor sistem tarafından otomatik oluşturulmuştur.'))
         report_file = os.path.join(report_dir, f"{report_type.replace(' ', '_').lower()}_{year}.docx")
         try:

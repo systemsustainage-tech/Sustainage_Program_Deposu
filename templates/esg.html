@@ -1,20 +1,20 @@
 {% extends "base.html" %}
 
-{% block title %}{{ _('esg_title') }} - SDG{% endblock %}
+{% block title %}{{ lang('esg_title') }} - SDG{% endblock %}
 
 {% block content %}
 
 <div class="row mb-4">
 <div class="col-md-12">
 <div class="d-flex justify-content-between align-items-center">
-<h1><i class="fas fa-chart-pie me-2"></i>{{ _('esg_title') }}</h1>
+<h1><i class="fas fa-chart-pie me-2"></i>{{ lang('esg_title') }}</h1>
 <div>
 <span class="badge bg-{{ 'success' if manager_available else 'danger' }}">
-                    {{ _('module_active_badge') if manager_available else _('module_passive_badge') }}
+                    {{ lang('module_active_badge') if manager_available else _('module_passive_badge') }}
                 </span>
-<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}</button></div>
 </div>
-<p class="lead text-muted">{{ _('esg_desc') }}</p>
+<p class="lead text-muted">{{ lang('esg_desc') }}</p>
 </div>
 </div>
 
@@ -24,7 +24,7 @@
 <div class="card h-100 shadow-sm border-success">
 <div class="card-body text-center">
 <i class="fas fa-leaf fa-3x text-success mb-3"></i>
-<h5 class="card-title">{{ _('esg_env') }}</h5>
+<h5 class="card-title">{{ lang('esg_env') }}</h5>
 <h2 class="fw-bold text-success">{{ stats.environmental }}</h2>
 <div class="progress mt-3">
 <div aria-valuemax="100" aria-valuemin="0" aria-valuenow="{{ stats.environmental }}" class="progress-bar bg-success" role="progressbar" style="width: {{ stats.environmental }}%"></div>
@@ -36,7 +36,7 @@
 <div class="card h-100 shadow-sm border-info">
 <div class="card-body text-center">
 <i class="fas fa-users fa-3x text-info mb-3"></i>
-<h5 class="card-title">{{ _('esg_social') }}</h5>
+<h5 class="card-title">{{ lang('esg_social') }}</h5>
 <h2 class="fw-bold text-info">{{ stats.social }}</h2>
 <div class="progress mt-3">
 <div aria-valuemax="100" aria-valuemin="0" aria-valuenow="{{ stats.social }}" class="progress-bar bg-info" role="progressbar" style="width: {{ stats.social }}%"></div>
@@ -48,7 +48,7 @@
 <div class="card h-100 shadow-sm border-primary">
 <div class="card-body text-center">
 <i class="fas fa-balance-scale fa-3x text-primary mb-3"></i>
-<h5 class="card-title">{{ _('esg_gov') }}</h5>
+<h5 class="card-title">{{ lang('esg_gov') }}</h5>
 <h2 class="fw-bold text-primary">{{ stats.governance }}</h2>
 <div class="progress mt-3">
 <div aria-valuemax="100" aria-valuemin="0" aria-valuenow="{{ stats.governance }}" class="progress-bar bg-primary" role="progressbar" style="width: {{ stats.governance }}%"></div>
@@ -57,13 +57,125 @@
 </div>
 </div>
 </div>
+
+{% if stats.data_availability %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="fas fa-database me-2"></i>{{ lang('data_sources_bonuses', 'Veri Kaynakları ve Bonuslar') }}</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small mb-3">
+                    {{ lang('data_sources_desc', 'Aşağıdaki modüllerden veri girişi yapıldığında ESG skorunuza otomatik bonus puanlar eklenir. Aktif modüller yeşil ile işaretlenmiştir.') }}
+                </p>
+                <div class="row">
+                    <!-- Environmental Sources -->
+                    <div class="col-md-4">
+                        <h6 class="text-success border-bottom pb-2">{{ lang('esg_env') }}</h6>
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Karbon Ayak İzi
+                                {% if stats.data_availability.carbon %}
+                                    <span class="badge bg-success rounded-pill"><i class="fas fa-check"></i> +0.05</span>
+                                {% else %}
+                                    <span class="badge bg-secondary rounded-pill"><i class="fas fa-times"></i> 0</span>
+                                {% endif %}
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Enerji Tüketimi
+                                {% if stats.data_availability.energy %}
+                                    <span class="badge bg-success rounded-pill"><i class="fas fa-check"></i> +0.05</span>
+                                {% else %}
+                                    <span class="badge bg-secondary rounded-pill"><i class="fas fa-times"></i> 0</span>
+                                {% endif %}
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Su Yönetimi
+                                {% if stats.data_availability.water %}
+                                    <span class="badge bg-success rounded-pill"><i class="fas fa-check"></i> +0.05</span>
+                                {% else %}
+                                    <span class="badge bg-secondary rounded-pill"><i class="fas fa-times"></i> 0</span>
+                                {% endif %}
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Atık / Biyoçeşitlilik
+                                {% if stats.data_availability.waste or stats.data_availability.biodiv %}
+                                    <span class="badge bg-success rounded-pill"><i class="fas fa-check"></i> +0.05</span>
+                                {% else %}
+                                    <span class="badge bg-secondary rounded-pill"><i class="fas fa-times"></i> 0</span>
+                                {% endif %}
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <!-- Social Sources -->
+                    <div class="col-md-4">
+                        <h6 class="text-info border-bottom pb-2">{{ lang('esg_social') }}</h6>
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Çalışan Verileri
+                                {% if stats.data_availability.employees %}
+                                    <span class="badge bg-success rounded-pill"><i class="fas fa-check"></i> +0.05</span>
+                                {% else %}
+                                    <span class="badge bg-secondary rounded-pill"><i class="fas fa-times"></i> 0</span>
+                                {% endif %}
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                İSG (OHS) Kayıtları
+                                {% if stats.data_availability.ohs %}
+                                    <span class="badge bg-success rounded-pill"><i class="fas fa-check"></i> +0.05</span>
+                                {% else %}
+                                    <span class="badge bg-secondary rounded-pill"><i class="fas fa-times"></i> 0</span>
+                                {% endif %}
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Eğitim Kayıtları
+                                {% if stats.data_availability.training %}
+                                    <span class="badge bg-success rounded-pill"><i class="fas fa-check"></i> +0.05</span>
+                                {% else %}
+                                    <span class="badge bg-secondary rounded-pill"><i class="fas fa-times"></i> 0</span>
+                                {% endif %}
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <!-- Governance Sources -->
+                    <div class="col-md-4">
+                        <h6 class="text-primary border-bottom pb-2">{{ lang('esg_gov') }}</h6>
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Yönetim Kurulu
+                                {% if stats.data_availability.board %}
+                                    <span class="badge bg-success rounded-pill"><i class="fas fa-check"></i> +0.05</span>
+                                {% else %}
+                                    <span class="badge bg-secondary rounded-pill"><i class="fas fa-times"></i> 0</span>
+                                {% endif %}
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Politikalar
+                                {% if stats.data_availability.policies %}
+                                    <span class="badge bg-success rounded-pill"><i class="fas fa-check"></i> +0.05</span>
+                                {% else %}
+                                    <span class="badge bg-secondary rounded-pill"><i class="fas fa-times"></i> 0</span>
+                                {% endif %}
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <div class="row mb-4">
 <div class="col-md-12 text-end">
 <a href="{{ url_for('esg_settings') }}" class="btn btn-outline-secondary me-2">
-<i class="fas fa-cog me-1"></i>{{ _('btn_settings', 'Ayarlar') }}
+<i class="fas fa-cog me-1"></i>{{ lang('btn_settings', 'Ayarlar') }}
 </a>
 <button class="btn btn-primary" data-bs-target="#addESGDataModal" data-bs-toggle="modal" type="button">
-<i class="fas fa-plus me-1"></i>{{ _('btn_add_data') }}
+<i class="fas fa-plus me-1"></i>{{ lang('btn_add_data') }}
         </button>
 </div>
 </div>
@@ -72,18 +184,18 @@
 <div class="modal-dialog">
 <div class="modal-content">
 <div class="modal-header">
-<h5 class="modal-title" id="addESGDataModalLabel">{{ _('esg_title') }} - {{ _('btn_add_data') }}</h5>
+<h5 class="modal-title" id="addESGDataModalLabel">{{ lang('esg_title') }} - {{ lang('btn_add_data') }}</h5>
 <button aria-label="Close" class="btn-close" data-bs-dismiss="modal" type="button"></button>
 </div>
 <form action="{{ url_for('esg_add') }}" method="POST">
 <div class="modal-body">
 <div class="row">
 <div class="col-md-6 mb-3">
-<label class="form-label" for="year">{{ _('eco_year') }}</label>
+<label class="form-label" for="year">{{ lang('eco_year') }}</label>
 <input class="form-control" id="year" name="year" required="" type="number" value="2025"/>
 </div>
 <div class="col-md-6 mb-3">
-<label class="form-label" for="quarter">{{ _('eco_quarter') }}</label>
+<label class="form-label" for="quarter">{{ lang('eco_quarter') }}</label>
 <select class="form-select" id="quarter" name="quarter" required="">
 <option value="1">Q1</option>
 <option value="2">Q2</option>
@@ -93,21 +205,21 @@
 </div>
 </div>
 <div class="mb-3">
-<label class="form-label" for="environmental_score">{{ _('esg_env') }} Skor (0-100)</label>
+<label class="form-label" for="environmental_score">{{ lang('esg_env') }} Skor (0-100)</label>
 <input class="form-control" id="environmental_score" max="100" min="0" name="environmental_score" required="" step="0.01" type="number"/>
 </div>
 <div class="mb-3">
-<label class="form-label" for="social_score">{{ _('esg_social') }} Skor (0-100)</label>
+<label class="form-label" for="social_score">{{ lang('esg_social') }} Skor (0-100)</label>
 <input class="form-control" id="social_score" max="100" min="0" name="social_score" required="" step="0.01" type="number"/>
 </div>
 <div class="mb-3">
-<label class="form-label" for="governance_score">{{ _('esg_gov') }} Skor (0-100)</label>
+<label class="form-label" for="governance_score">{{ lang('esg_gov') }} Skor (0-100)</label>
 <input class="form-control" id="governance_score" max="100" min="0" name="governance_score" required="" step="0.01" type="number"/>
 </div>
 </div>
 <div class="modal-footer">
-<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ _('cancel') }}</button>
-<button class="btn btn-primary" type="submit">{{ _('save') }}</button>
+<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ lang('cancel') }}</button>
+<button class="btn btn-primary" type="submit">{{ lang('save') }}</button>
 </div>
 </form>
 </div>
@@ -118,19 +230,19 @@
 <div class="col-md-12">
 <div class="card">
 <div class="card-header">
-<h5 class="mb-0">{{ _('recent_data') }}</h5>
+<h5 class="mb-0">{{ lang('recent_data') }}</h5>
 </div>
 <div class="card-body">
 <div class="table-responsive">
 <table class="table table-hover">
 <thead>
 <tr>
-<th>{{ _('eco_year') }} / {{ _('eco_quarter') }}</th>
-<th>{{ _('esg_env') }}</th>
-<th>{{ _('esg_social') }}</th>
-<th>{{ _('esg_gov') }}</th>
-<th>{{ _('esg_total') }}</th>
-<th>{{ _('date') }}</th>
+<th>{{ lang('eco_year') }} / {{ lang('eco_quarter') }}</th>
+<th>{{ lang('esg_env') }}</th>
+<th>{{ lang('esg_social') }}</th>
+<th>{{ lang('esg_gov') }}</th>
+<th>{{ lang('esg_total') }}</th>
+<th>{{ lang('date') }}</th>
 </tr>
 </thead>
 <tbody>
@@ -147,7 +259,7 @@
                                 {% endfor %}
                             {% else %}
                                 <tr>
-<td class="text-center text-muted" colspan="6">{{ _('no_data_available') }}</td>
+<td class="text-center text-muted" colspan="6">{{ lang('no_data_available') }}</td>
 </tr>
                             {% endif %}
                         </tbody>
@@ -160,8 +272,8 @@
 
 {% else %}
 <div class="alert alert-warning">
-<h4 class="alert-heading">{{ _('module_failed_title') }}</h4>
-<p>{{ _('module_failed_desc') }}</p>
+<h4 class="alert-heading">{{ lang('module_failed_title') }}</h4>
+<p>{{ lang('module_failed_desc') }}</p>
 </div>
 {% endif %}
 {% endblock %}

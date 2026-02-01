@@ -1,20 +1,20 @@
 {% extends "base.html" %}
 
-{% block title %}{{ _('iirc_title') }} - SDG Platform{% endblock %}
+{% block title %}{{ lang('iirc_title') }} - SDG Platform{% endblock %}
 
 {% block content %}
 
 <div class="row mb-4">
 <div class="col-md-12">
 <div class="d-flex justify-content-between align-items-center">
-<h1><i class="fas fa-puzzle-piece me-2"></i>{{ _('iirc_title') }}</h1>
+<h1><i class="fas fa-puzzle-piece me-2"></i>{{ lang('iirc_title') }}</h1>
 <div>
 <button class="btn btn-primary" data-bs-target="#addIIRCModal" data-bs-toggle="modal" type="button">
-<i class="fas fa-plus me-1"></i> {{ _('btn_add_data') }}
+<i class="fas fa-plus me-1"></i> {{ lang('btn_add_data') }}
                 </button>
-<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}</button></div>
 </div>
-<p class="lead text-muted">{{ _('iirc_desc') }}</p>
+<p class="lead text-muted">{{ lang('iirc_desc') }}</p>
 </div>
 </div>
 
@@ -44,27 +44,27 @@
 <div class="modal-dialog">
 <div class="modal-content">
 <div class="modal-header">
-<h5 class="modal-title" id="addIIRCModalLabel">{{ _('iirc_title') }} - {{ _('btn_add_data') }}</h5>
+<h5 class="modal-title" id="addIIRCModalLabel">{{ lang('iirc_title') }} - {{ lang('btn_add_data') }}</h5>
 <button aria-label="Close" class="btn-close" data-bs-dismiss="modal" type="button"></button>
 </div>
 <form action="{{ url_for('iirc_add') }}" method="POST">
 <div class="modal-body">
 <div class="mb-3">
-<label class="form-label" for="year">{{ _('year') }}</label>
+<label class="form-label" for="year">{{ lang('year') }}</label>
 <input class="form-control" id="year" name="year" required="" type="number" value="2025"/>
 </div>
 <div class="mb-3">
-<label class="form-label" for="report_name">{{ _('report_name') }}</label>
+<label class="form-label" for="report_name">{{ lang('report_name') }}</label>
 <input class="form-control" id="report_name" name="report_name" required="" type="text"/>
 </div>
 <div class="mb-3">
-<label class="form-label" for="report_description">{{ _('description') }}</label>
+<label class="form-label" for="report_description">{{ lang('description') }}</label>
 <textarea class="form-control" id="report_description" name="report_description" rows="3"></textarea>
 </div>
 </div>
 <div class="modal-footer">
-<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ _('cancel') }}</button>
-<button class="btn btn-primary" type="submit">{{ _('save') }}</button>
+<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ lang('cancel') }}</button>
+<button class="btn btn-primary" type="submit">{{ lang('save') }}</button>
 </div>
 </form>
 </div>

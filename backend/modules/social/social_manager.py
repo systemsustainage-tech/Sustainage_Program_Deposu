@@ -91,8 +91,213 @@ class SocialManager:
             )
         """)
 
+        # Human Rights Assessments table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS human_rights_assessments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                company_id INTEGER NOT NULL DEFAULT 1,
+                site_name TEXT,
+                assessment_date DATE,
+                risk_level TEXT, -- Low, Medium, High
+                incidents_found INTEGER DEFAULT 0,
+                mitigation_plan TEXT,
+                status TEXT DEFAULT 'Completed',
+                created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        # Fair Labor Audits table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS fair_labor_audits (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                company_id INTEGER NOT NULL DEFAULT 1,
+                site_name TEXT,
+                audit_date DATE,
+                forced_labor_risk TEXT, -- Low, Medium, High
+                child_labor_risk TEXT,
+                wage_compliance TEXT, -- Compliant, Non-Compliant
+                union_rights TEXT, -- Respected, Restricted
+                audit_score REAL,
+                created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        # Consumer Complaints table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS consumer_complaints (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                company_id INTEGER NOT NULL DEFAULT 1,
+                complaint_date DATE,
+                category TEXT, -- Product Quality, Safety, Privacy, etc.
+                severity TEXT, -- Low, Medium, High
+                description TEXT,
+                resolution_status TEXT, -- Open, In Progress, Resolved
+                satisfaction_score REAL, -- 1-5
+                created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
         conn.commit()
         conn.close()
+
+    def add_human_rights_assessment(self, company_id: int, data: Dict) -> bool:
+        """Add a new human rights assessment"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO human_rights_assessments 
+                (company_id, site_name, assessment_date, risk_level, incidents_found, mitigation_plan, status)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (company_id, data.get('site_name'), data.get('assessment_date'), 
+                  data.get('risk_level'), data.get('incidents_found', 0), 
+                  data.get('mitigation_plan'), data.get('status', 'Completed')))
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as e:
+            print(f"Error adding human rights assessment: {e}")
+            return False
+
+    def get_human_rights_assessments(self, company_id: int) -> List[Dict]:
+        """Get all human rights assessments"""
+        conn = sqlite3.connect(self.db_path)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM human_rights_assessments WHERE company_id = ? ORDER BY assessment_date DESC", (company_id,))
+        rows = cursor.fetchall()
+        conn.close()
+        return [dict(row) for row in rows]
+
+    def add_labor_audit(self, company_id: int, data: Dict) -> bool:
+        """Add a new fair labor audit"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO fair_labor_audits 
+                (company_id, site_name, audit_date, forced_labor_risk, child_labor_risk, wage_compliance, union_rights, audit_score)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (company_id, data.get('site_name'), data.get('audit_date'), 
+                  data.get('forced_labor_risk'), data.get('child_labor_risk'), 
+                  data.get('wage_compliance'), data.get('union_rights'), data.get('audit_score')))
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as e:
+            print(f"Error adding labor audit: {e}")
+            return False
+
+    def get_labor_audits(self, company_id: int) -> List[Dict]:
+        """Get all labor audits"""
+        conn = sqlite3.connect(self.db_path)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM fair_labor_audits WHERE company_id = ? ORDER BY audit_date DESC", (company_id,))
+        rows = cursor.fetchall()
+        conn.close()
+        return [dict(row) for row in rows]
+
+    def get_social_dashboard_stats(self, company_id: int) -> Dict:
+        """Get aggregated stats for dashboard charts"""
+        stats = {
+            'satisfaction_score': 0,
+            'training_hours_total': 0,
+            'ohs_incidents_total': 0,
+            'human_rights_incidents': 0,
+            'labor_audit_avg_score': 0
+        }
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            # Satisfaction (Latest year)
+            cursor.execute("SELECT satisfaction_score FROM employee_satisfaction WHERE company_id=? ORDER BY year DESC LIMIT 1", (company_id,))
+            row = cursor.fetchone()
+            if row and row[0]: stats['satisfaction_score'] = row[0]
+            
+            # Training Hours (Sum)
+            cursor.execute("SELECT SUM(hours) FROM training_records WHERE company_id=?", (company_id,))
+            row = cursor.fetchone()
+            if row and row[0]: stats['training_hours_total'] = row[0]
+            
+            # OHS Incidents
+            cursor.execute("SELECT COUNT(*) FROM ohs_incidents WHERE company_id=?", (company_id,))
+            row = cursor.fetchone()
+            if row: stats['ohs_incidents_total'] = row[0]
+            
+            # Human Rights Incidents
+            cursor.execute("SELECT SUM(incidents_found) FROM human_rights_assessments WHERE company_id=?", (company_id,))
+            row = cursor.fetchone()
+            if row and row[0]: stats['human_rights_incidents'] = row[0]
+            
+            # Labor Audit Score
+            cursor.execute("SELECT AVG(audit_score) FROM fair_labor_audits WHERE company_id=?", (company_id,))
+            row = cursor.fetchone()
+            if row and row[0]: stats['labor_audit_avg_score'] = round(row[0], 2)
+            
+            conn.close()
+        except Exception as e:
+            print(f"Error getting social stats: {e}")
+            
+        return stats
+
+    def add_consumer_complaint(self, company_id: int, data: Dict) -> bool:
+        """Add a new consumer complaint"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO consumer_complaints 
+                (company_id, complaint_date, category, severity, description, resolution_status, satisfaction_score)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (company_id, data.get('complaint_date'), data.get('category'), 
+                  data.get('severity'), data.get('description'), 
+                  data.get('resolution_status'), data.get('satisfaction_score')))
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as e:
+            print(f"Error adding consumer complaint: {e}")
+            return False
+
+    def get_consumer_complaints(self, company_id: int) -> List[Dict]:
+        """Get all consumer complaints"""
+        conn = sqlite3.connect(self.db_path)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM consumer_complaints WHERE company_id = ? ORDER BY complaint_date DESC", (company_id,))
+        rows = cursor.fetchall()
+        conn.close()
+        return [dict(row) for row in rows]
+    
+    def add_community_investment(self, company_id: int, data: Dict) -> bool:
+        """Add community investment"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO community_investment 
+                (company_id, project_name, investment_amount, beneficiaries_count, impact_description, date)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (company_id, data.get('project_name'), data.get('investment_amount'), 
+                  data.get('beneficiaries_count'), data.get('impact_description'), data.get('date')))
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as e:
+            print(f"Error adding community investment: {e}")
+            return False
+
+    def get_community_investments(self, company_id: int) -> List[Dict]:
+        """Get community investments"""
+        conn = sqlite3.connect(self.db_path)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM community_investment WHERE company_id = ? ORDER BY date DESC", (company_id,))
+        rows = cursor.fetchall()
+        conn.close()
+        return [dict(row) for row in rows]
 
     def get_stats(self, company_id: int) -> Dict:
         """Dashboard için özet istatistikleri getir"""

@@ -1,24 +1,24 @@
 {% extends "base.html" %}
 
-{% block title %}{{ _('data_entry_btn') }} - {{ _('esg_title') }}{% endblock %}
+{% block title %}{{ lang('data_entry_btn') }} - {{ lang('esg_title') }}{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-8">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h4 class="mb-0">{{ _('data_entry_btn') }} - {{ _('esg_title') }}</h4>
-                <button class="btn btn-sm btn-outline-secondary" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button>
+                <h4 class="mb-0">{{ lang('data_entry_btn') }} - {{ lang('esg_title') }}</h4>
+                <button class="btn btn-sm btn-outline-secondary" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}</button>
             </div>
             <div class="card-body">
                 <form method="post" class="needs-validation" novalidate>
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">{{ _('eco_year') }}</label>
+                            <label class="form-label">{{ lang('eco_year') }}</label>
                             <input type="number" class="form-control" name="year" value="2024" required>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">{{ _('eco_quarter') }}</label>
+                            <label class="form-label">{{ lang('eco_quarter') }}</label>
                             <select class="form-select" name="quarter">
                                 <option value="1">Q1</option>
                                 <option value="2">Q2</option>
@@ -29,23 +29,23 @@
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label text-success"><i class="fas fa-leaf me-1"></i>{{ _('esg_env') }} (0-100)</label>
+                        <label class="form-label text-success"><i class="fas fa-leaf me-1"></i>{{ lang('esg_env') }} (0-100)</label>
                         <input type="number" class="form-control" name="environmental_score" step="0.1" min="0" max="100" value="{{ scores.E if scores }}" readonly>
                     </div>
                     
                     <div class="mb-3">
-                        <label class="form-label text-info"><i class="fas fa-users me-1"></i>{{ _('esg_social') }} (0-100)</label>
+                        <label class="form-label text-info"><i class="fas fa-users me-1"></i>{{ lang('esg_social') }} (0-100)</label>
                         <input type="number" class="form-control" name="social_score" step="0.1" min="0" max="100" value="{{ scores.S if scores }}" readonly>
                     </div>
                     
                     <div class="mb-3">
-                        <label class="form-label text-primary"><i class="fas fa-balance-scale me-1"></i>{{ _('esg_gov') }} (0-100)</label>
+                        <label class="form-label text-primary"><i class="fas fa-balance-scale me-1"></i>{{ lang('esg_gov') }} (0-100)</label>
                         <input type="number" class="form-control" name="governance_score" step="0.1" min="0" max="100" value="{{ scores.G if scores }}" readonly>
                     </div>
 
                     <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                        <a href="{{ url_for('esg_module') }}" class="btn btn-light">{{ _('common.btn_cancel') }}</a>
-                        <button type="submit" class="btn btn-primary">{{ _('common.btn_save') }}</button>
+                        <a href="{{ url_for('esg_module') }}" class="btn btn-light">{{ lang('common.btn_cancel') }}</a>
+                        <button type="submit" class="btn btn-primary">{{ lang('common.btn_save') }}</button>
                     </div>
                 </form>
             </div>

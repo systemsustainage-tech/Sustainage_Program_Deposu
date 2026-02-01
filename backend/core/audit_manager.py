@@ -71,3 +71,22 @@ class AuditManager:
             return [dict(zip(columns, row)) for row in cursor.fetchall()]
         finally:
             conn.close()
+
+    def get_logs_count(self, company_id: Optional[int] = None) -> int:
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        try:
+            query = "SELECT COUNT(*) FROM audit_logs WHERE 1=1"
+            params = []
+            
+            if company_id is not None:
+                query += " AND company_id = ?"
+                params.append(company_id)
+                
+            cursor.execute(query, params)
+            return cursor.fetchone()[0]
+        except Exception as e:
+            self.logger.error(f"Get logs count error: {e}")
+            return 0
+        finally:
+            conn.close()

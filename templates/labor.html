@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block title %}{{ lang('labor_practices_title', 'Çalışma Uygulamaları') }} - SDG{% endblock %}
+
+{% block content %}
+
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1><i class="bi bi-person-workspace me-2"></i>{{ lang('labor_practices_title', 'Çalışma Uygulamaları') }}</h1>
+            <div>
+                <span class="badge bg-{{ 'success' if manager_available else 'secondary' }}">
+                    {{ lang('module_active_badge') if manager_available else _('module_passive_badge') }}
+                </span>
+                <button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}</button>
+            </div>
+        </div>
+        <p class="lead text-muted">{{ lang('labor_practices_desc', 'Çalışan hakları, iş sağlığı ve güvenliği, eğitim ve gelişim.') }}</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <!-- Dashboard View -->
+                <div class="row mb-4">
+                    {% if stats %}
+                    <div class="col-12 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">{{ lang('statistics', 'İstatistikler') }}</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    {% for key, value in stats.items() %}
+                                    <div class="col-md-3 mb-3">
+                                        <div class="border rounded p-3 text-center bg-light">
+                                            <h6 class="text-muted text-uppercase small">{{ key|replace('_', ' ')|title }}</h6>
+                                            <h3 class="mb-0 text-primary">{{ value }}</h3>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">{{ lang('records', 'Kayıtlar') }}</h5>
+                                <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addModal">
+                                    <i class="fas fa-plus"></i> {{ lang('add_new', 'Yeni Ekle') }}
+                                </button>
+                            </div>
+                            <div class="card-body">
+                                {% if records %}
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                {% if columns %}
+                                                    {% for col in columns %}
+                                                    <th>{{ col|replace('_', ' ')|title }}</th>
+                                                    {% endfor %}
+                                                {% else %}
+                                                    <th>{{ lang('details', 'Detaylar') }}</th>
+                                                {% endif %}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for record in records %}
+                                            <tr>
+                                                {% if columns %}
+                                                    {% for col in columns %}
+                                                        {% if record is mapping %}
+                                                            <td>{{ record[col] }}</td>
+                                                        {% else %}
+                                                            <td>{{ record }}</td>
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                {% else %}
+                                                    <td>{{ record }}</td>
+                                                {% endif %}
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {% else %}
+                                <div class="text-center py-5 text-muted">
+                                    <i class="bi bi-inbox fs-1"></i>
+                                    <p class="mt-2">{{ lang('no_records', 'Henüz kayıt bulunmuyor.') }}</p>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Modal -->
+<div class="modal fade" id="addModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ lang('add_new_record', 'Yeni Kayıt Ekle') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">{{ lang('site_name', 'Tesis/Lokasyon Adı') }}</label>
+                        <input type="text" class="form-control" name="site_name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ lang('audit_date', 'Denetim Tarihi') }}</label>
+                        <input type="date" class="form-control" name="audit_date" value="{{ today_date }}" required>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">{{ lang('forced_labor_risk', 'Zorla Çalıştırma Riski') }}</label>
+                            <select class="form-select" name="forced_labor_risk">
+                                <option value="Low">{{ lang('risk_low', 'Düşük') }}</option>
+                                <option value="Medium">{{ lang('risk_medium', 'Orta') }}</option>
+                                <option value="High">{{ lang('risk_high', 'Yüksek') }}</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">{{ lang('child_labor_risk', 'Çocuk İşçiliği Riski') }}</label>
+                            <select class="form-select" name="child_labor_risk">
+                                <option value="Low">{{ lang('risk_low', 'Düşük') }}</option>
+                                <option value="Medium">{{ lang('risk_medium', 'Orta') }}</option>
+                                <option value="High">{{ lang('risk_high', 'Yüksek') }}</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">{{ lang('wage_compliance', 'Ücret Uyumluluğu') }}</label>
+                            <select class="form-select" name="wage_compliance">
+                                <option value="Compliant">{{ lang('compliant', 'Uyumlu') }}</option>
+                                <option value="Non-Compliant">{{ lang('non_compliant', 'Uyumsuz') }}</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">{{ lang('union_rights', 'Sendikal Haklar') }}</label>
+                            <select class="form-select" name="union_rights">
+                                <option value="Respected">{{ lang('respected', 'Saygı Gösteriliyor') }}</option>
+                                <option value="Restricted">{{ lang('restricted', 'Kısıtlı') }}</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ lang('audit_score', 'Denetim Puanı (0-100)') }}</label>
+                        <input type="number" class="form-control" name="audit_score" min="0" max="100" step="0.1">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ lang('cancel', 'İptal') }}</button>
+                    <button type="submit" class="btn btn-primary">{{ lang('save', 'Kaydet') }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

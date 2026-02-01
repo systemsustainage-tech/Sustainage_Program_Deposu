@@ -1,27 +1,27 @@
 {% extends "base.html" %}
 
-{% block title %}{{ _('tcfd_page_title') }} - SDG{% endblock %}
+{% block title %}{{ lang('tcfd_page_title') }} - SDG{% endblock %}
 
 {% block content %}
 
 <div class="row mb-4">
 <div class="col-md-12">
 <div class="d-flex justify-content-between align-items-center">
-<h1><i class="fas fa-temperature-high me-2"></i>{{ _('tcfd_page_title') }}</h1>
+<h1><i class="fas fa-temperature-high me-2"></i>{{ lang('tcfd_page_title') }}</h1>
 <div>
 <span class="badge bg-{{ 'success' if manager_available else 'danger' }}">
-                    {{ _('module_active_badge') if manager_available else _('module_passive_badge') }}
+                    {{ lang('module_active_badge') if manager_available else _('module_passive_badge') }}
                 </span>
-<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}</button></div>
 </div>
-<p class="lead text-muted">{{ _('tcfd_desc') }}</p>
+<p class="lead text-muted">{{ lang('tcfd_desc') }}</p>
 </div>
 </div>
 <div class="row mb-4">
 <div class="col-md-4">
 <div class="card text-white bg-primary mb-3 shadow-sm border-0">
 <div class="card-body">
-<h5 class="card-title">{{ _('tcfd_total_risks') }}</h5>
+<h5 class="card-title">{{ lang('tcfd_total_risks') }}</h5>
 <p class="card-text display-4">{{ stats.total_risks }}</p>
 </div>
 </div>
@@ -29,7 +29,7 @@
 <div class="col-md-4">
 <div class="card text-white bg-success mb-3 shadow-sm border-0">
 <div class="card-body">
-<h5 class="card-title">{{ _('tcfd_total_opps') }}</h5>
+<h5 class="card-title">{{ lang('tcfd_total_opps') }}</h5>
 <p class="card-text display-4">{{ stats.total_opps }}</p>
 </div>
 </div>
@@ -37,7 +37,7 @@
 <div class="col-md-4">
 <div class="card text-white bg-info mb-3 shadow-sm border-0">
 <div class="card-body">
-<h5 class="card-title">{{ _('tcfd_financial_impact') }}</h5>
+<h5 class="card-title">{{ lang('tcfd_financial_impact') }}</h5>
 <p class="card-text display-4">{{ stats.financial_impact }}</p>
 </div>
 </div>
@@ -47,10 +47,10 @@
 <div class="col-md-12">
 <div class="card shadow-sm border-0">
 <div class="card-body">
-<h5>{{ _('tcfd_data_entry') }}</h5>
-<p>{{ _('tcfd_data_entry_desc') }}</p>
+<h5>{{ lang('tcfd_data_entry') }}</h5>
+<p>{{ lang('tcfd_data_entry_desc') }}</p>
 <button class="btn btn-primary" data-bs-target="#addTCFDModal" data-bs-toggle="modal" type="button">
-                    {{ _('btn_add_data') }}
+                    {{ lang('btn_add_data') }}
                 </button>
 </div>
 </div>
@@ -61,17 +61,17 @@
 <div class="modal-dialog">
 <div class="modal-content">
 <div class="modal-header">
-<h5 class="modal-title">{{ _('tcfd_add_title', 'TCFD Verisi Ekle') }}</h5>
+<h5 class="modal-title">{{ lang('tcfd_add_title', 'TCFD Verisi Ekle') }}</h5>
 <button class="btn-close" data-bs-dismiss="modal" type="button"></button>
 </div>
 <form action="{{ url_for('tcfd_add') }}" method="POST">
 <div class="modal-body">
 <div class="mb-3">
-<label class="form-label">{{ _('tcfd_col_year', 'Yıl') }}</label>
+<label class="form-label">{{ lang('tcfd_col_year', 'Yıl') }}</label>
 <input class="form-control" name="year" required="" type="number" value="2024"/>
 </div>
 <div class="mb-3">
-<label class="form-label">{{ _('tcfd_col_category', 'Kategori') }}</label>
+<label class="form-label">{{ lang('tcfd_col_category', 'Kategori') }}</label>
 <select class="form-select" name="category">
 <option value="Governance">Yönetişim (Governance)</option>
 <option value="Strategy">Strateji (Strategy)</option>
@@ -80,17 +80,17 @@
 </select>
 </div>
 <div class="mb-3">
-<label class="form-label">{{ _('tcfd_col_disclosure', 'Açıklama/Beyan') }}</label>
+<label class="form-label">{{ lang('tcfd_col_disclosure', 'Açıklama/Beyan') }}</label>
 <textarea class="form-control" name="disclosure" required="" rows="3"></textarea>
 </div>
 <div class="mb-3">
-<label class="form-label">{{ _('tcfd_col_impact', 'Finansal Etki') }}</label>
+<label class="form-label">{{ lang('tcfd_col_impact', 'Finansal Etki') }}</label>
 <textarea class="form-control" name="impact" rows="2"></textarea>
 </div>
 </div>
 <div class="modal-footer">
-<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ _('btn_cancel', 'İptal') }}</button>
-<button class="btn btn-primary" type="submit">{{ _('btn_save', 'Kaydet') }}</button>
+<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ lang('btn_cancel', 'İptal') }}</button>
+<button class="btn btn-primary" type="submit">{{ lang('btn_save', 'Kaydet') }}</button>
 </div>
 </form>
 </div>
@@ -102,17 +102,17 @@
 <div class="col-md-12">
 <div class="card shadow-sm border-0">
 <div class="card-header bg-light">
-<h5 class="mb-0">{{ _('tcfd_list_title') }}</h5>
+<h5 class="mb-0">{{ lang('tcfd_list_title') }}</h5>
 </div>
 <div class="card-body p-0">
 <div class="table-responsive">
 <table class="table table-hover mb-0">
 <thead>
 <tr>
-<th>{{ _('tcfd_col_year') }}</th>
-<th>{{ _('tcfd_col_category') }}</th>
-<th>{{ _('tcfd_col_disclosure') }}</th>
-<th>{{ _('tcfd_col_impact') }}</th>
+<th>{{ lang('tcfd_col_year') }}</th>
+<th>{{ lang('tcfd_col_category') }}</th>
+<th>{{ lang('tcfd_col_disclosure') }}</th>
+<th>{{ lang('tcfd_col_impact') }}</th>
 </tr>
 </thead>
 <tbody>
@@ -133,8 +133,8 @@
 </div>
 {% else %}
 <div class="alert alert-warning">
-<h4 class="alert-heading">{{ _('data_not_found_title') }}</h4>
-<p>{{ _('data_not_found_desc') }}</p>
+<h4 class="alert-heading">{{ lang('data_not_found_title') }}</h4>
+<p>{{ lang('data_not_found_desc') }}</p>
 </div>
         {% endif %}
 
@@ -143,9 +143,9 @@
             <div class="col-md-12">
                 <div class="card shadow-sm border-0">
                     <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">{{ _('tcfd_financial_impact_title', 'Finansal Etki ve Senaryo Analizi') }}</h5>
+                        <h5 class="mb-0">{{ lang('tcfd_financial_impact_title', 'Finansal Etki ve Senaryo Analizi') }}</h5>
                         <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#addTCFDImpactModal">
-                            <i class="bi bi-plus-circle"></i> {{ _('btn_add_impact', 'Finansal Etki Ekle') }}
+                            <i class="bi bi-plus-circle"></i> {{ lang('btn_add_impact', 'Finansal Etki Ekle') }}
                         </button>
                     </div>
                     <div class="card-body">
@@ -195,7 +195,7 @@
                         </div>
                         {% else %}
                         <div class="alert alert-info">
-                            {{ _('tcfd_no_impact_data', 'Henüz finansal etki verisi girilmemiş.') }}
+                            {{ lang('tcfd_no_impact_data', 'Henüz finansal etki verisi girilmemiş.') }}
                         </div>
                         {% endif %}
                     </div>
@@ -208,7 +208,7 @@
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">{{ _('tcfd_add_impact_title', 'Finansal Etki Ekle') }}</h5>
+                        <h5 class="modal-title">{{ lang('tcfd_add_impact_title', 'Finansal Etki Ekle') }}</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <form action="{{ url_for('tcfd_add_impact') }}" method="POST">
@@ -260,8 +260,8 @@
                             </div>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('btn_cancel', 'İptal') }}</button>
-                            <button type="submit" class="btn btn-primary">{{ _('btn_save', 'Kaydet') }}</button>
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ lang('btn_cancel', 'İptal') }}</button>
+                            <button type="submit" class="btn btn-primary">{{ lang('btn_save', 'Kaydet') }}</button>
                         </div>
                     </form>
                 </div>

@@ -10,7 +10,7 @@ from functools import wraps
 from typing import Optional, Dict, List
 from types import SimpleNamespace
 from werkzeug.utils import secure_filename
-from flask import Flask, render_template, redirect, url_for, session, request, flash, send_file, g, jsonify, has_request_context
+from flask import Flask, render_template, redirect, url_for, session, request, flash, send_file, g, jsonify, has_request_context, make_response
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 BACKEND_DIR = os.path.join(BASE_DIR, 'backend')
@@ -48,6 +48,11 @@ from modules.lca.lca_manager import LCAManager
 from modules.supply_chain.supply_chain_manager import SupplyChainManager
 from modules.realtime.realtime_manager import RealTimeMonitoringManager
 from modules.environmental.biodiversity_manager import BiodiversityManager
+from modules.social.social_manager import SocialManager
+from modules.environmental.carbon_manager import CarbonManager
+from modules.environmental.water_manager import WaterManager
+from modules.environmental.waste_manager import WasteManager
+from modules.governance.corporate_governance import CorporateGovernanceManager
 from config.database import DB_PATH
 # FORCE DB_PATH for remote environment to ensure correct DB is used
 if os.path.exists('/var/www/sustainage/backend/data/sdg_desktop.sqlite'):
@@ -122,6 +127,7 @@ COMPANY_INFO_FIELDS = [
     "posta_kodu",
     "adres"
 ]
+
 
 
 def ensure_company_info_table() -> None:
@@ -203,7 +209,13 @@ def require_company_context(f):
             # STRICT MODE: No fallback to 1.
             # If no company context, force logout or error.
             session.clear()
-            flash('Oturum süreniz doldu veya geçerli bir şirket bulunamadı.', 'warning')
+            # Use gettext/lang if available, otherwise raw string
+            msg = 'Oturum süreniz doldu veya geçerli bir şirket bulunamadı.'
+            try:
+                msg = _('session_expired', msg)
+            except NameError:
+                pass
+            flash(msg, 'warning')
             return redirect(url_for('login'))
             
         g.company_id = company_id
@@ -211,6 +223,13 @@ def require_company_context(f):
     return decorated_function
 
 app = Flask(__name__)
+
+# Cache busting version (updates on server restart)
+APP_VERSION = int(time.time())
+
+@app.context_processor
+def inject_version():
+    return {'app_version': APP_VERSION}
 
 @app.context_processor
 def inject_notifications():
@@ -257,13 +276,27 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'sustainage_secret_key_f
 def gettext(key, *args):
     """
     Retrieves translation for the given key using LanguageManager.
-    Falls back to 'tr' if session language is not set.
+    Falls back to session, then cookie, then 'tr'.
     """
     default = args[0] if args else None
-    current_lang = session.get('lang', 'tr')
+    
+    # Check session first
+    current_lang = session.get('lang')
+    
+    # If not in session, check cookie if request context exists
+    if not current_lang and has_request_context():
+        current_lang = request.cookies.get('lang')
+        # If found in cookie but not session, sync to session for performance
+        if current_lang:
+            session['lang'] = current_lang
+            
+    if not current_lang:
+        current_lang = 'tr'
+        
     return language_manager.get_text(key, lang=current_lang, default=default)
 
 app.jinja_env.globals.update(_=gettext)
+app.jinja_env.globals.update(lang=gettext)
 
 # Define _ in global scope for Python code usage
 _ = gettext
@@ -273,9 +306,15 @@ def set_language(lang):
     if lang in language_manager.translations:
         session['lang'] = lang
         flash(f"Dil değiştirildi: {lang}", "success")
+        
+        # Create response to set cookie
+        resp = make_response(redirect(request.referrer or url_for('dashboard')))
+        # Set cookie for 30 days
+        resp.set_cookie('lang', lang, max_age=60*60*24*30)
+        return resp
     else:
         flash("Geçersiz dil seçimi.", "danger")
-    return redirect(request.referrer or url_for('dashboard'))
+        return redirect(request.referrer or url_for('dashboard'))
 
 # --- Modern UI Route (Vue.js) ---
 from flask import send_from_directory
@@ -297,6 +336,24 @@ def modern_ui():
                              content='<div class="alert alert-info"><h1>Modern UI Hazırlanıyor</h1><p>Vue.js arayüzü henüz derlenmemiş. Lütfen <code>frontend/</code> klasöründe <code>npm run build</code> komutunu çalıştırın.</p></div>')
 
 # --- API v1 Routes (Vue.js Support) ---
+
+@app.route('/api/v1/translations')
+def api_translations():
+    """Returns translations for the current session language."""
+    # Determine language from session or cookie
+    current_lang = session.get('lang')
+    if not current_lang:
+        current_lang = request.cookies.get('lang', 'tr')
+    
+    # Ensure it defaults to 'tr' if invalid
+    if current_lang not in language_manager.translations:
+        current_lang = 'tr'
+        
+    translations = language_manager.get_all_translations(current_lang)
+    return jsonify({
+        'lang': current_lang,
+        'translations': translations
+    })
 
 @app.route('/api/v1/login', methods=['POST'])
 def api_login():
@@ -537,10 +594,10 @@ def _init_managers():
     except Exception as e:
         logging.error(f"BiodiversityManager init: {e}")
     try:
-        from modules.economic.economic_value_manager import EconomicValueManager
-        MANAGERS['economic'] = EconomicValueManager(DB_PATH)
+        from modules.economic.economic_manager import EconomicManager
+        MANAGERS['economic'] = EconomicManager(DB_PATH)
     except Exception as e:
-        logging.error(f"EconomicValueManager init: {e}")
+        logging.error(f"EconomicManager init: {e}")
     try:
         from modules.issb.issb_manager import ISSBManager
         MANAGERS['issb'] = ISSBManager(DB_PATH)
@@ -642,6 +699,12 @@ def _init_managers():
         MANAGERS['biodiversity'] = BiodiversityManager(DB_PATH)
     except Exception as e:
         logging.error(f"BiodiversityManager init: {e}")
+
+    try:
+        from modules.training.training_manager import TrainingManager
+        MANAGERS['training'] = TrainingManager(DB_PATH)
+    except Exception as e:
+        logging.error(f"TrainingManager init: {e}")
 
 _init_managers()
 
@@ -786,7 +849,7 @@ def admin_required(f):
         if 'user' not in session:
             return redirect(url_for('login'))
         role = str(session.get('role', 'User')).lower()
-        if role not in ['admin', 'super_admin', 'test admin']:
+        if role not in ['admin', 'super_admin', 'test admin', '__super__']:
             flash('Bu işlem için yetkiniz bulunmamaktadır.', 'danger')
             return redirect(url_for('dashboard'))
         return f(*args, **kwargs)
@@ -901,19 +964,6 @@ def login():
                 flash('Giriş başarılı!', 'success')
                 return redirect(url_for('dashboard'))
             else:
-                if username == 'admin' and password == 'admin':
-                    conn = get_db()
-                    exists = conn.execute("SELECT 1 FROM users WHERE username='admin'").fetchone()
-                    conn.close()
-                    if not exists:
-                        session['user'] = 'admin_test'
-                        session['role'] = 'Test Admin'
-                        try:
-                            security_audit_log(DB_PATH, "LOGIN_SUCCESS_WEB_TEST", username='admin_test', user_id=None, success=True, ip_address=client_ip, metadata={"role": session.get('role'), "user_agent": user_agent})
-                        except Exception as e:
-                            logging.error(f"Test login audit error: {e}")
-                        flash('Test modu girişi', 'warning')
-                        return redirect(url_for('dashboard'))
                 try:
                     if not is_privileged:
                         security_record_failed_login(DB_PATH, username, max_attempts=max_attempts, lock_seconds=lock_seconds)
@@ -1244,9 +1294,99 @@ def dashboard():
         module_stats = dsm.get_module_stats(g.company_id)
     except Exception as e:
         logging.error(f"Dashboard module stats error: {e}")
+
+    # Recent Activities (Son Aktiviteler)
+    recent_activities = []
+    try:
+        conn = get_db()
+        cur = conn.execute("""
+            SELECT u.username, a.action, a.timestamp, a.details 
+            FROM audit_logs a
+            LEFT JOIN users u ON a.user_id = u.id
+            WHERE a.company_id = ? 
+            ORDER BY a.timestamp DESC 
+            LIMIT 5
+        """, (g.company_id,))
+        recent_activities = cur.fetchall()
+        conn.close()
+    except Exception as e:
+        logging.error(f"Dashboard recent activities error: {e}")
+
+    # Pending Actions (Bekleyen İşler)
+    pending_actions = []
+    try:
+        conn = get_db()
+        
+        # 1. Yüksek Riskli Tedarikçiler
+        high_risk_count = conn.execute(
+            "SELECT COUNT(*) FROM supplier_profiles WHERE company_id=? AND risk_score >= 70", 
+            (g.company_id,)
+        ).fetchone()[0]
+        if high_risk_count > 0:
+            pending_actions.append({
+                'title': f"{high_risk_count} Yüksek Riskli Tedarikçi",
+                'desc': 'Acil denetim veya aksiyon gerekli.',
+                'link': url_for('supply_chain_module', risk_level='High'),
+                'type': 'danger'
+            })
+
+        # 2. Tamamlanmamış Modüller (Örnek: %0 olanlar)
+        zero_progress_modules = sum(1 for v in module_stats.values() if v == 0)
+        if zero_progress_modules > 0:
+            pending_actions.append({
+                'title': f"{zero_progress_modules} Modül Başlatılmadı",
+                'desc': 'Veri girişine başlayın.',
+                'link': '#modules-section',
+                'type': 'warning'
+            })
+            
+        # 3. Aktif Anketler
+        if stats.get('active_surveys', 0) > 0:
+            pending_actions.append({
+                'title': f"{stats['active_surveys']} Aktif Anket",
+                'desc': 'Yanıtları kontrol edin.',
+                'link': url_for('surveys_module', status='active'),
+                'type': 'info'
+            })
+            
+        conn.close()
+    except Exception as e:
+        logging.error(f"Dashboard pending actions error: {e}")
+
+    # Social Performance Stats for Charts
+    social_stats = {}
+    social_chart_data = [0, 0, 0, 0, 0]
+    try:
+        from backend.modules.social.social_manager import SocialManager
+        sm = SocialManager(DB_PATH)
+        social_stats = sm.get_social_dashboard_stats(g.company_id)
+        
+        # Normalize data for Radar Chart (0-100 scale)
+        # 1. Satisfaction (0-100)
+        s_score = social_stats.get('satisfaction_score', 0)
+        social_chart_data[0] = s_score if s_score else 0
+        
+        # 2. Training (Logarithmic or capped scale? Let's cap at 100 for now)
+        t_hours = social_stats.get('training_hours_total', 0)
+        social_chart_data[1] = min(t_hours, 100) if t_hours else 0
+        
+        # 3. OHS (Reverse: 100 is good, 0 is bad)
+        ohs_incidents = social_stats.get('ohs_incidents_total', 0)
+        social_chart_data[2] = max(0, 100 - (ohs_incidents * 20)) if ohs_incidents is not None else 100
+        
+        # 4. Human Rights (Reverse)
+        hr_incidents = social_stats.get('human_rights_incidents', 0)
+        social_chart_data[3] = max(0, 100 - (hr_incidents * 25)) if hr_incidents is not None else 100
+        
+        # 5. Labor Audit (0-100)
+        l_score = social_stats.get('labor_audit_avg_score', 0)
+        social_chart_data[4] = l_score if l_score else 0
+        
+    except Exception as e:
+        logging.error(f"Dashboard social stats error: {e}")
     
     try:
-        return render_template('dashboard.html', stats=stats, top_material_topics=top_material_topics, esrs_stats=esrs_stats, module_stats=module_stats)
+        return render_template('dashboard.html', stats=stats, top_material_topics=top_material_topics, esrs_stats=esrs_stats, module_stats=module_stats, recent_activities=recent_activities, pending_actions=pending_actions, social_stats=social_stats, social_chart_data=social_chart_data)
     except Exception as e:
         import traceback
         logging.error(f"Template rendering error: {traceback.format_exc()}")
@@ -1347,10 +1487,23 @@ def super_admin_system_stats():
 def super_admin_audit_logs():
     if 'user' not in session:
         return redirect(url_for('login'))
+    
+    page = request.args.get('page', 1, type=int)
+    search = request.args.get('search', '').strip()
+    start_date = request.args.get('start_date', '').strip()
+    end_date = request.args.get('end_date', '').strip()
+    
+    per_page = 20
+    offset = (page - 1) * per_page
+    
     logs: list[Dict[str, str]] = []
+    total_pages = 1
+    
     try:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
+        
+        # Ensure tables exist
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS audit_logs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1362,144 +1515,184 @@ def super_admin_audit_logs():
                 ip_address VARCHAR(45)
             )
         """)
-        cursor.execute("PRAGMA table_info(audit_logs)")
-        columns = [col[1] for col in cursor.fetchall()]
-        if 'username' not in columns:
+        
+        # Helper to get column names
+        def get_cols(table):
             try:
-                cursor.execute("ALTER TABLE audit_logs ADD COLUMN username VARCHAR(50)")
-                conn.commit()
-            except Exception as e:
-                logging.error(f"Audit logs username column alter error: {e}")
-        def fetch_from_audit_logs(cur: sqlite3.Cursor):
-            cols: list[str] = []
-            try:
-                cur.execute("PRAGMA table_info(audit_logs)")
-                cols = [c[1] for c in cur.fetchall()]
-            except Exception as e:
-                logging.error(f"Audit logs pragma error: {e}")
-            ts_col = 'timestamp' if 'timestamp' in cols else (
-                'created_at' if 'created_at' in cols else ('ts' if 'ts' in cols else None)
-            )
-            det_col = 'details' if 'details' in cols else (
-                'payload_json' if 'payload_json' in cols else ('metadata' if 'metadata' in cols else "''")
-            )
-            if ts_col is None:
-                ts_expr = "datetime('now')"
-            else:
-                ts_expr = f"COALESCE(a.{ts_col}, datetime('now'))"
-            det_expr = f"COALESCE(a.{det_col}, '')" if det_col != "''" else "''"
-            query = f"""
-                SELECT a.id,
-                       COALESCE(a.username, u.username, 'Sistem') as username,
-                       a.action,
-                       {ts_expr} as ts,
-                       {det_expr} as details
-                FROM audit_logs a
-                LEFT JOIN users u ON a.user_id = u.id
-                WHERE u.company_id = ?
-                ORDER BY a.id DESC
-                LIMIT 1000
-            """
-            cur.execute(query, (g.company_id,))
-            return cur.fetchall()
-        def fetch_from_security_logs(cur: sqlite3.Cursor):
-            cols: list[str] = []
-            try:
-                cur.execute("PRAGMA table_info(security_logs)")
-                cols = [c[1] for c in cur.fetchall()]
-            except Exception as e:
-                logging.error(f"Security logs pragma error: {e}")
-            ts_col = 'created_at' if 'created_at' in cols else (
-                'timestamp' if 'timestamp' in cols else None
-            )
-            det_col = 'details' if 'details' in cols else (
-                'metadata' if 'metadata' in cols else "''"
-            )
-            ts_expr = f"COALESCE({ts_col}, datetime('now'))" if ts_col else "datetime('now')"
-            det_expr = f"COALESCE({det_col}, '')" if det_col != "''" else "''"
-            if 'username' in cols:
-                user_expr = 'username'
-            elif 'user_id' in cols:
-                user_expr = "COALESCE((SELECT username FROM users WHERE id = user_id), 'Sistem')"
-            else:
-                user_expr = "'Sistem'"
-            if 'action' in cols:
-                action_col = 'action'
-            elif 'event_type' in cols:
-                action_col = 'event_type'
-            else:
+                cursor.execute(f"PRAGMA table_info({table})")
+                return [c[1] for c in cursor.fetchall()]
+            except:
                 return []
+                
+        cols_a = get_cols('audit_logs')
+        cols_s = get_cols('security_logs')
+        
+        # Build Query for Audit Logs
+        ts_col_a_name = 'timestamp' if 'timestamp' in cols_a else ('created_at' if 'created_at' in cols_a else 'ts')
+        if ts_col_a_name not in cols_a:
+            ts_expr_a = "datetime('now')"
+        else:
+            ts_expr_a = f"a.{ts_col_a_name}"
+
+        det_col_a_name = 'details' if 'details' in cols_a else ('payload_json' if 'payload_json' in cols_a else 'metadata')
+        if det_col_a_name not in cols_a:
+            det_expr_a = "''"
+        else:
+            det_expr_a = f"a.{det_col_a_name}"
+        
+        # Force usage of u.username (via JOIN) to avoid 'no such column: a.username' error
+        # even if PRAGMA table_info says 'username' exists (schema inconsistency workaround)
+        user_expr_a = 'NULL' 
+        
+        base_where_a = "u.company_id = ?"
+        params_a = [g.company_id]
+        
+        if search:
+            base_where_a += f" AND (COALESCE({user_expr_a}, u.username, 'Sistem') LIKE ? OR a.action LIKE ?)"
+            params_a.extend([f"%{search}%", f"%{search}%"])
+        if start_date:
+            base_where_a += f" AND date({ts_expr_a}) >= ?"
+            params_a.append(start_date)
+        if end_date:
+            base_where_a += f" AND date({ts_expr_a}) <= ?"
+            params_a.append(end_date)
+        
+        query_a = f"""
+            SELECT 
+                'audit' as source,
+                a.id,
+                COALESCE({user_expr_a}, u.username, 'Sistem') as username,
+                a.action,
+                COALESCE({ts_expr_a}, datetime('now')) as ts,
+                COALESCE({det_expr_a}, '') as details
+            FROM audit_logs a
+            LEFT JOIN users u ON a.user_id = u.id
+            WHERE {base_where_a}
+        """
+        
+        # Build Query for Security Logs
+        if cols_s:
+            ts_col_s = 'created_at' if 'created_at' in cols_s else ('timestamp' if 'timestamp' in cols_s else None)
+            det_col_s = 'details' if 'details' in cols_s else ('metadata' if 'metadata' in cols_s else None)
             
-            # Enforce company isolation for security logs if possible
-            where_clause = ""
-            params = []
-            if 'user_id' in cols:
-                 where_clause = "WHERE user_id IN (SELECT id FROM users WHERE company_id = ?)"
-                 params.append(g.company_id)
-            elif 'company_id' in cols:
-                 where_clause = "WHERE company_id = ?"
-                 params.append(g.company_id)
+            ts_expr_s = f"COALESCE({ts_col_s}, datetime('now'))" if ts_col_s else "datetime('now')"
+            det_expr_s = f"COALESCE({det_col_s}, '')" if det_col_s else "''"
+            
+            if 'username' in cols_s:
+                user_expr_s = 'username'
+            elif 'user_id' in cols_s:
+                user_expr_s = "COALESCE((SELECT username FROM users WHERE id = user_id), 'Sistem')"
+            else:
+                user_expr_s = "'Sistem'"
+                
+            action_col_s = 'action' if 'action' in cols_s else ('event_type' if 'event_type' in cols_s else "'Security Event'")
+            
+            where_s_parts = []
+            params_s = []
+            if 'user_id' in cols_s:
+                 where_s_parts.append("user_id IN (SELECT id FROM users WHERE company_id = ?)")
+                 params_s.append(g.company_id)
+            elif 'company_id' in cols_s:
+                 where_s_parts.append("company_id = ?")
+                 params_s.append(g.company_id)
+            else:
+                 where_s_parts.append("0=1")
+                 
+            if search:
+                where_s_parts.append(f"({user_expr_s} LIKE ? OR {action_col_s} LIKE ?)")
+                params_s.extend([f"%{search}%", f"%{search}%"])
+            if start_date:
+                where_s_parts.append(f"date({ts_expr_s}) >= ?")
+                params_s.append(start_date)
+            if end_date:
+                where_s_parts.append(f"date({ts_expr_s}) <= ?")
+                params_s.append(end_date)
+                
+            where_s_clause = "WHERE " + " AND ".join(where_s_parts) if where_s_parts else ""
 
-            query = f"""
-                SELECT id,
-                       {user_expr} as username,
-                       {action_col} as action,
-                       {ts_expr} as ts,
-                       {det_expr} as details
+            query_s = f"""
+                SELECT 
+                    'security' as source,
+                    id,
+                    {user_expr_s} as username,
+                    {action_col_s} as action,
+                    {ts_expr_s} as ts,
+                    {det_expr_s} as details
                 FROM security_logs
-                {where_clause}
-                ORDER BY id DESC
-                LIMIT 1000
+                {where_s_clause}
             """
-            cur.execute(query, params)
-            return cur.fetchall()
-        rows_a = []
-        try:
-            # Directly fetch with isolation (no global count check)
-            rows_a = fetch_from_audit_logs(cursor)
-        except Exception as e:
-            logging.error(f"Error fetching audit logs: {e}")
-            rows_a = []
+        else:
+            query_s = "SELECT 'security', NULL, NULL, NULL, NULL, NULL WHERE 0=1"
+            params_s = []
 
-        rows_s = []
-        try:
-            # Directly fetch with isolation (no global count check)
-            rows_s = fetch_from_security_logs(cursor)
-        except Exception as e:
-            logging.error(f"Error fetching security logs: {e}")
-            rows_s = []
-
-        # Combine and sort
-        all_rows = rows_a + rows_s
-        # Sort by timestamp (index 3) descending
-        all_rows.sort(key=lambda x: x[3] if x[3] else '', reverse=True)
-        rows = all_rows[:1000]
-
+        # Combine
+        full_query = f"""
+            SELECT * FROM (
+                {query_a}
+                UNION ALL
+                {query_s}
+            ) combined_logs
+            ORDER BY ts DESC
+            LIMIT ? OFFSET ?
+        """
+        
+        count_query = f"""
+            SELECT COUNT(*) FROM (
+                {query_a}
+                UNION ALL
+                {query_s}
+            ) combined_logs
+        """
+        
+        # Execute Count
+        all_params = params_a + params_s
+        cursor.execute(count_query, all_params)
+        total_count = cursor.fetchone()[0]
+        total_pages = (total_count + per_page - 1) // per_page
+        
+        # Execute Data
+        cursor.execute(full_query, all_params + [per_page, offset])
+        rows = cursor.fetchall()
+        
         for row in rows:
-            log_id, username, action, timestamp, details = row
+            # source, id, username, action, ts, details
+            source, log_id, username, action, timestamp, details = row
             text = details or 'Detay yok'
             if text and len(text) > 80:
                 text_short = text[:80] + '...'
             else:
                 text_short = text
+                
             logs.append({
                 'id': log_id,
+                'source': source,
                 'username': username or 'Sistem',
                 'action': action or 'Bilinmiyor',
                 'timestamp': timestamp or '',
                 'details': text_short
             })
-        try:
-            conn.commit()
-        except Exception as e:
-            logging.error(f"Audit logs commit error: {e}")
+            
         conn.close()
     except Exception as e:
         logging.error(f"Super admin audit logs error: {e}")
+        
+    pagination = SimpleNamespace(
+        page=page,
+        per_page=per_page,
+        total=locals().get('total_count', 0),
+        total_pages=total_pages,
+        has_prev=page > 1,
+        has_next=page < total_pages,
+    )
+
     return render_template(
         'super_admin_audit_logs.html',
         title=_('audit_logs_title', 'Audit Logları'),
-        logs=logs
+        logs=logs,
+        pagination=pagination,
+        search=search,
+        start_date=start_date,
+        end_date=end_date
     )
 
 
@@ -2515,47 +2708,91 @@ def help_module():
     if 'user' not in session: return redirect(url_for('login'))
     return render_template('help.html', title='Yardım Merkezi', manager_available=True)
 
-@app.route('/support/create_ticket', methods=['GET', 'POST'])
+# Support Ticket System Routes
+@app.route('/support')
 @require_company_context
-def create_ticket():
+def support_dashboard():
     if 'user' not in session: return redirect(url_for('login'))
+    
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
+    offset = (page - 1) * per_page
+    
+    from backend.modules.support.support_manager import SupportManager
+    manager = SupportManager(DB_PATH)
+    
+    # Get user's tickets
+    tickets = manager.get_user_tickets(g.company_id, session.get('user_id'), limit=per_page, offset=offset)
+    total_count = manager.get_user_tickets_count(g.company_id, session.get('user_id'))
+    total_pages = (total_count + per_page - 1) // per_page
+    
+    return render_template('support_list.html', title='Destek Taleplerim', tickets=tickets, page=page, total_pages=total_pages)
+
+@app.route('/support/create', methods=['GET', 'POST'])
+@require_company_context
+def support_create():
+    if 'user' not in session: return redirect(url_for('login'))
+    
     if request.method == 'POST':
         try:
             subject = request.form.get('subject')
-            message = request.form.get('message')
+            message = request.form.get('description')  # Note: template uses 'description'
             priority = request.form.get('priority', 'medium')
             category = request.form.get('category', 'general')
             
-            conn = get_db()
-            # Ensure support_tickets table exists
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS support_tickets (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER,
-                    company_id INTEGER,
-                    subject TEXT NOT NULL,
-                    message TEXT NOT NULL,
-                    priority TEXT DEFAULT 'medium',
-                    category TEXT DEFAULT 'general',
-                    status TEXT DEFAULT 'open',
-                    created_at TEXT DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
+            from backend.modules.support.support_manager import SupportManager
+            manager = SupportManager(DB_PATH)
             
-            conn.execute("""
-                INSERT INTO support_tickets (user_id, company_id, subject, message, priority, category)
-                VALUES (?, ?, ?, ?, ?, ?)
-            """, (session.get('user_id'), g.company_id, subject, message, priority, category))
-            conn.commit()
-            conn.close()
+            success = manager.create_ticket(
+                session.get('user_id'), 
+                g.company_id, 
+                subject, 
+                message, 
+                priority, 
+                category
+            )
             
-            flash('Destek talebiniz başarıyla oluşturuldu. Ekibimiz en kısa sürede sizinle iletişime geçecektir.', 'success')
-            return redirect(url_for('help_module'))
+            if success:
+                flash('Destek talebiniz başarıyla oluşturuldu.', 'success')
+                return redirect(url_for('support_dashboard'))
+            else:
+                flash('Talep oluşturulurken bir hata oluştu.', 'danger')
+                
         except Exception as e:
             logging.error(f"Support ticket error: {e}")
-            flash(f'Hata oluştu: {e}', 'danger')
+            flash(f'Hata: {e}', 'danger')
             
-    return render_template('support_ticket.html', title='Destek Talebi Oluştur')
+    return render_template('support_ticket.html', title='Yeni Destek Talebi')
+
+@app.route('/support/view/<int:ticket_id>', methods=['GET', 'POST'])
+@require_company_context
+def support_detail(ticket_id):
+    if 'user' not in session: return redirect(url_for('login'))
+    
+    from backend.modules.support.support_manager import SupportManager
+    manager = SupportManager(DB_PATH)
+    
+    # Handle Reply
+    if request.method == 'POST':
+        message = request.form.get('message')
+        if message:
+            is_admin = session.get('username') == '__super__'
+            manager.add_reply(ticket_id, session.get('user_id'), message, is_admin)
+            flash('Yanıtınız gönderildi.', 'success')
+            return redirect(url_for('support_detail', ticket_id=ticket_id))
+    
+    ticket = manager.get_ticket_details(ticket_id)
+    if not ticket:
+        flash('Talep bulunamadı.', 'danger')
+        return redirect(url_for('support_dashboard'))
+        
+    # Security check: ensure ticket belongs to company (unless super admin)
+    if ticket['company_id'] != g.company_id and session.get('username') != '__super__':
+         flash('Erişim reddedildi.', 'danger')
+         return redirect(url_for('support_dashboard'))
+         
+    return render_template('support_detail.html', title=f"Talep #{ticket['id']}", ticket=ticket)
+
 
 @app.route('/documentation')
 @require_company_context
@@ -2667,8 +2904,101 @@ def tsrs_module():
     
     return render_template('tsrs.html', title='TSRS', manager_available=True, stats=stats, records=records, indicators=indicators, mappings=mappings, columns=['indicator_code', 'indicator_title', 'response_value', 'unit', 'reporting_period'])
 
+@app.route('/training')
+@require_company_context
+def training_module():
+    if 'user' not in session: return redirect(url_for('login'))
+    
+    company_id = g.company_id
+    manager = MANAGERS.get('training')
+    
+    if not manager:
+        return render_template('training.html', title='Eğitim Yönetimi', manager_available=False, programs=[], records=[])
+        
+    # Programs (Not paginated, assuming manageable size)
+    programs = manager.get_training_programs(company_id)
+    
+    # Records (Paginated)
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
+    offset = (page - 1) * per_page
+    
+    conn = get_db()
+    
+    # Count total records
+    total = conn.execute("SELECT COUNT(*) FROM lms_training_records WHERE company_id = ?", (company_id,)).fetchone()[0]
+    
+    # Get paginated records
+    rows = conn.execute("""
+        SELECT r.*, p.title as training_title 
+        FROM lms_training_records r
+        JOIN lms_training_programs p ON r.training_id = p.id
+        WHERE r.company_id = ?
+        ORDER BY r.completion_date DESC
+        LIMIT ? OFFSET ?
+    """, (company_id, per_page, offset)).fetchall()
+    conn.close()
+    
+    records = [dict(row) for row in rows]
+    
+    import math
+    total_pages = int(math.ceil(total / per_page))
+    pagination = SimpleNamespace(
+        page=page,
+        per_page=per_page,
+        total=total,
+        total_pages=total_pages,
+        has_prev=page > 1,
+        has_next=page < total_pages,
+    )
+    
+    return render_template('training.html', title='Eğitim Yönetimi', manager_available=True, programs=programs, records=records, pagination=pagination)
 
 
+@app.route('/training/add_program', methods=['POST'])
+@require_company_context
+def training_add_program():
+    if 'user' not in session: return redirect(url_for('login'))
+    company_id = g.company_id
+    manager = MANAGERS.get('training')
+    if not manager:
+        flash(_('manager_not_active'), 'error')
+        return redirect(url_for('training_module'))
+        
+    title = request.form.get('title')
+    description = request.form.get('description')
+    training_type = request.form.get('training_type')
+    content_url = request.form.get('content_url')
+    duration = request.form.get('duration_minutes')
+    
+    if manager.add_training_program(company_id, title, description, training_type, content_url, duration):
+        flash(_('record_added_success'), 'success')
+    else:
+        flash(_('record_added_error'), 'error')
+        
+    return redirect(url_for('training_module'))
+
+@app.route('/training/add_record', methods=['POST'])
+@require_company_context
+def training_add_record():
+    if 'user' not in session: return redirect(url_for('login'))
+    company_id = g.company_id
+    manager = MANAGERS.get('training')
+    if not manager:
+        flash(_('manager_not_active'), 'error')
+        return redirect(url_for('training_module'))
+        
+    training_id = request.form.get('training_id')
+    participant = request.form.get('participant_name')
+    status = request.form.get('status')
+    score = request.form.get('score')
+    
+    if manager.add_training_record(company_id, training_id, participant, status, score):
+        flash(_('record_added_success'), 'success')
+    else:
+        flash(_('record_added_error'), 'error')
+        
+    return redirect(url_for('training_module'))
 
 @app.route('/ifrs')
 @require_company_context
@@ -2682,22 +3012,77 @@ def data():
     if 'user' not in session: return redirect(url_for('login'))
     
     company_id = g.company_id
+    active_tab = request.args.get('tab', 'carbon')
+    try:
+        page = int(request.args.get('page', 1))
+    except ValueError:
+        page = 1
+        
+    per_page = 20
+    offset = (page - 1) * per_page
+    
     data_ctx = {'carbon': [], 'energy': [], 'water': [], 'waste': []}
+    pagination = {'total_pages': 1, 'current_page': page, 'has_next': False, 'has_prev': False}
+    
     try:
         conn = get_db()
-        try: data_ctx['carbon'] = conn.execute("SELECT * FROM carbon_emissions WHERE company_id = ? ORDER BY created_at DESC LIMIT 50", (company_id,)).fetchall()
-        except: pass
-        try: data_ctx['energy'] = conn.execute("SELECT * FROM energy_consumption WHERE company_id = ? ORDER BY year DESC, month DESC LIMIT 50", (company_id,)).fetchall()
-        except: pass
-        try: data_ctx['water'] = conn.execute("SELECT * FROM water_consumption WHERE company_id = ? ORDER BY year DESC, month DESC LIMIT 50", (company_id,)).fetchall()
-        except: pass
-        try: data_ctx['waste'] = conn.execute("SELECT * FROM waste_generation WHERE company_id = ? ORDER BY date DESC LIMIT 50", (company_id,)).fetchall()
-        except: pass
+        
+        def get_paginated(table_name, order_by):
+            # Count total
+            try:
+                count = conn.execute(f"SELECT COUNT(*) FROM {table_name} WHERE company_id = ?", (company_id,)).fetchone()[0]
+            except:
+                count = 0
+            total_pages = max(1, (count + per_page - 1) // per_page)
+            
+            # Get data
+            try:
+                rows = conn.execute(f"SELECT * FROM {table_name} WHERE company_id = ? ORDER BY {order_by} LIMIT ? OFFSET ?", 
+                                  (company_id, per_page, offset)).fetchall()
+            except:
+                rows = []
+            return rows, total_pages
+
+        # Load active tab with pagination
+        if active_tab == 'carbon':
+            rows, total_pages = get_paginated('carbon_emissions', 'created_at DESC')
+            data_ctx['carbon'] = rows
+            pagination['total_pages'] = total_pages
+        elif active_tab == 'energy':
+            rows, total_pages = get_paginated('energy_consumption', 'year DESC, month DESC')
+            data_ctx['energy'] = rows
+            pagination['total_pages'] = total_pages
+        elif active_tab == 'water':
+            rows, total_pages = get_paginated('water_consumption', 'year DESC, month DESC')
+            data_ctx['water'] = rows
+            pagination['total_pages'] = total_pages
+        elif active_tab == 'waste':
+            rows, total_pages = get_paginated('waste_generation', 'date DESC')
+            data_ctx['waste'] = rows
+            pagination['total_pages'] = total_pages
+            
+        # Load others with default limit (e.g. 10) for preview
+        if active_tab != 'carbon':
+            try: data_ctx['carbon'] = conn.execute("SELECT * FROM carbon_emissions WHERE company_id = ? ORDER BY created_at DESC LIMIT 10", (company_id,)).fetchall()
+            except: pass
+        if active_tab != 'energy':
+            try: data_ctx['energy'] = conn.execute("SELECT * FROM energy_consumption WHERE company_id = ? ORDER BY year DESC, month DESC LIMIT 10", (company_id,)).fetchall()
+            except: pass
+        if active_tab != 'water':
+            try: data_ctx['water'] = conn.execute("SELECT * FROM water_consumption WHERE company_id = ? ORDER BY year DESC, month DESC LIMIT 10", (company_id,)).fetchall()
+            except: pass
+        if active_tab != 'waste':
+            try: data_ctx['waste'] = conn.execute("SELECT * FROM waste_generation WHERE company_id = ? ORDER BY date DESC LIMIT 10", (company_id,)).fetchall()
+            except: pass
+            
         conn.close()
     except Exception as e:
         logging.error(f"Error fetching data: {e}")
         
-    return render_template('data.html', title='Veri Girişi', data=data_ctx)
+    pagination['has_next'] = page < pagination['total_pages']
+    pagination['has_prev'] = page > 1
+        
+    return render_template('data.html', title='Veri Girişi', data=data_ctx, active_tab=active_tab, pagination=pagination)
 
 @app.route('/data/add', methods=['GET', 'POST'])
 @require_company_context
@@ -2933,63 +3318,107 @@ def data_add():
                 manager = MANAGERS.get('economic')
                 if not manager: raise Exception("Economic Manager not initialized")
 
-                economic_category = request.form.get('economic_category')
+                action = request.form.get('action')
 
-                try:
-                    year_for_economic = int(request.form.get('year') or year)
-                except Exception:
-                    year_for_economic = year
+                if action == 'add_project':
+                    try:
+                        project_name = request.form.get('project_name')
+                        initial_investment = float(request.form.get('initial_investment') or 0)
+                        start_date = request.form.get('start_date')
+                        discount_rate = float(request.form.get('discount_rate') or 0.10)
+                        description = request.form.get('description')
+                        
+                        manager.add_investment_project(
+                            company_id=company_id,
+                            project_name=project_name,
+                            initial_investment=initial_investment,
+                            start_date=start_date,
+                            description=description,
+                            discount_rate=discount_rate
+                        )
+                        flash(_('success_add', 'Yatırım projesi başarıyla eklendi.'), 'success')
+                    except Exception as e:
+                        logging.error(f"Error adding project: {e}")
+                        flash(_('error_add', 'Proje eklenirken hata oluştu.'), 'error')
+                        
+                elif action == 'add_cash_flow':
+                    try:
+                        project_id = int(request.form.get('project_id'))
+                        year_offset = int(request.form.get('year'))
+                        cash_flow = float(request.form.get('cash_flow') or 0)
+                        
+                        manager.add_project_cash_flow(
+                            project_id=project_id,
+                            year=year_offset,
+                            cash_flow=cash_flow
+                        )
+                        
+                        # Recalculate metrics
+                        manager.calculate_project_metrics(project_id)
+                        
+                        flash(_('success_add', 'Nakit akışı başarıyla eklendi.'), 'success')
+                    except Exception as e:
+                        logging.error(f"Error adding cash flow: {e}")
+                        flash(_('error_add', 'Nakit akışı eklenirken hata oluştu.'), 'error')
+                
+                else:
+                    economic_category = request.form.get('economic_category')
 
-                if economic_category == 'value' or economic_category == 'value_distribution':
-                    revenue = float(request.form.get('revenue') or 0)
-                    operating_costs = float(request.form.get('operating_costs') or 0)
-                    employee_wages = float(request.form.get('employee_wages') or 0)
-                    payments_capital = float(request.form.get('payments_capital') or 0)
-                    payments_gov = float(request.form.get('payments_gov') or 0)
-                    community_investments = float(request.form.get('community_investments') or 0)
-                    
-                    manager.add_economic_value_distribution(
-                        company_id=company_id,
-                        year=year_for_economic,
-                        revenue=revenue,
-                        operating_costs=operating_costs,
-                        employee_wages=employee_wages,
-                        payments_to_capital_providers=payments_capital,
-                        payments_to_governments=payments_gov,
-                        community_investments=community_investments
-                    )
-                elif economic_category == 'climate' or economic_category == 'financial_performance':
-                    assets = float(request.form.get('total_assets') or request.form.get('financial_impact') or 0)
-                    liabilities = float(request.form.get('total_liabilities') or 0)
-                    net_profit = float(request.form.get('net_profit') or assets) # Fallback to assets/impact if only one field
-                    ebitda = float(request.form.get('ebitda') or 0)
-                    equity = assets - liabilities
-                    
-                    manager.add_financial_performance(
-                        company_id=company_id,
-                        year=year_for_economic,
-                        total_assets=assets,
-                        total_liabilities=liabilities,
-                        net_profit=net_profit,
-                        ebitda=ebitda,
-                        equity=equity
-                    )
-                elif economic_category == 'tax':
-                    corporate_tax = float(request.form.get('corporate_tax') or request.form.get('tax_paid') or 0)
-                    payroll_tax = float(request.form.get('payroll_tax') or 0)
-                    vat_collected = float(request.form.get('vat_collected') or 0)
-                    property_tax = float(request.form.get('property_tax') or 0)
-                    other_taxes = float(request.form.get('other_taxes') or 0)
-                    
-                    manager.add_tax_contributions(
-                        company_id=company_id,
-                        year=year_for_economic,
-                        corporate_tax=corporate_tax,
-                        payroll_tax=payroll_tax,
-                        vat_collected=vat_collected,
-                        property_tax=property_tax,
-                        other_taxes=other_taxes
-                    )
+                    try:
+                        year_for_economic = int(request.form.get('year') or year)
+                    except Exception:
+                        year_for_economic = year
+
+                    if economic_category == 'value' or economic_category == 'value_distribution':
+                        revenue = float(request.form.get('revenue') or 0)
+                        operating_costs = float(request.form.get('operating_costs') or 0)
+                        employee_wages = float(request.form.get('employee_wages') or 0)
+                        payments_capital = float(request.form.get('payments_capital') or 0)
+                        payments_gov = float(request.form.get('payments_gov') or 0)
+                        community_investments = float(request.form.get('community_investments') or 0)
+                        
+                        manager.add_economic_value_distribution(
+                            company_id=company_id,
+                            year=year_for_economic,
+                            revenue=revenue,
+                            operating_costs=operating_costs,
+                            employee_wages=employee_wages,
+                            payments_to_capital_providers=payments_capital,
+                            payments_to_governments=payments_gov,
+                            community_investments=community_investments
+                        )
+                    elif economic_category == 'climate' or economic_category == 'financial_performance':
+                        assets = float(request.form.get('total_assets') or request.form.get('financial_impact') or 0)
+                        liabilities = float(request.form.get('total_liabilities') or 0)
+                        net_profit = float(request.form.get('net_profit') or assets) # Fallback to assets/impact if only one field
+                        ebitda = float(request.form.get('ebitda') or 0)
+                        equity = assets - liabilities
+                        
+                        manager.add_financial_performance(
+                            company_id=company_id,
+                            year=year_for_economic,
+                            total_assets=assets,
+                            total_liabilities=liabilities,
+                            net_profit=net_profit,
+                            ebitda=ebitda,
+                            equity=equity
+                        )
+                    elif economic_category == 'tax':
+                        corporate_tax = float(request.form.get('corporate_tax') or request.form.get('tax_paid') or 0)
+                        payroll_tax = float(request.form.get('payroll_tax') or 0)
+                        vat_collected = float(request.form.get('vat_collected') or 0)
+                        property_tax = float(request.form.get('property_tax') or 0)
+                        other_taxes = float(request.form.get('other_taxes') or 0)
+                        
+                        manager.add_tax_contributions(
+                            company_id=company_id,
+                            year=year_for_economic,
+                            corporate_tax=corporate_tax,
+                            payroll_tax=payroll_tax,
+                            vat_collected=vat_collected,
+                            property_tax=property_tax,
+                            other_taxes=other_taxes
+                        )
 
             elif dtype == 'supply_chain':
                 manager = MANAGERS.get('supply_chain')
@@ -3288,6 +3717,8 @@ def cdp_settings_reset():
 @require_company_context
 def users():
     page = request.args.get('page', 1, type=int)
+    search = request.args.get('search', '').strip()
+    role_filter = request.args.get('role', '').strip()
     per_page = 10
     users = []
     pagination = None
@@ -3295,68 +3726,68 @@ def users():
         conn = get_db()
         offset = (page - 1) * per_page
         
-        # Super admin olmayanlar için super_admin departmanını ve __super__ kullanıcılarını gizle
         current_role = session.get('role', '')
         
+        # Base Queries
         if current_role == '__super__':
-            count_query = "SELECT COUNT(*) FROM users"
-            data_query = """
-                SELECT u.id, u.username, u.email, u.first_name || ' ' || u.last_name as full_name, 
-                       u.department, u.is_active, u.last_login, r.name as role
-                FROM users u
-                LEFT JOIN user_roles ur ON u.id = ur.user_id
-                LEFT JOIN roles r ON ur.role_id = r.id
-                ORDER BY u.id DESC
-                LIMIT ? OFFSET ?
-            """
-            params = (per_page, offset)
-            total = conn.execute(count_query).fetchone()[0]
-            rows = conn.execute(data_query, params).fetchall()
+            base_query = "SELECT u.id, u.username, u.email, u.first_name || ' ' || u.last_name as full_name, u.department, u.is_active, u.last_login, r.name as role FROM users u LEFT JOIN user_roles ur ON u.id = ur.user_id LEFT JOIN roles r ON ur.role_id = r.id WHERE 1=1"
+            count_query = "SELECT COUNT(*) FROM users u LEFT JOIN user_roles ur ON u.id = ur.user_id LEFT JOIN roles r ON ur.role_id = r.id WHERE 1=1"
+            params = []
+            count_params = []
         else:
-            # Super admin olmayanlar için filtrele: Sadece kendi şirketinin kullanıcılarını gör
-            count_query = "SELECT COUNT(*) FROM users WHERE company_id = ? AND (department != 'super_admin' OR department IS NULL)"
+            base_query = "SELECT u.id, u.username, u.email, u.first_name || ' ' || u.last_name as full_name, u.department, u.is_active, u.last_login, r.name as role FROM users u LEFT JOIN user_roles ur ON u.id = ur.user_id LEFT JOIN roles r ON ur.role_id = r.id WHERE u.company_id = ? AND (u.department != 'super_admin' OR u.department IS NULL) AND (r.name != '__super__' OR r.name IS NULL)"
+            count_query = "SELECT COUNT(*) FROM users u LEFT JOIN user_roles ur ON u.id = ur.user_id LEFT JOIN roles r ON ur.role_id = r.id WHERE u.company_id = ? AND (u.department != 'super_admin' OR u.department IS NULL) AND (r.name != '__super__' OR r.name IS NULL)"
+            params = [g.company_id]
+            count_params = [g.company_id]
+
+        # Apply Filters
+        if search:
+            search_term = f"%{search}%"
+            clause = " AND (u.username LIKE ? OR u.email LIKE ? OR (u.first_name || ' ' || u.last_name) LIKE ?)"
+            base_query += clause
+            count_query += clause
+            params.extend([search_term, search_term, search_term])
+            count_params.extend([search_term, search_term, search_term])
             
-            data_query = """
-                SELECT u.id, u.username, u.email, u.first_name || ' ' || u.last_name as full_name, 
-                       u.department, u.is_active, u.last_login, r.name as role
-                FROM users u
-                LEFT JOIN user_roles ur ON u.id = ur.user_id
-                LEFT JOIN roles r ON ur.role_id = r.id
-                WHERE u.company_id = ?
-                AND (u.department != 'super_admin' OR u.department IS NULL)
-                AND (r.name != '__super__' OR r.name IS NULL)
-                ORDER BY u.id DESC
-                LIMIT ? OFFSET ?
-            """
-            params = (g.company_id, g.company_id, per_page, offset)
-            total = conn.execute(count_query, (g.company_id,)).fetchone()[0]
-            rows = conn.execute(data_query, params).fetchall()
-        
+        if role_filter:
+            clause = " AND r.name = ?"
+            base_query += clause
+            count_query += clause
+            params.append(role_filter)
+            count_params.append(role_filter)
+
+        # Pagination
+        base_query += " ORDER BY u.id DESC LIMIT ? OFFSET ?"
+        params.extend([per_page, offset])
+
+        # Execute
+        total = conn.execute(count_query, count_params).fetchone()[0]
+        rows = conn.execute(base_query, params).fetchall()
         conn.close()
         
         users = [dict(row) for row in rows]
         
         # Simple pagination object
         import math
-        class Pagination:
-            def __init__(self, page, per_page, total):
-                self.page = page
-                self.per_page = per_page
-                self.total = total
-                self.pages = int(math.ceil(total / per_page))
-                self.has_prev = page > 1
-                self.has_next = page < self.pages
-                self.prev_num = page - 1
-                self.next_num = page + 1
-                self.iter_pages = lambda: range(1, self.pages + 1)
+        total_pages = math.ceil(total / per_page)
         
-        pagination = Pagination(page, per_page, total)
+        pagination = SimpleNamespace(
+            page=page,
+            per_page=per_page,
+            total=total,
+            pages=total_pages,
+            has_prev=page > 1,
+            has_next=page < total_pages,
+            prev_num=page - 1,
+            next_num=page + 1,
+            iter_pages=lambda: range(1, total_pages + 1)
+        )
         
     except Exception as e:
         logging.error(f"Error fetching users: {e}")
         flash('Kullanıcı listesi alınamadı.', 'danger')
         
-    return render_template('users.html', title='Kullanıcı Yönetimi', users=users, pagination=pagination)
+    return render_template('users.html', title='Kullanıcı Yönetimi', users=users, pagination=pagination, search=search, role_filter=role_filter)
 
 @app.route('/survey/<token>', methods=['GET', 'POST'])
 def public_survey(token):
@@ -3592,7 +4023,8 @@ def roles():
         flash(_('system_error', 'Sistem hatası: Kullanıcı yöneticisi başlatılamadı.'), 'danger')
         return redirect(url_for('dashboard'))
     
-    all_roles = user_manager.get_roles()
+    # Pass company_id to filter roles (System roles + Company roles)
+    all_roles = user_manager.get_roles(company_id=g.company_id)
     return render_template('roles.html', roles=all_roles)
 
 @app.route('/roles/add')
@@ -3627,9 +4059,25 @@ def role_edit(role_id):
     if not role:
         flash(_('role_not_found', 'Rol bulunamadı.'), 'danger')
         return redirect(url_for('roles'))
+    
+    # Access Control
+    is_super = session.get('role') == '__super__'
+    
+    # 1. System roles: Only Super Admin can edit
+    if role.get('is_system_role') and not is_super:
+        flash(_('role_system_edit_error', 'Sistem rolleri sadece süper yönetici tarafından düzenlenebilir.'), 'danger')
+        return redirect(url_for('roles'))
+        
+    # 2. Company roles: Only own company or Super Admin
+    if not is_super and not role.get('is_system_role'):
+        # Check company ownership (assuming company_id is present)
+        if role.get('company_id') and role.get('company_id') != g.company_id:
+            flash(_('unauthorized_access', 'Yetkisiz erişim.'), 'danger')
+            return redirect(url_for('roles'))
         
     permissions = user_manager.get_permissions()
-    role_perm_ids = user_manager.get_role_permissions(role_id)
+    role_perms = user_manager.get_role_permissions(role_id)
+    role_perm_ids = [p['id'] for p in role_perms]
     
     # Group permissions by module
     permissions_by_module = {}
@@ -3661,15 +4109,35 @@ def role_save():
         'display_name': display_name,
         'description': description,
         'is_active': 1 if is_active else 0,
-        'permission_ids': [int(pid) for pid in permission_ids]
+        'permission_ids': [int(pid) for pid in permission_ids],
+        'company_id': g.company_id
     }
     
     try:
         if role_id:
             # Update
             role_id = int(role_id)
-            # Check if system role name is being changed (not allowed)
             current_role = user_manager.get_role_by_id(role_id)
+            
+            if not current_role:
+                 flash(_('role_not_found', 'Rol bulunamadı.'), 'danger')
+                 return redirect(url_for('roles'))
+
+            # Access Control
+            is_super = session.get('role') == '__super__'
+            
+            # 1. System roles: Only Super Admin
+            if current_role.get('is_system_role') and not is_super:
+                 flash(_('role_system_edit_error', 'Sistem rolleri sadece süper yönetici tarafından düzenlenebilir.'), 'danger')
+                 return redirect(url_for('roles'))
+            
+            # 2. Company roles: Only own company or Super Admin
+            if not is_super and not current_role.get('is_system_role'):
+                 if current_role.get('company_id') and current_role.get('company_id') != g.company_id:
+                     flash(_('unauthorized_access', 'Yetkisiz erişim.'), 'danger')
+                     return redirect(url_for('roles'))
+
+            # Check if system role name is being changed (not allowed)
             if current_role and current_role['is_system_role']:
                 role_data.pop('name', None) # Don't update name for system roles
                 
@@ -3693,13 +4161,32 @@ def role_save():
     return redirect(url_for('roles'))
 
 @app.route('/roles/delete/<int:role_id>')
-@super_admin_required
+@admin_required
 @require_company_context
 def role_delete(role_id):
     if not user_manager:
         flash(_('system_error', 'Sistem hatası: Kullanıcı yöneticisi başlatılamadı.'), 'danger')
         return redirect(url_for('dashboard'))
         
+    role = user_manager.get_role_by_id(role_id)
+    if not role:
+        flash(_('role_not_found', 'Rol bulunamadı.'), 'danger')
+        return redirect(url_for('roles'))
+        
+    # Access Control
+    is_super = session.get('role') == '__super__'
+    
+    # 1. System roles: Cannot delete (handled by user_manager too, but good to check here)
+    if role.get('is_system_role'):
+        flash(_('role_system_delete_error', 'Sistem rolleri silinemez.'), 'danger')
+        return redirect(url_for('roles'))
+        
+    # 2. Company roles: Only own company or Super Admin
+    if not is_super:
+        if role.get('company_id') and role.get('company_id') != g.company_id:
+            flash(_('unauthorized_access', 'Yetkisiz erişim.'), 'danger')
+            return redirect(url_for('roles'))
+            
     success = user_manager.delete_role(role_id, deleted_by=session.get('user_id'))
     if success:
         flash(_('role_delete_success', 'Rol başarıyla silindi.'), 'success')
@@ -3808,20 +4295,78 @@ def companies():
     if 'user' not in session:
         return redirect(url_for('login'))
     
+    page = request.args.get('page', 1, type=int)
+    search = request.args.get('search', '').strip()
+    country_filter = request.args.get('country', '').strip()
+    status_filter = request.args.get('status', '').strip()
+    
+    per_page = 20
+    offset = (page - 1) * per_page
+    
     companies = []
+    total = 0
+    total_pages = 1
+    
     try:
         conn = get_db()
         # Strict Isolation: Regular users see only their own company
-        # Super admins can see all (if we decide so, but for now stick to strict isolation or check role)
         if session.get('role') == '__super__':
-             companies = conn.execute("SELECT * FROM companies ORDER BY id DESC").fetchall()
+            # Base query
+            base_query = "SELECT * FROM companies WHERE 1=1"
+            count_query = "SELECT COUNT(*) FROM companies WHERE 1=1"
+            params = []
+            
+            if search:
+                search_term = f"%{search}%"
+                clause = " AND (name LIKE ? OR sector LIKE ?)"
+                base_query += clause
+                count_query += clause
+                params.extend([search_term, search_term])
+            
+            if country_filter:
+                search_country = f"%{country_filter}%"
+                clause = " AND country LIKE ?"
+                base_query += clause
+                count_query += clause
+                params.append(search_country)
+                
+            if status_filter:
+                clause = " AND is_active = ?"
+                base_query += clause
+                count_query += clause
+                params.append(1 if status_filter == 'active' else 0)
+                
+            # Count
+            total_row = conn.execute(count_query, params).fetchone()
+            total = total_row[0] if total_row else 0
+            
+            # Fetch
+            base_query += " ORDER BY id DESC LIMIT ? OFFSET ?"
+            params.extend([per_page, offset])
+            
+            companies = conn.execute(base_query, params).fetchall()
         else:
-             companies = conn.execute("SELECT * FROM companies WHERE id = ? ORDER BY id DESC", (g.company_id,)).fetchall()
+            total = 1 # Only one company
+            companies = conn.execute("SELECT * FROM companies WHERE id = ? ORDER BY id DESC", (g.company_id,)).fetchall()
+        
         conn.close()
+        
+        total_pages = (total + per_page - 1) // per_page if per_page and total else 1
+        
     except Exception as e:
         logging.error(f"Error fetching companies: {e}")
         
-    return render_template('companies.html', title='Şirketler', companies=companies)
+    pagination = SimpleNamespace(
+        page=page,
+        per_page=per_page,
+        total=total,
+        total_pages=total_pages,
+        has_prev=page > 1,
+        has_next=page < total_pages,
+    )
+        
+    return render_template('companies.html', title='Şirketler', companies=companies, pagination=pagination, 
+                           search=search, country_filter=country_filter, status_filter=status_filter)
 
 @app.route('/companies/add', methods=['GET', 'POST'])
 @super_admin_required
@@ -4121,6 +4666,12 @@ def reports():
     company_id = g.company_id
     reports = []
     pagination = None
+    
+    # Filter params
+    filter_type = request.args.get('type', '')
+    filter_start_date = request.args.get('start_date', '')
+    filter_end_date = request.args.get('end_date', '')
+
     try:
         conn = get_db()
         try:
@@ -4130,18 +4681,36 @@ def reports():
         per_page = 25
         offset = (page - 1) * per_page
 
+        # Build dynamic query
+        where_clauses = ["company_id = ?"]
+        params = [company_id]
+        
+        if filter_type:
+            where_clauses.append("report_type = ?")
+            params.append(filter_type)
+        if filter_start_date:
+            where_clauses.append("date(created_at) >= date(?)")
+            params.append(filter_start_date)
+        if filter_end_date:
+            where_clauses.append("date(created_at) <= date(?)")
+            params.append(filter_end_date)
+            
+        where_sql = " WHERE " + " AND ".join(where_clauses)
+
         total = 0
         try:
-            total_row = conn.execute("SELECT COUNT(*) FROM report_registry WHERE company_id = ?", (company_id,)).fetchone()
+            total_row = conn.execute(f"SELECT COUNT(*) FROM report_registry{where_sql}", params).fetchone()
             total = total_row[0] if total_row else 0
         except Exception as e:
             logging.error(f"Error counting reports: {e}")
 
         rows = []
         try:
+            # Need to append LIMIT/OFFSET to params
+            data_params = params + [per_page, offset]
             rows = conn.execute(
-                "SELECT * FROM report_registry WHERE company_id = ? ORDER BY id DESC LIMIT ? OFFSET ?",
-                (company_id, per_page, offset),
+                f"SELECT * FROM report_registry{where_sql} ORDER BY id DESC LIMIT ? OFFSET ?",
+                data_params
             ).fetchall()
         except Exception as e:
             logging.error(f"Error querying reports: {e}")
@@ -4156,6 +4725,7 @@ def reports():
                     "report_name": _get("report_name") or _get("name") or "",
                     "report_type": _get("report_type") or _get("type") or "",
                     "created_at": _get("created_at") or _get("date") or "",
+                    "file_path": _get("file_path"),
                 }
             )
 
@@ -4171,7 +4741,15 @@ def reports():
         conn.close()
     except Exception as e:
         logging.error(f"Error fetching reports: {e}")
-    return render_template('reports.html', title='Raporlar', reports=reports, pagination=pagination)
+    return render_template(
+        'reports.html', 
+        title='Raporlar', 
+        reports=reports, 
+        pagination=pagination,
+        filter_type=filter_type,
+        filter_start_date=filter_start_date,
+        filter_end_date=filter_end_date
+    )
 
 @app.route('/reports/add', methods=['GET', 'POST'])
 @require_company_context
@@ -5767,6 +6345,9 @@ def social_add():
     return render_template('social_edit.html', title='Sosyal Veri Girişi', data_type=data_type)
 
 
+
+
+
 @app.route('/governance')
 @require_company_context
 def governance_module():
@@ -5787,6 +6368,10 @@ def governance_module():
             logging.error(f"Error in governance manager stats: {e}")
 
     return render_template('governance.html', title='Kurumsal Yönetişim', manager_available=bool(manager), stats=stats, recent_data=recent_data)
+
+
+
+
 
 @app.route('/governance/add', methods=['GET', 'POST'])
 @require_company_context
@@ -5871,6 +6456,205 @@ def governance_add():
             flash(f'Hata: {e}', 'danger')
             
     return render_template('governance_edit.html', title='Yönetişim Veri Girişi', data_type=data_type)
+
+# --- ISO 26000 & Additional Core Subjects Routes ---
+
+@app.route('/human_rights', methods=['GET', 'POST'])
+@require_company_context
+def human_rights_module():
+    if 'user' not in session: return redirect(url_for('login'))
+    
+    manager = MANAGERS.get('social')
+    company_id = g.company_id
+    
+    if request.method == 'POST':
+        try:
+            data = {
+                'site_name': request.form.get('site_name'),
+                'assessment_date': request.form.get('assessment_date'),
+                'risk_level': request.form.get('risk_level'),
+                'incidents_found': request.form.get('incidents_found', 0),
+                'mitigation_plan': request.form.get('mitigation_plan'),
+                'status': request.form.get('status')
+            }
+            if manager.add_human_rights_assessment(company_id, data):
+                flash('İnsan hakları değerlendirmesi eklendi.', 'success')
+            else:
+                flash('Ekleme sırasında hata oluştu.', 'error')
+        except Exception as e:
+            logging.error(f"Error adding human rights data: {e}")
+            flash(f'Hata: {e}', 'error')
+        return redirect(url_for('human_rights_module'))
+
+    records = []
+    stats = {'incidents': 0, 'audits': 0, 'violations': 0}
+    
+    if manager:
+        try:
+            records = manager.get_human_rights_assessments(company_id)
+            stats['audits'] = len(records)
+            stats['incidents'] = sum(1 for r in records if r['incidents_found'] > 0)
+        except Exception as e:
+            logging.error(f"Error in human rights data: {e}")
+            
+    return render_template('human_rights.html', title=_('human_rights_title', 'İnsan Hakları'), 
+                         stats=stats, records=records, 
+                         columns=['site_name', 'assessment_date', 'risk_level', 'status'],
+                         manager_available=bool(manager))
+
+@app.route('/labor', methods=['GET', 'POST'])
+@require_company_context
+def labor_module():
+    if 'user' not in session: return redirect(url_for('login'))
+    
+    manager = MANAGERS.get('social')
+    company_id = g.company_id
+    
+    if request.method == 'POST':
+        try:
+            data = {
+                'site_name': request.form.get('site_name'),
+                'audit_date': request.form.get('audit_date'),
+                'forced_labor_risk': request.form.get('forced_labor_risk'),
+                'child_labor_risk': request.form.get('child_labor_risk'),
+                'wage_compliance': request.form.get('wage_compliance'),
+                'union_rights': request.form.get('union_rights'),
+                'audit_score': request.form.get('audit_score')
+            }
+            if manager.add_labor_audit(company_id, data):
+                flash('Adil çalışma denetimi eklendi.', 'success')
+            else:
+                flash('Ekleme sırasında hata oluştu.', 'error')
+        except Exception as e:
+            logging.error(f"Error adding labor audit: {e}")
+            flash(f'Hata: {e}', 'error')
+        return redirect(url_for('labor_module'))
+
+    records = []
+    stats = {'audits': 0, 'high_risk_sites': 0}
+    
+    if manager:
+        try:
+            records = manager.get_labor_audits(company_id)
+            stats['audits'] = len(records)
+            stats['high_risk_sites'] = sum(1 for r in records if r['forced_labor_risk'] == 'High' or r['child_labor_risk'] == 'High')
+        except Exception as e:
+            logging.error(f"Error in labor data: {e}")
+            
+    return render_template('labor.html', title=_('labor_practices_title', 'Çalışma Uygulamaları'), 
+                         stats=stats, records=records,
+                         columns=['site_name', 'audit_date', 'audit_score', 'wage_compliance'],
+                         manager_available=bool(manager))
+
+@app.route('/fair_operating')
+@require_company_context
+def fair_operating_module():
+    if 'user' not in session: return redirect(url_for('login'))
+    
+    manager = MANAGERS.get('governance')
+    company_id = g.company_id
+    
+    stats = {'ethics_incidents': 0, 'corruption_cases': 0}
+    
+    if manager and hasattr(manager, 'get_fair_operating_stats'):
+        try:
+            stats = manager.get_fair_operating_stats(company_id)
+        except Exception as e:
+            logging.error(f"Error in fair operating stats: {e}")
+            
+    return render_template('fair_operating.html', title=_('fair_operating_title', 'Adil Çalışma Uygulamaları'), stats=stats, manager_available=bool(manager))
+
+@app.route('/consumer', methods=['GET', 'POST'])
+@require_company_context
+def consumer_module():
+    if 'user' not in session: return redirect(url_for('login'))
+    
+    manager = MANAGERS.get('social')
+    company_id = g.company_id
+    
+    if request.method == 'POST':
+        try:
+            data = {
+                'complaint_date': request.form.get('complaint_date'),
+                'category': request.form.get('category'),
+                'severity': request.form.get('severity'),
+                'description': request.form.get('description'),
+                'resolution_status': request.form.get('resolution_status'),
+                'satisfaction_score': request.form.get('satisfaction_score')
+            }
+            if manager.add_consumer_complaint(company_id, data):
+                flash('Tüketici şikayeti eklendi.', 'success')
+            else:
+                flash('Ekleme sırasında hata oluştu.', 'error')
+        except Exception as e:
+            logging.error(f"Error adding consumer complaint: {e}")
+            flash(f'Hata: {e}', 'error')
+        return redirect(url_for('consumer_module'))
+
+    records = []
+    stats = {'complaints': 0, 'open_cases': 0, 'avg_satisfaction': 0}
+    
+    if manager:
+        try:
+            records = manager.get_consumer_complaints(company_id)
+            stats['complaints'] = len(records)
+            stats['open_cases'] = sum(1 for r in records if r['resolution_status'] != 'Resolved')
+            if records:
+                scores = [float(r['satisfaction_score']) for r in records if r['satisfaction_score']]
+                if scores:
+                    stats['avg_satisfaction'] = round(sum(scores) / len(scores), 2)
+        except Exception as e:
+            logging.error(f"Error in consumer stats: {e}")
+            
+    return render_template('consumer.html', title=_('consumer_issues_title', 'Tüketici Sorunları'), 
+                         stats=stats, records=records,
+                         columns=['complaint_date', 'category', 'severity', 'resolution_status'],
+                         manager_available=bool(manager))
+
+@app.route('/community', methods=['GET', 'POST'])
+@require_company_context
+def community_module():
+    if 'user' not in session: return redirect(url_for('login'))
+    
+    manager = MANAGERS.get('social')
+    company_id = g.company_id
+    
+    if request.method == 'POST':
+        try:
+            data = {
+                'project_name': request.form.get('project_name'),
+                'investment_amount': request.form.get('investment_amount'),
+                'beneficiaries_count': request.form.get('beneficiaries_count'),
+                'impact_description': request.form.get('impact_description'),
+                'date': request.form.get('date')
+            }
+            if manager.add_community_investment(company_id, data):
+                flash('Toplumsal yatırım eklendi.', 'success')
+            else:
+                flash('Ekleme sırasında hata oluştu.', 'error')
+        except Exception as e:
+            logging.error(f"Error adding community investment: {e}")
+            flash(f'Hata: {e}', 'error')
+        return redirect(url_for('community_module'))
+
+    records = []
+    stats = {'investments': 0, 'total_amount': 0, 'beneficiaries': 0}
+    
+    if manager:
+        try:
+            records = manager.get_community_investments(company_id)
+            stats['investments'] = len(records)
+            stats['total_amount'] = sum(float(r['investment_amount'] or 0) for r in records)
+            stats['beneficiaries'] = sum(int(r['beneficiaries_count'] or 0) for r in records)
+        except Exception as e:
+            logging.error(f"Error in community stats: {e}")
+            
+    return render_template('community.html', title=_('community_involvement_title', 'Toplumsal Katılım'), 
+                         stats=stats, records=records,
+                         columns=['date', 'project_name', 'investment_amount', 'beneficiaries_count'],
+                         manager_available=bool(manager))
+
+# ----------------------------------------------------
 
 @app.route('/carbon')
 @require_company_context
@@ -6490,6 +7274,39 @@ def carbon_add():
         
     return redirect(url_for('carbon_module'))
 
+@app.route('/environment')
+@require_company_context
+def environmental_module():
+    if 'user' not in session: return redirect(url_for('login'))
+    
+    stats = {}
+    records = []
+    
+    try:
+        carbon_mgr = MANAGERS.get('carbon')
+        water_mgr = MANAGERS.get('water')
+        waste_mgr = MANAGERS.get('waste')
+        
+        company_id = g.company_id
+        
+        if carbon_mgr and hasattr(carbon_mgr, 'get_total_emissions'):
+            c_stats = carbon_mgr.get_total_emissions(company_id)
+            stats['total_carbon'] = f"{c_stats:.2f} tCO2e"
+            
+        if water_mgr and hasattr(water_mgr, 'get_total_consumption'):
+            w_stats = water_mgr.get_total_consumption(company_id)
+            stats['total_water'] = f"{w_stats:.2f} m3"
+            
+        if waste_mgr and hasattr(waste_mgr, 'get_total_waste'):
+            waste_data = waste_mgr.get_total_waste(company_id)
+            stats['total_waste'] = f"{waste_data:.2f} tons"
+            
+    except Exception as e:
+        logging.error(f"Error gathering environmental stats: {e}")
+
+    return render_template('environmental.html', title='Çevre Yönetimi', stats=stats, records=records, manager_available=True)
+
+
 @app.route('/water')
 @require_company_context
 def water_module():
@@ -6758,6 +7575,7 @@ def economic_add():
     return render_template('economic_edit.html', title='Ekonomik Veri Girişi', data_type=data_type)
 
 
+
 @app.route('/benchmark')
 @require_company_context
 def benchmark_module():
@@ -6780,18 +7598,12 @@ def benchmark_module():
     selected_sector = request.args.get('sector', 'imalat')
     
     # Get comprehensive sector data for the selected sector
-    # Since existing class doesn't have a simple "get all metrics for sector" method that returns a nice dict,
-    # we might need to query the database directly or use _get_comprehensive_sector_data logic if exposed.
-    # Looking at the class, get_sector_benchmark returns one row.
+    averages = manager.get_all_metrics_for_sector(selected_sector)
     
-    # Let's fetch all metrics for the selected sector
-    averages = {}
-    for metric_code in metrics.keys():
-        data = manager.get_sector_benchmark(selected_sector, metric_code)
-        if data:
-            averages[metric_code] = data
+    # Placeholder for company values (To be implemented with real data fetching)
+    company_values = {} 
             
-    return render_template('benchmark.html', title='Benchmarking', manager_available=True, sectors=sectors, metrics=metrics, averages=averages, selected_sector=selected_sector)
+    return render_template('benchmark.html', title='Benchmarking', manager_available=True, sectors=sectors, metrics=metrics, averages=averages, selected_sector=selected_sector, company_values=company_values)
 
 @app.route('/regulation')
 @require_company_context
@@ -7505,6 +8317,7 @@ def ai_reports_module():
         mat_stats['total_topics'] = 0
 
     analysis_result = None
+    log_id = None
     
     if request.method == 'POST':
         # Generate Analysis
@@ -7521,7 +8334,7 @@ def ai_reports_module():
                 }
             }
             # Use unified report type for comprehensive summary
-            analysis_result = ai_manager.generate_summary(data_payload, report_type="unified")
+            analysis_result, log_id = ai_manager.generate_summary(data_payload, report_type="unified")
         else:
             # Simulation for demo/fallback
             analysis_result = f"""
@@ -7547,7 +8360,41 @@ Kurumunuzun sürdürülebilirlik yolculuğunda temel yapı taşları (SKA ve Ön
                          manager_available=ai_manager.is_available() if 'ai_manager' in locals() else False,
                          sdg_stats=sdg_stats,
                          mat_stats=mat_stats,
-                         analysis_result=analysis_result)
+                         analysis_result=analysis_result,
+                         log_id=log_id)
+
+
+@app.route('/ai/feedback', methods=['POST'])
+@require_company_context
+def ai_feedback_submit():
+    if 'user' not in session: return jsonify({"success": False, "error": "Auth required"}), 401
+    
+    try:
+        from backend.modules.ai.ai_manager import AIManager
+        ai_manager = AIManager(DB_PATH)
+        
+        log_id = request.form.get('log_id')
+        rating = request.form.get('rating')
+        comment = request.form.get('comment', '')
+        
+        if not log_id or not rating:
+            return jsonify({"success": False, "error": "Missing fields"}), 400
+            
+        success = ai_manager.submit_feedback(
+            log_id=int(log_id),
+            rating=int(rating),
+            comment=comment,
+            user_id=session.get('user_id')
+        )
+        
+        if success:
+            return jsonify({"success": True})
+        else:
+            return jsonify({"success": False, "error": "Database error"}), 500
+            
+    except Exception as e:
+        logging.error(f"Feedback error: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 
@@ -7978,39 +8825,7 @@ def emission_reduction_module():
     return render_template('emission_reduction.html', title='Emission Reduction')
 
 
-@app.route('/environmental')
-@require_company_context
-def environmental_module():
-    if 'user' not in session: return redirect(url_for('login'))
-    
-    company_id = g.company_id
-    stats = {
-        'carbon_emissions': 0,
-        'energy_consumption': 0,
-        'water_consumption': 0,
-        'waste_generation': 0
-    }
-    
-    try:
-        conn = get_db()
-        # Simple counts or sums
-        try:
-            stats['carbon_emissions'] = conn.execute("SELECT COUNT(*) FROM carbon_emissions WHERE company_id=?", (company_id,)).fetchone()[0]
-        except: pass
-        try:
-            stats['energy_consumption'] = conn.execute("SELECT COUNT(*) FROM energy_consumption WHERE company_id=?", (company_id,)).fetchone()[0]
-        except: pass
-        try:
-            stats['water_consumption'] = conn.execute("SELECT COUNT(*) FROM water_consumption WHERE company_id=?", (company_id,)).fetchone()[0]
-        except: pass
-        try:
-            stats['waste_generation'] = conn.execute("SELECT COUNT(*) FROM waste_generation WHERE company_id=?", (company_id,)).fetchone()[0]
-        except: pass
-        conn.close()
-    except Exception as e:
-        logging.error(f"Environmental stats error: {e}")
-        
-    return render_template('environmental.html', title='Çevresel Yönetim', stats=stats, manager_available=True)
+
 
 
 @app.route('/erp_integration')
@@ -8579,13 +9394,6 @@ def supply_chain_edit_module():
     return render_template('supply_chain_edit.html', title='Supply Chain Edit')
 
 
-@app.route('/support_ticket')
-@require_company_context
-def support_ticket_module():
-    if 'user' not in session: return redirect(url_for('login'))
-    return render_template('support_ticket.html', title='Support Ticket')
-
-
 @app.route('/surveys')
 @require_company_context
 def surveys_module():
@@ -8598,6 +9406,11 @@ def surveys_module():
     
     # Load stakeholder groups for dropdown
     stakeholder_groups = {}
+    
+    # Filter params
+    search = request.args.get('search', '')
+    status_filter = request.args.get('status', '')
+
     try:
         import json
         import os
@@ -8622,9 +9435,38 @@ def surveys_module():
         stats['active_surveys'] = online_stats.get('active_surveys', 0)
         stats['total_responses'] = online_stats.get('total_responses', 0)
         
-        # Get survey records
+        # Get survey records (Paginated)
+        page = request.args.get('page', 1, type=int)
+        per_page = 10
+        offset = (page - 1) * per_page
+        
         conn = get_db()
-        cursor = conn.execute("""
+        
+        # Build dynamic query
+        where_clauses = ["company_id = ?"]
+        params = [company_id]
+        
+        if search:
+            where_clauses.append("survey_title LIKE ?")
+            params.append(f"%{search}%")
+        
+        if status_filter:
+            if status_filter == 'active':
+                where_clauses.append("is_active = 1")
+            elif status_filter == 'passive':
+                where_clauses.append("is_active = 0")
+                
+        where_sql = " WHERE " + " AND ".join(where_clauses)
+        
+        # Count total
+        try:
+            total = conn.execute(f"SELECT COUNT(*) FROM online_surveys{where_sql}", params).fetchone()[0]
+        except:
+            total = 0
+            
+        # Get records
+        data_params = params + [per_page, offset]
+        cursor = conn.execute(f"""
             SELECT 
                 id,
                 survey_title, 
@@ -8633,9 +9475,10 @@ def surveys_module():
                 created_at,
                 survey_link
             FROM online_surveys 
-            WHERE company_id=? 
+            {where_sql}
             ORDER BY created_at DESC
-        """, (company_id,))
+            LIMIT ? OFFSET ?
+        """, data_params)
         
         rows = cursor.fetchall()
         # Add survey_link to the dict keys but keep columns list same for display
@@ -8650,10 +9493,23 @@ def surveys_module():
             records.append(rec)
         
         conn.close()
+        
+        import math
+        from types import SimpleNamespace
+        total_pages = int(math.ceil(total / per_page))
+        pagination = SimpleNamespace(
+            page=page,
+            per_page=per_page,
+            total=total,
+            total_pages=total_pages,
+            has_prev=page > 1,
+            has_next=page < total_pages,
+        )
     except Exception as e:
         logging.error(f"Surveys module error: {e}")
+        pagination = None
         
-    return render_template('surveys.html', title='Surveys', stats=stats, records=records, columns=columns, manager_available=True, stakeholder_groups=stakeholder_groups)
+    return render_template('surveys.html', title='Surveys', stats=stats, records=records, columns=columns, manager_available=True, stakeholder_groups=stakeholder_groups, pagination=pagination, search=search, status_filter=status_filter)
 
 
 
@@ -8810,6 +9666,49 @@ def add_standard_survey_questions(survey_id):
         conn.close()
         
     return redirect(url_for('survey_detail', survey_id=survey_id))
+
+@app.route('/surveys/<int:survey_id>/create_training_plan', methods=['POST'])
+@require_company_context
+def create_training_plan_from_survey(survey_id):
+    if 'user' not in session: return redirect(url_for('login'))
+    company_id = g.company_id
+    
+    try:
+        from backend.modules.surveys.hosting_survey_manager import HostingSurveyManager
+        from backend.modules.social.training_manager import TrainingManager
+        
+        sm = HostingSurveyManager(DB_PATH)
+        tm = TrainingManager(DB_PATH)
+        
+        # Anket sahipliğini kontrol et
+        conn = get_db()
+        cursor = conn.execute("SELECT id FROM online_surveys WHERE id=? AND company_id=?", (survey_id, company_id))
+        if not cursor.fetchone():
+            conn.close()
+            flash('Yetkisiz işlem.', 'error')
+            return redirect(url_for('survey_detail', survey_id=survey_id))
+        conn.close()
+        
+        result = sm.export_to_training(
+            survey_id=survey_id,
+            training_manager=tm,
+            company_id=company_id
+        )
+        
+        if result['success']:
+            msg = f"{result['created_count']} adet eğitim planı oluşturuldu."
+            if result.get('details'):
+                msg += " Detaylar: " + ", ".join(result['details'])
+            flash(msg, 'success')
+        else:
+            flash(f"Hata: {result.get('error')}", 'error')
+            
+    except Exception as e:
+        logging.error(f"Error creating training plan: {e}")
+        flash(f"Eğitim planı oluşturulurken hata: {e}", 'error')
+        
+    return redirect(url_for('survey_detail', survey_id=survey_id))
+
 
 @app.route('/surveys/<int:survey_id>/add_question', methods=['POST'])
 @require_company_context
@@ -9332,126 +10231,8 @@ def prioritization_add():
 
 # --- SPA API Routes (Added for Option 1: UI Modernization) ---
 
-@app.route('/api/v1/login', methods=['POST'])
-@require_company_context
-def api_login():
-    try:
-        data = request.get_json()
-        if not data:
-            return jsonify({'error': 'No data provided'}), 400
-            
-        username = data.get('username')
-        password = data.get('password')
-        
-        if not username or not password:
-            return jsonify({'error': 'Missing credentials'}), 400
-            
-        user = None
-        if user_manager:
-            user = user_manager.authenticate(username, password)
-            
-        if user:
-            # Session handling for hybrid approach
-            session['user'] = user.username
-            session['role'] = user.role
-            session['user_id'] = user.id
-            session['company_id'] = user.company_id if hasattr(user, 'company_id') else 1
-            
-            return jsonify({
-                'success': True,
-                'token': 'session_based', 
-                'user': {
-                    'id': user.id,
-                    'username': user.username,
-                    'role': user.role,
-                    'company_id': getattr(user, 'company_id', 1)
-                }
-            })
-        else:
-            return jsonify({'error': 'Invalid credentials'}), 401
-            
-    except Exception as e:
-        logging.error(f"API Login error: {e}")
-        return jsonify({'error': str(e)}), 500
+# Note: api_dashboard_stats is already defined at line 386 using DashboardStatsManager.
 
-@app.route('/api/v1/dashboard-stats', methods=['GET'])
-@require_company_context
-def api_dashboard_stats():
-    if 'user' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-        
-    try:
-        company_id = g.company_id
-        year = datetime.now().year
-        stats = {
-            'modules': [],
-            'alerts': 0,
-            'next_deadline': f'{year}-12-31'
-        }
-
-        # Carbon Module
-        carbon_score = 0
-        carbon_status = 'Pending'
-        if MANAGERS.get('carbon'):
-            try:
-                total_emissions = MANAGERS['carbon'].get_total_carbon_footprint(company_id, year)
-                if total_emissions > 0:
-                    carbon_score = 100 # Simplified logic
-                    carbon_status = 'Active'
-                else:
-                    records = MANAGERS['carbon'].get_carbon_records(company_id, year)
-                    if records:
-                        carbon_score = 50
-                        carbon_status = 'Active'
-            except Exception as e:
-                logging.error(f"API Carbon stats error: {e}")
-        
-        stats['modules'].append({
-            'name': 'Karbon (Carbon)',
-            'status': carbon_status,
-            'score': carbon_score
-        })
-
-        # Water Module
-        water_score = 0
-        water_status = 'Pending'
-        if MANAGERS.get('water'):
-            try:
-                water_data = MANAGERS['water'].calculate_water_footprint(company_id, str(year))
-                if water_data and water_data.get('total_water_footprint', 0) > 0:
-                    water_score = 100
-                    water_status = 'Active'
-            except Exception as e:
-                logging.error(f"API Water stats error: {e}")
-
-        stats['modules'].append({
-            'name': 'Su (Water)',
-            'status': water_status,
-            'score': water_score
-        })
-
-        # Social Module
-        social_score = 0
-        social_status = 'Pending'
-        if MANAGERS.get('social'):
-            try:
-                social_data = MANAGERS['social'].get_dashboard_stats(company_id)
-                if social_data and social_data.get('employees', 0) > 0:
-                    social_score = 100
-                    social_status = 'Active'
-            except Exception as e:
-                logging.error(f"API Social stats error: {e}")
-
-        stats['modules'].append({
-            'name': 'Sosyal (Social)',
-            'status': social_status,
-            'score': social_score
-        })
-
-        return jsonify(stats)
-    except Exception as e:
-        logging.error(f"API Dashboard error: {e}")
-        return jsonify({'error': str(e)}), 500
 
 # ==========================================
 # DYNAMIC MODULE INTEGRATION (AUTO-GENERATED)
@@ -9736,8 +10517,69 @@ def lca_delete_entry(assessment_id, entry_id):
 def supply_chain_module():
     if 'user' not in session: return redirect(url_for('login'))
     manager = SupplyChainManager(DB_PATH)
-    suppliers = manager.get_suppliers(g.company_id)
-    return render_template('supply_chain.html', suppliers=suppliers)
+    
+    # Pagination & Filtering
+    page = request.args.get('page', 1, type=int)
+    search = request.args.get('search', '').strip()
+    risk_filter = request.args.get('risk_level', '').strip()
+    
+    per_page = 10
+    offset = (page - 1) * per_page
+    
+    conn = get_db()
+    
+    # Base query
+    query = "SELECT * FROM supplier_profiles WHERE company_id = ?"
+    params = [g.company_id]
+    
+    if search:
+        query += " AND (name LIKE ? OR sector LIKE ? OR region LIKE ?)"
+        term = f"%{search}%"
+        params.extend([term, term, term])
+        
+    if risk_filter:
+        # High Score (>70) = Low Risk
+        # Medium Score (50-70) = Medium Risk
+        # Low Score (<=50) = High Risk
+        if risk_filter == 'Low': 
+            query += " AND risk_score > 70"
+        elif risk_filter == 'Medium':
+            query += " AND risk_score > 50 AND risk_score <= 70"
+        elif risk_filter == 'High': 
+            query += " AND risk_score <= 50"
+            
+    # Count total
+    count_query = f"SELECT COUNT(*) FROM ({query})"
+    try:
+        total = conn.execute(count_query, params).fetchone()[0]
+    except:
+        total = 0
+        
+    # Get paginated
+    query += " ORDER BY name ASC LIMIT ? OFFSET ?"
+    params.extend([per_page, offset])
+    
+    rows = conn.execute(query, params).fetchall()
+    conn.close()
+    
+    suppliers = [dict(row) for row in rows]
+    
+    import math
+    from types import SimpleNamespace
+    total_pages = int(math.ceil(total / per_page))
+    pagination = SimpleNamespace(
+        page=page,
+        per_page=per_page,
+        total=total,
+        total_pages=total_pages,
+        has_prev=page > 1,
+        has_next=page < total_pages,
+        prev_num=page - 1,
+        next_num=page + 1,
+        iter_pages=lambda: range(1, total_pages + 1)
+    )
+    
+    return render_template('supply_chain.html', suppliers=suppliers, pagination=pagination, search=search, risk_filter=risk_filter)
 
 @app.route('/supply_chain/add_supplier', methods=['POST'])
 @require_company_context
@@ -9761,13 +10603,27 @@ def supply_chain_profile(supplier_id):
     if 'user' not in session: return redirect(url_for('login'))
     manager = SupplyChainManager(DB_PATH)
     
-    supplier = manager.get_supplier(supplier_id, g.company_id)
-    if not supplier:
+    # Use the new scorecard function which aggregates everything
+    scorecard = manager.get_supplier_scorecard(supplier_id, g.company_id)
+    
+    if not scorecard:
         flash('Tedarikçi bulunamadı.', 'error')
         return redirect(url_for('supply_chain_module'))
-        
+    
+    # Fetch raw lists for tables
     assessments = manager.get_assessments(supplier_id, g.company_id)
-    return render_template('supply_chain_profile.html', supplier=supplier, assessments=assessments, today_date=datetime.now().strftime('%Y-%m-%d'))
+    audits = manager.get_audits(supplier_id, g.company_id)
+    risks = manager.get_risks(supplier_id, g.company_id)
+    recommendations = manager.get_recommendations(supplier_id, g.company_id)
+    
+    return render_template('supply_chain_profile.html', 
+                         supplier=scorecard.get('profile'), 
+                         scorecard=scorecard,
+                         assessments=assessments, 
+                         audits=audits,
+                         risks=risks,
+                         recommendations=recommendations, 
+                         today_date=datetime.now().strftime('%Y-%m-%d'))
 
 @app.route('/supply_chain/profile/<int:supplier_id>/add_assessment', methods=['POST'])
 @require_company_context
@@ -9789,11 +10645,51 @@ def supply_chain_add_assessment(supplier_id):
         supplier_id,
         g.company_id,
         request.form.get('assessment_date'),
-        score,
+        score, # total_score
         request.form.get('risk_level'),
-        details
+        details, # responses_json
+        details['env_score'],
+        details['social_score'],
+        details['gov_score']
     )
     flash('Değerlendirme eklendi.', 'success')
+    return redirect(url_for('supply_chain_profile', supplier_id=supplier_id))
+
+@app.route('/supply_chain/profile/<int:supplier_id>/add_audit', methods=['POST'])
+@require_company_context
+def supply_chain_add_audit(supplier_id):
+    if 'user' not in session: return redirect(url_for('login'))
+    manager = SupplyChainManager(DB_PATH)
+    
+    manager.add_audit(
+        supplier_id,
+        g.company_id,
+        request.form.get('audit_date'),
+        request.form.get('auditor_name'),
+        request.form.get('audit_type'),
+        float(request.form.get('audit_score') or 0),
+        request.form.get('findings'),
+        int(request.form.get('non_conformities') or 0)
+    )
+    flash('Denetim kaydı eklendi.', 'success')
+    return redirect(url_for('supply_chain_profile', supplier_id=supplier_id))
+
+@app.route('/supply_chain/profile/<int:supplier_id>/add_risk', methods=['POST'])
+@require_company_context
+def supply_chain_add_risk(supplier_id):
+    if 'user' not in session: return redirect(url_for('login'))
+    manager = SupplyChainManager(DB_PATH)
+    
+    manager.add_risk(
+        supplier_id,
+        g.company_id,
+        request.form.get('risk_category'),
+        request.form.get('description'),
+        int(request.form.get('probability') or 1),
+        int(request.form.get('impact') or 1),
+        request.form.get('mitigation_plan')
+    )
+    flash('Risk kaydı eklendi.', 'success')
     return redirect(url_for('supply_chain_profile', supplier_id=supplier_id))
 
 # --- Real-Time Monitoring Routes ---

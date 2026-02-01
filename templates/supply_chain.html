@@ -1,5 +1,6 @@
 
 {% extends "base.html" %}
+{% from "includes/pagination.html" import render_pagination %}
 
 {% block title %}Tedarik Zinciri Sürdürülebilirliği - SustainAge{% endblock %}
 
@@ -13,6 +14,32 @@
             </button>
         </div>
         <p class="lead text-muted">Tedarikçilerinizi yönetin, risk değerlendirmeleri yapın ve sürdürülebilirlik performanslarını izleyin.</p>
+    </div>
+</div>
+
+<div class="card mb-4 shadow-sm">
+    <div class="card-body">
+        <form method="get" action="{{ url_for('supply_chain_module') }}" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label for="search" class="form-label">Ara</label>
+                <input type="text" class="form-control" id="search" name="search" value="{{ search or '' }}" placeholder="Tedarikçi adı, sektör veya bölge...">
+            </div>
+            <div class="col-md-3">
+                <label for="risk_level" class="form-label">Risk Seviyesi</label>
+                <select class="form-select" id="risk_level" name="risk_level">
+                    <option value="">Tümü</option>
+                    <option value="Low" {% if risk_filter == 'Low' %}selected{% endif %}>Düşük Risk (Skor > 70)</option>
+                    <option value="Medium" {% if risk_filter == 'Medium' %}selected{% endif %}>Orta Risk (50-70)</option>
+                    <option value="High" {% if risk_filter == 'High' %}selected{% endif %}>Yüksek Risk (< 50)</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> Filtrele</button>
+                {% if search or risk_filter %}
+                <a href="{{ url_for('supply_chain_module') }}" class="btn btn-outline-secondary"><i class="bi bi-x-circle"></i> Temizle</a>
+                {% endif %}
+            </div>
+        </form>
     </div>
 </div>
 
@@ -48,9 +75,9 @@
                                 <td>{{ supplier.sector }}</td>
                                 <td>{{ supplier.region }}</td>
                                 <td>
-                                    {% if supplier.risk_score < 30 %}
+                                    {% if supplier.risk_score > 70 %}
                                     <span class="badge bg-success">Düşük Risk ({{ supplier.risk_score|round(1) }})</span>
-                                    {% elif supplier.risk_score < 70 %}
+                                    {% elif supplier.risk_score > 50 %}
                                     <span class="badge bg-warning text-dark">Orta Risk ({{ supplier.risk_score|round(1) }})</span>
                                     {% else %}
                                     <span class="badge bg-danger">Yüksek Risk ({{ supplier.risk_score|round(1) }})</span>
@@ -66,6 +93,9 @@
                         </tbody>
                     </table>
                 </div>
+                {% if pagination %}
+                {{ render_pagination(pagination, 'supply_chain_module', search=search, risk_level=risk_filter) }}
+                {% endif %}
                 {% else %}
                 <div class="text-center py-5">
                     <i class="fas fa-truck-loading fa-3x text-muted mb-3"></i>

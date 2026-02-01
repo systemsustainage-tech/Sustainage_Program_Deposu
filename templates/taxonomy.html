@@ -1,59 +1,59 @@
 {% extends "base.html" %}
 
-{% block title %}{{ _('tax_title') }} - SDG Platform<!-- Add Taxonomy Modal -->
+{% block title %}{{ lang('tax_title') }} - SDG Platform<!-- Add Taxonomy Modal -->
 <div aria-hidden="true" aria-labelledby="addTaxonomyModalLabel" class="modal fade" id="addTaxonomyModal" tabindex="-1">
 <div class="modal-dialog modal-lg">
 <div class="modal-content">
 <div class="modal-header">
-<h5 class="modal-title" id="addTaxonomyModalLabel">{{ _('tax_title') }} - {{ _('btn_add_data') }}</h5>
+<h5 class="modal-title" id="addTaxonomyModalLabel">{{ lang('tax_title') }} - {{ lang('btn_add_data') }}</h5>
 <button aria-label="Close" class="btn-close" data-bs-dismiss="modal" type="button"></button>
 </div>
 <form action="{{ url_for('taxonomy_add') }}" method="POST">
 <div class="modal-body">
 <div class="mb-3">
-<label class="form-label" for="env_objective">{{ _('tax_env_objective') }}</label>
+<label class="form-label" for="env_objective">{{ lang('tax_env_objective') }}</label>
 <select class="form-select" id="env_objective" name="env_objective">
-<option value="CCM">{{ _('tax_obj_climate_mitigation') }}</option>
-<option value="CCA">{{ _('tax_obj_climate_adaptation') }}</option>
-<option value="WTR">{{ _('tax_obj_water') }}</option>
-<option value="CE">{{ _('tax_obj_circular') }}</option>
-<option value="PPC">{{ _('tax_obj_pollution') }}</option>
-<option value="BIO">{{ _('tax_obj_biodiversity') }}</option>
+<option value="CCM">{{ lang('tax_obj_climate_mitigation') }}</option>
+<option value="CCA">{{ lang('tax_obj_climate_adaptation') }}</option>
+<option value="WTR">{{ lang('tax_obj_water') }}</option>
+<option value="CE">{{ lang('tax_obj_circular') }}</option>
+<option value="PPC">{{ lang('tax_obj_pollution') }}</option>
+<option value="BIO">{{ lang('tax_obj_biodiversity') }}</option>
 </select>
 </div>
 <div class="mb-3">
-<label class="form-label" for="year">{{ _('eco_year') }}</label>
+<label class="form-label" for="year">{{ lang('eco_year') }}</label>
 <input class="form-control" id="year" name="year" required="" type="number" value="2025"/>
 </div>
 <div class="mb-3">
-<label class="form-label" for="activity_name">{{ _('tax_activity') }}</label>
+<label class="form-label" for="activity_name">{{ lang('tax_activity') }}</label>
 <input class="form-control" id="activity_name" name="activity_name" placeholder="Örn: Yenilenebilir Enerji Üretimi" required="" type="text"/>
 </div>
 <div class="mb-3">
-<label class="form-label" for="nace_code">{{ _('tax_nace') }}</label>
+<label class="form-label" for="nace_code">{{ lang('tax_nace') }}</label>
 <input class="form-control" id="nace_code" name="nace_code" placeholder="Örn: D35.11" type="text"/>
 </div>
 <div class="row">
 <div class="col-md-4 mb-3">
-<label class="form-label" for="turnover_amount">{{ _('tax_turnover') }} (TL)</label>
+<label class="form-label" for="turnover_amount">{{ lang('tax_turnover') }} (TL)</label>
 <input class="form-control" id="turnover_amount" name="turnover_amount" required="" step="0.01" type="number"/>
 </div>
 <div class="col-md-4 mb-3">
-<label class="form-label" for="capex_amount">{{ _('tax_capex') }} (TL)</label>
+<label class="form-label" for="capex_amount">{{ lang('tax_capex') }} (TL)</label>
 <input class="form-control" id="capex_amount" name="capex_amount" required="" step="0.01" type="number"/>
 </div>
 <div class="col-md-4 mb-3">
-<label class="form-label" for="opex_amount">{{ _('tax_opex') }} (TL)</label>
+<label class="form-label" for="opex_amount">{{ lang('tax_opex') }} (TL)</label>
 <input class="form-control" id="opex_amount" name="opex_amount" required="" step="0.01" type="number"/>
 </div>
 </div>
 <div class="mb-3">
-<label class="form-label" for="aligned_pct">{{ _('tax_aligned') }} (0-100)</label>
+<label class="form-label" for="aligned_pct">{{ lang('tax_aligned') }} (0-100)</label>
 <input class="form-control" id="aligned_pct" max="100" min="0" name="aligned_pct" required="" step="0.1" type="number"/>
 </div>
 <div class="mb-3">
-<h5 class="mb-1">{{ _('tax_tech_criteria') }}</h5>
-<p class="text-muted small mb-2">{{ _('tax_tech_criteria_desc') }}</p>
+<h5 class="mb-1">{{ lang('tax_tech_criteria') }}</h5>
+<p class="text-muted small mb-2">{{ lang('tax_tech_criteria_desc') }}</p>
 <div class="row">
 <div class="col-md-4 mb-2">
 <div class="form-check">
@@ -82,13 +82,13 @@
 </div>
 </div>
 <div class="mb-3">
-<label class="form-label" for="documentation">{{ _('documentation') }}</label>
+<label class="form-label" for="documentation">{{ lang('documentation') }}</label>
 <textarea class="form-control" id="documentation" name="documentation" rows="2"></textarea>
 </div>
 </div>
 <div class="modal-footer">
-<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ _('cancel') }}</button>
-<button class="btn btn-primary" type="submit">{{ _('save') }}</button>
+<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ lang('cancel') }}</button>
+<button class="btn btn-primary" type="submit">{{ lang('save') }}</button>
 </div>
 </form>
 </div>
@@ -101,14 +101,14 @@
 <div class="row mb-4">
 <div class="col-md-12">
 <div class="d-flex justify-content-between align-items-center">
-<h1><i class="fas fa-tree me-2"></i>{{ _('tax_title') }}</h1>
+<h1><i class="fas fa-tree me-2"></i>{{ lang('tax_title') }}</h1>
 <div>
 <span class="badge bg-{{ 'success' if manager_available else 'danger' }}">
-                    {{ _('module_active_badge') if manager_available else _('module_passive_badge') }}
+                    {{ lang('module_active_badge') if manager_available else _('module_passive_badge') }}
                 </span>
-<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}</button></div>
 </div>
-<p class="lead text-muted">{{ _('tax_desc') }}</p>
+<p class="lead text-muted">{{ lang('tax_desc') }}</p>
 </div>
 </div>
 
@@ -117,10 +117,10 @@
 <div class="col-md-6 mb-4">
 <div class="card h-100">
 <div class="card-body">
-<h5 class="card-title">{{ _('tax_analysis') }}</h5>
-<p class="card-text">{{ _('tax_analysis_desc') }}</p>
+<h5 class="card-title">{{ lang('tax_analysis') }}</h5>
+<p class="card-text">{{ lang('tax_analysis_desc') }}</p>
 <button class="btn btn-primary" data-bs-target="#addTaxonomyModal" data-bs-toggle="modal" type="button">
-<i class="fas fa-plus me-1"></i> {{ _('btn_add_data') }}
+<i class="fas fa-plus me-1"></i> {{ lang('btn_add_data') }}
                 </button>
 </div>
 </div>
@@ -128,10 +128,10 @@
 <div class="col-md-6 mb-4">
 <div class="card h-100">
 <div class="card-body">
-<h5 class="card-title">{{ _('tax_tech_criteria') }}</h5>
-<p class="card-text">{{ _('tax_tech_criteria_desc') }}</p>
+<h5 class="card-title">{{ lang('tax_tech_criteria') }}</h5>
+<p class="card-text">{{ lang('tax_tech_criteria_desc') }}</p>
 <button class="btn btn-outline-primary" data-bs-target="#addTaxonomyModal" data-bs-toggle="modal" type="button">
-<i class="fas fa-plus me-1"></i> {{ _('btn_add_data') }}
+<i class="fas fa-plus me-1"></i> {{ lang('btn_add_data') }}
                 </button>
 </div>
 </div>
@@ -141,27 +141,27 @@
 <div class="col-md-4">
 <div class="card text-center h-100 border-success">
 <div class="card-body">
-<h6 class="text-muted">{{ _('tax_turnover') }}</h6>
+<h6 class="text-muted">{{ lang('tax_turnover') }}</h6>
 <h2 class="display-6 text-success">%{{ stats.turnover_pct }}</h2>
-<small class="text-muted">{{ _('tax_aligned') }}</small>
+<small class="text-muted">{{ lang('tax_aligned') }}</small>
 </div>
 </div>
 </div>
 <div class="col-md-4">
 <div class="card text-center h-100 border-primary">
 <div class="card-body">
-<h6 class="text-muted">{{ _('tax_capex') }}</h6>
+<h6 class="text-muted">{{ lang('tax_capex') }}</h6>
 <h2 class="display-6 text-primary">%{{ stats.capex_pct }}</h2>
-<small class="text-muted">{{ _('tax_aligned') }}</small>
+<small class="text-muted">{{ lang('tax_aligned') }}</small>
 </div>
 </div>
 </div>
 <div class="col-md-4">
 <div class="card text-center h-100 border-info">
 <div class="card-body">
-<h6 class="text-muted">{{ _('tax_opex') }}</h6>
+<h6 class="text-muted">{{ lang('tax_opex') }}</h6>
 <h2 class="display-6 text-info">%{{ stats.opex_pct }}</h2>
-<small class="text-muted">{{ _('tax_aligned') }}</small>
+<small class="text-muted">{{ lang('tax_aligned') }}</small>
 </div>
 </div>
 </div>
@@ -171,27 +171,27 @@
 <div class="col-md-8">
 <div class="card">
 <div class="card-header">
-<h5 class="mb-0">{{ _('recent_data') }}</h5>
+<h5 class="mb-0">{{ lang('recent_data') }}</h5>
 </div>
 <div class="card-body">
                 {% if detail_item %}
                 <div class="mb-4">
 <h6 class="mb-2">{{ detail_item.activity_name }}</h6>
 <p class="mb-1">
-<strong>{{ _('tax_env_objective') }}:</strong>
+<strong>{{ lang('tax_env_objective') }}:</strong>
                         {% set obj = detail_item.environmental_objective %}
                         {% if obj in ['CCM', 'climate_change_mitigation'] %}
-                            {{ _('tax_obj_climate_mitigation') }}
+                            {{ lang('tax_obj_climate_mitigation') }}
                         {% elif obj == 'CCA' %}
-                            {{ _('tax_obj_climate_adaptation') }}
+                            {{ lang('tax_obj_climate_adaptation') }}
                         {% elif obj == 'WTR' %}
-                            {{ _('tax_obj_water') }}
+                            {{ lang('tax_obj_water') }}
                         {% elif obj == 'CE' %}
-                            {{ _('tax_obj_circular') }}
+                            {{ lang('tax_obj_circular') }}
                         {% elif obj == 'PPC' %}
-                            {{ _('tax_obj_pollution') }}
+                            {{ lang('tax_obj_pollution') }}
                         {% elif obj == 'BIO' %}
-                            {{ _('tax_obj_biodiversity') }}
+                            {{ lang('tax_obj_biodiversity') }}
                         {% else %}
                             {{ obj }}
                         {% endif %}
@@ -210,7 +210,7 @@
                     {% endif %}
                     {% if detail_item.documentation %}
                     <p class="mb-0">
-<strong>{{ _('eco_description') }}:</strong>
+<strong>{{ lang('eco_description') }}:</strong>
                         {{ detail_item.documentation }}
                     </p>
                     {% endif %}
@@ -221,17 +221,17 @@
 <table class="table table-hover">
 <thead>
 <tr>
-<th>{{ _('eco_year') }}</th>
-<th>{{ _('tax_activity') }}</th>
-<th>{{ _('tax_nace') }}</th>
-<th>{{ _('tax_env_objective') }}</th>
-<th>{{ _('tax_eligible') }}</th>
-<th>{{ _('tax_aligned') }}</th>
-<th>{{ _('tax_turnover') }}</th>
+<th>{{ lang('eco_year') }}</th>
+<th>{{ lang('tax_activity') }}</th>
+<th>{{ lang('tax_nace') }}</th>
+<th>{{ lang('tax_env_objective') }}</th>
+<th>{{ lang('tax_eligible') }}</th>
+<th>{{ lang('tax_aligned') }}</th>
+<th>{{ lang('tax_turnover') }}</th>
 <th>SC</th>
 <th>DNSH</th>
 <th>MS</th>
-<th>{{ _('date') }}</th>
+<th>{{ lang('date') }}</th>
 </tr>
 </thead>
 <tbody>
@@ -246,17 +246,17 @@
 <td>
                                         {% set obj = item.environmental_objective %}
                                         {% if obj in ['CCM', 'climate_change_mitigation'] %}
-                                            {{ _('tax_obj_climate_mitigation') }}
+                                            {{ lang('tax_obj_climate_mitigation') }}
                                         {% elif obj == 'CCA' %}
-                                            {{ _('tax_obj_climate_adaptation') }}
+                                            {{ lang('tax_obj_climate_adaptation') }}
                                         {% elif obj == 'WTR' %}
-                                            {{ _('tax_obj_water') }}
+                                            {{ lang('tax_obj_water') }}
                                         {% elif obj == 'CE' %}
-                                            {{ _('tax_obj_circular') }}
+                                            {{ lang('tax_obj_circular') }}
                                         {% elif obj == 'PPC' %}
-                                            {{ _('tax_obj_pollution') }}
+                                            {{ lang('tax_obj_pollution') }}
                                         {% elif obj == 'BIO' %}
-                                            {{ _('tax_obj_biodiversity') }}
+                                            {{ lang('tax_obj_biodiversity') }}
                                         {% else %}
                                             {{ obj }}
                                         {% endif %}
@@ -298,7 +298,7 @@
                                 {% endfor %}
                             {% else %}
                                 <tr>
-<td class="text-center text-muted" colspan="7">{{ _('no_data_available') }}</td>
+<td class="text-center text-muted" colspan="7">{{ lang('no_data_available') }}</td>
 </tr>
                             {% endif %}
                         </tbody>
@@ -310,43 +310,43 @@
 <div class="col-md-4">
 <div class="card h-100">
 <div class="card-header">
-<h5 class="mb-0">{{ _('tax_framework_mappings') }}</h5>
+<h5 class="mb-0">{{ lang('tax_framework_mappings') }}</h5>
 </div>
 <div class="card-body">
-<p class="text-muted small mb-3">{{ _('tax_framework_mappings_desc') }}</p>
+<p class="text-muted small mb-3">{{ lang('tax_framework_mappings_desc') }}</p>
 <form action="{{ url_for('taxonomy_mapping_add') }}" class="mb-3" method="POST">
 <div class="mb-2">
-<label class="form-label">{{ _('tax_activity_code') }}</label>
+<label class="form-label">{{ lang('tax_activity_code') }}</label>
 <input class="form-control form-control-sm" name="activity_code" placeholder="4.1, 4.9 gibi" required="" type="text"/>
 </div>
 <div class="mb-2">
-<label class="form-label">{{ _('tax_objective_code') }}</label>
+<label class="form-label">{{ lang('tax_objective_code') }}</label>
 <input class="form-control form-control-sm" name="objective_code" placeholder="CCM, CCA, WTR gibi" required="" type="text"/>
 </div>
 <div class="mb-2">
-<label class="form-label">{{ _('label_sdg_target') }}</label>
+<label class="form-label">{{ lang('label_sdg_target') }}</label>
 <input class="form-control form-control-sm" name="sdg_target" placeholder="SDG 7.2 gibi" type="text"/>
 </div>
 <div class="mb-2">
-<label class="form-label">{{ _('label_gri_disclosure') }}</label>
+<label class="form-label">{{ lang('label_gri_disclosure') }}</label>
 <input class="form-control form-control-sm" name="gri_disclosure" placeholder="GRI 302-1 gibi" type="text"/>
 </div>
 <div class="mb-2">
-<label class="form-label">{{ _('label_tsrs_metric') }}</label>
+<label class="form-label">{{ lang('label_tsrs_metric') }}</label>
 <input class="form-control form-control-sm" name="tsrs_metric" placeholder="TSRS E1-1 gibi" type="text"/>
 </div>
 <div class="mb-2">
-<label class="form-label">{{ _('label_mapping_rationale') }}</label>
+<label class="form-label">{{ lang('label_mapping_rationale') }}</label>
 <textarea class="form-control form-control-sm" name="mapping_rationale" rows="2"></textarea>
 </div>
-<button class="btn btn-sm btn-primary w-100" type="submit">{{ _('common.btn_save') }}</button>
+<button class="btn btn-sm btn-primary w-100" type="submit">{{ lang('common.btn_save') }}</button>
 </form>
 <div class="table-responsive" style="max-height: 260px;">
 <table class="table table-sm table-striped">
 <thead>
 <tr>
-<th>{{ _('tax_activity_code') }}</th>
-<th>{{ _('tax_objective_code') }}</th>
+<th>{{ lang('tax_activity_code') }}</th>
+<th>{{ lang('tax_objective_code') }}</th>
 <th>SDG</th>
 <th>GRI</th>
 <th>TSRS</th>
@@ -365,7 +365,7 @@
                                 {% endfor %}
                             {% else %}
                                 <tr>
-<td class="text-center text-muted" colspan="5">{{ _('no_data_available') }}</td>
+<td class="text-center text-muted" colspan="5">{{ lang('no_data_available') }}</td>
 </tr>
                             {% endif %}
                         </tbody>
@@ -378,8 +378,8 @@
 
 {% else %}
 <div class="alert alert-warning">
-<h4 class="alert-heading">{{ _('module_failed_title') }}</h4>
-<p>{{ _('module_failed_desc') }}</p>
+<h4 class="alert-heading">{{ lang('module_failed_title') }}</h4>
+<p>{{ lang('module_failed_desc') }}</p>
 </div>
 {% endif %}
 {% endblock %}

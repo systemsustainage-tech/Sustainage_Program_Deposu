@@ -1,21 +1,21 @@
 {% extends "base.html" %}
 
-{% block title %}{{ _('benchmark_title') }} - SDG{% endblock %}
+{% block title %}{{ lang('benchmark_title') }} - SDG{% endblock %}
 
 {% block content %}
 
 <div class="row mb-4">
     <div class="col-md-12">
         <div class="d-flex justify-content-between align-items-center">
-            <h1><i class="fas fa-chart-line me-2"></i>{{ _('benchmark_title') }}</h1>
+            <h1><i class="fas fa-chart-line me-2"></i>{{ lang('benchmark_title') }}</h1>
             <div>
                 <span class="badge bg-{{ 'success' if manager_available else 'danger' }}">
-                    {{ _('module_active_badge') if manager_available else _('module_passive_badge') }}
+                    {{ lang('module_active_badge') if manager_available else _('module_passive_badge') }}
                 </span>
-                <button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button>
+                <button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}</button>
             </div>
         </div>
-        <p class="lead text-muted">{{ _('benchmark_desc') }}</p>
+        <p class="lead text-muted">{{ lang('benchmark_desc') }}</p>
     </div>
 </div>
 
@@ -24,12 +24,12 @@
     <div class="col-md-12">
         <div class="card shadow-sm">
             <div class="card-header bg-light">
-                <h5 class="mb-0"><i class="fas fa-filter me-2"></i>{{ _('sector_selection') }}</h5>
+                <h5 class="mb-0"><i class="fas fa-filter me-2"></i>{{ lang('sector_selection') }}</h5>
             </div>
             <div class="card-body">
                 <form action="{{ url_for('benchmark_module') }}" method="get" class="row align-items-end">
                     <div class="col-md-4">
-                        <label for="sector" class="form-label">{{ _('select_sector') }}</label>
+                        <label for="sector" class="form-label">{{ lang('select_sector') }}</label>
                         <select class="form-select" id="sector" name="sector" onchange="this.form.submit()">
                             {% for code, name in sectors.items() %}
                             <option value="{{ code }}" {% if selected_sector == code %}selected{% endif %}>{{ name }}</option>
@@ -38,7 +38,7 @@
                     </div>
                     <div class="col-md-8">
                         <div class="alert alert-info mb-0 py-2">
-                            <i class="fas fa-info-circle me-2"></i> {{ _('benchmark_info_text') }}
+                            <i class="fas fa-info-circle me-2"></i> {{ lang('benchmark_info_text') }}
                         </div>
                     </div>
                 </form>
@@ -52,19 +52,20 @@
         <!-- Environmental Metrics -->
         <div class="card mb-4 shadow-sm">
             <div class="card-header bg-success text-white">
-                <h5 class="mb-0"><i class="fas fa-leaf me-2"></i>{{ _('category_environmental') }}</h5>
+                <h5 class="mb-0"><i class="fas fa-leaf me-2"></i>{{ lang('category_environmental') }}</h5>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
                     <table class="table table-hover table-striped align-middle">
                         <thead class="table-light">
                             <tr>
-                                <th style="width: 30%">{{ _('metric_name') }}</th>
-                                <th style="width: 15%" class="text-center">{{ _('unit') }}</th>
-                                <th style="width: 15%" class="text-center">{{ _('sector_avg') }}</th>
-                                <th style="width: 15%" class="text-center">{{ _('median') }}</th>
-                                <th style="width: 15%" class="text-center">{{ _('best_performer') }}</th>
-                                <th style="width: 10%" class="text-center">{{ _('trend') }}</th>
+                                <th style="width: 30%">{{ lang('metric_name') }}</th>
+                                <th style="width: 10%" class="text-center">{{ lang('unit') }}</th>
+                                <th style="width: 15%" class="text-center bg-light">{{ lang('my_company', 'Şirketim') }}</th>
+                                <th style="width: 15%" class="text-center">{{ lang('sector_avg') }}</th>
+                                <th style="width: 10%" class="text-center">{{ lang('median') }}</th>
+                                <th style="width: 15%" class="text-center">{{ lang('best_performer') }}</th>
+                                <th style="width: 5%" class="text-center">{{ lang('trend') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -75,12 +76,18 @@
                                     <tr>
                                         <td class="fw-bold">{{ data.metric_name }}</td>
                                         <td class="text-center"><span class="badge bg-light text-dark border">{{ data.unit }}</span></td>
+                                        <td class="text-center fw-bold bg-light">{{ company_values.get(code, '-') }}</td>
                                         <td class="text-center fw-bold text-primary">{{ data.average_value }}</td>
                                         <td class="text-center">{{ data.median_value }}</td>
                                         <td class="text-center text-success">{{ data.min_value if 'yogunluk' in code or 'kaza' in code else data.max_value }}</td>
                                         <td class="text-center">
-                                            <!-- Placeholder for trend -->
-                                            <i class="fas fa-minus text-muted"></i>
+                                            {% if data.trend_direction == 'artan' %}
+                                                <i class="fas fa-arrow-up text-danger" title="Artış: %{{ '%.1f'|format(data.yoy_change|float) }}"></i>
+                                            {% elif data.trend_direction == 'azalan' %}
+                                                <i class="fas fa-arrow-down text-success" title="Azalış: %{{ '%.1f'|format(data.yoy_change|float) }}"></i>
+                                            {% else %}
+                                                <i class="fas fa-minus text-muted" title="Stabil"></i>
+                                            {% endif %}
                                         </td>
                                     </tr>
                                     {% endif %}
@@ -95,19 +102,19 @@
         <!-- Social Metrics -->
         <div class="card mb-4 shadow-sm">
             <div class="card-header bg-info text-white">
-                <h5 class="mb-0"><i class="fas fa-users me-2"></i>{{ _('category_social') }}</h5>
+                <h5 class="mb-0"><i class="fas fa-users me-2"></i>{{ lang('category_social') }}</h5>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
                     <table class="table table-hover table-striped align-middle">
                         <thead class="table-light">
                             <tr>
-                                <th style="width: 30%">{{ _('metric_name') }}</th>
-                                <th style="width: 15%" class="text-center">{{ _('unit') }}</th>
-                                <th style="width: 15%" class="text-center">{{ _('sector_avg') }}</th>
-                                <th style="width: 15%" class="text-center">{{ _('median') }}</th>
-                                <th style="width: 15%" class="text-center">{{ _('best_performer') }}</th>
-                                <th style="width: 10%" class="text-center">{{ _('trend') }}</th>
+                                <th style="width: 30%">{{ lang('metric_name') }}</th>
+                                <th style="width: 15%" class="text-center">{{ lang('unit') }}</th>
+                                <th style="width: 15%" class="text-center">{{ lang('sector_avg') }}</th>
+                                <th style="width: 15%" class="text-center">{{ lang('median') }}</th>
+                                <th style="width: 15%" class="text-center">{{ lang('best_performer') }}</th>
+                                <th style="width: 10%" class="text-center">{{ lang('trend') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -135,19 +142,20 @@
         <!-- Governance Metrics -->
         <div class="card mb-4 shadow-sm">
             <div class="card-header bg-secondary text-white">
-                <h5 class="mb-0"><i class="fas fa-gavel me-2"></i>{{ _('category_governance') }}</h5>
+                <h5 class="mb-0"><i class="fas fa-gavel me-2"></i>{{ lang('category_governance') }}</h5>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
                     <table class="table table-hover table-striped align-middle">
                         <thead class="table-light">
                             <tr>
-                                <th style="width: 30%">{{ _('metric_name') }}</th>
-                                <th style="width: 15%" class="text-center">{{ _('unit') }}</th>
-                                <th style="width: 15%" class="text-center">{{ _('sector_avg') }}</th>
-                                <th style="width: 15%" class="text-center">{{ _('median') }}</th>
-                                <th style="width: 15%" class="text-center">{{ _('best_performer') }}</th>
-                                <th style="width: 10%" class="text-center">{{ _('trend') }}</th>
+                                <th style="width: 30%">{{ lang('metric_name') }}</th>
+                                <th style="width: 10%" class="text-center">{{ lang('unit') }}</th>
+                                <th style="width: 15%" class="text-center bg-light">{{ lang('my_company', 'Şirketim') }}</th>
+                                <th style="width: 15%" class="text-center">{{ lang('sector_avg') }}</th>
+                                <th style="width: 10%" class="text-center">{{ lang('median') }}</th>
+                                <th style="width: 15%" class="text-center">{{ lang('best_performer') }}</th>
+                                <th style="width: 5%" class="text-center">{{ lang('trend') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -158,6 +166,7 @@
                                     <tr>
                                         <td class="fw-bold">{{ data.metric_name }}</td>
                                         <td class="text-center"><span class="badge bg-light text-dark border">{{ data.unit }}</span></td>
+                                        <td class="text-center fw-bold bg-light">{{ company_values.get(code, '-') }}</td>
                                         <td class="text-center fw-bold text-primary">{{ data.average_value }}</td>
                                         <td class="text-center">{{ data.median_value }}</td>
                                         <td class="text-center text-success">{{ data.max_value }}</td>
@@ -175,19 +184,20 @@
         <!-- Economic Metrics -->
         <div class="card mb-4 shadow-sm">
             <div class="card-header bg-warning text-dark">
-                <h5 class="mb-0"><i class="fas fa-coins me-2"></i>{{ _('category_economic') }}</h5>
+                <h5 class="mb-0"><i class="fas fa-coins me-2"></i>{{ lang('category_economic') }}</h5>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
                     <table class="table table-hover table-striped align-middle">
                         <thead class="table-light">
                             <tr>
-                                <th style="width: 30%">{{ _('metric_name') }}</th>
-                                <th style="width: 15%" class="text-center">{{ _('unit') }}</th>
-                                <th style="width: 15%" class="text-center">{{ _('sector_avg') }}</th>
-                                <th style="width: 15%" class="text-center">{{ _('median') }}</th>
-                                <th style="width: 15%" class="text-center">{{ _('best_performer') }}</th>
-                                <th style="width: 10%" class="text-center">{{ _('trend') }}</th>
+                                <th style="width: 30%">{{ lang('metric_name') }}</th>
+                                <th style="width: 10%" class="text-center">{{ lang('unit') }}</th>
+                                <th style="width: 15%" class="text-center bg-light">{{ lang('my_company', 'Şirketim') }}</th>
+                                <th style="width: 15%" class="text-center">{{ lang('sector_avg') }}</th>
+                                <th style="width: 10%" class="text-center">{{ lang('median') }}</th>
+                                <th style="width: 15%" class="text-center">{{ lang('best_performer') }}</th>
+                                <th style="width: 5%" class="text-center">{{ lang('trend') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -198,6 +208,7 @@
                                     <tr>
                                         <td class="fw-bold">{{ data.metric_name }}</td>
                                         <td class="text-center"><span class="badge bg-light text-dark border">{{ data.unit }}</span></td>
+                                        <td class="text-center fw-bold bg-light">{{ company_values.get(code, '-') }}</td>
                                         <td class="text-center fw-bold text-primary">{{ data.average_value }}</td>
                                         <td class="text-center">{{ data.median_value }}</td>
                                         <td class="text-center text-success">{{ data.max_value }}</td>
@@ -216,7 +227,7 @@
 </div>
 {% else %}
 <div class="alert alert-warning">
-    {{ _('module_not_available') }}
+    {{ lang('module_not_available') }}
 </div>
 {% endif %}
 

@@ -9,7 +9,7 @@ import json
 import os
 import sqlite3
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 try:
     from backend.core.language_manager import LanguageManager
@@ -60,6 +60,47 @@ class AIManager:
             
         # Initialize Validator
         self.validator = ReportValidator()
+
+        # Initialize Tables
+        self._init_ai_tables()
+
+    def _init_ai_tables(self):
+        """AI log ve feedback tablolarini olustur"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            # AI Logs
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS ai_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    company_id INTEGER,
+                    module TEXT,
+                    prompt TEXT,
+                    response TEXT,
+                    model TEXT,
+                    tokens INTEGER,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            # AI Feedback
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS ai_feedback (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    log_id INTEGER,
+                    rating INTEGER,
+                    comment TEXT,
+                    user_id INTEGER,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (log_id) REFERENCES ai_logs(id)
+                )
+            """)
+            
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            logging.error(f"AI tables init error: {e}")
 
     def _get_text_safe(self, key: str, lang: str = "tr", default: str = None) -> str:
         """LanguageManager uzerinden guvenli ceviri al"""
@@ -928,10 +969,29 @@ class AIManager:
             logging.error(f"Context hazirlama hatasi: {e}")
             return str(data)
 
-    def generate_summary(self, data: Dict, report_type: str = "genel", language: str = "tr") -> Optional[str]:
+    def _handle_ai_error(self, e: Exception, language: str) -> str:
+        """AI hata yonetimi"""
+        error_msg = str(e)
+        if "insufficient_quota" in error_msg or "429" in error_msg:
+            return self._get_text_safe(
+                "AI_QUOTA_EXCEEDED", 
+                language, 
+                "⚠️ Yapay zeka kotası aşıldığı için içerik oluşturulamadı. Lütfen sistem yöneticisi ile iletişime geçin (OpenAI API Kotası Dolu)."
+            )
+        if "invalid_api_key" in error_msg or "401" in error_msg:
+             return self._get_text_safe(
+                "AI_INVALID_KEY", 
+                language, 
+                "⚠️ API anahtarı geçersiz veya eksik. Lütfen yapılandırmayı kontrol edin."
+            )
+            
+        error_prefix = self._get_text_safe("AI_ERROR_PREFIX", language, "AI hatasi: ")
+        return f"{error_prefix}{error_msg}"
+
+    def generate_summary(self, data: Dict, report_type: str = "genel", language: str = "tr") -> Tuple[Optional[str], Optional[int]]:
         """Veri ozetleme"""
         if not self.is_available():
-            return self._get_text_safe("AI_SERVICE_UNAVAILABLE", language, "AI servisi kullanılamıyor. Lutfen API key ekleyin.")
+            return self._get_text_safe("AI_SERVICE_UNAVAILABLE", language, "AI servisi kullanılamıyor. Lutfen API key ekleyin."), None
 
         try:
             # Context hazirla
@@ -965,11 +1025,41 @@ class AIManager:
                     for w in warnings:
                         content += f"- {w}\n"
 
-            return content
+            # Log to DB
+            log_id = None
+            try:
+                conn = sqlite3.connect(self.db_path)
+                cursor = conn.cursor()
+                cursor.execute("""
+                    INSERT INTO ai_logs (company_id, module, prompt, response, model, tokens)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                """, (data.get('company_id'), report_type, prompt, content, self.model, response.usage.total_tokens))
+                log_id = cursor.lastrowid
+                conn.commit()
+                conn.close()
+            except Exception as e:
+                logging.error(f"AI logging error: {e}")
+
+            return content, log_id
 
         except Exception as e:
-            error_prefix = self._get_text_safe("AI_ERROR_PREFIX", language, "AI hatasi: ")
-            return f"{error_prefix}{str(e)}"
+            return self._handle_ai_error(e, language), None
+
+    def submit_feedback(self, log_id: int, rating: int, comment: str, user_id: Optional[int] = None) -> bool:
+        """Kullanici geri bildirimi kaydet"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO ai_feedback (log_id, rating, comment, user_id)
+                VALUES (?, ?, ?, ?)
+            """, (log_id, rating, comment, user_id))
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as e:
+            logging.error(f"AI feedback error: {e}")
+            return False
 
     def analyze_performance(self, metrics: List[Dict], language: str = "tr") -> Optional[str]:
         """Performans analizi"""
@@ -1003,8 +1093,7 @@ class AIManager:
             return response.choices[0].message.content
 
         except Exception as e:
-            error_prefix = self._get_text_safe("AI_ERROR_PREFIX", language, "AI hatasi: ")
-            return f"{error_prefix}{str(e)}"
+            return self._handle_ai_error(e, language)
 
     def get_recommendations(self, context: str, language: str = "tr") -> Optional[str]:
         """Akilli oneriler"""
@@ -1036,8 +1125,7 @@ class AIManager:
             return response.choices[0].message.content
 
         except Exception as e:
-            error_prefix = self._get_text_safe("AI_ERROR_PREFIX", language, "AI hatasi: ")
-            return f"{error_prefix}{str(e)}"
+            return self._handle_ai_error(e, language)
 
     def save_report(self, report_content: str, report_name: str) -> bool:
         """AI raporunu kaydet"""

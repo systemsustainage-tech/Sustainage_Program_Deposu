@@ -1,20 +1,20 @@
 {% extends "base.html" %}
 
-{% block title %}{{ _('cdp_page_title') }} - SDG{% endblock %}
+{% block title %}{{ lang('cdp_page_title') }} - SDG{% endblock %}
 
 {% block content %}
 
 <div class="row mb-4">
 <div class="col-md-12">
 <div class="d-flex justify-content-between align-items-center">
-<h1><i class="fas fa-globe-americas me-2"></i>{{ _('cdp_page_title') }}</h1>
+<h1><i class="fas fa-globe-americas me-2"></i>{{ lang('cdp_page_title') }}</h1>
 <div>
 <span class="badge bg-{{ 'success' if manager_available else 'danger' }}">
-                    {{ _('module_active_badge') if manager_available else _('module_passive_badge') }}
+                    {{ lang('module_active_badge') if manager_available else _('module_passive_badge') }}
                 </span>
-<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}</button></div>
 </div>
-<p class="lead text-muted">{{ _('cdp_desc') }}</p>
+<p class="lead text-muted">{{ lang('cdp_desc') }}</p>
 </div>
 </div>
 
@@ -24,7 +24,7 @@
 <div class="col-md-4">
 <div class="card text-white bg-primary mb-3 shadow-sm border-0">
 <div class="card-body">
-<h5 class="card-title">{{ _('cdp_module_climate') }}</h5>
+<h5 class="card-title">{{ lang('cdp_module_climate') }}</h5>
 <p class="card-text display-4">{{ stats.climate_score or '-' }}</p>
 </div>
 </div>
@@ -32,7 +32,7 @@
 <div class="col-md-4">
 <div class="card text-white bg-info mb-3 shadow-sm border-0">
 <div class="card-body">
-<h5 class="card-title">{{ _('cdp_module_water') }}</h5>
+<h5 class="card-title">{{ lang('cdp_module_water') }}</h5>
 <p class="card-text display-4">{{ stats.water_score or '-' }}</p>
 </div>
 </div>
@@ -40,7 +40,7 @@
 <div class="col-md-4">
 <div class="card text-white bg-success mb-3 shadow-sm border-0">
 <div class="card-body">
-<h5 class="card-title">{{ _('cdp_module_forests') }}</h5>
+<h5 class="card-title">{{ lang('cdp_module_forests') }}</h5>
 <p class="card-text display-4">{{ stats.forests_score or '-' }}</p>
 </div>
 </div>
@@ -50,24 +50,24 @@
 <ul class="nav nav-tabs mb-4">
 <li class="nav-item">
 <a class="nav-link {{ 'active' if current_type == 'Climate Change' else '' }}" href="{{ url_for('cdp_module', type='Climate Change') }}">
-<i class="fas fa-cloud me-2"></i>{{ _('cdp_module_climate') }}
+<i class="fas fa-cloud me-2"></i>{{ lang('cdp_module_climate') }}
         </a>
 </li>
 <li class="nav-item">
 <a class="nav-link {{ 'active' if current_type == 'Water Security' else '' }}" href="{{ url_for('cdp_module', type='Water Security') }}">
-<i class="fas fa-tint me-2"></i>{{ _('cdp_module_water') }}
+<i class="fas fa-tint me-2"></i>{{ lang('cdp_module_water') }}
         </a>
 </li>
 <li class="nav-item">
 <a class="nav-link {{ 'active' if current_type == 'Forests' else '' }}" href="{{ url_for('cdp_module', type='Forests') }}">
-<i class="fas fa-tree me-2"></i>{{ _('cdp_module_forests') }}
+<i class="fas fa-tree me-2"></i>{{ lang('cdp_module_forests') }}
         </a>
 </li>
 </ul>
 <!-- Questionnaire Form -->
 <div class="card shadow-sm mb-4">
 <div class="card-header bg-white py-3">
-<h5 class="mb-0">{{ current_type }} {{ _('questionnaire_title') }}</h5>
+<h5 class="mb-0">{{ current_type }} {{ lang('questionnaire_title') }}</h5>
 </div>
 <div class="card-body">
 <form action="{{ url_for('cdp_module') }}" method="POST">
@@ -91,19 +91,19 @@
                         </label>
 <textarea class="form-control" name="question_{{ q.question_id }}" rows="3">{{ responses_map.get(q.question_id, '') }}</textarea>
 <div class="form-text text-muted">
-                            {{ _('weight') }}: {{ q.scoring_weight }}
+                            {{ lang('weight') }}: {{ q.scoring_weight }}
                         </div>
 </div>
                 {% endfor %}
                 
                 <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
 <button class="btn btn-primary btn-lg" type="submit">
-<i class="fas fa-save me-2"></i>{{ _('save_responses') }}
+<i class="fas fa-save me-2"></i>{{ lang('save_responses') }}
                     </button>
 </div>
             {% else %}
                 <div class="alert alert-info">
-                    {{ _('no_questions_found') }}
+                    {{ lang('no_questions_found') }}
                 </div>
             {% endif %}
         </form>
@@ -112,8 +112,8 @@
 
 {% else %}
 <div class="alert alert-warning">
-<h4 class="alert-heading">{{ _('module_failed_title') }}</h4>
-<p>{{ _('module_failed_desc') }}</p>
+<h4 class="alert-heading">{{ lang('module_failed_title') }}</h4>
+<p>{{ lang('module_failed_desc') }}</p>
 </div>
 {% endif %}
 {% endblock %}

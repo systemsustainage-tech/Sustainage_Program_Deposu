@@ -14,7 +14,7 @@ if (empty($token)) {
     <head>
         <meta charset="UTF-8">
         <title>Hata - Sustainage</title>
-        <link rel="stylesheet" href="css/style.css">
+        <link rel="stylesheet" href="css/style.css?v=<?php echo filemtime('css/style.css'); ?>">
     </head>
     <body>
         <div class="container">
@@ -44,7 +44,7 @@ if (!$survey) {
     <head>
         <meta charset="UTF-8">
         <title>Hata - Sustainage</title>
-        <link rel="stylesheet" href="css/style.css">
+        <link rel="stylesheet" href="css/style.css?v=<?php echo filemtime('css/style.css'); ?>">
     </head>
     <body>
         <div class="container">
@@ -67,7 +67,7 @@ if ($survey['status'] !== 'active') {
     <head>
         <meta charset="UTF-8">
         <title>Hata - Sustainage</title>
-        <link rel="stylesheet" href="css/style.css">
+        <link rel="stylesheet" href="css/style.css?v=<?php echo filemtime('css/style.css'); ?>">
     </head>
     <body>
         <div class="container">
@@ -90,7 +90,7 @@ if (strtotime($survey['deadline_date']) < time()) {
     <head>
         <meta charset="UTF-8">
         <title>Hata - Sustainage</title>
-        <link rel="stylesheet" href="css/style.css">
+        <link rel="stylesheet" href="css/style.css?v=<?php echo filemtime('css/style.css'); ?>">
     </head>
     <body>
         <div class="container">
@@ -119,7 +119,7 @@ if (empty($topics)) {
     <head>
         <meta charset="UTF-8">
         <title>Hata - Sustainage</title>
-        <link rel="stylesheet" href="css/style.css">
+        <link rel="stylesheet" href="css/style.css?v=<?php echo filemtime('css/style.css'); ?>">
     </head>
     <body>
         <div class="container">
@@ -142,7 +142,7 @@ logMessage("Survey viewed: {$survey['survey_name']} (Token: $token)", 'INFO');
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($survey['survey_name'], ENT_QUOTES, 'UTF-8'); ?> - Sustainage</title>
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css?v=<?php echo filemtime('css/style.css'); ?>">
 </head>
 <body>
     <div class="container">
@@ -348,7 +348,7 @@ logMessage("Survey viewed: {$survey['survey_name']} (Token: $token)", 'INFO');
         </footer>
     </div>
 
-    <script src="js/survey.js"></script>
+    <script src="js/survey.js?v=<?php echo filemtime('js/survey.js'); ?>"></script>
 </body>
 </html>
 

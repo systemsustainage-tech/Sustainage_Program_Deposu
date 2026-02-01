@@ -1,22 +1,39 @@
-import logging
 import sqlite3
+import os
+import sys
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+# Try multiple possible paths for the DB
+possible_paths = [
+    'backend/data/sdg_desktop.sqlite',
+    '../backend/data/sdg_desktop.sqlite',
+    r'C:\SUSTAINAGESERVER\backend\data\sdg_desktop.sqlite'
+]
 
-conn = sqlite3.connect('sdg.db')
-cur = conn.cursor()
+db_path = None
+for p in possible_paths:
+    if os.path.exists(p):
+        db_path = p
+        break
 
-cur.execute("PRAGMA table_info(roles)")
-columns = [row[1] for row in cur.fetchall()]
+if not db_path:
+    print("Database file not found in any known location!")
+    print(f"CWD: {os.getcwd()}")
+    sys.exit(1)
 
-logging.info('Roles Columns:')
-for col in columns:
-    logging.info(f'  {col}')
+print(f"Checking DB at: {db_path}")
 
-logging.info('\nRoles Data:')
-cur.execute("SELECT * FROM roles LIMIT 5")
-rows = cur.fetchall()
-for row in rows:
-    logging.info(f'  {row}')
+conn = sqlite3.connect(db_path)
+cursor = conn.cursor()
+
+try:
+    cursor.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='roles'")
+    result = cursor.fetchone()
+    if result:
+        print("Schema for roles table:")
+        print(result[0])
+    else:
+        print("Table 'roles' not found.")
+except Exception as e:
+    print(f"Error: {e}")
 
 conn.close()

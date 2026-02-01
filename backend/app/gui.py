@@ -59,9 +59,9 @@ class SDGDesktopApp(tk.Tk):
         self.tab_rep = ttk.Frame(self.tabs)
         self.tabs.add(self.tab_rep, text=self.lm.tr("rep_tab_title", "RAPORLAMA"))
         ttk.Label(self.tab_rep, text=self.lm.tr("rep_types_label", "Rapor Tipleri")).pack(anchor="w", padx=10, pady=10)
-        ttk.Button(self.tab_rep, text=self.lm.tr("btn_sdg_report", "SDG Raporu"), command=lambda: messagebox.showinfo(self.lm.tr("report", "Rapor"), self.lm.tr("msg_sdg_report", "SDG raporu üret (placeholder)"))).pack(padx=10,pady=5)
-        ttk.Button(self.tab_rep, text=self.lm.tr("btn_sdg_gri_report", "SDG + GRI Raporu"), command=lambda: messagebox.showinfo(self.lm.tr("report", "Rapor"), self.lm.tr("msg_sdg_gri_report", "SDG+GRI raporu (placeholder)"))).pack(padx=10,pady=5)
-        ttk.Button(self.tab_rep, text=self.lm.tr("btn_sdg_gri_tsrs_report", "SDG + GRI + TSRS Raporu"), command=lambda: messagebox.showinfo(self.lm.tr("report", "Rapor"), self.lm.tr("msg_sdg_gri_tsrs_report", "SDG+GRI+TSRS raporu (placeholder)"))).pack(padx=10,pady=5)
+        ttk.Button(self.tab_rep, text=self.lm.tr("btn_sdg_report", "SDG Raporu"), command=lambda: messagebox.showinfo(self.lm.tr("report_label", "Rapor"), self.lm.tr("msg_sdg_report", "SDG raporu üret (placeholder)"))).pack(padx=10,pady=5)
+        ttk.Button(self.tab_rep, text=self.lm.tr("btn_sdg_gri_report", "SDG + GRI Raporu"), command=lambda: messagebox.showinfo(self.lm.tr("report_label", "Rapor"), self.lm.tr("msg_sdg_gri_report", "SDG+GRI raporu (placeholder)"))).pack(padx=10,pady=5)
+        ttk.Button(self.tab_rep, text=self.lm.tr("btn_sdg_gri_tsrs_report", "SDG + GRI + TSRS Raporu"), command=lambda: messagebox.showinfo(self.lm.tr("report_label", "Rapor"), self.lm.tr("msg_sdg_gri_tsrs_report", "SDG+GRI+TSRS raporu (placeholder)"))).pack(padx=10,pady=5)
 
         # UI Etiketleri (Durum/Kategori) önizleme alanı
         preview_frame = ttk.LabelFrame(self.tab_rep, text=self.lm.tr("preview_frame_title", "UI Etiket Önizleme"))

@@ -44,51 +44,51 @@
 
             {% if session.get('user') %}
             <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('dashboard') }}">{{ _('dashboard', 'Dashboard') }}</a>
+              <a class="nav-link" href="{{ url_for('dashboard') }}">{{ lang('dashboard', 'Dashboard') }}</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('reporting_journey') }}">{{ _('roadmap', 'Yol Haritası') }}</a>
+              <a class="nav-link" href="{{ url_for('reporting_journey') }}">{{ lang('roadmap', 'Yol Haritası') }}</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('reports') }}">{{ _('reports', 'Raporlar') }}</a>
+              <a class="nav-link" href="{{ url_for('reports') }}">{{ lang('reports', 'Raporlar') }}</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('data') }}">{{ _('data_entry', 'Veri Girişi') }}</a>
+              <a class="nav-link" href="{{ url_for('data') }}">{{ lang('data_entry', 'Veri Girişi') }}</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('targets_module') }}">{{ _('targets', 'Hedefler') }}</a>
+              <a class="nav-link" href="{{ url_for('targets_module') }}">{{ lang('targets', 'Hedefler') }}</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('help_module') }}">{{ _('help', 'Yardım') }}</a>
+              <a class="nav-link" href="{{ url_for('help_module') }}">{{ lang('help', 'Yardım') }}</a>
             </li>
             
             {% if session.role|lower in ['admin', 'super_admin', 'test admin'] %}
             <li class="nav-item dropdown">
               <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                {{ _('management', 'Yönetim') }}
+                {{ lang('management', 'Yönetim') }}
               </a>
               <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
-                <li><a class="dropdown-item" href="{{ url_for('users') }}">{{ _('users', 'Kullanıcılar') }}</a></li>
-                <li><a class="dropdown-item" href="{{ url_for('companies') }}">{{ _('companies', 'Şirketler') }}</a></li>
-                <li><a class="dropdown-item" href="{{ url_for('company_info_edit', company_id=g.company_id) }}">{{ _('company_info', 'Firma Bilgileri') }}</a></li>
-                <li><a class="dropdown-item" href="{{ url_for('supplier_portal.login') }}" target="_blank"><i class="bi bi-box-arrow-in-right"></i> {{ _('supplier_login', 'Tedarikçi Girişi') }}</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('users') }}">{{ lang('users', 'Kullanıcılar') }}</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('companies') }}">{{ lang('companies', 'Şirketler') }}</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('company_info_edit', company_id=g.company_id) }}">{{ lang('company_info', 'Firma Bilgileri') }}</a></li>
+                {# <li><a class="dropdown-item" href="{{ url_for('supplier_portal.login') }}" target="_blank"><i class="bi bi-box-arrow-in-right"></i> {{ lang('supplier_login', 'Tedarikçi Girişi') }}</a></li> #}
                 <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item" href="{{ url_for('user_add') }}">{{ _('new_user', 'Yeni Kullanıcı') }}</a></li>
-                <li><a class="dropdown-item" href="{{ url_for('company_add') }}">{{ _('new_company', 'Yeni Şirket') }}</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('user_add') }}">{{ lang('new_user', 'Yeni Kullanıcı') }}</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('company_add') }}">{{ lang('new_company', 'Yeni Şirket') }}</a></li>
                 {% if session.role and session.role|lower in ['super_admin', 'admin', 'test admin'] %}
                 <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item text-danger" href="{{ url_for('super_admin_panel') }}">{{ _('admin_panel', 'Super Admin Paneli') }}</a></li>
+                <li><a class="dropdown-item text-danger" href="{{ url_for('super_admin_panel') }}">{{ lang('admin_panel', 'Super Admin Paneli') }}</a></li>
                 {% endif %}
               </ul>
             </li>
             {% endif %}
 
             <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('logout') }}">{{ _('logout', 'Çıkış') }}</a>
+              <a class="nav-link" href="{{ url_for('logout') }}">{{ lang('logout', 'Çıkış') }}</a>
             </li>
             {% else %}
             <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('login') }}">{{ _('login', 'Giriş') }}</a>
+              <a class="nav-link" href="{{ url_for('login') }}">{{ lang('login', 'Giriş') }}</a>
             </li>
             {% endif %}
           </ul>

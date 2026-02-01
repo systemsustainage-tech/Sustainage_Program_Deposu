@@ -1,20 +1,21 @@
 {% extends "base.html" %}
 
-{% block title %}{{ _('biodiversity_page_title') }}{% endblock %}
+{% block title %}{{ lang('biodiversity_page_title') }}{% endblock %}
 
 {% block content %}
 
 <div class="row mb-4">
 <div class="col-md-12">
 <div class="d-flex justify-content-between align-items-center">
-<h1><i class="fas fa-leaf me-2"></i>{{ _('biodiversity_header') }}</h1>
+<h1><i class="fas fa-leaf me-2"></i>{{ lang('biodiversity_header') }}</h1>
 <div>
 <span class="badge bg-{{ 'success' if manager_available else 'danger' }}">
-                    {{ _('module_active') if manager_available else _('module_passive') }}
+                    {{ lang('module_active') if manager_available else _('module_passive') }}
                 </span>
-<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+<button class="btn btn-sm btn-success ms-2" data-bs-target="#addProjectModal" data-bs-toggle="modal"><i class="fas fa-plus"></i> {{ lang('add_project', 'Proje Ekle') }}</button>
+<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}</button></div>
 </div>
-<p class="lead text-muted">{{ _('biodiversity_lead') }}</p>
+<p class="lead text-muted">{{ lang('biodiversity_lead') }}</p>
 </div>
 </div>
 
@@ -23,7 +24,7 @@
 <div class="col-md-6">
 <div class="card bg-success text-white shadow-sm h-100">
 <div class="card-body text-center">
-<h6 class="card-title text-uppercase mb-2" style="opacity: 0.8;">{{ _('bio_total_records') }}</h6>
+<h6 class="card-title text-uppercase mb-2" style="opacity: 0.8;">{{ lang('bio_total_records') }}</h6>
 <h2 class="display-4 fw-bold mb-0">{{ stats.total_count }}</h2>
 </div>
 </div>
@@ -31,7 +32,7 @@
 <div class="col-md-6">
 <div class="card bg-info text-white shadow-sm h-100">
 <div class="card-body text-center">
-<h6 class="card-title text-uppercase mb-2" style="opacity: 0.8;">{{ _('bio_total_area') }}</h6>
+<h6 class="card-title text-uppercase mb-2" style="opacity: 0.8;">{{ lang('bio_total_area') }}</h6>
 <h2 class="display-4 fw-bold mb-0">{{ stats.total_area }}</h2>
 </div>
 </div>
@@ -45,10 +46,10 @@
 <div class="card h-100 shadow-sm">
 <div class="card-body text-center">
 <i class="fas fa-tree fa-3x text-success mb-3"></i>
-<h5 class="card-title">{{ _('bio_habitat_areas') }}</h5>
-<p class="card-text">{{ _('bio_habitat_desc') }}</p>
-<button class="btn btn-outline-success" data-bs-target="#addBiodiversityModal" data-bs-toggle="modal" onclick="setBiodiversityCategory('habitat', '{{ _('bio_habitat_areas') }}')" type="button">
-<i class="fas fa-plus me-1"></i> {{ _('btn_add_data') }}
+<h5 class="card-title">{{ lang('bio_habitat_areas') }}</h5>
+<p class="card-text">{{ lang('bio_habitat_desc') }}</p>
+<button class="btn btn-outline-success" data-bs-target="#addHabitatModal" data-bs-toggle="modal" onclick="setBiodiversityCategory('habitat', '{{ lang('bio_habitat_areas') }}')" type="button">
+<i class="fas fa-plus me-1"></i> {{ lang('btn_add_data') }}
                 </button>
 </div>
 </div>
@@ -57,10 +58,10 @@
 <div class="card h-100 shadow-sm">
 <div class="card-body text-center">
 <i class="fas fa-paw fa-3x text-warning mb-3"></i>
-<h5 class="card-title">{{ _('bio_species_protection') }}</h5>
-<p class="card-text">{{ _('bio_species_desc') }}</p>
-<button class="btn btn-outline-success" data-bs-target="#addBiodiversityModal" data-bs-toggle="modal" onclick="setBiodiversityCategory('species', '{{ _('bio_species_protection') }}')" type="button">
-<i class="fas fa-plus me-1"></i> {{ _('btn_add_data') }}
+<h5 class="card-title">{{ lang('bio_species_protection') }}</h5>
+<p class="card-text">{{ lang('bio_species_desc') }}</p>
+<button class="btn btn-outline-success" data-bs-target="#addSpeciesModal" data-bs-toggle="modal" onclick="setBiodiversityCategory('species', '{{ lang('bio_species_protection') }}')" type="button">
+<i class="fas fa-plus me-1"></i> {{ lang('btn_add_data') }}
                 </button>
 </div>
 </div>
@@ -69,11 +70,11 @@
 <div class="card h-100 shadow-sm">
 <div class="card-body text-center">
 <i class="fas fa-hand-holding-water fa-3x text-info mb-3"></i>
-<h5 class="card-title">{{ _('bio_ecosystem_services') }}</h5>
-<p class="card-text">{{ _('bio_impact_management') }}</p>
-<button class="btn btn-outline-success" data-bs-target="#addBiodiversityModal" data-bs-toggle="modal" onclick="setBiodiversityCategory('impact', '{{ _('bio_ecosystem_services') }}')" type="button">
-<i class="fas fa-plus me-1"></i> {{ _('btn_add_data') }}
-                </button>
+<h5 class="card-title">{{ lang('bio_ecosystem_services') }}</h5>
+<p class="card-text">{{ lang('bio_impact_management') }}</p>
+<button class="btn btn-outline-success" data-bs-target="#addEcosystemModal" data-bs-toggle="modal" type="button">
+<i class="fas fa-plus me-1"></i> {{ lang('btn_add_data') }}
+</button>
 </div>
 </div>
 </div>
@@ -84,18 +85,18 @@
 <div class="col-md-12">
 <div class="card shadow-sm border-0">
 <div class="card-header bg-light">
-<h5 class="mb-0">{{ _('bio_recent_records') }}</h5>
+<h5 class="mb-0">{{ lang('bio_recent_records') }}</h5>
 </div>
 <div class="card-body p-0">
 <div class="table-responsive">
 <table class="table table-hover mb-0">
 <thead>
 <tr>
-<th>{{ _('bio_category') }}</th>
-<th>{{ _('bio_description') }}</th>
-<th>{{ _('bio_area') }}</th>
-<th>{{ _('bio_status') }}</th>
-<th>{{ _('bio_date') }}</th>
+<th>{{ lang('bio_category') }}</th>
+<th>{{ lang('bio_description') }}</th>
+<th>{{ lang('bio_area') }}</th>
+<th>{{ lang('bio_status') }}</th>
+<th>{{ lang('bio_date') }}</th>
 </tr>
 </thead>
 <tbody>
@@ -122,7 +123,7 @@
 <div class="modal-dialog">
 <div class="modal-content">
 <div class="modal-header">
-<h5 class="modal-title" id="addHabitatModalLabel">{{ _('add_habitat_area') }}</h5>
+<h5 class="modal-title" id="addHabitatModalLabel">{{ lang('add_habitat_area') }}</h5>
 <button aria-label="Close" class="btn-close" data-bs-dismiss="modal" type="button"></button>
 </div>
 <form action="{{ url_for('data_add') }}?type=biodiversity" method="POST">
@@ -131,27 +132,27 @@
 <input name="bio_category" type="hidden" value="habitat"/>
 <input name="date" type="hidden" value="{{ current_date }}"/>
 <div class="mb-3">
-<label class="form-label" for="habitatName">{{ _('habitat_name') }}</label>
+<label class="form-label" for="habitatName">{{ lang('habitat_name') }}</label>
 <input class="form-control" id="habitatName" name="habitat_name" required="" type="text"/>
 </div>
 <div class="mb-3">
-<label class="form-label" for="habitatType">{{ _('habitat_type') }}</label>
+<label class="form-label" for="habitatType">{{ lang('habitat_type') }}</label>
 <select class="form-select" id="habitatType" name="habitat_type" required="">
-<option value="Forest">{{ _('forest') }}</option>
-<option value="Wetland">{{ _('wetland') }}</option>
-<option value="Grassland">{{ _('grassland') }}</option>
-<option value="Marine">{{ _('marine') }}</option>
-<option value="Urban">{{ _('urban') }}</option>
-<option value="Other">{{ _('other') }}</option>
+<option value="Forest">{{ lang('forest') }}</option>
+<option value="Wetland">{{ lang('wetland') }}</option>
+<option value="Grassland">{{ lang('grassland') }}</option>
+<option value="Marine">{{ lang('marine') }}</option>
+<option value="Urban">{{ lang('urban') }}</option>
+<option value="Other">{{ lang('other') }}</option>
 </select>
 </div>
 <div class="row">
 <div class="col-md-6 mb-3">
-<label class="form-label" for="areaSize">{{ _('area_size') }}</label>
+<label class="form-label" for="areaSize">{{ lang('area_size') }}</label>
 <input class="form-control" id="areaSize" name="area_size" step="0.01" type="number"/>
 </div>
 <div class="col-md-6 mb-3">
-<label class="form-label" for="areaUnit">{{ _('unit') }}</label>
+<label class="form-label" for="areaUnit">{{ lang('unit') }}</label>
 <select class="form-select" id="areaUnit" name="area_unit">
 <option value="m²">m²</option>
 <option value="ha">ha</option>
@@ -160,21 +161,21 @@
 </div>
 </div>
 <div class="mb-3">
-<label class="form-label" for="protectionStatus">{{ _('protection_status') }}</label>
+<label class="form-label" for="protectionStatus">{{ lang('protection_status') }}</label>
 <select class="form-select" id="protectionStatus" name="protection_status">
-<option value="Protected">{{ _('protected') }}</option>
-<option value="Partially Protected">{{ _('partially_protected') }}</option>
-<option value="Not Protected">{{ _('not_protected') }}</option>
+<option value="Protected">{{ lang('protected') }}</option>
+<option value="Partially Protected">{{ lang('partially_protected') }}</option>
+<option value="Not Protected">{{ lang('not_protected') }}</option>
 </select>
 </div>
 <div class="mb-3">
-<label class="form-label" for="managementPlan">{{ _('management_plan') }}</label>
+<label class="form-label" for="managementPlan">{{ lang('management_plan') }}</label>
 <textarea class="form-control" id="managementPlan" name="management_plan" rows="2"></textarea>
 </div>
 </div>
 <div class="modal-footer">
-<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ _('cancel') }}</button>
-<button class="btn btn-success" type="submit">{{ _('save') }}</button>
+<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ lang('cancel') }}</button>
+<button class="btn btn-success" type="submit">{{ lang('save') }}</button>
 </div>
 </form>
 </div>
@@ -186,7 +187,7 @@
 <div class="modal-dialog">
 <div class="modal-content">
 <div class="modal-header">
-<h5 class="modal-title" id="addSpeciesModalLabel">{{ _('add_biodiversity_species') }}</h5>
+<h5 class="modal-title" id="addSpeciesModalLabel">{{ lang('add_biodiversity_species') }}</h5>
 <button aria-label="Close" class="btn-close" data-bs-dismiss="modal" type="button"></button>
 </div>
 <form action="{{ url_for('data_add') }}?type=biodiversity" method="POST">
@@ -195,19 +196,19 @@
 <input name="bio_category" type="hidden" value="species"/>
 <input name="date" type="hidden" value="{{ current_date }}"/>
 <div class="mb-3">
-<label class="form-label" for="speciesName">{{ _('species_name') }}</label>
+<label class="form-label" for="speciesName">{{ lang('species_name') }}</label>
 <input class="form-control" id="speciesName" name="species_name" required="" type="text"/>
 </div>
 <div class="mb-3">
-<label class="form-label" for="speciesType">{{ _('species_type') }}</label>
+<label class="form-label" for="speciesType">{{ lang('species_type') }}</label>
 <select class="form-select" id="speciesType" name="species_type" required="">
-<option value="Flora">{{ _('flora') }}</option>
-<option value="Fauna">{{ _('fauna') }}</option>
-<option value="Fungi">{{ _('fungi') }}</option>
+<option value="Flora">{{ lang('flora') }}</option>
+<option value="Fauna">{{ lang('fauna') }}</option>
+<option value="Fungi">{{ lang('fungi') }}</option>
 </select>
 </div>
 <div class="mb-3">
-<label class="form-label" for="conservationStatus">{{ _('conservation_status') }}</label>
+<label class="form-label" for="conservationStatus">{{ lang('conservation_status') }}</label>
 <select class="form-select" id="conservationStatus" name="conservation_status">
 <option value="Least Concern">Least Concern (LC)</option>
 <option value="Near Threatened">Near Threatened (NT)</option>
@@ -219,17 +220,17 @@
 </select>
 </div>
 <div class="mb-3">
-<label class="form-label" for="populationCount">{{ _('population_count') }}</label>
+<label class="form-label" for="populationCount">{{ lang('population_count') }}</label>
 <input class="form-control" id="populationCount" name="population_count" type="number"/>
 </div>
 <div class="mb-3">
-<label class="form-label" for="protectionMeasures">{{ _('protection_measures') }}</label>
+<label class="form-label" for="protectionMeasures">{{ lang('protection_measures') }}</label>
 <textarea class="form-control" id="protectionMeasures" name="protection_measures" rows="2"></textarea>
 </div>
 </div>
 <div class="modal-footer">
-<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ _('cancel') }}</button>
-<button class="btn btn-success" type="submit">{{ _('save') }}</button>
+<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ lang('cancel') }}</button>
+<button class="btn btn-success" type="submit">{{ lang('save') }}</button>
 </div>
 </form>
 </div>
@@ -241,7 +242,7 @@
 <div class="modal-dialog">
 <div class="modal-content">
 <div class="modal-header">
-<h5 class="modal-title" id="addProjectModalLabel">{{ _('add_biodiversity_project') }}</h5>
+<h5 class="modal-title" id="addProjectModalLabel">{{ lang('add_biodiversity_project') }}</h5>
 <button aria-label="Close" class="btn-close" data-bs-dismiss="modal" type="button"></button>
 </div>
 <form action="{{ url_for('data_add') }}?type=biodiversity" method="POST">
@@ -249,40 +250,40 @@
 <input name="data_type" type="hidden" value="biodiversity"/>
 <input name="bio_category" type="hidden" value="project"/>
 <div class="mb-3">
-<label class="form-label" for="projectName">{{ _('project_name') }}</label>
+<label class="form-label" for="projectName">{{ lang('project_name') }}</label>
 <input class="form-control" id="projectName" name="project_name" required="" type="text"/>
 </div>
 <div class="mb-3">
-<label class="form-label" for="projectType">{{ _('project_type') }}</label>
+<label class="form-label" for="projectType">{{ lang('project_type') }}</label>
 <select class="form-select" id="projectType" name="project_type">
-<option value="Conservation">{{ _('conservation') }}</option>
-<option value="Restoration">{{ _('restoration') }}</option>
-<option value="Monitoring">{{ _('monitoring') }}</option>
-<option value="Education">{{ _('education') }}</option>
+<option value="Conservation">{{ lang('conservation') }}</option>
+<option value="Restoration">{{ lang('restoration') }}</option>
+<option value="Monitoring">{{ lang('monitoring') }}</option>
+<option value="Education">{{ lang('education') }}</option>
 </select>
 </div>
 <div class="row">
 <div class="col-md-6 mb-3">
-<label class="form-label" for="startDate">{{ _('start_date') }}</label>
+<label class="form-label" for="startDate">{{ lang('start_date') }}</label>
 <input class="form-control" id="startDate" name="start_date" required="" type="date"/>
 </div>
 <div class="col-md-6 mb-3">
-<label class="form-label" for="endDate">{{ _('end_date') }}</label>
+<label class="form-label" for="endDate">{{ lang('end_date') }}</label>
 <input class="form-control" id="endDate" name="end_date" type="date"/>
 </div>
 </div>
 <div class="mb-3">
-<label class="form-label" for="investmentCost">{{ _('investment_cost') }}</label>
+<label class="form-label" for="investmentCost">{{ lang('investment_cost') }}</label>
 <input class="form-control" id="investmentCost" name="investment_cost" step="0.01" type="number"/>
 </div>
 <div class="mb-3">
-<label class="form-label" for="expectedBenefits">{{ _('expected_benefits') }}</label>
+<label class="form-label" for="expectedBenefits">{{ lang('expected_benefits') }}</label>
 <textarea class="form-control" id="expectedBenefits" name="expected_benefits" rows="2"></textarea>
 </div>
 </div>
 <div class="modal-footer">
-<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ _('cancel') }}</button>
-<button class="btn btn-success" type="submit">{{ _('save') }}</button>
+<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ lang('cancel') }}</button>
+<button class="btn btn-success" type="submit">{{ lang('save') }}</button>
 </div>
 </form>
 </div>
@@ -294,7 +295,7 @@
 <div class="modal-dialog">
 <div class="modal-content">
 <div class="modal-header">
-<h5 class="modal-title" id="addEcosystemModalLabel">{{ _('add_ecosystem_service') }}</h5>
+<h5 class="modal-title" id="addEcosystemModalLabel">{{ lang('add_ecosystem_service') }}</h5>
 <button aria-label="Close" class="btn-close" data-bs-dismiss="modal" type="button"></button>
 </div>
 <form action="{{ url_for('data_add') }}?type=biodiversity" method="POST">
@@ -303,36 +304,36 @@
 <input name="bio_category" type="hidden" value="ecosystem"/>
 <input name="year" type="hidden" value="{{ current_year }}"/>
 <div class="mb-3">
-<label class="form-label" for="serviceType">{{ _('service_type') }}</label>
+<label class="form-label" for="serviceType">{{ lang('service_type') }}</label>
 <select class="form-select" id="serviceType" name="service_type" required="">
-<option value="Provisioning">{{ _('provisioning') }}</option>
-<option value="Regulating">{{ _('regulating') }}</option>
-<option value="Cultural">{{ _('cultural') }}</option>
-<option value="Supporting">{{ _('supporting') }}</option>
+<option value="Provisioning">{{ lang('provisioning') }}</option>
+<option value="Regulating">{{ lang('regulating') }}</option>
+<option value="Cultural">{{ lang('cultural') }}</option>
+<option value="Supporting">{{ lang('supporting') }}</option>
 </select>
 </div>
 <div class="row">
 <div class="col-md-6 mb-3">
-<label class="form-label" for="serviceValue">{{ _('value') }}</label>
+<label class="form-label" for="serviceValue">{{ lang('value') }}</label>
 <input class="form-control" id="serviceValue" name="service_value" step="0.01" type="number"/>
 </div>
 <div class="col-md-6 mb-3">
-<label class="form-label" for="valueUnit">{{ _('unit') }}</label>
+<label class="form-label" for="valueUnit">{{ lang('unit') }}</label>
 <input class="form-control" id="valueUnit" name="value_unit" placeholder="TL, USD, etc." type="text"/>
 </div>
 </div>
 <div class="mb-3">
-<label class="form-label" for="beneficiary">{{ _('beneficiary') }}</label>
+<label class="form-label" for="beneficiary">{{ lang('beneficiary') }}</label>
 <input class="form-control" id="beneficiary" name="beneficiary" type="text"/>
 </div>
 <div class="mb-3">
-<label class="form-label" for="measurementMethod">{{ _('measurement_method') }}</label>
+<label class="form-label" for="measurementMethod">{{ lang('measurement_method') }}</label>
 <input class="form-control" id="measurementMethod" name="measurement_method" type="text"/>
 </div>
 </div>
 <div class="modal-footer">
-<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ _('cancel') }}</button>
-<button class="btn btn-success" type="submit">{{ _('save') }}</button>
+<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ lang('cancel') }}</button>
+<button class="btn btn-success" type="submit">{{ lang('save') }}</button>
 </div>
 </form>
 </div>
@@ -341,8 +342,8 @@
 
 {% else %}
 <div class="alert alert-warning">
-<h4 class="alert-heading">{{ _('module_load_error') }}</h4>
-<p>{{ _('module_biodiversity_unavailable') }}</p>
+<h4 class="alert-heading">{{ lang('module_load_error') }}</h4>
+<p>{{ lang('module_biodiversity_unavailable') }}</p>
 </div>
 {% endif %}
 {% endblock %}

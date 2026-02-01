@@ -144,6 +144,16 @@ class ESGManager:
                 'erp_metrics',
                 'supplier_assessments',
                 'survey_responses',
+                'carbon_emissions',
+                'energy_consumption',
+                'water_consumption',
+                'waste_generation',
+                'biodiversity_habitats',
+                'employees',
+                'ohs_incidents',
+                'lms_training_records',
+                'governance_board_members',
+                'governance_policies',
             }
             allowed_wheres = {
                 's.category = ?',
@@ -165,12 +175,39 @@ class ESGManager:
         except Exception:
             return 0
 
+    def _check_data_availability(self, cur, company_id: int) -> Dict:
+        """Modül veri varlığını kontrol et"""
+        has_carbon = self._safe_count(cur, 'carbon_emissions', "company_id=?", (company_id,)) > 0
+        has_energy = self._safe_count(cur, 'energy_consumption', "company_id=?", (company_id,)) > 0
+        has_water = self._safe_count(cur, 'water_consumption', "company_id=?", (company_id,)) > 0
+        has_waste = self._safe_count(cur, 'waste_generation', "company_id=?", (company_id,)) > 0
+        has_biodiv = self._safe_count(cur, 'biodiversity_habitats', "company_id=?", (company_id,)) > 0
+        
+        has_employees = self._safe_count(cur, 'employees', "company_id=?", (company_id,)) > 0
+        has_ohs = self._safe_count(cur, 'ohs_incidents', "company_id=?", (company_id,)) > 0
+        has_training = self._safe_count(cur, 'lms_training_records', "company_id=?", (company_id,)) > 0
+        
+        has_board = self._safe_count(cur, 'governance_board_members', "company_id=?", (company_id,)) > 0
+        has_policies = self._safe_count(cur, 'governance_policies', "company_id=?", (company_id,)) > 0
+        
+        return {
+            'carbon': has_carbon, 'energy': has_energy, 'water': has_water, 'waste': has_waste, 'biodiv': has_biodiv,
+            'employees': has_employees, 'ohs': has_ohs, 'training': has_training,
+            'board': has_board, 'policies': has_policies
+        }
+
     def compute_scores(self, company_id: int, period: str = None) -> Dict:
         """E, S, G skorlarını hesaplar ve genel ESG skorunu döner."""
         conn = self._connect()
         cur = conn.cursor()
         cfg = self.config
         sc = cfg['scoring']
+
+        # Veri varlığı kontrolü
+        da = self._check_data_availability(cur, company_id)
+        has_carbon, has_energy, has_water, has_waste, has_biodiv = da['carbon'], da['energy'], da['water'], da['waste'], da['biodiv']
+        has_employees, has_ohs, has_training = da['employees'], da['ohs'], da['training']
+        has_board, has_policies = da['board'], da['policies']
 
         # GRI yanıtları: kategoriye göre cevaplanan gösterge oranı
         gri_e_total = self._safe_count(cur, 'gri_indicators i JOIN gri_standards s ON i.standard_id = s.id', "s.category = ?", ("Environmental",))
@@ -221,14 +258,46 @@ class ESGManager:
         def ratio(ans: int, tot: int) -> float:
             return float(ans) / float(tot) if tot > 0 else 0.0
 
+        # Base ratios from standards
         e_ratio = max(ratio(gri_e_answered + tsrs_e_answered, gri_e_total + tsrs_e_total), 0.0)
         s_ratio = max(ratio(gri_s_answered + tsrs_s_answered, gri_s_total + tsrs_s_total), 0.0)
         g_ratio = max(ratio(gri_g_answered + tsrs_g_answered, gri_g_total + tsrs_g_total), 0.0)
+        
+        # Add Data Availability Bonuses (0.05 per active module)
+        # Environmental Bonus (Max 0.20)
+        e_bonus = 0.0
+        if has_carbon: e_bonus += 0.05
+        if has_energy: e_bonus += 0.05
+        if has_water: e_bonus += 0.05
+        if has_waste or has_biodiv: e_bonus += 0.05
+        
+        # Social Bonus (Max 0.15)
+        s_bonus = 0.0
+        if has_employees: s_bonus += 0.05
+        if has_ohs: s_bonus += 0.05
+        if has_training: s_bonus += 0.05
+        
+        # Governance Bonus (Max 0.10)
+        g_bonus = 0.0
+        if has_board: g_bonus += 0.05
+        if has_policies: g_bonus += 0.05
 
         # Bonusları uygula, 1.0 ile sınırla
-        E = min(e_ratio + evidence_bonus, 1.0)
-        S = min(s_ratio + evidence_bonus, 1.0)
-        G = min(g_ratio + materiality_bonus, 1.0)
+        # Eğer hiç standart (GRI/TSRS) verisi yoksa, sadece veri varlığı üzerinden puan verilebilir (0.5 max)
+        if gri_e_total + tsrs_e_total == 0:
+            E = min(e_bonus * 2.5, 1.0) # Scale up if no standards defined yet
+        else:
+            E = min(e_ratio + e_bonus + evidence_bonus, 1.0)
+            
+        if gri_s_total + tsrs_s_total == 0:
+            S = min(s_bonus * 3.3, 1.0)
+        else:
+            S = min(s_ratio + s_bonus + evidence_bonus, 1.0)
+            
+        if gri_g_total + tsrs_g_total == 0:
+            G = min(g_bonus * 5.0, 1.0)
+        else:
+            G = min(g_ratio + g_bonus + materiality_bonus, 1.0)
 
         weights = cfg['weights']
         overall = E * weights['E'] + S * weights['S'] + G * weights['G']
@@ -239,6 +308,11 @@ class ESGManager:
             'S': round(S * 100, 1),
             'G': round(G * 100, 1),
             'overall': round(overall * 100, 1),
+            'data_availability': {
+                'carbon': has_carbon, 'energy': has_energy, 'water': has_water, 'waste': has_waste,
+                'employees': has_employees, 'ohs': has_ohs, 'training': has_training,
+                'board': has_board, 'policies': has_policies
+            },
             'details': {
                 'gri': {
                     'environmental': {'answered': gri_e_answered, 'total': gri_e_total},
@@ -250,13 +324,46 @@ class ESGManager:
                     'social': {'answered': tsrs_s_answered, 'total': tsrs_s_total},
                     'governance': {'answered': tsrs_g_answered, 'total': tsrs_g_total}
                 },
+                'data_availability': {
+                    'carbon': has_carbon, 'energy': has_energy, 'water': has_water, 'waste': has_waste,
+                    'employees': has_employees, 'ohs': has_ohs, 'training': has_training,
+                    'board': has_board, 'policies': has_policies
+                },
                 'bonuses': {
                     'evidence_bonus': evidence_bonus,
                     'materiality_bonus': materiality_bonus,
-                    'sdg_answers': sdg_any_answers
+                    'e_bonus': e_bonus,
+                    's_bonus': s_bonus,
+                    'g_bonus': g_bonus
                 }
             }
         }
+
+    def save_score(self, company_id: int, year: int, quarter: int, e_score: float, s_score: float, g_score: float, total: float) -> bool:
+        """Manuel veya otomatik hesaplanan skoru kaydeder"""
+        conn = self._connect()
+        cursor = conn.cursor()
+        try:
+            # Detaylar için mevcut hesaplamayı kullanabiliriz veya boş geçebiliriz
+            # Manuel girişte detaylar tam olmayabilir, bu yüzden compute_scores çağırıp merge etmek mantıklı
+            computed = self.compute_scores(company_id)
+            details = computed['details']
+            
+            cursor.execute("""
+                INSERT INTO esg_scores 
+                (company_id, score_date, year, quarter, e_score, s_score, g_score, overall_score, details, created_at)
+                VALUES (?, DATE('now'), ?, ?, ?, ?, ?, ?, ?, DATETIME('now'))
+            """, (
+                company_id, year, quarter, e_score, s_score, g_score, total, json.dumps(details)
+            ))
+            conn.commit()
+            logging.info(f"ESG skoru kaydedildi: {company_id} -> {total}")
+            return True
+        except Exception as e:
+            logging.error(f"Skor kaydetme hatasi: {e}")
+            return False
+        finally:
+            conn.close()
 
     def calculate_and_save_score(self, company_id: int) -> Dict:
         """Skoru hesapla ve veritabanına kaydet"""
@@ -290,7 +397,7 @@ class ESGManager:
         if history:
             latest = history[0]
             # Format uyumluluğu için
-            return {
+            stats = {
                 'E': latest['E'],
                 'S': latest['S'],
                 'G': latest['G'],
@@ -300,14 +407,25 @@ class ESGManager:
                 'governance': latest['G'],
                 'details': latest['details']
             }
+            # Extract data_availability from details if present, or compute fresh?
+            # Computing fresh is better for "Current Status" badges.
+            # But let's check details first.
+            if 'data_availability' in latest['details']:
+                stats['data_availability'] = latest['details']['data_availability']
+            else:
+                # If missing (old record), compute it live (cheap check)
+                conn = self._connect()
+                try:
+                    stats['data_availability'] = self._check_data_availability(conn.cursor(), company_id)
+                except Exception as e:
+                    logging.error(f"Data availability check failed: {e}")
+                    stats['data_availability'] = {}
+                finally:
+                    conn.close()
+            return stats
         else:
-            # Varsayılan değerler
-            return {
-                'E': 0, 'S': 0, 'G': 0, 'overall': 0,
-                'environmental': 0, 'social': 0, 'governance': 0,
-                'details': {}
-            }
-        return self.compute_scores(company_id)
+            # Geçmiş yoksa güncel veriyi hesapla
+            return self.compute_scores(company_id)
 
     def get_history(self, company_id: int) -> List[Dict]:
         """Geçmiş skorları getir"""

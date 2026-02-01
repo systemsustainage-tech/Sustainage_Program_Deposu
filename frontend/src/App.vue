@@ -22,15 +22,15 @@ function handleLogout() {
         <div class="collapse navbar-collapse" id="navbarNav">
           <ul class="navbar-nav me-auto">
             <li class="nav-item" v-if="authStore.isAuthenticated">
-              <RouterLink class="nav-link" to="/">Dashboard</RouterLink>
+              <RouterLink class="nav-link" to="/">{{ $t('dashboard') }}</RouterLink>
             </li>
           </ul>
           <ul class="navbar-nav">
             <li class="nav-item" v-if="!authStore.isAuthenticated">
-              <RouterLink class="nav-link" to="/login">Giriş</RouterLink>
+              <RouterLink class="nav-link" to="/login">{{ $t('login') }}</RouterLink>
             </li>
             <li class="nav-item" v-if="authStore.isAuthenticated">
-              <button class="nav-link btn btn-link" @click="handleLogout">Çıkış</button>
+              <button class="nav-link btn btn-link" @click="handleLogout">{{ $t('logout') }}</button>
             </li>
           </ul>
         </div>

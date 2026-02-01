@@ -1,35 +1,35 @@
 {% extends "base.html" %}
 
-{% block title %}{{ _('cdp_data_entry') }} - SDG{% endblock %}
+{% block title %}{{ lang('cdp_data_entry') }} - SDG{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-8">
         <div class="card shadow-sm">
             <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                <h4 class="mb-0"><i class="fas fa-edit me-2"></i>{{ _('cdp_data_entry') }}</h4>
-                <button class="btn btn-sm btn-outline-secondary" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button>
+                <h4 class="mb-0"><i class="fas fa-edit me-2"></i>{{ lang('cdp_data_entry') }}</h4>
+                <button class="btn btn-sm btn-outline-secondary" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}</button>
             </div>
             <div class="card-body p-4">
                 <form method="POST" class="needs-validation" novalidate>
                     <div class="mb-3">
-                        <label for="year" class="form-label">{{ _('cdp_col_year') }}</label>
+                        <label for="year" class="form-label">{{ lang('cdp_col_year') }}</label>
                         <input type="number" class="form-control" id="year" name="year" required value="2024">
                     </div>
                     
                     <div class="mb-3">
-                        <label for="module_type" class="form-label">{{ _('cdp_col_module') }}</label>
+                        <label for="module_type" class="form-label">{{ lang('cdp_col_module') }}</label>
                         <select class="form-select" id="module_type" name="module_type" required>
-                            <option value="Climate Change">{{ _('cdp_module_climate') }}</option>
-                            <option value="Water Security">{{ _('cdp_module_water') }}</option>
-                            <option value="Forests">{{ _('cdp_module_forests') }}</option>
+                            <option value="Climate Change">{{ lang('cdp_module_climate') }}</option>
+                            <option value="Water Security">{{ lang('cdp_module_water') }}</option>
+                            <option value="Forests">{{ lang('cdp_module_forests') }}</option>
                         </select>
                     </div>
 
                     <div class="mb-3">
-                        <label for="score" class="form-label">{{ _('cdp_col_score') }}</label>
+                        <label for="score" class="form-label">{{ lang('cdp_col_score') }}</label>
                         <select class="form-select" id="score" name="score" required>
-                            <option value="">{{ _('select_score') }}</option>
+                            <option value="">{{ lang('select_score') }}</option>
                             <option value="A">A</option>
                             <option value="A-">A-</option>
                             <option value="B">B</option>
@@ -43,18 +43,18 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="status" class="form-label">{{ _('cdp_col_status') }}</label>
+                        <label for="status" class="form-label">{{ lang('cdp_col_status') }}</label>
                         <select class="form-select" id="status" name="status" required>
-                            <option value="Submitted">{{ _('cdp_status_submitted') }}</option>
-                            <option value="In Progress">{{ _('cdp_status_inprogress') }}</option>
-                            <option value="Not Started">{{ _('cdp_status_notstarted') }}</option>
+                            <option value="Submitted">{{ lang('cdp_status_submitted') }}</option>
+                            <option value="In Progress">{{ lang('cdp_status_inprogress') }}</option>
+                            <option value="Not Started">{{ lang('cdp_status_notstarted') }}</option>
                         </select>
                     </div>
                     </div>
 
                     <div class="d-flex justify-content-between gap-2">
-                        <a href="{{ url_for('cdp_module') }}" class="btn btn-secondary flex-grow-1">{{ _('common.btn_cancel') }}</a>
-                        <button type="submit" class="btn btn-primary flex-grow-1">{{ _('common.btn_save') }}</button>
+                        <a href="{{ url_for('cdp_module') }}" class="btn btn-secondary flex-grow-1">{{ lang('common.btn_cancel') }}</a>
+                        <button type="submit" class="btn btn-primary flex-grow-1">{{ lang('common.btn_save') }}</button>
                     </div>
                 </form>
             </div>

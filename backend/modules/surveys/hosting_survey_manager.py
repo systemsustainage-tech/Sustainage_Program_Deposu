@@ -597,24 +597,85 @@ class HostingSurveyManager:
                         logging.info(f"[OK] Email gönderildi: {email}")
                     else:
                         fail_count += 1
-                        last_error = result.get('error', '')
-                        logging.error(f"[HATA] Email gönderilemedi: {email}")
+                        last_error = result.get('error', 'Bilinmeyen hata')
+                        logging.error(f"[HATA] Email hatası ({email}): {last_error}")
 
                 except Exception as e:
-                    logging.error(f"[HATA] Email gönderilemedi ({email}): {e}")
                     fail_count += 1
+                    logging.error(f"[HATA] Email döngü hatası ({email}): {e}")
 
-            logging.error(f"[OK] Email gönderme tamamlandı: {success_count} başarılı, {fail_count} başarısız")
-            return (success_count, fail_count, last_error)
-
-        except ImportError as e:
-            logging.error(f"[HATA] EmailService modülü bulunamadı: {e}")
-            return (0, len(stakeholder_emails), str(e))
+            return success_count, fail_count, last_error
         except Exception as e:
-            logging.error(f"[HATA] Email gönderme hatası: {e}")
-            # Traceback yerine loglama
-            logging.debug(f"Email error details: {e}", exc_info=True)
-            return (0, len(stakeholder_emails), str(e))
+            logging.error(f"[HATA] Email servisi başlatılamadı: {e}")
+            return 0, len(stakeholder_emails), str(e)
+
+    def export_to_training(self, survey_id: int, training_manager: Any, company_id: int, threshold: float = 12.0) -> Dict[str, Any]:
+        """
+        Anket sonuçlarına göre otomatik eğitim önerileri oluştur
+        
+        Args:
+            survey_id: Anket ID
+            training_manager: TrainingManager instance
+            company_id: Şirket ID
+            threshold: Materiality skoru eşiği (varsayılan 12.0)
+            
+        Returns:
+            {'success': True, 'created_count': X, 'details': [...]}
+        """
+        summary_result = self.get_summary(survey_id)
+        if not summary_result.get('success'):
+            return {'success': False, 'error': summary_result.get('error')}
+            
+        summary = summary_result.get('summary', [])
+        created_count = 0
+        details = []
+        current_year = datetime.now().year
+        
+        for item in summary:
+            # Materiality Score (Önem x Etki) kontrolü
+            try:
+                score = float(item.get('materiality_score', 0))
+            except (ValueError, TypeError):
+                score = 0.0
+
+            topic_name = item.get('topic_name', 'Bilinmeyen Konu')
+            
+            if score >= threshold:
+                program_name = f"{topic_name} Eğitimi"
+                
+                # Check if exists
+                if hasattr(training_manager, 'check_program_exists') and \
+                   training_manager.check_program_exists(company_id, program_name, current_year):
+                    details.append(f"Mevcut: {program_name}")
+                    continue
+
+                # Create training
+                # add_training_program imzası:
+                # company_id, program_name, program_type, target_audience, ...
+                success = training_manager.add_training_program(
+                    company_id=company_id,
+                    program_name=program_name,
+                    program_type="Technical", # Varsayılan kategori
+                    target_audience="İlgili Departmanlar",
+                    duration_hours=0, # Planlanacak
+                    cost_per_participant=0,
+                    period_year=current_year,
+                    supplier="Otomatik (Anket)",
+                    total_cost=0
+                )
+                
+                if success:
+                    created_count += 1
+                    details.append(f"Oluşturuldu: {program_name} (Skor: {score:.2f})")
+                else:
+                    details.append(f"Hata: {program_name} oluşturulamadı")
+                    
+        return {
+            'success': True,
+            'created_count': created_count,
+            'details': details
+        }
+
 
     def get_local_surveys(self) -> List[Dict[str, Any]]:
         """Lokal veritabanındaki anketleri getir"""

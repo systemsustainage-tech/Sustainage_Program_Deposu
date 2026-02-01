@@ -1,20 +1,20 @@
 {% extends "base.html" %}
 
-{% block title %}{{ _('product_technology_title', 'Product Technology') }} - SDG{% endblock %}
+{% block title %}{{ lang('product_technology_title', 'Product Technology') }} - SDG{% endblock %}
 
 {% block content %}
 
 <div class="row mb-4">
 <div class="col-md-12">
 <div class="d-flex justify-content-between align-items-center">
-<h1><i class="fas fa-cube me-2"></i>{{ _('product_technology_title', 'Product Technology') }}</h1>
+<h1><i class="fas fa-cube me-2"></i>{{ lang('product_technology_title', 'Product Technology') }}</h1>
 <div>
 <span class="badge bg-{{ 'success' if manager_available else 'secondary' }}">
-                    {{ _('module_active_badge') if manager_available else _('module_passive_badge') }}
+                    {{ lang('module_active_badge') if manager_available else _('module_passive_badge') }}
                 </span>
-<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}</button></div>
 </div>
-<p class="lead text-muted">{{ _('product_technology_desc', 'Module description for Product Technology') }}</p>
+<p class="lead text-muted">{{ lang('product_technology_desc', 'Module description for Product Technology') }}</p>
 </div>
 </div>
 <div class="row">
@@ -29,7 +29,7 @@
                             <div class="col-12 mb-4">
 <div class="card">
 <div class="card-header">
-<h5 class="mb-0">{{ _('statistics', 'İstatistikler') }}</h5>
+<h5 class="mb-0">{{ lang('statistics', 'İstatistikler') }}</h5>
 </div>
 <div class="card-body">
 <div class="row">
@@ -51,9 +51,9 @@
                             <div class="col-12">
 <div class="card">
 <div class="card-header d-flex justify-content-between align-items-center">
-<h5 class="mb-0">{{ _('records', 'Kayıtlar') }}</h5>
+<h5 class="mb-0">{{ lang('records', 'Kayıtlar') }}</h5>
 <button class="btn btn-sm btn-primary" data-bs-target="#addProductTechModal" data-bs-toggle="modal">
-<i class="fas fa-plus"></i> {{ _('add_new', 'Yeni Ekle') }}
+<i class="fas fa-plus"></i> {{ lang('add_new', 'Yeni Ekle') }}
                                         </button>
 </div>
 <div class="card-body">
@@ -66,7 +66,7 @@
                                                             <th>{{ col|replace('_', ' ')|title }}</th>
                                                             {% endfor %}
                                                         {% else %}
-                                                            <th>{{ _('details', 'Detaylar') }}</th>
+                                                            <th>{{ lang('details', 'Detaylar') }}</th>
                                                         {% endif %}
                                                     </tr>
 </thead>
@@ -98,9 +98,9 @@
                         <!-- Fallback to Under Construction if no data -->
 <div class="text-center py-5">
 <i class="bi bi-cone-striped display-1 text-warning mb-3"></i>
-<h3>{{ _('module_under_construction') }}</h3>
-<p class="text-muted">{{ _('module_coming_soon_desc', 'Bu modülün web arayüzü entegrasyonu devam etmektedir.') }}</p>
-<p class="small text-muted">{{ _('no_data_msg', 'Veri bulunamadı veya modül henüz aktif değil.') }}</p>
+<h3>{{ lang('module_under_construction') }}</h3>
+<p class="text-muted">{{ lang('module_coming_soon_desc', 'Bu modülün web arayüzü entegrasyonu devam etmektedir.') }}</p>
+<p class="small text-muted">{{ lang('no_data_msg', 'Veri bulunamadı veya modül henüz aktif değil.') }}</p>
 </div>
                     {% endif %}
 
@@ -113,43 +113,43 @@
 <div class="modal-dialog">
 <div class="modal-content">
 <div class="modal-header">
-<h5 class="modal-title">{{ _('add_new_product_tech', 'Yeni Üretim ve Teknoloji Verisi Ekle') }}</h5>
+<h5 class="modal-title">{{ lang('add_new_product_tech', 'Yeni Üretim ve Teknoloji Verisi Ekle') }}</h5>
 <button aria-label="Close" class="btn-close" data-bs-dismiss="modal" type="button"></button>
 </div>
 <form action="{{ url_for('product_tech_add') }}" method="POST">
 <div class="modal-body">
 <div class="mb-3">
-<label class="form-label" for="reporting_period">{{ _('reporting_period', 'Raporlama Dönemi') }}</label>
+<label class="form-label" for="reporting_period">{{ lang('reporting_period', 'Raporlama Dönemi') }}</label>
 <input class="form-control" id="reporting_period" name="reporting_period" placeholder="YYYY-QX" required="" type="text"/>
 </div>
 <div class="mb-3">
-<label class="form-label" for="rd_investment_ratio">{{ _('rd_investment_ratio', 'Ar-Ge Yatırım Oranı (%)') }}</label>
+<label class="form-label" for="rd_investment_ratio">{{ lang('rd_investment_ratio', 'Ar-Ge Yatırım Oranı (%)') }}</label>
 <input class="form-control" id="rd_investment_ratio" name="rd_investment_ratio" required="" step="0.01" type="number"/>
 </div>
 <div class="mb-3">
-<label class="form-label" for="patent_applications">{{ _('patent_applications', 'Patent Başvuru Sayısı') }}</label>
+<label class="form-label" for="patent_applications">{{ lang('patent_applications', 'Patent Başvuru Sayısı') }}</label>
 <input class="form-control" id="patent_applications" name="patent_applications" required="" type="number"/>
 </div>
 <div class="mb-3">
-<label class="form-label" for="innovation_budget">{{ _('innovation_budget', 'İnovasyon Bütçesi (TL)') }}</label>
+<label class="form-label" for="innovation_budget">{{ lang('innovation_budget', 'İnovasyon Bütçesi (TL)') }}</label>
 <input class="form-control" id="innovation_budget" name="innovation_budget" required="" step="0.01" type="number"/>
 </div>
 <div class="form-check mb-3">
 <input class="form-check-input" id="ecodesign_integration" name="ecodesign_integration" type="checkbox"/>
 <label class="form-check-label" for="ecodesign_integration">
-                            {{ _('ecodesign_integration', 'Eko-tasarım Entegrasyonu') }}
+                            {{ lang('ecodesign_integration', 'Eko-tasarım Entegrasyonu') }}
                         </label>
 </div>
 <div class="form-check mb-3">
 <input class="form-check-input" id="lca_implementation" name="lca_implementation" type="checkbox"/>
 <label class="form-check-label" for="lca_implementation">
-                            {{ _('lca_implementation', 'LCA Uygulaması') }}
+                            {{ lang('lca_implementation', 'LCA Uygulaması') }}
                         </label>
 </div>
 </div>
 <div class="modal-footer">
-<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ _('btn_cancel', 'İptal') }}</button>
-<button class="btn btn-primary" type="submit">{{ _('btn_save', 'Kaydet') }}</button>
+<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ lang('btn_cancel', 'İptal') }}</button>
+<button class="btn btn-primary" type="submit">{{ lang('btn_save', 'Kaydet') }}</button>
 </div>
 </form>
 </div>

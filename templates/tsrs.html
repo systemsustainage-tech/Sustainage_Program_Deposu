@@ -1,20 +1,20 @@
 {% extends "base.html" %}
 
-{% block title %}{{ _('tsrs_title', 'Tsrs') }} - SDG{% endblock %}
+{% block title %}{{ lang('tsrs_title', 'Tsrs') }} - SDG{% endblock %}
 
 {% block content %}
 
 <div class="row mb-4">
 <div class="col-md-12">
 <div class="d-flex justify-content-between align-items-center">
-<h1><i class="fas fa-cube me-2"></i>{{ _('tsrs_title', 'Tsrs') }}</h1>
+<h1><i class="fas fa-cube me-2"></i>{{ lang('tsrs_title', 'Tsrs') }}</h1>
 <div>
 <span class="badge bg-{{ 'success' if manager_available else 'secondary' }}">
-                    {{ _('module_active_badge') if manager_available else _('module_passive_badge') }}
+                    {{ lang('module_active_badge') if manager_available else _('module_passive_badge') }}
                 </span>
-<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}</button></div>
 </div>
-<p class="lead text-muted">{{ _('tsrs_desc', 'Module description for Tsrs') }}</p>
+<p class="lead text-muted">{{ lang('tsrs_desc', 'Module description for Tsrs') }}</p>
 </div>
 </div>
 <div class="row">
@@ -29,7 +29,7 @@
                         <div class="col-12 mb-4">
 <div class="card">
 <div class="card-header">
-<h5 class="mb-0">{{ _('statistics', 'İstatistikler') }}</h5>
+<h5 class="mb-0">{{ lang('statistics', 'İstatistikler') }}</h5>
 </div>
 <div class="card-body">
 <div class="row">
@@ -50,9 +50,9 @@
                         <div class="col-12">
 <div class="card">
 <div class="card-header d-flex justify-content-between align-items-center">
-<h5 class="mb-0">{{ _('records', 'Kayıtlar') }}</h5>
+<h5 class="mb-0">{{ lang('records', 'Kayıtlar') }}</h5>
 <button class="btn btn-sm btn-primary" data-bs-target="#addTSRSModal" data-bs-toggle="modal" type="button">
-<i class="fas fa-plus"></i> {{ _('add_new', 'Yeni Ekle') }}
+<i class="fas fa-plus"></i> {{ lang('add_new', 'Yeni Ekle') }}
                                     </button>
 </div>
 <div class="card-body">
@@ -65,7 +65,7 @@
                                                         <th>{{ col|replace('_', ' ')|title }}</th>
                                                         {% endfor %}
                                                     {% else %}
-                                                        <th>{{ _('details', 'Detaylar') }}</th>
+                                                        <th>{{ lang('details', 'Detaylar') }}</th>
                                                     {% endif %}
                                                 </tr>
 </thead>
@@ -88,7 +88,7 @@
                                                     {% endfor %}
                                                 {% else %}
                                                     <tr>
-<td class="text-center" colspan="100%">{{ _('no_records_found', 'Kayıt bulunamadı') }}</td>
+<td class="text-center" colspan="100%">{{ lang('no_records_found', 'Kayıt bulunamadı') }}</td>
 </tr>
                                                 {% endif %}
                                             </tbody>
@@ -103,18 +103,18 @@
                         <div class="col-12 mt-4">
                             <div class="card">
                                 <div class="card-header">
-                                    <h5 class="mb-0">{{ _('tsrs_esrs_mappings', 'TSRS - ESRS Eşleştirmeleri') }}</h5>
+                                    <h5 class="mb-0">{{ lang('tsrs_esrs_mappings', 'TSRS - ESRS Eşleştirmeleri') }}</h5>
                                 </div>
                                 <div class="card-body">
                                     <div class="table-responsive">
                                         <table class="table table-hover">
                                             <thead>
                                                 <tr>
-                                                    <th>{{ _('tsrs_code', 'TSRS Kodu') }}</th>
-                                                    <th>{{ _('tsrs_title', 'TSRS Başlığı') }}</th>
-                                                    <th>{{ _('esrs_code', 'ESRS Kodu') }}</th>
-                                                    <th>{{ _('relationship', 'İlişki') }}</th>
-                                                    <th>{{ _('description', 'Açıklama') }}</th>
+                                                    <th>{{ lang('tsrs_code', 'TSRS Kodu') }}</th>
+                                                    <th>{{ lang('tsrs_title', 'TSRS Başlığı') }}</th>
+                                                    <th>{{ lang('esrs_code', 'ESRS Kodu') }}</th>
+                                                    <th>{{ lang('relationship', 'İlişki') }}</th>
+                                                    <th>{{ lang('description', 'Açıklama') }}</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -130,7 +130,7 @@
                                                     {% endfor %}
                                                 {% else %}
                                                     <tr>
-                                                        <td colspan="5" class="text-center">{{ _('no_mappings_found', 'Eşleştirme bulunamadı') }}</td>
+                                                        <td colspan="5" class="text-center">{{ lang('no_mappings_found', 'Eşleştirme bulunamadı') }}</td>
                                                     </tr>
                                                 {% endif %}
                                             </tbody>
@@ -142,7 +142,7 @@
 
                 {% else %}
                     <div class="alert alert-warning">
-                        {{ _('module_not_available', 'Bu modül şu anda aktif değil veya yönetici sınıfı yüklenemedi.') }}
+                        {{ lang('module_not_available', 'Bu modül şu anda aktif değil veya yönetici sınıfı yüklenemedi.') }}
                     </div>
                 {% endif %}
             </div>
@@ -154,16 +154,16 @@
 <div class="modal-dialog modal-lg">
 <div class="modal-content">
 <div class="modal-header">
-<h5 class="modal-title" id="addTSRSModalLabel">{{ _('add_new_tsrs_data', 'Yeni TSRS Verisi Ekle') }}</h5>
+<h5 class="modal-title" id="addTSRSModalLabel">{{ lang('add_new_tsrs_data', 'Yeni TSRS Verisi Ekle') }}</h5>
 <button aria-label="Close" class="btn-close" data-bs-dismiss="modal" type="button"></button>
 </div>
 <form action="{{ url_for('tsrs_add') }}" method="POST">
 <div class="modal-body">
 <div class="row">
 <div class="col-md-12 mb-3">
-<label class="form-label" for="indicator_id">{{ _('indicator', 'Gösterge') }}</label>
+<label class="form-label" for="indicator_id">{{ lang('indicator', 'Gösterge') }}</label>
 <select class="form-select" id="indicator_id" name="indicator_id" required="">
-<option disabled="" selected="" value="">{{ _('select_indicator', 'Gösterge Seçiniz') }}</option>
+<option disabled="" selected="" value="">{{ lang('select_indicator', 'Gösterge Seçiniz') }}</option>
                                 {% for indicator in indicators %}
                                 <option value="{{ indicator.id }}">{{ indicator.code }} - {{ indicator.title }}</option>
                                 {% endfor %}
@@ -172,54 +172,54 @@
 </div>
 <div class="row">
 <div class="col-md-6 mb-3">
-<label class="form-label" for="reporting_period">{{ _('reporting_period', 'Raporlama Dönemi') }}</label>
+<label class="form-label" for="reporting_period">{{ lang('reporting_period', 'Raporlama Dönemi') }}</label>
 <input class="form-control" id="reporting_period" name="reporting_period" placeholder="YYYY" required="" type="text"/>
 </div>
 <div class="col-md-6 mb-3">
-<label class="form-label" for="reporting_status">{{ _('status', 'Durum') }}</label>
+<label class="form-label" for="reporting_status">{{ lang('status_label', 'Durum') }}</label>
 <select class="form-select" id="reporting_status" name="reporting_status">
-<option value="Draft">{{ _('draft', 'Taslak') }}</option>
-<option value="Final">{{ _('final', 'Final') }}</option>
-<option value="Verified">{{ _('verified', 'Doğrulanmış') }}</option>
+<option value="Draft">{{ lang('draft', 'Taslak') }}</option>
+<option value="Final">{{ lang('final', 'Final') }}</option>
+<option value="Verified">{{ lang('verified', 'Doğrulanmış') }}</option>
 </select>
 </div>
 </div>
 <div class="mb-3">
-<label class="form-label" for="response_value">{{ _('response_value', 'Yanıt Değeri') }}</label>
+<label class="form-label" for="response_value">{{ lang('response_value', 'Yanıt Değeri') }}</label>
 <textarea class="form-control" id="response_value" name="response_value" rows="3"></textarea>
 </div>
 <div class="row">
 <div class="col-md-6 mb-3">
-<label class="form-label" for="numerical_value">{{ _('numerical_value', 'Sayısal Değer') }}</label>
+<label class="form-label" for="numerical_value">{{ lang('numerical_value', 'Sayısal Değer') }}</label>
 <input class="form-control" id="numerical_value" name="numerical_value" step="any" type="number"/>
 </div>
 <div class="col-md-6 mb-3">
-<label class="form-label" for="unit">{{ _('unit', 'Birim') }}</label>
+<label class="form-label" for="unit">{{ lang('unit', 'Birim') }}</label>
 <input class="form-control" id="unit" name="unit" type="text"/>
 </div>
 </div>
 <div class="mb-3">
-<label class="form-label" for="methodology_used">{{ _('methodology_used', 'Kullanılan Metodoloji') }}</label>
+<label class="form-label" for="methodology_used">{{ lang('methodology_used', 'Kullanılan Metodoloji') }}</label>
 <textarea class="form-control" id="methodology_used" name="methodology_used" rows="2"></textarea>
 </div>
 <div class="row">
 <div class="col-md-6 mb-3">
-<label class="form-label" for="data_source">{{ _('data_source', 'Veri Kaynağı') }}</label>
+<label class="form-label" for="data_source">{{ lang('data_source', 'Veri Kaynağı') }}</label>
 <input class="form-control" id="data_source" name="data_source" type="text"/>
 </div>
 <div class="col-md-6 mb-3">
-<label class="form-label" for="evidence_url">{{ _('evidence_url', 'Kanıt URL') }}</label>
+<label class="form-label" for="evidence_url">{{ lang('evidence_url', 'Kanıt URL') }}</label>
 <input class="form-control" id="evidence_url" name="evidence_url" type="url"/>
 </div>
 </div>
 <div class="mb-3">
-<label class="form-label" for="notes">{{ _('notes', 'Notlar') }}</label>
+<label class="form-label" for="notes">{{ lang('notes', 'Notlar') }}</label>
 <textarea class="form-control" id="notes" name="notes" rows="2"></textarea>
 </div>
 </div>
 <div class="modal-footer">
-<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ _('cancel', 'İptal') }}</button>
-<button class="btn btn-primary" type="submit">{{ _('save', 'Kaydet') }}</button>
+<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ lang('cancel', 'İptal') }}</button>
+<button class="btn btn-primary" type="submit">{{ lang('save', 'Kaydet') }}</button>
 </div>
 </form>
 </div>

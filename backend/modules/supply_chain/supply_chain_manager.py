@@ -1,4 +1,3 @@
-
 import sqlite3
 import logging
 import json
@@ -9,6 +8,50 @@ class SupplyChainManager:
     def __init__(self, db_path: str = DB_PATH):
         self.db_path = db_path
         self.logger = logging.getLogger(__name__)
+        self.ensure_tables()
+
+    def ensure_tables(self):
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        # Audits Table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS supplier_audits (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                supplier_id INTEGER NOT NULL,
+                company_id INTEGER NOT NULL,
+                audit_date TEXT NOT NULL,
+                auditor_name TEXT,
+                audit_type TEXT,
+                findings TEXT,
+                non_conformities INTEGER DEFAULT 0,
+                audit_score REAL,
+                status TEXT DEFAULT 'Open',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (supplier_id) REFERENCES supplier_profiles(id)
+            )
+        """)
+        
+        # Risks Table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS supplier_risks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                supplier_id INTEGER NOT NULL,
+                company_id INTEGER NOT NULL,
+                risk_category TEXT NOT NULL,
+                risk_description TEXT,
+                probability INTEGER CHECK(probability BETWEEN 1 AND 5),
+                impact INTEGER CHECK(impact BETWEEN 1 AND 5),
+                risk_score INTEGER,
+                mitigation_plan TEXT,
+                status TEXT DEFAULT 'Active',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (supplier_id) REFERENCES supplier_profiles(id)
+            )
+        """)
+        
+        conn.commit()
+        conn.close()
 
     def get_connection(self):
         conn = sqlite3.connect(self.db_path)
@@ -58,6 +101,47 @@ class SupplyChainManager:
         conn.close()
         return dict(row) if row else None
 
+    def get_supplier_scorecard(self, supplier_id: int, company_id: int) -> Dict:
+        """Aggregates data for a supplier scorecard."""
+        profile = self.get_supplier(supplier_id, company_id)
+        if not profile:
+            return {}
+            
+        # Get latest assessment
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT * FROM supplier_assessments 
+            WHERE supplier_id = ? AND company_id = ? 
+            ORDER BY assessment_date DESC LIMIT 1
+        """, (supplier_id, company_id))
+        latest_assessment = cursor.fetchone()
+        
+        # Get audits stats
+        cursor.execute("""
+            SELECT COUNT(*) as audit_count, AVG(audit_score) as avg_audit_score, SUM(non_conformities) as total_nc
+            FROM supplier_audits 
+            WHERE supplier_id = ? AND company_id = ?
+        """, (supplier_id, company_id))
+        audit_stats = cursor.fetchone()
+        
+        # Get high risks
+        cursor.execute("""
+            SELECT * FROM supplier_risks 
+            WHERE supplier_id = ? AND company_id = ? AND risk_score >= 12
+            ORDER BY risk_score DESC
+        """, (supplier_id, company_id))
+        high_risks = [dict(row) for row in cursor.fetchall()]
+        
+        conn.close()
+        
+        return {
+            'profile': profile,
+            'latest_assessment': dict(latest_assessment) if latest_assessment else None,
+            'audit_stats': dict(audit_stats) if audit_stats else None,
+            'high_risks': high_risks
+        }
+
     def update_supplier_risk_score(self, supplier_id: int, company_id: int):
         """Calculates average risk score from assessments and updates profile."""
         conn = self.get_connection()
@@ -65,7 +149,7 @@ class SupplyChainManager:
         
         # Calculate average score
         cursor.execute("""
-            SELECT AVG(score) as avg_score 
+            SELECT AVG(total_score) as avg_score 
             FROM supplier_assessments 
             WHERE supplier_id = ? AND company_id = ?
         """, (supplier_id, company_id))
@@ -83,20 +167,24 @@ class SupplyChainManager:
 
     # --- Supplier Assessments ---
 
-    def add_assessment(self, supplier_id: int, company_id: int, assessment_date: str, score: float, risk_level: str, details: Dict) -> int:
+    def add_assessment(self, supplier_id: int, company_id: int, assessment_date: str, total_score: float, risk_level: str, responses_json: Dict, environmental_score: float = 0, social_score: float = 0, governance_score: float = 0) -> int:
         conn = self.get_connection()
         cursor = conn.cursor()
         try:
             cursor.execute("""
-                INSERT INTO supplier_assessments (supplier_id, company_id, assessment_date, score, risk_level, details)
-                VALUES (?, ?, ?, ?, ?, ?)
-            """, (supplier_id, company_id, assessment_date, score, risk_level, json.dumps(details)))
+                INSERT INTO supplier_assessments (
+                    supplier_id, company_id, assessment_date, total_score, risk_level, responses_json,
+                    environmental_score, social_score, governance_score
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                supplier_id, company_id, assessment_date, total_score, risk_level, json.dumps(responses_json),
+                environmental_score, social_score, governance_score
+            ))
             assessment_id = cursor.lastrowid
             conn.commit()
-            
-            # Update main profile risk score
+            # Update average risk score
             self.update_supplier_risk_score(supplier_id, company_id)
-            
             return assessment_id
         except Exception as e:
             self.logger.error(f"Error adding assessment: {e}")
@@ -105,44 +193,83 @@ class SupplyChainManager:
         finally:
             conn.close()
 
-    def get_assessments(self, supplier_id: int, company_id: int) -> List[Dict]:
+    # --- Supplier Audits ---
+
+    def add_audit(self, supplier_id: int, company_id: int, data: Dict) -> int:
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                INSERT INTO supplier_audits (
+                    supplier_id, company_id, audit_date, auditor_name, audit_type, 
+                    findings, non_conformities, audit_score, status
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                supplier_id, company_id, data.get('audit_date'), data.get('auditor_name'), 
+                data.get('audit_type'), data.get('findings'), data.get('non_conformities', 0), 
+                data.get('audit_score'), data.get('status', 'Open')
+            ))
+            audit_id = cursor.lastrowid
+            conn.commit()
+            return audit_id
+        except Exception as e:
+            self.logger.error(f"Error adding audit: {e}")
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
+
+    def get_audits(self, supplier_id: int, company_id: int) -> List[Dict]:
         conn = self.get_connection()
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT * FROM supplier_assessments 
-            WHERE supplier_id = ? AND company_id = ? 
-            ORDER BY assessment_date DESC
+            SELECT * FROM supplier_audits 
+            WHERE supplier_id = ? AND company_id = ?
+            ORDER BY audit_date DESC
         """, (supplier_id, company_id))
         rows = cursor.fetchall()
         conn.close()
-        
-        results = []
-        for row in rows:
-            d = dict(row)
-            if d['details']:
-                try:
-                    d['details'] = json.loads(d['details'])
-                except:
-                    d['details'] = {}
-            results.append(d)
-        return results
+        return [dict(row) for row in rows]
 
-    def get_assessment(self, assessment_id: int, company_id: int) -> Optional[Dict]:
+    # --- Supplier Risks ---
+
+    def add_risk(self, supplier_id: int, company_id: int, data: Dict) -> int:
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        try:
+            prob = int(data.get('probability', 1))
+            impact = int(data.get('impact', 1))
+            risk_score = prob * impact
+            
+            cursor.execute("""
+                INSERT INTO supplier_risks (
+                    supplier_id, company_id, risk_category, risk_description, 
+                    probability, impact, risk_score, mitigation_plan, status
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                supplier_id, company_id, data.get('risk_category'), data.get('risk_description'), 
+                prob, impact, risk_score, data.get('mitigation_plan'), data.get('status', 'Active')
+            ))
+            risk_id = cursor.lastrowid
+            conn.commit()
+            return risk_id
+        except Exception as e:
+            self.logger.error(f"Error adding risk: {e}")
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
+
+    def get_risks(self, supplier_id: int, company_id: int) -> List[Dict]:
         conn = self.get_connection()
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT * FROM supplier_assessments 
-            WHERE id = ? AND company_id = ?
-        """, (assessment_id, company_id))
-        row = cursor.fetchone()
+            SELECT * FROM supplier_risks 
+            WHERE supplier_id = ? AND company_id = ?
+            ORDER BY risk_score DESC
+        """, (supplier_id, company_id))
+        rows = cursor.fetchall()
         conn.close()
-        
-        if row:
-            d = dict(row)
-            if d['details']:
-                try:
-                    d['details'] = json.loads(d['details'])
-                except:
-                    d['details'] = {}
-            return d
-        return None
+        return [dict(row) for row in rows]

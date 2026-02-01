@@ -17,7 +17,7 @@
                 {% else %}
                 <span class="badge bg-warning text-dark p-2"><i class="fas fa-exclamation-triangle me-1"></i> Simülasyon Modu</span>
                 {% endif %}
-            <button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+            <button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}</button></div>
 </div>
 </div>
 </div>
@@ -92,7 +92,69 @@
 <!-- Simple formatting for simulation text -->
                     {{ analysis_result | replace('\n', '<br/>') | safe }}
                 </div>
-</div>
+
+                {% if log_id %}
+                <div class="mt-4 p-3 border rounded bg-white">
+                    <h6 class="text-muted mb-3"><i class="fas fa-star text-warning me-2"></i>Bu analiz faydalı mıydı?</h6>
+                    <form id="feedbackForm">
+                        <input type="hidden" name="log_id" value="{{ log_id }}">
+                        <div class="mb-3">
+                            <div class="btn-group" role="group" aria-label="Rating">
+                                <input type="radio" class="btn-check" name="rating" id="btnradio1" value="1" autocomplete="off">
+                                <label class="btn btn-outline-secondary" for="btnradio1">1</label>
+
+                                <input type="radio" class="btn-check" name="rating" id="btnradio2" value="2" autocomplete="off">
+                                <label class="btn btn-outline-secondary" for="btnradio2">2</label>
+
+                                <input type="radio" class="btn-check" name="rating" id="btnradio3" value="3" autocomplete="off">
+                                <label class="btn btn-outline-secondary" for="btnradio3">3</label>
+
+                                <input type="radio" class="btn-check" name="rating" id="btnradio4" value="4" autocomplete="off">
+                                <label class="btn btn-outline-secondary" for="btnradio4">4</label>
+
+                                <input type="radio" class="btn-check" name="rating" id="btnradio5" value="5" autocomplete="off">
+                                <label class="btn btn-outline-secondary" for="btnradio5">5</label>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <textarea class="form-control" name="comment" rows="2" placeholder="Görüşlerinizi paylaşın (İsteğe bağlı)"></textarea>
+                        </div>
+                        <button type="button" class="btn btn-primary btn-sm" onclick="submitFeedback()">Geri Bildirimi Gönder</button>
+                    </form>
+                    <div id="feedbackMessage" class="alert alert-success mt-2" style="display: none;">
+                        <i class="fas fa-check-circle me-2"></i>Geri bildiriminiz için teşekkürler!
+                    </div>
+                </div>
+                <script>
+                function submitFeedback() {
+                    const form = document.getElementById('feedbackForm');
+                    const formData = new FormData(form);
+                    if (!formData.get('rating')) {
+                        alert("Lütfen bir puan verin.");
+                        return;
+                    }
+                    
+                    fetch('/ai/feedback', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            form.style.display = 'none';
+                            document.getElementById('feedbackMessage').style.display = 'block';
+                        } else {
+                            alert("Hata: " + (data.error || "Bilinmeyen hata"));
+                        }
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        alert("İletişim hatası oluştu.");
+                    });
+                }
+                </script>
+                {% endif %}
+            </div>
 <div class="card-footer bg-white">
 <div class="d-flex justify-content-end">
 <button class="btn btn-outline-secondary btn-sm me-2" onclick="window.print()">

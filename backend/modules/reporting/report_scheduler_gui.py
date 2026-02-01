@@ -117,7 +117,7 @@ class ReportSchedulerGUI:
                 bg='white', justify='left').pack(padx=30, pady=10)
 
         # Rapor listesi
-        columns = (self.lm.tr('report', 'Rapor'), self.lm.tr('type', 'Tip'), self.lm.tr('period', 'Periyot'), self.lm.tr('last_run', 'Son Çalışma'), self.lm.tr('btn_next', 'Sonraki'), self.lm.tr('status', 'Durum'))
+        columns = (self.lm.tr("report_label", "Rapor"), self.lm.tr('type', 'Tip'), self.lm.tr('period', 'Periyot'), self.lm.tr('last_run', 'Son Çalışma'), self.lm.tr('btn_next', 'Sonraki'), self.lm.tr('status', 'Durum'))
         self.scheduled_tree = ttk.Treeview(scheduled_frame,
                                           columns=columns,
                                           show='headings', height=10)
@@ -214,7 +214,7 @@ class ReportSchedulerGUI:
                 bg='white', justify='left').pack(padx=30, pady=10)
 
         # Workflow listesi
-        columns = (self.lm.tr('report', 'Rapor'), self.lm.tr('version', 'Versiyon'), self.lm.tr('status', 'Durum'), self.lm.tr('sender', 'Gönderen'), self.lm.tr('approver', 'Onaylayan'), self.lm.tr('date', 'Tarih'))
+        columns = (self.lm.tr("report_label", "Rapor"), self.lm.tr('version', 'Versiyon'), self.lm.tr('status', 'Durum'), self.lm.tr('sender', 'Gönderen'), self.lm.tr('approver', 'Onaylayan'), self.lm.tr('date', 'Tarih'))
         self.approval_tree = ttk.Treeview(approval_frame,
                                          columns=columns,
                                          show='headings', height=10)

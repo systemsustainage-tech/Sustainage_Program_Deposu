@@ -1,30 +1,30 @@
 {% extends "base.html" %}
 
-{% block title %}{{ _('issb_title') }} - {{ _('app.title') }}{% endblock %}
+{% block title %}{{ lang('issb_title') }} - {{ lang('app.title') }}{% endblock %}
 
 {% block content %}
 
 <div class="row mb-4">
 <div class="col-md-12">
 <div class="d-flex justify-content-between align-items-center">
-<h1><i class="fas fa-book me-2"></i>{{ _('issb_title') }}</h1>
+<h1><i class="fas fa-book me-2"></i>{{ lang('issb_title') }}</h1>
 <div>
 <span class="badge bg-{{ 'success' if manager_available else 'danger' }}">
-                    {{ _('module_active_badge') if manager_available else _('module_passive_badge') }}
+                    {{ lang('module_active_badge') if manager_available else _('module_passive_badge') }}
                 </span>
-<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}</button></div>
 </div>
-<p class="lead text-muted">{{ _('issb_desc') }}</p>
+<p class="lead text-muted">{{ lang('issb_desc') }}</p>
 </div>
 </div>
 
 {% if manager_available %}
 <div class="card mb-4">
 <div class="card-body">
-<h5>{{ _('issb_data_entry') }}</h5>
-<p>{{ _('issb_data_entry_desc') }}</p>
+<h5>{{ lang('issb_data_entry') }}</h5>
+<p>{{ lang('issb_data_entry_desc') }}</p>
 <button class="btn btn-primary" data-bs-target="#addISSBModal" data-bs-toggle="modal" type="button">
-            {{ _('btn_add_data') }}
+            {{ lang('btn_add_data') }}
         </button>
 </div>
 </div>
@@ -33,34 +33,34 @@
 <div class="modal-dialog">
 <div class="modal-content">
 <div class="modal-header">
-<h5 class="modal-title">{{ _('issb_add_title', 'ISSB Verisi Ekle') }}</h5>
+<h5 class="modal-title">{{ lang('issb_add_title', 'ISSB Verisi Ekle') }}</h5>
 <button class="btn-close" data-bs-dismiss="modal" type="button"></button>
 </div>
 <form action="{{ url_for('issb_add') }}" method="POST">
 <div class="modal-body">
 <div class="mb-3">
-<label class="form-label">{{ _('issb_col_year', 'Yıl') }}</label>
+<label class="form-label">{{ lang('issb_col_year', 'Yıl') }}</label>
 <input class="form-control" name="year" required="" type="number" value="2024"/>
 </div>
 <div class="mb-3">
-<label class="form-label">{{ _('issb_col_standard', 'Standart') }}</label>
+<label class="form-label">{{ lang('issb_col_standard', 'Standart') }}</label>
 <select class="form-select" name="standard">
 <option value="IFRS S1">IFRS S1 (General Requirements)</option>
 <option value="IFRS S2">IFRS S2 (Climate-related)</option>
 </select>
 </div>
 <div class="mb-3">
-<label class="form-label">{{ _('issb_col_disclosure', 'Açıklama/Beyan') }}</label>
+<label class="form-label">{{ lang('issb_col_disclosure', 'Açıklama/Beyan') }}</label>
 <textarea class="form-control" name="disclosure" required="" rows="3"></textarea>
 </div>
 <div class="mb-3">
-<label class="form-label">{{ _('issb_col_metric', 'Metrik') }}</label>
+<label class="form-label">{{ lang('issb_col_metric', 'Metrik') }}</label>
 <input class="form-control" name="metric" type="text"/>
 </div>
 </div>
 <div class="modal-footer">
-<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ _('btn_cancel', 'İptal') }}</button>
-<button class="btn btn-primary" type="submit">{{ _('btn_save', 'Kaydet') }}</button>
+<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ lang('btn_cancel', 'İptal') }}</button>
+<button class="btn btn-primary" type="submit">{{ lang('btn_save', 'Kaydet') }}</button>
 </div>
 </form>
 </div>
@@ -70,7 +70,7 @@
 <div class="col-md-4">
 <div class="card text-center h-100 border-primary">
 <div class="card-body">
-<h6 class="card-title text-muted">{{ _('issb_total_disclosures') }}</h6>
+<h6 class="card-title text-muted">{{ lang('issb_total_disclosures') }}</h6>
 <p class="display-4 text-primary">{{ stats.total_disclosures }}</p>
 </div>
 </div>
@@ -78,7 +78,7 @@
 <div class="col-md-4">
 <div class="card text-center h-100 border-success">
 <div class="card-body">
-<h6 class="card-title text-muted">{{ _('issb_standards_covered') }}</h6>
+<h6 class="card-title text-muted">{{ lang('issb_standards_covered') }}</h6>
 <p class="display-4 text-success">{{ stats.standards_covered }}</p>
 </div>
 </div>
@@ -86,7 +86,7 @@
 <div class="col-md-4">
 <div class="card text-center h-100 border-info">
 <div class="card-body">
-<h6 class="card-title text-muted">{{ _('issb_completion_rate') }}</h6>
+<h6 class="card-title text-muted">{{ lang('issb_completion_rate') }}</h6>
 <p class="display-4 text-info">%{{ stats.completion_rate }}</p>
 <div class="progress" style="height: 5px;">
 <div class="progress-bar bg-info" role="progressbar" style="width: {{ stats.completion_rate }}%"></div>
@@ -99,17 +99,17 @@
 <div class="col-md-12">
 <div class="card shadow-sm border-0">
 <div class="card-header bg-light">
-<h5 class="mb-0">{{ _('issb_list_title') }}</h5>
+<h5 class="mb-0">{{ lang('issb_list_title') }}</h5>
 </div>
 <div class="card-body p-0">
 <div class="table-responsive">
 <table class="table table-hover mb-0">
 <thead>
 <tr>
-<th>{{ _('issb_col_year') }}</th>
-<th>{{ _('issb_col_standard') }}</th>
-<th>{{ _('issb_col_disclosure') }}</th>
-<th>{{ _('issb_col_metric') }}</th>
+<th>{{ lang('issb_col_year') }}</th>
+<th>{{ lang('issb_col_standard') }}</th>
+<th>{{ lang('issb_col_disclosure') }}</th>
+<th>{{ lang('issb_col_metric') }}</th>
 </tr>
 </thead>
 <tbody>
@@ -124,7 +124,7 @@
                                 {% endfor %}
                             {% else %}
                                 <tr>
-<td class="text-center py-3 text-muted" colspan="4">{{ _('no_data_found') }}</td>
+<td class="text-center py-3 text-muted" colspan="4">{{ lang('no_data_found') }}</td>
 </tr>
                             {% endif %}
                         </tbody>
@@ -136,8 +136,8 @@
 </div>
 {% else %}
 <div class="alert alert-warning">
-<h4 class="alert-heading">{{ _('module_failed_title') }}</h4>
-<p>{{ _('module_failed_desc') }}</p>
+<h4 class="alert-heading">{{ lang('module_failed_title') }}</h4>
+<p>{{ lang('module_failed_desc') }}</p>
 </div>
 {% endif %}
 {% endblock %}

@@ -12,16 +12,16 @@
 <span class="badge bg-{{ 'success' if survey.is_active else 'secondary' }}">
                     {{ 'Aktif' if survey.is_active else 'Taslak' }}
                 </span>
-<span class="badge bg-info ms-1" title="{{ _('target_group', 'Hedef Kitle') }}">
+<span class="badge bg-info ms-1" title="{{ lang('target_group', 'Hedef Kitle') }}">
 <i class="fas fa-users"></i> {{ stakeholder_groups.get(survey.target_groups, survey.target_groups) if survey.target_groups else _('not_specified', 'Belirtilmemiş') }}
                 </span>
 <a class="btn btn-sm btn-outline-primary ms-2" href="/survey/{{ survey.token }}" target="_blank">
-<i class="fas fa-external-link-alt"></i> {{ _('view_survey', 'Anketi Görüntüle') }}
+<i class="fas fa-external-link-alt"></i> {{ lang('view_survey', 'Anketi Görüntüle') }}
                 </a>
 <button class="btn btn-sm btn-outline-danger ms-2" onclick="confirmDelete('{{ survey.id }}', '{{ survey.survey_title }}')" type="button">
-<i class="fas fa-trash"></i> {{ _('delete', 'Sil') }}
+<i class="fas fa-trash"></i> {{ lang('delete', 'Sil') }}
                 </button>
-<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ _('btn_back', 'Geri') }}</button></div>
+<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}</button></div>
 </div>
 <p class="lead text-muted">{{ survey.survey_description }}</p>
 </div>
@@ -30,13 +30,13 @@
 <div class="col-md-12">
 <ul class="nav nav-tabs mb-4" id="surveyTabs" role="tablist">
 <li class="nav-item">
-<a class="nav-link active" data-bs-toggle="tab" href="#questions" id="questions-tab" role="tab">{{ _('questions', 'Sorular') }}</a>
+<a class="nav-link active" data-bs-toggle="tab" href="#questions" id="questions-tab" role="tab">{{ lang('questions', 'Sorular') }}</a>
 </li>
 <li class="nav-item">
-<a class="nav-link" data-bs-toggle="tab" href="#settings" id="settings-tab" role="tab">{{ _('settings', 'Ayarlar') }}</a>
+<a class="nav-link" data-bs-toggle="tab" href="#settings" id="settings-tab" role="tab">{{ lang('settings', 'Ayarlar') }}</a>
 </li>
 <li class="nav-item">
-<a class="nav-link" data-bs-toggle="tab" href="#results" id="results-tab" role="tab">{{ _('results', 'Sonuçlar') }}</a>
+<a class="nav-link" data-bs-toggle="tab" href="#results" id="results-tab" role="tab">{{ lang('results', 'Sonuçlar') }}</a>
 </li>
 </ul>
 <div class="tab-content" id="surveyTabsContent">
@@ -44,13 +44,13 @@
 <div class="tab-pane fade show active" id="questions" role="tabpanel">
 <div class="card shadow-sm border-0 mb-4">
 <div class="card-header bg-light d-flex justify-content-between align-items-center">
-<h5 class="mb-0">{{ _('question_list', 'Soru Listesi') }}</h5>
+<h5 class="mb-0">{{ lang('question_list', 'Soru Listesi') }}</h5>
 <div>
 <button class="btn btn-sm btn-outline-primary me-2" data-bs-target="#addStandardQuestionModal" data-bs-toggle="modal">
-<i class="fas fa-list"></i> {{ _('add_standard_question', 'Standart Soru Ekle') }}
+<i class="fas fa-list"></i> {{ lang('add_standard_question', 'Standart Soru Ekle') }}
                             </button>
 <button class="btn btn-sm btn-primary" data-bs-target="#addQuestionModal" data-bs-toggle="modal">
-<i class="fas fa-plus"></i> {{ _('add_custom_question', 'Özel Soru Ekle') }}
+<i class="fas fa-plus"></i> {{ lang('add_custom_question', 'Özel Soru Ekle') }}
                             </button>
 </div>
 </div>
@@ -73,7 +73,7 @@
 </h2>
 <div class="accordion-collapse collapse" data-bs-parent="#questionsAccordion" id="collapse{{ q.id }}">
 <div class="accordion-body">
-<p><strong>{{ _('type', 'Tip') }}:</strong> 
+<p><strong>{{ lang('type', 'Tip') }}:</strong> 
                                                 {% if q.question_type == 'scale_1_5' %}1-5 Ölçeği
                                                 {% elif q.question_type == 'yes_no' %}Evet/Hayır
                                                 {% elif q.question_type == 'text' %}Metin
@@ -81,10 +81,10 @@
                                             </p>
 <div class="d-flex justify-content-end">
 <button class="btn btn-sm btn-outline-primary me-2" type="button" onclick="openEditModal('{{ q.id }}', '{{ q.question_text|replace("'", "\\'")|replace('\n', ' ') }}', '{{ q.question_type }}', '{{ q.category }}', {{ 'true' if q.is_required else 'false' }})">
-<i class="fas fa-edit"></i> {{ _('edit', 'Düzenle') }}
+<i class="fas fa-edit"></i> {{ lang('edit', 'Düzenle') }}
                                                 </button>
-<form action="{{ url_for('delete_survey_question', survey_id=survey.id, question_id=q.id) }}" method="POST" onsubmit="return confirm('{{ _('confirm_delete', 'Emin misiniz?') }}');">
-<button class="btn btn-sm btn-danger" type="submit">{{ _('delete', 'Sil') }}</button>
+<form action="{{ url_for('delete_survey_question', survey_id=survey.id, question_id=q.id) }}" method="POST" onsubmit="return confirm('{{ lang('confirm_delete', 'Emin misiniz?') }}');">
+<button class="btn btn-sm btn-danger" type="submit">{{ lang('delete', 'Sil') }}</button>
 </form>
 </div>
 </div>
@@ -94,9 +94,9 @@
                             </div>
                         {% else %}
                             <div class="text-center py-5">
-<p class="text-muted">{{ _('no_questions', 'Henüz soru eklenmemiş.') }}</p>
+<p class="text-muted">{{ lang('no_questions', 'Henüz soru eklenmemiş.') }}</p>
 <button class="btn btn-primary" data-bs-target="#addQuestionModal" data-bs-toggle="modal">
-<i class="fas fa-plus"></i> {{ _('add_first_question', 'İlk Soruyu Ekle') }}
+<i class="fas fa-plus"></i> {{ lang('add_first_question', 'İlk Soruyu Ekle') }}
                                 </button>
 </div>
                         {% endif %}
@@ -108,19 +108,19 @@
 <div class="card shadow-sm border-0">
 <div class="card-body">
 <form action="{{ url_for('update_survey_settings', survey_id=survey.id) }}" method="POST">
-<h5 class="mb-3">{{ _('general_settings', 'Genel Ayarlar') }}</h5>
+<h5 class="mb-3">{{ lang('general_settings', 'Genel Ayarlar') }}</h5>
 <div class="mb-3">
-<label class="form-label">{{ _('survey_title', 'Anket Başlığı') }}</label>
+<label class="form-label">{{ lang('survey_title', 'Anket Başlığı') }}</label>
 <input class="form-control" name="survey_title" required="" type="text" value="{{ survey.survey_title }}"/>
 </div>
 <div class="mb-3">
-<label class="form-label">{{ _('description', 'Açıklama') }}</label>
+<label class="form-label">{{ lang('description', 'Açıklama') }}</label>
 <textarea class="form-control" name="survey_description" rows="3">{{ survey.survey_description }}</textarea>
 </div>
 <div class="mb-3">
-<label class="form-label">{{ _('target_group', 'Hedef Kitle / Paydaş Grubu') }}</label>
+<label class="form-label">{{ lang('target_group', 'Hedef Kitle / Paydaş Grubu') }}</label>
 <select class="form-select" name="target_groups">
-<option value="">{{ _('select', 'Seçiniz') }}</option>
+<option value="">{{ lang('select', 'Seçiniz') }}</option>
                                     {% if stakeholder_groups %}
                                         {% for key, name in stakeholder_groups.items() %}
                                             <option value="{{ key }}" {% if survey.target_groups == key %}selected{% endif %}>{{ name }}</option>
@@ -133,32 +133,32 @@
                                 </select>
 </div>
 <hr/>
-<h5 class="mb-3">{{ _('demographics', 'Demografik Bilgiler') }}</h5>
-<p class="text-muted small">{{ _('demographics_desc', 'Katılımcılardan hangi bilgilerin isteneceğini seçin.') }}</p>
+<h5 class="mb-3">{{ lang('demographics', 'Demografik Bilgiler') }}</h5>
+<p class="text-muted small">{{ lang('demographics_desc', 'Katılımcılardan hangi bilgilerin isteneceğini seçin.') }}</p>
 <div class="row">
 <div class="col-md-6">
 <div class="form-check mb-2">
 <input class="form-check-input" id="req_name" name="require_name" type="checkbox" {% if demographics.require_name %}checked{% endif %}/>
-<label class="form-check-label" for="req_name">{{ _('require_name', 'Ad Soyad İste') }}</label>
+<label class="form-check-label" for="req_name">{{ lang('require_name', 'Ad Soyad İste') }}</label>
 </div>
 <div class="form-check mb-2">
 <input class="form-check-input" id="req_email" name="require_email" type="checkbox" {% if demographics.require_email %}checked{% endif %}/>
-<label class="form-check-label" for="req_email">{{ _('require_email', 'E-posta İste') }}</label>
+<label class="form-check-label" for="req_email">{{ lang('require_email', 'E-posta İste') }}</label>
 </div>
 </div>
 <div class="col-md-6">
 <div class="form-check mb-2">
 <input class="form-check-input" id="req_company" name="require_company" type="checkbox" {% if demographics.require_company %}checked{% endif %}/>
-<label class="form-check-label" for="req_company">{{ _('require_company', 'Firma Adı İste') }}</label>
+<label class="form-check-label" for="req_company">{{ lang('require_company', 'Firma Adı İste') }}</label>
 </div>
 <div class="form-check mb-2">
 <input class="form-check-input" id="req_dept" name="require_department" type="checkbox" {% if demographics.require_department %}checked{% endif %}/>
-<label class="form-check-label" for="req_dept">{{ _('require_department', 'Departman İste') }}</label>
+<label class="form-check-label" for="req_dept">{{ lang('require_department', 'Departman İste') }}</label>
 </div>
 </div>
 </div>
 <div class="mt-4 text-end">
-<button class="btn btn-primary" type="submit">{{ _('save_changes', 'Değişiklikleri Kaydet') }}</button>
+<button class="btn btn-primary" type="submit">{{ lang('save_changes', 'Değişiklikleri Kaydet') }}</button>
 </div>
 </form>
 </div>
@@ -168,12 +168,19 @@
 <div class="tab-pane fade" id="results" role="tabpanel">
 <div class="card shadow-sm border-0">
 <div class="card-body">
-<h5 class="mb-4">{{ _('survey_results', 'Anket Sonuçları') }}</h5>
+<div class="d-flex justify-content-between align-items-center mb-4">
+<h5 class="mb-0">{{ lang('survey_results', 'Anket Sonuçları') }}</h5>
+<form action="{{ url_for('create_training_plan_from_survey', survey_id=survey.id) }}" method="POST" onsubmit="return confirm('{{ lang('confirm_training_plan', 'Anket sonuçlarına göre otomatik eğitim planı oluşturmak istiyor musunuz?') }}');">
+<button class="btn btn-success" type="submit">
+<i class="fas fa-graduation-cap"></i> {{ lang('create_training_plan', 'Eğitim Planı Oluştur') }}
+</button>
+</form>
+</div>
 <div class="row text-center mb-4">
 <div class="col-md-4">
 <div class="p-3 bg-light rounded">
 <h3>{{ survey.response_count }}</h3>
-<span class="text-muted">{{ _('total_responses', 'Toplam Yanıt') }}</span>
+<span class="text-muted">{{ lang('total_responses', 'Toplam Yanıt') }}</span>
 </div>
 </div>
 </div>
@@ -183,10 +190,10 @@
 <table class="table table-hover">
 <thead>
 <tr>
-<th>{{ _('respondent', 'Katılımcı') }}</th>
-<th>{{ _('company', 'Firma') }}</th>
-<th>{{ _('date', 'Tarih') }}</th>
-<th>{{ _('actions', 'İşlemler') }}</th>
+<th>{{ lang('respondent', 'Katılımcı') }}</th>
+<th>{{ lang('company', 'Firma') }}</th>
+<th>{{ lang('date', 'Tarih') }}</th>
+<th>{{ lang('actions', 'İşlemler') }}</th>
 </tr>
 </thead>
 <tbody>
@@ -196,7 +203,7 @@
 <td>{{ r.respondent_company or '-' }}</td>
 <td>{{ r.submitted_at }}</td>
 <td>
-<button class="btn btn-sm btn-outline-info">{{ _('view', 'Görüntüle') }}</button>
+<button class="btn btn-sm btn-outline-info">{{ lang('view', 'Görüntüle') }}</button>
 </td>
 </tr>
                                     {% endfor %}
@@ -204,7 +211,7 @@
 </table>
 </div>
                         {% else %}
-                        <p class="text-center text-muted py-4">{{ _('no_responses_yet', 'Henüz yanıt yok.') }}</p>
+                        <p class="text-center text-muted py-4">{{ lang('no_responses_yet', 'Henüz yanıt yok.') }}</p>
                         {% endif %}
                     </div>
 </div>
@@ -217,13 +224,13 @@
 <div class="modal-dialog">
 <div class="modal-content">
 <div class="modal-header">
-<h5 class="modal-title">{{ _('add_new_question', 'Yeni Soru Ekle') }}</h5>
+<h5 class="modal-title">{{ lang('add_new_question', 'Yeni Soru Ekle') }}</h5>
 <button class="btn-close" data-bs-dismiss="modal" type="button"></button>
 </div>
 <form action="{{ url_for('add_survey_question', survey_id=survey.id) }}" method="POST">
 <div class="modal-body">
 <div class="mb-3">
-<label class="form-label">{{ _('category', 'Kategori') }}</label>
+<label class="form-label">{{ lang('category', 'Kategori') }}</label>
 <select class="form-select" name="category">
 <option value="Environmental">Çevresel</option>
 <option value="Social">Sosyal</option>
@@ -232,11 +239,11 @@
 </select>
 </div>
 <div class="mb-3">
-<label class="form-label">{{ _('question_text', 'Soru Metni') }}</label>
+<label class="form-label">{{ lang('question_text', 'Soru Metni') }}</label>
 <textarea class="form-control" name="question_text" required="" rows="2"></textarea>
 </div>
 <div class="mb-3">
-<label class="form-label">{{ _('question_type', 'Soru Tipi') }}</label>
+<label class="form-label">{{ lang('question_type', 'Soru Tipi') }}</label>
 <select class="form-select" name="question_type">
 <option value="scale_1_5">1-5 Ölçeği (Önem Düzeyi)</option>
 <option value="text">Açık Uçlu (Metin)</option>
@@ -245,12 +252,12 @@
 </div>
 <div class="form-check">
 <input checked="" class="form-check-input" id="is_req" name="is_required" type="checkbox"/>
-<label class="form-check-label" for="is_req">{{ _('required', 'Zorunlu') }}</label>
+<label class="form-check-label" for="is_req">{{ lang('required', 'Zorunlu') }}</label>
 </div>
 </div>
 <div class="modal-footer">
-<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ _('cancel', 'İptal') }}</button>
-<button class="btn btn-primary" type="submit">{{ _('add', 'Ekle') }}</button>
+<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ lang('cancel', 'İptal') }}</button>
+<button class="btn btn-primary" type="submit">{{ lang('add', 'Ekle') }}</button>
 </div>
 </form>
 </div>
@@ -261,13 +268,13 @@
 <div class="modal-dialog">
 <div class="modal-content">
 <div class="modal-header">
-<h5 class="modal-title">{{ _('edit_question', 'Soruyu Düzenle') }}</h5>
+<h5 class="modal-title">{{ lang('edit_question', 'Soruyu Düzenle') }}</h5>
 <button class="btn-close" data-bs-dismiss="modal" type="button"></button>
 </div>
 <form action="" id="editQuestionForm" method="POST">
 <div class="modal-body">
 <div class="mb-3">
-<label class="form-label">{{ _('category', 'Kategori') }}</label>
+<label class="form-label">{{ lang('category', 'Kategori') }}</label>
 <select class="form-select" id="edit_category" name="category">
 <option value="Environmental">Çevresel</option>
 <option value="Social">Sosyal</option>
@@ -276,11 +283,11 @@
 </select>
 </div>
 <div class="mb-3">
-<label class="form-label">{{ _('question_text', 'Soru Metni') }}</label>
+<label class="form-label">{{ lang('question_text', 'Soru Metni') }}</label>
 <textarea class="form-control" id="edit_question_text" name="question_text" required="" rows="2"></textarea>
 </div>
 <div class="mb-3">
-<label class="form-label">{{ _('question_type', 'Soru Tipi') }}</label>
+<label class="form-label">{{ lang('question_type', 'Soru Tipi') }}</label>
 <select class="form-select" id="edit_question_type" name="question_type">
 <option value="scale_1_5">1-5 Ölçeği (Önem Düzeyi)</option>
 <option value="text">Açık Uçlu (Metin)</option>
@@ -289,12 +296,12 @@
 </div>
 <div class="form-check">
 <input class="form-check-input" id="edit_is_required" name="is_required" type="checkbox"/>
-<label class="form-check-label" for="edit_is_required">{{ _('required', 'Zorunlu') }}</label>
+<label class="form-check-label" for="edit_is_required">{{ lang('required', 'Zorunlu') }}</label>
 </div>
 </div>
 <div class="modal-footer">
-<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ _('cancel', 'İptal') }}</button>
-<button class="btn btn-primary" type="submit">{{ _('save_changes', 'Değişiklikleri Kaydet') }}</button>
+<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ lang('cancel', 'İptal') }}</button>
+<button class="btn btn-primary" type="submit">{{ lang('save_changes', 'Değişiklikleri Kaydet') }}</button>
 </div>
 </form>
 </div>
@@ -316,7 +323,7 @@ function openEditModal(id, text, category, type, required) {
 <div class="modal-dialog modal-lg">
 <div class="modal-content">
 <div class="modal-header">
-<h5 class="modal-title">{{ _('add_standard_questions', 'Standart Soru Ekle') }}</h5>
+<h5 class="modal-title">{{ lang('add_standard_questions', 'Standart Soru Ekle') }}</h5>
 <button class="btn-close" data-bs-dismiss="modal" type="button"></button>
 </div>
 <form action="{{ url_for('add_standard_survey_questions', survey_id=survey.id) }}" method="POST">
@@ -338,7 +345,7 @@ function openEditModal(id, text, category, type, required) {
                         <div class="tab-pane fade {% if loop.first %}show active{% endif %}" id="cat-{{ loop.index }}" role="tabpanel">
 <div class="mb-2 form-check">
 <input class="form-check-input select-all" data-target="group-{{ loop.index }}" id="select-all-{{ loop.index }}" type="checkbox"/>
-<label class="form-check-label fw-bold" for="select-all-{{ loop.index }}">{{ _('select_all', 'Tümünü Seç') }}</label>
+<label class="form-check-label fw-bold" for="select-all-{{ loop.index }}">{{ lang('select_all', 'Tümünü Seç') }}</label>
 </div>
 <hr/>
 <div class="question-group" id="group-{{ loop.index }}">
@@ -364,8 +371,8 @@ function openEditModal(id, text, category, type, required) {
                     </div>
 </div>
 <div class="modal-footer">
-<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ _('cancel', 'İptal') }}</button>
-<button class="btn btn-primary" type="submit">{{ _('add_selected', 'Seçilenleri Ekle') }}</button>
+<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ lang('cancel', 'İptal') }}</button>
+<button class="btn btn-primary" type="submit">{{ lang('add_selected', 'Seçilenleri Ekle') }}</button>
 </div>
 </form>
 </div>
@@ -390,17 +397,17 @@ document.addEventListener('DOMContentLoaded', function() {
 <div class="modal-dialog">
 <div class="modal-content">
 <div class="modal-header">
-<h5 class="modal-title">{{ _('delete_survey', 'Anketi Sil') }}</h5>
+<h5 class="modal-title">{{ lang('delete_survey', 'Anketi Sil') }}</h5>
 <button class="btn-close" data-bs-dismiss="modal" type="button"></button>
 </div>
 <div class="modal-body">
-<p>{{ _('confirm_delete_survey', 'Bu anketi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.') }}</p>
+<p>{{ lang('confirm_delete_survey', 'Bu anketi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.') }}</p>
 <p class="fw-bold" id="deleteSurveyTitle"></p>
 </div>
 <div class="modal-footer">
-<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ _('cancel', 'İptal') }}</button>
+<button class="btn btn-secondary" data-bs-dismiss="modal" type="button">{{ lang('cancel', 'İptal') }}</button>
 <form action="" id="deleteSurveyForm" method="POST" style="display: inline;">
-<button class="btn btn-danger" type="submit">{{ _('delete', 'Sil') }}</button>
+<button class="btn btn-danger" type="submit">{{ lang('delete', 'Sil') }}</button>
 </form>
 </div>
 </div>

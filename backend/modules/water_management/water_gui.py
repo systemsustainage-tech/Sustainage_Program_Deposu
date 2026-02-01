@@ -1384,7 +1384,7 @@ Icons.TIME {self.lm.tr('record_info', 'KAYIT BİLGİLERİ')}:
                 return
             path = self.reporting.generate_excel_report(self.company_id, period)
             self.last_water_report_path = path
-            messagebox.showinfo(self.lm.tr('report', 'Rapor'), f"{self.lm.tr('excel_report_created', 'Excel rapor oluşturuldu')}:\n{path}")
+            messagebox.showinfo(self.lm.tr("report_label", "Rapor"), f"{self.lm.tr('excel_report_created', 'Excel rapor oluşturuldu')}:\n{path}")
         except Exception as e:
             messagebox.showerror(self.lm.tr('error', 'Hata'), f"{self.lm.tr('excel_report_error', 'Excel rapor oluşturulamadı')}: {e}")
 

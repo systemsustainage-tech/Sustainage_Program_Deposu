@@ -23,8 +23,48 @@ class SDGManager:
             
         try:
             os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
+            self._create_tables()
         except Exception as e:
             logging.error(f"Silent error caught: {str(e)}")
+
+    def _create_tables(self):
+        """Gerekli tabloları oluştur"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        try:
+            # sdg_responses tablosu
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS sdg_responses (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    company_id INTEGER,
+                    indicator_id INTEGER,
+                    period TEXT,
+                    value TEXT,
+                    unit TEXT,
+                    evidence TEXT,
+                    status TEXT DEFAULT 'pending',
+                    progress_pct INTEGER DEFAULT 0,
+                    action TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            # user_sdg_selections tablosu
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS user_sdg_selections (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    company_id INTEGER,
+                    goal_id INTEGER,
+                    selected_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(company_id, goal_id)
+                )
+            """)
+            conn.commit()
+        except Exception as e:
+            logging.error(f"Error creating tables: {e}")
+        finally:
+            conn.close()
 
     def get_connection(self) -> sqlite3.Connection:
         """Veritabanı bağlantısı"""

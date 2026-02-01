@@ -361,7 +361,7 @@ NOTLAR:
 
         # AI cagrisi
         report_type = self.report_type_var.get()
-        summary = self.manager.generate_summary(data, report_type)
+        summary, log_id = self.manager.generate_summary(data, report_type)
 
         # Sonucu goster
         self.result_text.delete('1.0', tk.END)
