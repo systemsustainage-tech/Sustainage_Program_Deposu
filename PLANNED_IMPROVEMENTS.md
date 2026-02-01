@@ -43,7 +43,7 @@
   - Added "Recent Activities" and "Pending Actions" list to Dashboard.
 - [x] **Dashboard Charts**
   - Added specific charts for ISO 26000 modules (Social Performance Radar Chart).
-- [ ] **Supply Chain Advanced Features**
+- [x] **Supply Chain Advanced Features**
   - Implement Bulk Risk Import (Excel/CSV).
   - Add Real-time Risk Alerts system.
 - [ ] **Dashboard Advanced Filtering**

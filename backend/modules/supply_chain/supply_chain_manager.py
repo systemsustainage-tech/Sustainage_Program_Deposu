@@ -101,6 +101,128 @@ class SupplyChainManager:
         conn.close()
         return dict(row) if row else None
 
+    # --- Bulk Import & Alerts ---
+
+    def import_risks_from_excel(self, company_id: int, file_path: str) -> Dict[str, int]:
+        """
+        Imports supplier risks from an Excel file.
+        Expected columns: 'Tedarikçi Adı', 'Risk Kategorisi', 'Risk Açıklaması', 'Olasılık', 'Etki', 'Azaltma Planı'
+        """
+        import pandas as pd
+        
+        results = {"success": 0, "errors": 0, "details": []}
+        
+        try:
+            df = pd.read_excel(file_path)
+            # Normalize columns
+            df.columns = [c.strip() for c in df.columns]
+            
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            for index, row in df.iterrows():
+                try:
+                    supplier_name = row.get('Tedarikçi Adı')
+                    if not supplier_name:
+                        continue
+                        
+                    # Find supplier ID
+                    cursor.execute("SELECT id FROM supplier_profiles WHERE name = ? AND company_id = ?", (supplier_name, company_id))
+                    supplier_row = cursor.fetchone()
+                    
+                    if not supplier_row:
+                        results["errors"] += 1
+                        results["details"].append(f"Row {index+2}: Supplier '{supplier_name}' not found.")
+                        continue
+                        
+                    supplier_id = supplier_row[0]
+                    
+                    risk_category = row.get('Risk Kategorisi', 'General')
+                    risk_desc = row.get('Risk Açıklaması', '')
+                    probability = int(row.get('Olasılık', 1))
+                    impact = int(row.get('Etki', 1))
+                    mitigation = row.get('Azaltma Planı', '')
+                    
+                    # Validate probability and impact
+                    probability = max(1, min(5, probability))
+                    impact = max(1, min(5, impact))
+                    risk_score = probability * impact
+                    
+                    cursor.execute("""
+                        INSERT INTO supplier_risks (supplier_id, company_id, risk_category, risk_description, probability, impact, risk_score, mitigation_plan)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (supplier_id, company_id, risk_category, risk_desc, probability, impact, risk_score, mitigation))
+                    
+                    results["success"] += 1
+                    
+                except Exception as row_error:
+                    results["errors"] += 1
+                    results["details"].append(f"Row {index+2}: {str(row_error)}")
+            
+            conn.commit()
+            conn.close()
+            
+        except Exception as e:
+            self.logger.error(f"Bulk import error: {e}")
+            results["errors"] += 1
+            results["details"].append(f"File Error: {str(e)}")
+            
+        return results
+
+    def get_high_risk_alerts(self, company_id: int) -> List[Dict]:
+        """
+        Returns a list of high-risk suppliers (Score < 50) or those with recent high-risk incidents.
+        """
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        # Get suppliers with low overall risk score (calculated elsewhere, but assuming we store it or calculate it)
+        # For now, let's use the 'risk_score' column in supplier_profiles if it exists, or aggregate from risks
+        
+        # Check if risk_score column exists in supplier_profiles (it should based on templates)
+        # Assuming it is updated via triggers or manual updates.
+        # Let's fallback to calculating from supplier_risks if needed.
+        
+        alerts = []
+        
+        # 1. High Risk Suppliers (Score < 50)
+        cursor.execute("""
+            SELECT id, name, risk_score FROM supplier_profiles
+            WHERE company_id = ? AND risk_score < 50
+            ORDER BY risk_score ASC
+        """, (company_id,))
+        
+        high_risk_suppliers = cursor.fetchall()
+        for s in high_risk_suppliers:
+            alerts.append({
+                "type": "High Risk Supplier",
+                "message": f"Supplier '{s['name']}' has a CRITICAL risk score of {s['risk_score']}.",
+                "link": f"/supply_chain/profile/{s['id']}",
+                "level": "danger"
+            })
+            
+        # 2. Recent High Impact Risks (Impact >= 4)
+        cursor.execute("""
+            SELECT r.id, s.name, r.risk_category, r.created_at
+            FROM supplier_risks r
+            JOIN supplier_profiles s ON r.supplier_id = s.id
+            WHERE r.company_id = ? AND r.impact >= 4 AND r.status = 'Active'
+            ORDER BY r.created_at DESC
+            LIMIT 5
+        """, (company_id,))
+        
+        recent_risks = cursor.fetchall()
+        for r in recent_risks:
+            alerts.append({
+                "type": "Critical Risk Detected",
+                "message": f"New critical risk '{r['risk_category']}' detected for {r['name']}.",
+                "link": f"/supply_chain/profile/{s['id']}#risks",
+                "level": "warning"
+            })
+            
+        conn.close()
+        return alerts
+
     def get_supplier_scorecard(self, supplier_id: int, company_id: int) -> Dict:
         """Aggregates data for a supplier scorecard."""
         profile = self.get_supplier(supplier_id, company_id)

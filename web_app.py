@@ -10563,6 +10563,9 @@ def supply_chain_module():
     conn.close()
     
     suppliers = [dict(row) for row in rows]
+
+    # Get Alerts
+    alerts = manager.get_high_risk_alerts(g.company_id)
     
     import math
     from types import SimpleNamespace
@@ -10579,7 +10582,47 @@ def supply_chain_module():
         iter_pages=lambda: range(1, total_pages + 1)
     )
     
-    return render_template('supply_chain.html', suppliers=suppliers, pagination=pagination, search=search, risk_filter=risk_filter)
+    return render_template('supply_chain.html', suppliers=suppliers, pagination=pagination, search=search, risk_filter=risk_filter, alerts=alerts)
+
+@app.route('/supply_chain/import_risks', methods=['POST'])
+@require_company_context
+def supply_chain_import_risks():
+    if 'user' not in session: return redirect(url_for('login'))
+    
+    if 'file' not in request.files:
+        flash('Dosya seçilmedi.', 'danger')
+        return redirect(url_for('supply_chain_module'))
+        
+    file = request.files['file']
+    if file.filename == '':
+        flash('Dosya seçilmedi.', 'danger')
+        return redirect(url_for('supply_chain_module'))
+        
+    if file and (file.filename.endswith('.xlsx') or file.filename.endswith('.xls')):
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(BACKEND_DIR, 'data', 'temp', filename)
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        file.save(filepath)
+        
+        manager = SupplyChainManager(DB_PATH)
+        result = manager.import_risks_from_excel(g.company_id, filepath)
+        
+        # Cleanup
+        try:
+            os.remove(filepath)
+        except:
+            pass
+            
+        if result['errors'] == 0:
+            flash(f"Başarıyla içe aktarıldı: {result['success']} risk kaydı.", 'success')
+        else:
+            flash(f"İşlem tamamlandı: {result['success']} başarılı, {result['errors']} hatalı.", 'warning')
+            for err in result['details'][:5]:
+                flash(err, 'danger')
+    else:
+        flash('Geçersiz dosya formatı. Lütfen Excel (.xlsx) dosyası yükleyin.', 'danger')
+        
+    return redirect(url_for('supply_chain_module'))
 
 @app.route('/supply_chain/add_supplier', methods=['POST'])
 @require_company_context

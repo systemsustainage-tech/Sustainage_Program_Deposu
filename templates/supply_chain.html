@@ -17,6 +17,30 @@
     </div>
 </div>
 
+{% if alerts %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-warning">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Önemli Risk Uyarıları</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    {% for alert in alerts %}
+                    <a href="{{ alert.link }}" class="list-group-item list-group-item-action list-group-item-{{ alert.level }}">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h5 class="mb-1">{{ alert.type }}</h5>
+                        </div>
+                        <p class="mb-1">{{ alert.message }}</p>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <div class="card mb-4 shadow-sm">
     <div class="card-body">
         <form method="get" action="{{ url_for('supply_chain_module') }}" class="row g-3 align-items-end">
@@ -48,9 +72,14 @@
         <div class="card shadow-sm border-0">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">Tedarikçi Listesi</h5>
-                <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addSupplierModal">
-                    <i class="fas fa-plus"></i> Yeni Tedarikçi Ekle
-                </button>
+                <div>
+                    <button class="btn btn-outline-primary btn-sm me-2" data-bs-toggle="modal" data-bs-target="#importRisksModal">
+                        <i class="fas fa-file-import"></i> Riskleri İçe Aktar
+                    </button>
+                    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addSupplierModal">
+                        <i class="fas fa-plus"></i> Yeni Tedarikçi Ekle
+                    </button>
+                </div>
             </div>
             <div class="card-body">
                 {% if suppliers %}
@@ -145,4 +174,30 @@
         </div>
     </div>
 </div>
+
+<!-- Import Risks Modal -->
+<div class="modal fade" id="importRisksModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="{{ url_for('supply_chain_import_risks') }}" method="POST" enctype="multipart/form-data">
+                <div class="modal-header">
+                    <h5 class="modal-title">Risk Verilerini İçe Aktar (Excel)</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small">Excel dosyanız şu sütunları içermelidir: Tedarikçi Adı, Risk Kategorisi, Risk Açıklaması, Olasılık (1-5), Etki (1-5), Azaltma Planı</p>
+                    <div class="mb-3">
+                        <label for="file" class="form-label">Excel Dosyası Seç</label>
+                        <input class="form-control" type="file" id="file" name="file" accept=".xlsx, .xls" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-primary">Yükle ve İçe Aktar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
