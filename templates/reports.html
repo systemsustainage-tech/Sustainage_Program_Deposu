@@ -90,7 +90,7 @@
                     <a class="btn btn-sm btn-outline-info" href="{{ url_for('view_report', report_id=report['id']) }}" target="_blank" title="{{ lang('view') }}"><i class="bi bi-eye"></i></a>
                     <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('report_download', report_id=report['id']) }}" title="{{ lang('download') }}"><i class="bi bi-download"></i></a>
                     {% if session.role|lower in ['admin', 'super_admin', 'test admin'] %}
-                    <form action="{{ url_for('report_delete', report_id=report['id']) }}" method="POST" onsubmit="return confirm('{{ lang('confirm_delete_report') }}');" style="display:inline;">
+                    <form action="{{ url_for('report_delete', report_id=report['id']) }}" method="POST" onsubmit="return confirm('{{ lang('confirm_delete_report') | replace("'", "\\'") }}');" style="display:inline;">
                         <button class="btn btn-sm btn-outline-danger" title="{{ lang('delete') }}" type="submit"><i class="bi bi-trash"></i></button>
                     </form>
                     {% endif %}
