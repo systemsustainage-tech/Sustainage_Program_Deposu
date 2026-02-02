@@ -88,9 +88,9 @@
 <i class="bi bi-pencil"></i>
 </a>
                     {% if user.id != session.user_id %}
-                    <a class="btn btn-sm btn-outline-danger" href="{{ url_for('user_delete', user_id=user.id) }}" onclick="return confirm('{{ lang('users_confirm_delete') }}');" title="{{ lang('common_delete') }}">
-<i class="bi bi-trash"></i>
-</a>
+                    <a class="btn btn-sm btn-outline-danger btn-delete-user" href="{{ url_for('user_delete', user_id=user.id) }}" data-confirm-message="{{ lang('users_confirm_delete') }}" title="{{ lang('common_delete') }}">
+                        <i class="bi bi-trash"></i>
+                    </a>
                     {% endif %}
                     {% endif %}
                 </td>

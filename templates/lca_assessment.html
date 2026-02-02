@@ -85,7 +85,7 @@
                                 <td>{{ "%.2f"|format(entry.quantity * entry.co2e_factor) }}</td>
                                 <td>
                                     <form action="{{ url_for('lca_delete_entry', assessment_id=assessment.id, entry_id=entry.id) }}" method="POST" class="d-inline">
-                                        <button type="submit" class="btn btn-sm btn-link text-danger p-0" onclick="return confirm('Silmek istediğinize emin misiniz?')">
+                                        <button type="submit" class="btn btn-sm btn-link text-danger p-0 btn-confirm-delete" data-confirm-message="Silmek istediğinize emin misiniz?">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     </form>
@@ -174,9 +174,22 @@
     </div>
 </div>
 
+{% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Confirm delete handling
+    const deleteButtons = document.querySelectorAll('.btn-confirm-delete');
+    deleteButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            const msg = this.getAttribute('data-confirm-message');
+            if (!confirm(msg)) {
+                e.preventDefault();
+            }
+        });
+    });
+
+    // Chart initialization
     const ctx = document.getElementById('stageChart').getContext('2d');
     const data = {
         labels: ['Hammadde', 'Üretim', 'Dağıtım', 'Kullanım', 'Bertaraf'],

@@ -2,6 +2,22 @@
 
 {% block title %}Yedekleme ve Geri Yükleme{% endblock %}
 
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const restoreButtons = document.querySelectorAll('.btn-confirm-restore');
+        restoreButtons.forEach(button => {
+            button.addEventListener('click', function(e) {
+                const msg = this.getAttribute('data-confirm-message');
+                if (!confirm(msg)) {
+                    e.preventDefault();
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}
+
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
 <div>
@@ -149,7 +165,7 @@
 <form class="d-inline" method="post">
 <input name="action" type="hidden" value="restore"/>
 <input name="backup_id" type="hidden" value="{{ b.id }}"/>
-<button class="btn btn-sm btn-outline-warning" onclick="return confirm('Seçili yedeği geri yüklemek istediğinize emin misiniz? İşlem geri alınamaz.');" type="submit">
+<button class="btn btn-sm btn-outline-warning btn-confirm-restore" data-confirm-message="Seçili yedeği geri yüklemek istediğinize emin misiniz? İşlem geri alınamaz." type="submit">
                                                 Geri Yükle
                                             </button>
 </form>

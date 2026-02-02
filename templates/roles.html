@@ -2,6 +2,22 @@
 
 {% block title %}{{ lang('roles_page_title', 'Rol Yönetimi') }}{% endblock %}
 
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const deleteButtons = document.querySelectorAll('.btn-delete-role');
+        deleteButtons.forEach(button => {
+            button.addEventListener('click', function(e) {
+                const msg = this.getAttribute('data-confirm-message');
+                if (!confirm(msg)) {
+                    e.preventDefault();
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}
+
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">{{ lang('roles_header', 'Rol Yönetimi') }}</h1>
@@ -58,7 +74,7 @@
                         <i class="bi bi-pencil"></i>
                     </a>
                     {% if not role.is_system_role %}
-                    <a class="btn btn-sm btn-outline-danger" href="{{ url_for('role_delete', role_id=role.id) }}" onclick="return confirm('{{ lang('roles_confirm_delete', 'Bu rolü silmek istediğinize emin misiniz?') }}');" title="{{ lang('common_delete', 'Sil') }}">
+                    <a class="btn btn-sm btn-outline-danger btn-delete-role" href="{{ url_for('role_delete', role_id=role.id) }}" data-confirm-message="{{ lang('roles_confirm_delete', 'Bu rolü silmek istediğinize emin misiniz?') }}" title="{{ lang('common_delete', 'Sil') }}">
                         <i class="bi bi-trash"></i>
                     </a>
                     {% endif %}
