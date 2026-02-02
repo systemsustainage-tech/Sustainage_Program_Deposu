@@ -33,6 +33,7 @@ matplotlib>=3.7.0        # Grafik ve görselleştirme
 flask>=3.0.0             # Web framework (web versiyonu için)
 flask-cors>=4.0.0        # CORS desteği
 Flask-Session>=0.5.0     # Session yönetimi
+Flask-Compress>=1.14.0   # Gzip sıkıştırma (Performance)
 gunicorn>=21.0.0         # Production web sunucusu
 
 # === TEST ===

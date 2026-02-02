@@ -10,7 +10,7 @@ KEY_FILE = os.path.expanduser("~/.ssh/id_rsa")
 # Directories to sync (recursive)
 DIRS_TO_SYNC = ["templates", "anket", "tools", "locales", "static"]
 # Files to sync (in root)
-FILES_TO_SYNC = ["web_app.py", "requirements.txt", "wsgi.py"]
+FILES_TO_SYNC = ["web_app.py", "requirements.txt", "wsgi.py", "gunicorn_config.py"]
 
 # Exclude patterns
 EXCLUDE_EXT = ['.pyc', '.pyo', '.git', '.DS_Store']

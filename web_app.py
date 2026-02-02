@@ -11,6 +11,7 @@ from typing import Optional, Dict, List
 from types import SimpleNamespace
 from werkzeug.utils import secure_filename
 from flask import Flask, render_template, redirect, url_for, session, request, flash, send_file, g, jsonify, has_request_context, make_response
+from flask_compress import Compress # Performance optimization
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 BACKEND_DIR = os.path.join(BASE_DIR, 'backend')
@@ -223,6 +224,8 @@ def require_company_context(f):
     return decorated_function
 
 app = Flask(__name__)
+# Enable Gzip Compression
+Compress(app)
 
 # Cache busting version (updates on server restart)
 APP_VERSION = int(time.time())
@@ -297,6 +300,34 @@ def gettext(key, *args):
 
 app.jinja_env.globals.update(_=gettext)
 app.jinja_env.globals.update(lang=gettext)
+
+# Performance & Security Headers
+@app.after_request
+def add_security_headers(response):
+    # HSTS (HTTP Strict Transport Security) - Force HTTPS for 1 year
+    if request.is_secure:
+        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    
+    # X-Content-Type-Options - Prevent MIME sniffing
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    
+    # X-Frame-Options - Prevent Clickjacking (allow from same origin)
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+    
+    # Cache Control for Static Assets
+    if request.path.startswith('/static'):
+        # Cache for 1 week (604800 seconds)
+        response.headers['Cache-Control'] = 'public, max-age=604800'
+    
+    return response
+
+# Enable Jinja2 Bytecode Cache (if not already enabled by default)
+# Note: Jinja2 in Flask usually uses an in-memory cache, but we can be explicit if needed.
+# For now, relying on default environment behavior is often sufficient, 
+# but ensuring 'TEMPLATES_AUTO_RELOAD' is False in production helps.
+if not app.debug:
+    app.config['TEMPLATES_AUTO_RELOAD'] = False
+
 
 # Define _ in global scope for Python code usage
 _ = gettext
