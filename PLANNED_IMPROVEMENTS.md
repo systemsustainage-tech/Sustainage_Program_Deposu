@@ -48,5 +48,11 @@
   - Add Real-time Risk Alerts system.
 - [x] **Dashboard Advanced Filtering**
   - Add Date Range and Module-specific filters.
-- [ ] **Mobile Responsiveness Check**
-  - Verify all new forms and tables on mobile view.
+- [x] **Fair Operating Practices Module (ISO 26000)**
+  - Implement full CRUD functionality.
+  - Add "Add New" modal and data entry form.
+  - Ensure statistics calculation.
+  - Deployed and Verified.
+- [x] **Mobile Responsiveness Check**
+  - Verified all new forms and tables on mobile view.
+  - Improved responsiveness of Reports filter form.

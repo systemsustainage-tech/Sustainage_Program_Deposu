@@ -10,7 +10,7 @@
             <h1><i class="bi bi-people me-2"></i>{{ lang('community_involvement_title', 'Toplumsal Katılım') }}</h1>
             <div>
                 <span class="badge bg-{{ 'success' if manager_available else 'secondary' }}">
-                    {{ lang('module_active_badge') if manager_available else _('module_passive_badge') }}
+                    {{ lang('module_active_badge') if manager_available else lang('module_passive_badge') }}
                 </span>
                 <button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}</button>
             </div>
@@ -36,7 +36,7 @@
                                     {% for key, value in stats.items() %}
                                     <div class="col-md-3 mb-3">
                                         <div class="border rounded p-3 text-center bg-light">
-                                            <h6 class="text-muted text-uppercase small">{{ key|replace('_', ' ')|title }}</h6>
+                                            <h6 class="text-muted text-uppercase small">{{ lang(key, key|replace('_', ' ')|title) }}</h6>
                                             <h3 class="mb-0 text-primary">{{ value }}</h3>
                                         </div>
                                     </div>
@@ -52,7 +52,7 @@
                             <div class="card-header d-flex justify-content-between align-items-center">
                                 <h5 class="mb-0">{{ lang('records', 'Kayıtlar') }}</h5>
                                 <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addModal">
-                                    <i class="fas fa-plus"></i> {{ lang('add_new', 'Yeni Ekle') }}
+                                    <i class="fas fa-plus"></i> {{ lang('btn_add_data', 'Yeni Veri Girişi') }}
                                 </button>
                             </div>
                             <div class="card-body">
@@ -63,7 +63,7 @@
                                             <tr>
                                                 {% if columns %}
                                                     {% for col in columns %}
-                                                    <th>{{ col|replace('_', ' ')|title }}</th>
+                                                    <th>{{ lang(col, col|replace('_', ' ')|title) }}</th>
                                                     {% endfor %}
                                                 {% else %}
                                                     <th>{{ lang('details', 'Detaylar') }}</th>

@@ -10,7 +10,7 @@
             <h1><i class="fas fa-gavel me-2"></i>{{ lang('regulation_title') }}</h1>
             <div>
                 <span class="badge bg-{{ 'success' if manager_available else 'danger' }}">
-                    {{ lang('module_active_badge') if manager_available else _('module_passive_badge') }}
+                    {{ lang('module_active_badge') if manager_available else lang('module_passive_badge') }}
                 </span>
                 <button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}</button>
             </div>

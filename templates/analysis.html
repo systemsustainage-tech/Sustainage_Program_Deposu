@@ -10,7 +10,7 @@
 <h1><i class="fas fa-cube me-2"></i>{{ lang('analysis_title', 'Önceliklendirme Analizi') }}</h1>
 <div>
 <span class="badge bg-{{ 'success' if manager_available else 'secondary' }}">
-                    {{ lang('module_active_badge', 'Aktif') if manager_available else _('module_passive_badge', 'Pasif') }}
+                    {{ lang('module_active_badge', 'Aktif') if manager_available else lang('module_passive_badge', 'Pasif') }}
                 </span>
 <button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}</button></div>
 </div>

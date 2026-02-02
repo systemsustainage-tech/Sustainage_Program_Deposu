@@ -3827,7 +3827,8 @@ def public_survey(token):
         conn = get_db()
         
         # Anket var mı kontrol et
-        row = conn.execute("SELECT * FROM online_surveys WHERE survey_link = ? AND is_active = 1", (f"/survey/{token}",)).fetchone()
+        # Check for both exact path and full URL match (ending with token)
+        row = conn.execute("SELECT * FROM online_surveys WHERE (survey_link = ? OR survey_link LIKE ?) AND is_active = 1", (f"/survey/{token}", f"%/{token}")).fetchone()
         
         if not row:
             conn.close()
@@ -4174,11 +4175,11 @@ def super_admin_audit_logs():
     )
 
 # Supplier Portal Blueprint
-try:
-    from modules.supplier_portal import supplier_portal_bp
-    app.register_blueprint(supplier_portal_bp)
-except Exception as e:
-    logging.error(f"Supplier Portal Blueprint registration error: {e}")
+# try:
+#     from modules.supplier_portal import supplier_portal_bp
+#     app.register_blueprint(supplier_portal_bp)
+# except Exception as e:
+#     logging.error(f"Supplier Portal Blueprint registration error: {e}")
 
 def check_and_migrate_schema():
     """Checks and migrates database schema on startup"""

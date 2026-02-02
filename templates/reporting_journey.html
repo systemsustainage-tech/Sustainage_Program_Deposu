@@ -115,7 +115,7 @@
                         {% set completed_count = journey|selectattr("status", "equalto", "completed")|list|length %}
                         {% set total_count = journey|length %}
                         {% set percent = (completed_count / total_count * 100)|round|int %}
-                        <div aria-valuemax="100" aria-valuemin="0" aria-valuenow="{{ percent }}" class="progress-bar progress-bar-striped progress-bar-animated bg-success" role="progressbar" style="width: {{ percent }}%;">
+                        <div aria-valuemax="100" aria-valuemin="0" aria-valuenow="{{ percent }}" class="progress-bar progress-bar-striped progress-bar-animated bg-success" role="progressbar" style="width: 0%;" data-width="{{ percent }}">
                              %{{ percent }} Tamamlandı
                         </div>
 </div>

@@ -5991,5 +5991,12 @@
     "privacy": "Privacy",
     "site_name": "Site Name",
     "compliant": "Compliant",
-    "resolution_status": "Resolution Status"
+    "resolution_status": "Resolution Status",
+    "app.title": "Title",
+    "common.btn_cancel": "Btn Cancel",
+    "common.btn_save": "Btn Save",
+    "common.save": "Save",
+    "confirm_delete_selected": "Confirm Delete Selected",
+    "delete_selected": "Delete Selected",
+    "sdg.data_entry": "Sdg Data Entry"
 }

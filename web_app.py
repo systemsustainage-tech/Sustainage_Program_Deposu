@@ -1150,6 +1150,29 @@ def reset_password_web():
 
 from backend.core.reporting_journey_manager import ReportingJourneyManager
 
+@app.route('/environmental')
+@require_company_context
+def environmental():
+    if 'user' not in session: return redirect(url_for('login'))
+    
+    company_id = g.company_id
+    stats = {}
+    records = []
+    columns = []
+    manager_available = True
+    
+    try:
+        # Aggregate stats from sub-modules
+        for mgr_key in ['carbon', 'water', 'waste', 'biodiversity']:
+            if mgr_key in MANAGERS:
+                mgr = MANAGERS[mgr_key]
+                # specific logic to pull summary stats if needed
+                pass
+    except Exception as e:
+        logging.error(f"Environmental page error: {e}")
+        
+    return render_template('environmental.html', title=language_manager.get_text('environmental_title', 'Environmental'), stats=stats, records=records, columns=columns, manager_available=manager_available)
+
 @app.route('/journey')
 @require_company_context
 def reporting_journey():
@@ -1211,6 +1234,12 @@ def analysis():
 def dashboard():
     if 'user' not in session:
         return redirect(url_for('login'))
+    
+    # Get filter parameters
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    module_filter = request.args.get('module_filter')
+
     stats: Dict[str, int] = {}
     try:
         conn = get_db()
@@ -3797,11 +3826,13 @@ def public_survey(token):
         conn = get_db()
         
         # Anket var mı kontrol et
-        query = "SELECT * FROM online_surveys WHERE survey_link = ? AND is_active = 1"
-        param = f"/survey/{token}"
-        logging.info(f"Executing query: {query} with param: {param}")
+        # Check for both exact path and full URL match (ending with token)
+        query = "SELECT * FROM online_surveys WHERE (survey_link = ? OR survey_link LIKE ?) AND is_active = 1"
+        param1 = f"/survey/{token}"
+        param2 = f"%/{token}"
+        logging.info(f"Executing query: {query} with params: {param1}, {param2}")
         
-        row = conn.execute(query, (param,)).fetchone()
+        row = conn.execute(query, (param1, param2)).fetchone()
         
         if not row:
             logging.warning(f"Survey not found for token: {token}")
@@ -5587,8 +5618,40 @@ def report_download(report_id):
             return redirect(url_for('reports'))
 
         file_path = report['file_path']
+        
+        # Path correction for cross-platform compatibility
+        if file_path and '\\' in file_path and os.name != 'nt':
+             file_path = file_path.replace('\\', '/')
+        
+        # If absolute path doesn't exist, try relative to cwd
+        if file_path and not os.path.exists(file_path):
+            # Try to extract just the filename or relative path
+            # Assuming standard structure: reports/filename.ext
+            if 'reports' in file_path:
+                # Try finding 'reports/' index (normalize separators first)
+                normalized_path = file_path.replace('\\', '/')
+                idx = normalized_path.rfind('reports')
+                if idx != -1:
+                    rel_path = normalized_path[idx:]
+                    if os.path.exists(rel_path):
+                        file_path = rel_path
+            
+            # If still not found, try just basename in reports/
+            if not os.path.exists(file_path):
+                basename = os.path.basename(file_path)
+                candidate = os.path.join('reports', basename)
+                if os.path.exists(candidate):
+                    file_path = candidate
+            
+            # If still not found, try static/reports/
+            if not os.path.exists(file_path):
+                basename = os.path.basename(file_path)
+                candidate = os.path.join('static', 'reports', basename)
+                if os.path.exists(candidate):
+                    file_path = candidate
+
         if not file_path or not os.path.exists(file_path):
-            flash('Dosya sunucuda bulunamadı.', 'danger')
+            flash(f'Dosya sunucuda bulunamadı. (Path: {report["file_path"]})', 'danger')
             return redirect(url_for('reports'))
 
         download_name = report['report_name'] if report['report_name'] else 'report'
@@ -5640,6 +5703,71 @@ def view_report(report_id):
         logging.error(f"Error viewing report: {e}")
         flash(f'Hata: {e}', 'danger')
         return redirect(url_for('reports'))
+
+
+@app.route('/reports/bulk_delete', methods=['POST'])
+@require_company_context
+def reports_bulk_delete():
+    if 'user' not in session:
+        return redirect(url_for('login'))
+        
+    try:
+        report_ids = request.form.getlist('report_ids')
+        if not report_ids:
+            flash('Hiçbir rapor seçilmedi.', 'warning')
+            return redirect(url_for('reports'))
+            
+        conn = get_db()
+        deleted_count = 0
+        
+        for report_id in report_ids:
+            try:
+                report = conn.execute("SELECT file_path FROM report_registry WHERE id=? AND company_id=?", (report_id, g.company_id)).fetchone()
+                if report:
+                    file_path = report['file_path']
+                    # Path correction
+                    if file_path and '\\' in file_path and os.name != 'nt':
+                         file_path = file_path.replace('\\', '/')
+                    
+                    # Try to locate file if not found directly
+                    if file_path and not os.path.exists(file_path):
+                        if 'reports' in file_path:
+                            normalized_path = file_path.replace('\\', '/')
+                            idx = normalized_path.rfind('reports')
+                            if idx != -1:
+                                rel_path = normalized_path[idx:]
+                                if os.path.exists(rel_path):
+                                    file_path = rel_path
+                        if not os.path.exists(file_path):
+                            basename = os.path.basename(file_path)
+                            candidate = os.path.join('reports', basename)
+                            if os.path.exists(candidate):
+                                file_path = candidate
+
+                    if file_path and os.path.exists(file_path):
+                        try:
+                            os.remove(file_path)
+                        except Exception as e:
+                            logging.error(f"Error deleting file {file_path}: {e}")
+                    
+                    conn.execute("DELETE FROM report_registry WHERE id=? AND company_id=?", (report_id, g.company_id))
+                    deleted_count += 1
+            except Exception as e:
+                logging.error(f"Error processing bulk delete for id {report_id}: {e}")
+                
+        conn.commit()
+        conn.close()
+        
+        if deleted_count > 0:
+            flash(f'{deleted_count} rapor başarıyla silindi.', 'success')
+        else:
+            flash('Silinecek rapor bulunamadı veya yetki hatası.', 'warning')
+            
+    except Exception as e:
+        logging.error(f"Error in bulk delete: {e}")
+        flash(f'Hata: {e}', 'danger')
+        
+    return redirect(url_for('reports'))
 
 
 @app.route('/reports/delete/<int:report_id>', methods=['POST'])
@@ -6547,7 +6675,7 @@ def labor_module():
                          columns=['site_name', 'audit_date', 'audit_score', 'wage_compliance'],
                          manager_available=bool(manager))
 
-@app.route('/fair_operating')
+@app.route('/fair_operating', methods=['GET', 'POST'])
 @require_company_context
 def fair_operating_module():
     if 'user' not in session: return redirect(url_for('login'))
@@ -6555,15 +6683,41 @@ def fair_operating_module():
     manager = MANAGERS.get('governance')
     company_id = g.company_id
     
-    stats = {'ethics_incidents': 0, 'corruption_cases': 0}
-    
-    if manager and hasattr(manager, 'get_fair_operating_stats'):
+    if request.method == 'POST':
         try:
-            stats = manager.get_fair_operating_stats(company_id)
+            data = {
+                'date': request.form.get('date'),
+                'practice_area': request.form.get('practice_area'),
+                'activity_type': request.form.get('activity_type'),
+                'description': request.form.get('description')
+            }
+            if manager and hasattr(manager, 'add_fair_operating_record') and manager.add_fair_operating_record(company_id, data):
+                flash('Adil çalışma kaydı başarıyla eklendi.', 'success')
+            else:
+                flash('Kayıt eklenirken hata oluştu veya modül aktif değil.', 'danger')
         except Exception as e:
-            logging.error(f"Error in fair operating stats: {e}")
+            logging.error(f"Add fair operating record error: {e}")
+            flash(f'Hata: {e}', 'danger')
+        return redirect(url_for('fair_operating_module'))
+
+    stats = {}
+    records = []
+    
+    if manager:
+        try:
+            if hasattr(manager, 'get_fair_operating_stats'):
+                stats = manager.get_fair_operating_stats(company_id)
+            if hasattr(manager, 'get_fair_operating_records'):
+                records = manager.get_fair_operating_records(company_id)
+        except Exception as e:
+            logging.error(f"Error in fair operating data: {e}")
             
-    return render_template('fair_operating.html', title=_('fair_operating_title', 'Adil Çalışma Uygulamaları'), stats=stats, manager_available=bool(manager))
+    return render_template('fair_operating.html', 
+                         title=_('fair_operating_title', 'Adil Çalışma Uygulamaları'), 
+                         stats=stats, 
+                         records=records,
+                         today=datetime.now().strftime('%Y-%m-%d'),
+                         manager_available=bool(manager))
 
 @app.route('/consumer', methods=['GET', 'POST'])
 @require_company_context
@@ -9618,10 +9772,56 @@ def survey_detail(survey_id):
             demographics = json.loads(survey['demographics_config'])
         except:
             pass
+
+    # Get responses
+    cursor = conn.execute("""
+        SELECT r.response_id as id, r.stakeholder_name as respondent_name, r.stakeholder_organization as respondent_company, r.submitted_date as submitted_at 
+        FROM survey_responses r 
+        WHERE r.survey_id=? AND r.company_id=? 
+        ORDER BY r.submitted_date DESC
+    """, (survey_id, company_id))
+    responses = [dict(row) for row in cursor.fetchall()]
             
     conn.close()
     
-    return render_template('survey_detail.html', title=survey['survey_title'], survey=survey, questions=questions, demographics=demographics, standard_questions=STANDARD_QUESTIONS, stakeholder_groups=stakeholder_groups)
+    return render_template('survey_detail.html', title=survey['survey_title'], survey=survey, questions=questions, demographics=demographics, standard_questions=STANDARD_QUESTIONS, stakeholder_groups=stakeholder_groups, responses=responses)
+
+@app.route('/surveys/response/<int:response_id>')
+@require_company_context
+def survey_response_detail(response_id):
+    if 'user' not in session: return redirect(url_for('login'))
+    company_id = g.company_id
+    
+    conn = get_db()
+    
+    # Get response details
+    cursor = conn.execute("""
+        SELECT r.*, s.survey_title 
+        FROM survey_responses r 
+        JOIN online_surveys s ON r.survey_id = s.id
+        WHERE r.response_id=? AND r.company_id=?
+    """, (response_id, company_id))
+    response = cursor.fetchone()
+    
+    if not response:
+        conn.close()
+        flash('Yanıt bulunamadı.', 'error')
+        return redirect(url_for('surveys_module'))
+        
+    response = dict(response)
+    
+    # Get answers
+    cursor = conn.execute("""
+        SELECT a.*, q.question_text, q.category 
+        FROM survey_answers a 
+        LEFT JOIN survey_questions q ON a.question_id = q.id
+        WHERE a.response_id=? AND a.company_id=?
+    """, (response_id, company_id))
+    answers = [dict(row) for row in cursor.fetchall()]
+    
+    conn.close()
+    
+    return render_template('survey_response_detail.html', response=response, answers=answers)
 
 @app.route('/surveys/<int:survey_id>/add_standard_questions', methods=['POST'])
 @require_company_context

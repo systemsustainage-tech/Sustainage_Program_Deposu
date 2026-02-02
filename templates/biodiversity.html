@@ -10,7 +10,7 @@
 <h1><i class="fas fa-leaf me-2"></i>{{ lang('biodiversity_header') }}</h1>
 <div>
 <span class="badge bg-{{ 'success' if manager_available else 'danger' }}">
-                    {{ lang('module_active') if manager_available else _('module_passive') }}
+                    {{ lang('module_active') if manager_available else lang('module_passive') }}
                 </span>
 <button class="btn btn-sm btn-success ms-2" data-bs-target="#addProjectModal" data-bs-toggle="modal"><i class="fas fa-plus"></i> {{ lang('add_project', 'Proje Ekle') }}</button>
 <button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}</button></div>

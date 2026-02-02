@@ -39,7 +39,7 @@ function confirmDelete(id, title) {
 <h1><i class="fas fa-cube me-2"></i>{{ lang('surveys_title', 'Anket Yönetimi') }}</h1>
 <div>
 <span class="badge bg-{{ 'success' if manager_available else 'secondary' }}">
-                    {{ lang('module_active_badge', 'Aktif') if manager_available else _('module_passive_badge', 'Pasif') }}
+                    {{ lang('module_active_badge', 'Aktif') if manager_available else lang('module_passive_badge', 'Pasif') }}
                 </span>
 <button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}</button></div>
 </div>
@@ -65,7 +65,7 @@ function confirmDelete(id, title) {
                                             {% for key, value in stats.items() %}
                                             <div class="col-md-3 mb-3">
 <div class="border rounded p-3 text-center bg-light">
-<h6 class="text-muted text-uppercase small">{{ lang(key) }}</h6>
+<h6 class="text-muted text-uppercase small">{{ lang(key, key|replace('_', ' ')|title) }}</h6>
 <h3 class="mb-0 text-primary">{{ value }}</h3>
 </div>
 </div>
@@ -109,7 +109,7 @@ function confirmDelete(id, title) {
 <div class="card-header d-flex justify-content-between align-items-center">
 <h5 class="mb-0">{{ lang('records', 'Kayıtlar') }}</h5>
 <button class="btn btn-sm btn-primary" data-bs-target="#addSurveyModal" data-bs-toggle="modal">
-<i class="fas fa-plus"></i> {{ lang('add_new', 'Yeni Ekle') }}
+<i class="fas fa-plus"></i> {{ lang('btn_add_data', 'Yeni Veri Girişi') }}
                                         </button>
 </div>
 <div class="card-body">
@@ -275,12 +275,12 @@ function confirmDelete(id, title) {
             const descInput = modalEl.querySelector('textarea[name="survey_description"]');
             
             if (mode === 'sdg') {
-                titleInput.value = 'SKA Hizalama Anketi';
-                if(descInput) descInput.value = 'Şirketimizin Sürdürülebilir Kalkınma Amaçları (SKA) ile uyumunu değerlendirmek amacıyla hazırlanan anket.';
+                titleInput.value = JSON.parse('{{ lang('sdg_survey_title', 'SKA Hizalama Anketi') | tojson | replace("\'", "\\\'") | safe }}');
+                if(descInput) descInput.value = JSON.parse('{{ lang('sdg_survey_desc', 'Şirketimizin Sürdürülebilir Kalkınma Amaçları (SKA) ile uyumunu değerlendirmek amacıyla hazırlanan anket.') | tojson | replace("\'", "\\\'") | safe }}');
                 modal.show();
             } else if (mode === 'materiality') {
-                titleInput.value = 'Önceliklendirme Analizi Anketi';
-                if(descInput) descInput.value = 'Şirketimizin öncelikli sürdürülebilirlik konularını belirlemek için paydaş görüşlerini topladığımız anket.';
+                titleInput.value = JSON.parse('{{ lang('materiality_survey_title', 'Önceliklendirme Analizi Anketi') | tojson | replace("\'", "\\\'") | safe }}');
+                if(descInput) descInput.value = JSON.parse('{{ lang('materiality_survey_desc', 'Şirketimizin öncelikli sürdürülebilirlik konularını belirlemek için paydaş görüşlerini topladığımız anket.') | tojson | replace("\'", "\\\'") | safe }}');
                 modal.show();
             }
         }

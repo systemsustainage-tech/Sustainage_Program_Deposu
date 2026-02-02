@@ -73,7 +73,8 @@ def test_routes():
             '/supply_chain/profile/1',
             '/surveys',
             '/super_admin/audit_logs?search=admin',
-            '/super_admin/audit_logs?start_date=2024-01-01'
+            '/super_admin/audit_logs?start_date=2024-01-01',
+            '/fair_operating'
         ]
 
         for route in routes_to_test:
@@ -90,6 +91,22 @@ def test_routes():
                     print(f"FAILED ({response.status_code})")
             except Exception as e:
                 print(f"ERROR: {e}")
+
+        # Test POST for Fair Operating
+        print("Testing POST /fair_operating...", end=" ")
+        try:
+            response = client.post('/fair_operating', data={
+                'date': '2024-01-01',
+                'practice_area': 'Anti-corruption',
+                'activity_type': 'Policy',
+                'description': 'Test Policy'
+            }, follow_redirects=True)
+            if response.status_code == 200:
+                print("OK")
+            else:
+                print(f"FAILED ({response.status_code})")
+        except Exception as e:
+            print(f"ERROR: {e}")
 
 if __name__ == "__main__":
     test_routes()

@@ -1,32 +1,46 @@
+import paramiko
+
+HOST = "72.62.150.207"
+USER = "root"
+PASS = "Sustainage123!"
+
+REMOTE_SCRIPT = """
 import sqlite3
 import os
 
 DB_PATH = '/var/www/sustainage/backend/data/sdg_desktop.sqlite'
 
-def list_tables():
-    if not os.path.exists(DB_PATH):
-        print("DB not found")
-        return
-
+if os.path.exists(DB_PATH):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
     tables = cursor.fetchall()
-    
-    print("Tables:")
+    print("--- Remote Tables ---")
     for t in tables:
-        print(f"- {t[0]}")
-        
-    # Check specific tables details
-    for target in ['eu_taxonomy_data', 'csrd_records', 'audit_logs']:
-        print(f"\nSchema for {target}:")
-        cursor.execute(f"PRAGMA table_info({target})")
-        cols = cursor.fetchall()
-        for c in cols:
-            print(c)
-
+        print(t[0])
     conn.close()
+else:
+    print(f"DB not found at {DB_PATH}")
+"""
+
+def list_tables():
+    print(f"Connecting to {HOST}...")
+    try:
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(HOST, username=USER, password=PASS)
+        
+        print("Executing remote script...")
+        stdin, stdout, stderr = ssh.exec_command("python3 -c \"" + REMOTE_SCRIPT.replace('"', '\\"') + "\"")
+        print(stdout.read().decode())
+        err = stderr.read().decode()
+        if err:
+            print(f"Error: {err}")
+            
+        ssh.close()
+        
+    except Exception as e:
+        print(f"Connection failed: {e}")
 
 if __name__ == "__main__":
     list_tables()

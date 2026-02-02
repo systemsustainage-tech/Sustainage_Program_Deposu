@@ -8,7 +8,7 @@ Yönetim kurulu, komiteler ve yönetişim yapısı
 import logging
 import os
 import sqlite3
-from typing import Dict
+from typing import Dict, List
 from config.database import DB_PATH
 
 
@@ -88,6 +88,20 @@ class CorporateGovernanceManager:
                     participants INTEGER,
                     total_hours REAL,
                     description TEXT,
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (company_id) REFERENCES companies(id)
+                )
+            """)
+
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS fair_operating_practices (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    company_id INTEGER NOT NULL,
+                    practice_area TEXT NOT NULL,
+                    activity_type TEXT NOT NULL,
+                    description TEXT,
+                    date DATE,
+                    status TEXT DEFAULT 'active',
                     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (company_id) REFERENCES companies(id)
                 )
@@ -428,3 +442,81 @@ class CorporateGovernanceManager:
             return {}
         finally:
             conn.close()
+
+    def add_fair_operating_record(self, company_id: int, data: Dict) -> bool:
+        """Adil çalışma uygulaması kaydı ekle"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        try:
+            cursor.execute("""
+                INSERT INTO fair_operating_practices 
+                (company_id, practice_area, activity_type, description, date)
+                VALUES (?, ?, ?, ?, ?)
+            """, (company_id, data.get('practice_area'), data.get('activity_type'), 
+                  data.get('description'), data.get('date')))
+            
+            conn.commit()
+            return True
+        except Exception as e:
+            logging.error(f"Fair operating record add error: {e}")
+            conn.rollback()
+            return False
+        finally:
+            conn.close()
+
+    def get_fair_operating_records(self, company_id: int) -> List[Dict]:
+        """Adil çalışma kayıtlarını getir"""
+        conn = sqlite3.connect(self.db_path)
+        conn.row_factory = sqlite3.Row
+        records = []
+        
+        try:
+            rows = conn.execute("""
+                SELECT * FROM fair_operating_practices 
+                WHERE company_id = ? AND status = 'active' 
+                ORDER BY date DESC
+            """, (company_id,)).fetchall()
+            
+            for row in rows:
+                records.append(dict(row))
+        except Exception as e:
+            logging.error(f"Fair operating records error: {e}")
+        finally:
+            conn.close()
+            
+        return records
+
+    def get_fair_operating_stats(self, company_id: int) -> Dict:
+        """Adil çalışma istatistikleri"""
+        stats = {
+            'total_practices': 0,
+            'anti_corruption': 0,
+            'fair_competition': 0,
+            'value_chain': 0
+        }
+        
+        conn = sqlite3.connect(self.db_path)
+        try:
+            # Total
+            row = conn.execute("SELECT COUNT(*) FROM fair_operating_practices WHERE company_id = ? AND status = 'active'", (company_id,)).fetchone()
+            if row: stats['total_practices'] = row[0]
+            
+            # Anti-corruption
+            row = conn.execute("SELECT COUNT(*) FROM fair_operating_practices WHERE company_id = ? AND practice_area = 'Anti-corruption' AND status = 'active'", (company_id,)).fetchone()
+            if row: stats['anti_corruption'] = row[0]
+            
+            # Fair Competition
+            row = conn.execute("SELECT COUNT(*) FROM fair_operating_practices WHERE company_id = ? AND practice_area = 'Fair Competition' AND status = 'active'", (company_id,)).fetchone()
+            if row: stats['fair_competition'] = row[0]
+
+            # Value Chain
+            row = conn.execute("SELECT COUNT(*) FROM fair_operating_practices WHERE company_id = ? AND practice_area = 'Value Chain' AND status = 'active'", (company_id,)).fetchone()
+            if row: stats['value_chain'] = row[0]
+            
+        except Exception as e:
+            logging.error(f"Fair operating stats error: {e}")
+        finally:
+            conn.close()
+            
+        return stats

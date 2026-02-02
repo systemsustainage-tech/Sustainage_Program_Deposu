@@ -186,6 +186,16 @@
           });
         }, 5000);
       });
+
+      // Progress Bar Animation for data-width attribute
+      document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.progress-bar[data-width]').forEach(function(el) {
+          setTimeout(function() {
+            el.style.width = el.getAttribute('data-width') + '%';
+          }, 100);
+        });
+      });
     </script>
+    {% block scripts %}{% endblock %}
   </body>
 </html>

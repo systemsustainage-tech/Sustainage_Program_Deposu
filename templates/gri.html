@@ -10,7 +10,7 @@
 <h1><i class="fas fa-file-alt me-2"></i>{{ lang('gri_title') }}</h1>
 <div>
 <span class="badge bg-{{ 'success' if manager_available else 'danger' }}">
-                    {{ lang('module_active_badge') if manager_available else _('module_passive_badge') }}
+                    {{ lang('module_active_badge') if manager_available else lang('module_passive_badge') }}
                 </span>
 <button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}</button></div>
 </div>
@@ -57,7 +57,7 @@
 <h6 class="text-muted">{{ lang('gri_completion_rate') }}</h6>
 <h2 class="display-4 text-info">%{{ stats.completion_rate }}</h2>
 <div class="progress mt-2" style="height: 5px;">
-<div class="progress-bar bg-info" role="progressbar" style="width: {{ stats.completion_rate }}%"></div>
+<div class="progress-bar bg-info" role="progressbar" style="width: 0%" data-width="{{ stats.completion_rate }}"></div>
 </div>
 </div>
 </div>

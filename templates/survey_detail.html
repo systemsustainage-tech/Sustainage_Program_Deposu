@@ -13,7 +13,7 @@
                     {{ 'Aktif' if survey.is_active else 'Taslak' }}
                 </span>
 <span class="badge bg-info ms-1" title="{{ lang('target_group', 'Hedef Kitle') }}">
-<i class="fas fa-users"></i> {{ stakeholder_groups.get(survey.target_groups, survey.target_groups) if survey.target_groups else _('not_specified', 'Belirtilmemiş') }}
+<i class="fas fa-users"></i> {{ stakeholder_groups.get(survey.target_groups, survey.target_groups) if survey.target_groups else lang('not_specified', 'Belirtilmemiş') }}
                 </span>
 <a class="btn btn-sm btn-outline-primary ms-2" href="/survey/{{ survey.token }}" target="_blank">
 <i class="fas fa-external-link-alt"></i> {{ lang('view_survey', 'Anketi Görüntüle') }}
@@ -199,13 +199,15 @@
 <tbody>
                                     {% for r in responses %}
                                     <tr>
-<td>{{ r.respondent_name or 'Anonim' }}</td>
-<td>{{ r.respondent_company or '-' }}</td>
-<td>{{ r.submitted_at }}</td>
-<td>
-<button class="btn btn-sm btn-outline-info">{{ lang('view', 'Görüntüle') }}</button>
-</td>
-</tr>
+                                        <td>{{ r.respondent_name or 'Anonim' }}</td>
+                                        <td>{{ r.respondent_company or '-' }}</td>
+                                        <td>{{ r.submitted_at }}</td>
+                                        <td>
+                                            <a href="{{ url_for('survey_response_detail', response_id=r.id) }}" class="btn btn-sm btn-outline-info">
+                                                <i class="fas fa-eye"></i> {{ lang('view', 'Görüntüle') }}
+                                            </a>
+                                        </td>
+                                    </tr>
                                     {% endfor %}
                                 </tbody>
 </table>
@@ -232,10 +234,10 @@
 <div class="mb-3">
 <label class="form-label">{{ lang('category', 'Kategori') }}</label>
 <select class="form-select" name="category">
-<option value="Environmental">Çevresel</option>
-<option value="Social">Sosyal</option>
-<option value="Governance">Yönetişim</option>
-<option value="General">Genel</option>
+<option value="Environmental">{{ lang('environmental', 'Çevresel') }}</option>
+<option value="Social">{{ lang('social', 'Sosyal') }}</option>
+<option value="Governance">{{ lang('governance', 'Yönetişim') }}</option>
+<option value="General">{{ lang('general', 'Genel') }}</option>
 </select>
 </div>
 <div class="mb-3">
@@ -245,9 +247,9 @@
 <div class="mb-3">
 <label class="form-label">{{ lang('question_type', 'Soru Tipi') }}</label>
 <select class="form-select" name="question_type">
-<option value="scale_1_5">1-5 Ölçeği (Önem Düzeyi)</option>
-<option value="text">Açık Uçlu (Metin)</option>
-<option value="yes_no">Evet / Hayır</option>
+<option value="scale_1_5">{{ lang('scale_1_5', '1-5 Ölçeği (Önem Düzeyi)') }}</option>
+<option value="text">{{ lang('text_open', 'Açık Uçlu (Metin)') }}</option>
+<option value="yes_no">{{ lang('yes_no', 'Evet / Hayır') }}</option>
 </select>
 </div>
 <div class="form-check">
@@ -276,10 +278,10 @@
 <div class="mb-3">
 <label class="form-label">{{ lang('category', 'Kategori') }}</label>
 <select class="form-select" id="edit_category" name="category">
-<option value="Environmental">Çevresel</option>
-<option value="Social">Sosyal</option>
-<option value="Governance">Yönetişim</option>
-<option value="General">Genel</option>
+<option value="Environmental">{{ lang('environmental', 'Çevresel') }}</option>
+<option value="Social">{{ lang('social', 'Sosyal') }}</option>
+<option value="Governance">{{ lang('governance', 'Yönetişim') }}</option>
+<option value="General">{{ lang('general', 'Genel') }}</option>
 </select>
 </div>
 <div class="mb-3">
@@ -289,9 +291,9 @@
 <div class="mb-3">
 <label class="form-label">{{ lang('question_type', 'Soru Tipi') }}</label>
 <select class="form-select" id="edit_question_type" name="question_type">
-<option value="scale_1_5">1-5 Ölçeği (Önem Düzeyi)</option>
-<option value="text">Açık Uçlu (Metin)</option>
-<option value="yes_no">Evet / Hayır</option>
+<option value="scale_1_5">{{ lang('scale_1_5', '1-5 Ölçeği (Önem Düzeyi)') }}</option>
+<option value="text">{{ lang('text_open', 'Açık Uçlu (Metin)') }}</option>
+<option value="yes_no">{{ lang('yes_no', 'Evet / Hayır') }}</option>
 </select>
 </div>
 <div class="form-check">

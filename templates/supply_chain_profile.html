@@ -21,12 +21,12 @@
         <!-- Scorecard Summary -->
         <div class="card shadow-sm border-0 mb-4">
             <div class="card-header bg-primary text-white">
-                <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Tedarikçi Karnesi</h5>
+                <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>{{ lang('supplier_scorecard', 'Tedarikçi Karnesi') }}</h5>
             </div>
             <div class="card-body">
                 <ul class="list-group list-group-flush">
                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                        Sürdürülebilirlik Skoru
+                        {{ lang('sustainability_score', 'Sürdürülebilirlik Skoru') }}
                         {% if supplier.risk_score >= 70 %}
                         <span class="badge bg-success rounded-pill">{{ supplier.risk_score|round(1) }}</span>
                         {% elif supplier.risk_score >= 40 %}
@@ -37,16 +37,16 @@
                     </li>
                     {% if scorecard.audit_stats %}
                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                        Denetim Ortalaması
+                        {{ lang('audit_average', 'Denetim Ortalaması') }}
                         <span class="badge bg-info text-dark rounded-pill">{{ scorecard.audit_stats.avg_audit_score|round(1) }}</span>
                     </li>
                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                        Toplam Uygunsuzluk
+                        {{ lang('total_non_compliance', 'Toplam Uygunsuzluk') }}
                         <span class="badge bg-secondary rounded-pill">{{ scorecard.audit_stats.total_nc }}</span>
                     </li>
                     {% endif %}
                     <li class="list-group-item">
-                        <strong>İletişim:</strong><br>
+                        <strong>{{ lang('contact', 'İletişim') }}:</strong><br>
                         {{ supplier.contact_info }}
                     </li>
                 </ul>

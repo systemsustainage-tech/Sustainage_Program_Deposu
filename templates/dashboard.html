@@ -83,7 +83,7 @@
         <div class="card h-100 border-0 shadow-sm text-center">
             <div class="card-body">
                 <i class="bi bi-chat-left-text fs-1 text-success mb-2"></i>
-                <h5 class="card-title">{{ lang('total_responses') }}</h5>
+                <h5 class="card-title">{{ lang('total_responses', 'Toplam Cevap') }}</h5>
                 <h2 class="fw-bold">{{ stats.total_responses }}</h2>
                 <a href="{{ url_for('surveys_module') }}" class="stretched-link"></a>
             </div>
@@ -125,7 +125,7 @@
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
+                    <table class="table table-hover align-middle mb-0 no-datatable">
                         <thead class="table-light">
                             <tr>
                                 <th scope="col" class="ps-4">{{ lang('user', 'Kullanıcı') }}</th>
@@ -200,21 +200,21 @@
 </div>
 
 <!-- SÜRDÜRÜLEBİLİRLİK MODÜLLERİ (19 MODÜL) -->
-<div class="row mb-4">
+<div class="row mb-4" id="modules-section">
     <div class="col-12 mb-3">
-        <h4 class="text-muted border-bottom pb-2"><i class="bi bi-grid-fill me-2"></i>{{ lang('sustainability_modules') }}</h4>
+        <h4 class="text-muted border-bottom pb-2"><i class="bi bi-grid-fill me-2"></i>{{ lang('sustainability_modules', 'Sürdürülebilirlik Modülleri') }}</h4>
     </div>
     
     <!-- Çevresel (Environmental) -->
-    <div class="col-12"><h6 class="text-success mb-3">{{ lang('module_environmental') }}</h6></div>
+    <div class="col-12"><h6 class="text-success mb-3">{{ lang('module_environmental', 'Çevresel') }}</h6></div>
     
     <div class="col-md-2 mb-3">
         <div class="card h-100 text-center border-0 shadow-sm hover-card">
             <div class="card-body">
                 <i class="bi bi-cloud-haze2 fs-1 text-success mb-2"></i>
-                <h6 class="card-title">{{ lang('module_carbon') }}</h6>
+                <h6 class="card-title">{{ lang('module_carbon', 'Karbon Ayak İzi') }}</h6>
                 <div class="progress mt-2 mb-1" style="height: 5px;">
-                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ module_stats.get('carbon', 0) }}%" aria-valuenow="{{ module_stats.get('carbon', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
+                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('carbon', 0) }}" aria-valuenow="{{ module_stats.get('carbon', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
                 <small class="text-muted">%{{ module_stats.get('carbon', 0) }}</small>
                 <a href="{{ url_for('carbon_module') }}" class="stretched-link"></a>
@@ -225,9 +225,9 @@
         <div class="card h-100 text-center border-0 shadow-sm hover-card">
             <div class="card-body">
                 <i class="bi bi-lightning-charge fs-1 text-warning mb-2"></i>
-                <h6 class="card-title">{{ lang('module_energy') }}</h6>
+                <h6 class="card-title">{{ lang('module_energy', 'Enerji Yönetimi') }}</h6>
                 <div class="progress mt-2 mb-1" style="height: 5px;">
-                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ module_stats.get('energy', 0) }}%" aria-valuenow="{{ module_stats.get('energy', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
+                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('energy', 0) }}" aria-valuenow="{{ module_stats.get('energy', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
                 <small class="text-muted">%{{ module_stats.get('energy', 0) }}</small>
                 <a href="{{ url_for('energy_module') }}" class="stretched-link"></a>
@@ -238,9 +238,9 @@
         <div class="card h-100 text-center border-0 shadow-sm hover-card">
             <div class="card-body">
                 <i class="bi bi-recycle fs-1 text-secondary mb-2"></i>
-                <h6 class="card-title">{{ lang('module_waste') }}</h6>
+                <h6 class="card-title">{{ lang('module_waste', 'Atık Yönetimi') }}</h6>
                 <div class="progress mt-2 mb-1" style="height: 5px;">
-                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ module_stats.get('waste', 0) }}%" aria-valuenow="{{ module_stats.get('waste', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
+                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('waste', 0) }}" aria-valuenow="{{ module_stats.get('waste', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
                 <small class="text-muted">%{{ module_stats.get('waste', 0) }}</small>
                 <a href="{{ url_for('waste_module') }}" class="stretched-link"></a>
@@ -251,9 +251,9 @@
         <div class="card h-100 text-center border-0 shadow-sm hover-card">
             <div class="card-body">
                 <i class="bi bi-droplet fs-1 text-info mb-2"></i>
-                <h6 class="card-title">{{ lang('module_water') }}</h6>
+                <h6 class="card-title">{{ lang('module_water', 'Su Yönetimi') }}</h6>
                 <div class="progress mt-2 mb-1" style="height: 5px;">
-                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ module_stats.get('water', 0) }}%" aria-valuenow="{{ module_stats.get('water', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
+                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('water', 0) }}" aria-valuenow="{{ module_stats.get('water', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
                 <small class="text-muted">%{{ module_stats.get('water', 0) }}</small>
                 <a href="{{ url_for('water_module') }}" class="stretched-link"></a>
@@ -264,9 +264,9 @@
         <div class="card h-100 text-center border-0 shadow-sm hover-card">
             <div class="card-body">
                 <i class="bi bi-tree fs-1 text-success mb-2"></i>
-                <h6 class="card-title">{{ lang('module_biodiversity') }}</h6>
+                <h6 class="card-title">{{ lang('module_biodiversity', 'Biyoçeşitlilik') }}</h6>
                 <div class="progress mt-2 mb-1" style="height: 5px;">
-                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ module_stats.get('biodiversity', 0) }}%" aria-valuenow="{{ module_stats.get('biodiversity', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
+                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('biodiversity', 0) }}" aria-valuenow="{{ module_stats.get('biodiversity', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
                 <small class="text-muted">%{{ module_stats.get('biodiversity', 0) }}</small>
                 <a href="{{ url_for('biodiversity_module') }}" class="stretched-link"></a>
@@ -275,15 +275,15 @@
     </div>
 
     <!-- Sosyal & Yönetişim (Social & Governance) -->
-    <div class="col-12 mt-3"><h6 class="text-primary mb-3">{{ lang('module_social_governance') }}</h6></div>
+    <div class="col-12 mt-3"><h6 class="text-primary mb-3">{{ lang('module_social_governance', 'Sosyal & Yönetişim') }}</h6></div>
     
     <div class="col-md-2 mb-3">
         <div class="card h-100 text-center border-0 shadow-sm hover-card">
             <div class="card-body">
                 <i class="bi bi-people fs-1 text-info mb-2"></i>
-                <h6 class="card-title">{{ lang('module_social_impact') }}</h6>
+                <h6 class="card-title">{{ lang('module_social_impact', 'Sosyal Etki') }}</h6>
                 <div class="progress mt-2 mb-1" style="height: 5px;">
-                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ module_stats.get('social', 0) }}%" aria-valuenow="{{ module_stats.get('social', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
+                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('social', 0) }}" aria-valuenow="{{ module_stats.get('social', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
                 <small class="text-muted">%{{ module_stats.get('social', 0) }}</small>
                 <a href="{{ url_for('social_module') }}" class="stretched-link"></a>
@@ -294,9 +294,9 @@
         <div class="card h-100 text-center border-0 shadow-sm hover-card">
             <div class="card-body">
                 <i class="bi bi-bank fs-1 text-secondary mb-2"></i>
-                <h6 class="card-title">{{ lang('module_corporate_governance') }}</h6>
+                <h6 class="card-title">{{ lang('module_corporate_governance', 'Kurumsal Yönetişim') }}</h6>
                 <div class="progress mt-2 mb-1" style="height: 5px;">
-                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ module_stats.get('governance', 0) }}%" aria-valuenow="{{ module_stats.get('governance', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
+                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('governance', 0) }}" aria-valuenow="{{ module_stats.get('governance', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
                 <small class="text-muted">%{{ module_stats.get('governance', 0) }}</small>
                 <a href="{{ url_for('governance_module') }}" class="stretched-link"></a>
@@ -307,9 +307,9 @@
         <div class="card h-100 text-center border-0 shadow-sm hover-card">
             <div class="card-body">
                 <i class="bi bi-truck fs-1 text-warning mb-2"></i>
-                <h6 class="card-title">{{ lang('module_supply_chain') }}</h6>
+                <h6 class="card-title">{{ lang('module_supply_chain', 'Tedarik Zinciri') }}</h6>
                 <div class="progress mt-2 mb-1" style="height: 5px;">
-                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ module_stats.get('supply_chain', 0) }}%" aria-valuenow="{{ module_stats.get('supply_chain', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
+                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('supply_chain', 0) }}" aria-valuenow="{{ module_stats.get('supply_chain', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
                 <small class="text-muted">%{{ module_stats.get('supply_chain', 0) }}</small>
                 <a href="{{ url_for('supply_chain_module') }}" class="stretched-link"></a>
@@ -320,9 +320,9 @@
         <div class="card h-100 text-center border-0 shadow-sm hover-card">
             <div class="card-body">
                 <i class="bi bi-cash-coin fs-1 text-success mb-2"></i>
-                <h6 class="card-title">{{ lang('module_economic_value') }}</h6>
+                <h6 class="card-title">{{ lang('module_economic_value', 'Ekonomik Değer') }}</h6>
                 <div class="progress mt-2 mb-1" style="height: 5px;">
-                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ module_stats.get('economic', 0) }}%" aria-valuenow="{{ module_stats.get('economic', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
+                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('economic', 0) }}" aria-valuenow="{{ module_stats.get('economic', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
                 <small class="text-muted">%{{ module_stats.get('economic', 0) }}</small>
                 <a href="{{ url_for('economic_module') }}" class="stretched-link"></a>
@@ -331,15 +331,15 @@
     </div>
 
     <!-- Çerçeveler & Standartlar (Frameworks & Standards) -->
-    <div class="col-12 mt-3"><h6 class="text-danger mb-3">{{ lang('module_frameworks') }}</h6></div>
+    <div class="col-12 mt-3"><h6 class="text-danger mb-3">{{ lang('module_frameworks', 'Çerçeveler & Standartlar') }}</h6></div>
     
     <div class="col-md-2 mb-3">
         <div class="card h-100 text-center border-0 shadow-sm hover-card">
             <div class="card-body">
                 <i class="bi bi-bar-chart-steps fs-1 text-primary mb-2"></i>
-                <h6 class="card-title">{{ lang('module_esg_score') }}</h6>
+                <h6 class="card-title">{{ lang('module_esg_score', 'ESG Skoru') }}</h6>
                 <div class="progress mt-2 mb-1" style="height: 5px;">
-                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ module_stats.get('esg', 0) }}%" aria-valuenow="{{ module_stats.get('esg', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
+                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('esg', 0) }}" aria-valuenow="{{ module_stats.get('esg', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
                 <small class="text-muted">%{{ module_stats.get('esg', 0) }}</small>
                 <a href="{{ url_for('esg_module') }}" class="stretched-link"></a>
@@ -350,9 +350,9 @@
         <div class="card h-100 text-center border-0 shadow-sm hover-card">
             <div class="card-body">
                 <i class="bi bi-globe-europe-africa fs-1 text-danger mb-2"></i>
-                <h6 class="card-title">{{ lang('module_cbam') }}</h6>
+                <h6 class="card-title">{{ lang('module_cbam', 'CBAM') }}</h6>
                 <div class="progress mt-2 mb-1" style="height: 5px;">
-                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ module_stats.get('cbam', 0) }}%" aria-valuenow="{{ module_stats.get('cbam', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
+                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('cbam', 0) }}" aria-valuenow="{{ module_stats.get('cbam', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
                 <small class="text-muted">%{{ module_stats.get('cbam', 0) }}</small>
                 <a href="{{ url_for('cbam_module') }}" class="stretched-link"></a>
@@ -363,9 +363,9 @@
         <div class="card h-100 text-center border-0 shadow-sm hover-card">
             <div class="card-body">
                 <i class="bi bi-file-earmark-check fs-1 text-primary mb-2"></i>
-                <h6 class="card-title">{{ lang('module_csrd') }}</h6>
+                <h6 class="card-title">{{ lang('module_csrd', 'CSRD') }}</h6>
                 <div class="progress mt-2 mb-1" style="height: 5px;">
-                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ module_stats.get('csrd', 0) }}%" aria-valuenow="{{ module_stats.get('csrd', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
+                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('csrd', 0) }}" aria-valuenow="{{ module_stats.get('csrd', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
                 <small class="text-muted">%{{ module_stats.get('csrd', 0) }}</small>
                 <a href="{{ url_for('csrd_module') }}" class="stretched-link"></a>
@@ -376,9 +376,9 @@
         <div class="card h-100 text-center border-0 shadow-sm hover-card">
             <div class="card-body">
                 <i class="bi bi-diagram-3 fs-1 text-success mb-2"></i>
-                <h6 class="card-title">{{ lang('module_eu_taxonomy') }}</h6>
+                <h6 class="card-title">{{ lang('module_eu_taxonomy', 'AB Taksonomisi') }}</h6>
                 <div class="progress mt-2 mb-1" style="height: 5px;">
-                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ module_stats.get('taxonomy', 0) }}%" aria-valuenow="{{ module_stats.get('taxonomy', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
+                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('taxonomy', 0) }}" aria-valuenow="{{ module_stats.get('taxonomy', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
                 <small class="text-muted">%{{ module_stats.get('taxonomy', 0) }}</small>
                 <a href="{{ url_for('taxonomy_module') }}" class="stretched-link"></a>
@@ -389,9 +389,9 @@
         <div class="card h-100 text-center border-0 shadow-sm hover-card">
             <div class="card-body">
                 <i class="bi bi-journal-text fs-1 text-info mb-2"></i>
-                <h6 class="card-title">{{ lang('module_gri') }}</h6>
+                <h6 class="card-title">{{ lang('module_gri', 'GRI') }}</h6>
                 <div class="progress mt-2 mb-1" style="height: 5px;">
-                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ module_stats.get('gri', 0) }}%" aria-valuenow="{{ module_stats.get('gri', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
+                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('gri', 0) }}" aria-valuenow="{{ module_stats.get('gri', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
                 <small class="text-muted">%{{ module_stats.get('gri', 0) }}</small>
                 <a href="{{ url_for('gri_module') }}" class="stretched-link"></a>
@@ -402,9 +402,9 @@
         <div class="card h-100 text-center border-0 shadow-sm hover-card">
             <div class="card-body">
                 <i class="bi bi-bullseye fs-1 text-danger mb-2"></i>
-                <h6 class="card-title">{{ lang('module_sdg') }}</h6>
+                <h6 class="card-title">{{ lang('module_sdg', 'SDG') }}</h6>
                 <div class="progress mt-2 mb-1" style="height: 5px;">
-                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ module_stats.get('sdg', 0) }}%" aria-valuenow="{{ module_stats.get('sdg', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
+                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('sdg', 0) }}" aria-valuenow="{{ module_stats.get('sdg', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
                 <small class="text-muted">%{{ module_stats.get('sdg', 0) }}</small>
                 <a href="{{ url_for('sdg_module') }}" class="stretched-link"></a>
@@ -415,9 +415,9 @@
         <div class="card h-100 text-center border-0 shadow-sm hover-card">
             <div class="card-body">
                 <i class="bi bi-file-earmark-richtext fs-1 text-primary mb-2"></i>
-                <h6 class="card-title">{{ lang('module_esrs') }}</h6>
+                <h6 class="card-title">{{ lang('module_esrs', 'ESRS') }}</h6>
                 <div class="progress mt-2 mb-1" style="height: 5px;">
-                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ module_stats.get('esrs', 0) }}%" aria-valuenow="{{ module_stats.get('esrs', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
+                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('esrs', 0) }}" aria-valuenow="{{ module_stats.get('esrs', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
                 <small class="text-muted">%{{ module_stats.get('esrs', 0) }}</small>
                 <a href="{{ url_for('esrs_module') }}" class="stretched-link"></a>
@@ -426,15 +426,15 @@
     </div>
     
     <!-- İleri Raporlama (Advanced Reporting) -->
-    <div class="col-12 mt-3"><h6 class="text-secondary mb-3">{{ lang('module_advanced_reporting') }}</h6></div>
+    <div class="col-12 mt-3"><h6 class="text-secondary mb-3">{{ lang('module_advanced_reporting', 'İleri Raporlama') }}</h6></div>
     
     <div class="col-md-2 mb-3">
         <div class="card h-100 text-center border-0 shadow-sm hover-card">
             <div class="card-body">
                 <i class="bi bi-sort-numeric-down fs-1 text-warning mb-2"></i>
-                <h6 class="card-title">{{ lang('module_prioritization') }}</h6>
+                <h6 class="card-title">{{ lang('module_prioritization', 'Önceliklendirme') }}</h6>
                 <div class="progress mt-2 mb-1" style="height: 5px;">
-                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ module_stats.get('prioritization', 0) }}%" aria-valuenow="{{ module_stats.get('prioritization', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
+                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('prioritization', 0) }}" aria-valuenow="{{ module_stats.get('prioritization', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
                 <small class="text-muted">%{{ module_stats.get('prioritization', 0) }}</small>
                 <a href="{{ url_for('prioritization_module') }}" class="stretched-link"></a>
@@ -446,9 +446,9 @@
         <div class="card h-100 text-center border-0 shadow-sm hover-card">
             <div class="card-body">
                 <i class="bi bi-file-earmark-spreadsheet fs-1 text-primary mb-2"></i>
-                <h6 class="card-title">{{ lang('module_ifrs') }}</h6>
+                <h6 class="card-title">{{ lang('module_ifrs', 'IFRS') }}</h6>
                 <div class="progress mt-2 mb-1" style="height: 5px;">
-                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ module_stats.get('ifrs', 0) }}%" aria-valuenow="{{ module_stats.get('ifrs', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
+                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('ifrs', 0) }}" aria-valuenow="{{ module_stats.get('ifrs', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
                 <small class="text-muted">%{{ module_stats.get('ifrs', 0) }}</small>
                 <a href="{{ url_for('ifrs_module') }}" class="stretched-link"></a>
@@ -459,9 +459,9 @@
         <div class="card h-100 text-center border-0 shadow-sm hover-card">
             <div class="card-body">
                 <i class="bi bi-cloud-sun fs-1 text-warning mb-2"></i>
-                <h6 class="card-title">{{ lang('module_tcfd') }}</h6>
+                <h6 class="card-title">{{ lang('module_tcfd', 'TCFD') }}</h6>
                 <div class="progress mt-2 mb-1" style="height: 5px;">
-                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ module_stats.get('tcfd', 0) }}%" aria-valuenow="{{ module_stats.get('tcfd', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
+                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('tcfd', 0) }}" aria-valuenow="{{ module_stats.get('tcfd', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
                 <small class="text-muted">%{{ module_stats.get('tcfd', 0) }}</small>
                 <a href="{{ url_for('tcfd_module') }}" class="stretched-link"></a>
@@ -472,9 +472,9 @@
         <div class="card h-100 text-center border-0 shadow-sm hover-card">
             <div class="card-body">
                 <i class="bi bi-flower1 fs-1 text-success mb-2"></i>
-                <h6 class="card-title">{{ lang('module_tnfd') }}</h6>
+                <h6 class="card-title">{{ lang('module_tnfd', 'TNFD') }}</h6>
                 <div class="progress mt-2 mb-1" style="height: 5px;">
-                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ module_stats.get('tnfd', 0) }}%" aria-valuenow="{{ module_stats.get('tnfd', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
+                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('tnfd', 0) }}" aria-valuenow="{{ module_stats.get('tnfd', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
                 <small class="text-muted">%{{ module_stats.get('tnfd', 0) }}</small>
                 <a href="{{ url_for('tnfd_module') }}" class="stretched-link"></a>
@@ -485,9 +485,9 @@
         <div class="card h-100 text-center border-0 shadow-sm hover-card">
             <div class="card-body">
                 <i class="bi bi-building-check fs-1 text-dark mb-2"></i>
-                <h6 class="card-title">{{ lang('module_cdp') }}</h6>
+                <h6 class="card-title">{{ lang('module_cdp', 'CDP') }}</h6>
                 <div class="progress mt-2 mb-1" style="height: 5px;">
-                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ module_stats.get('cdp', 0) }}%" aria-valuenow="{{ module_stats.get('cdp', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
+                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('cdp', 0) }}" aria-valuenow="{{ module_stats.get('cdp', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
                 <small class="text-muted">%{{ module_stats.get('cdp', 0) }}</small>
                 <a href="{{ url_for('cdp_module') }}" class="stretched-link"></a>
@@ -535,7 +535,7 @@
                     <h3 class="display-6 fw-bold text-success">{{ esrs_stats.completion_rate }}%</h3>
                     <p class="text-muted">{{ lang('completion_rate') }}</p>
                     <div class="progress w-75 mt-2" style="height: 10px;">
-                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ esrs_stats.completion_rate }}%" aria-valuenow="{{ esrs_stats.completion_rate }}" aria-valuemin="0" aria-valuemax="100"></div>
+                        <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ esrs_stats.completion_rate }}" aria-valuenow="{{ esrs_stats.completion_rate }}" aria-valuemin="0" aria-valuemax="100"></div>
                     </div>
                     <div class="text-center mt-4">
                         <a href="{{ url_for('esrs_module') }}" class="btn btn-sm btn-outline-success">{{ lang('view_details') }}</a>
@@ -615,7 +615,7 @@
             ],
             datasets: [{
                 label: "{{ lang('social_score', 'Sosyal Skor') }}",
-                data: {{ social_chart_data | tojson }},
+                data: JSON.parse('{{ social_chart_data | tojson | replace("\'", "\\\'") | safe }}'),
                 fill: true,
                 backgroundColor: 'rgba(54, 162, 235, 0.2)',
                 borderColor: 'rgb(54, 162, 235)',

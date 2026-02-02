@@ -18,7 +18,7 @@
 <div class="col-md-3">
 <div class="card border-0 shadow-sm">
 <div class="card-body">
-<div class="text-muted small">Toplam Lisans</div>
+<div class="text-muted small">{{ lang('total_licenses', 'Toplam Lisans') }}</div>
 <div class="h3 mb-0">{{ stats.total }}</div>
 </div>
 </div>
@@ -26,7 +26,7 @@
 <div class="col-md-3">
 <div class="card border-0 shadow-sm">
 <div class="card-body">
-<div class="text-muted small">Aktif Lisans</div>
+<div class="text-muted small">{{ lang('active_licenses', 'Aktif Lisans') }}</div>
 <div class="h3 mb-0 text-success">{{ stats.active }}</div>
 </div>
 </div>
@@ -34,7 +34,7 @@
 <div class="col-md-3">
 <div class="card border-0 shadow-sm">
 <div class="card-body">
-<div class="text-muted small">Süresi Dolmuş</div>
+<div class="text-muted small">{{ lang('expired', 'Süresi Dolmuş') }}</div>
 <div class="h3 mb-0 text-danger">{{ stats.expired }}</div>
 </div>
 </div>
@@ -42,7 +42,7 @@
 <div class="col-md-3">
 <div class="card border-0 shadow-sm">
 <div class="card-body">
-<div class="text-muted small">Yakında Dolacak (30g)</div>
+<div class="text-muted small">{{ lang('expiring_soon_30d', 'Yakında Dolacak (30g)') }}</div>
 <div class="h3 mb-0 text-warning">{{ stats.expiring_soon }}</div>
 </div>
 </div>

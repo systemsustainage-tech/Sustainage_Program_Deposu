@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 
-{% block title %}{{ lang('user_edit_title') if user else _('user_new_title') }} - SDG{% endblock %}
+{% block title %}{{ lang('user_edit_title') if user else lang('user_new_title') }} - SDG{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-<h1 class="h2">{{ lang('user_edit_title') if user else _('user_new_title') }}</h1>
+<h1 class="h2">{{ lang('user_edit_title') if user else lang('user_new_title') }}</h1>
 <div class="btn-toolbar mb-2 mb-md-0">
 
 <button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}</button></div>
@@ -54,7 +54,7 @@
 <div class="col-md-6">
 <label class="form-label" for="department">{{ lang('lbl_department') }}</label>
 <select class="form-select" id="department" name="department">
-<option value="">{{ lang('select_department') if _('select_department') != 'select_department' else 'Departman Seçin' }}</option>
+<option value="">{{ lang('select_department') if lang('select_department') != 'select_department' else 'Departman Seçin' }}</option>
                                 {% set departments = ['İnsan Kaynakları', 'Bilgi İşlem', 'Finans', 'Muhasebe', 'Üretim', 'Satış', 'Pazarlama', 'Lojistik', 'Yönetim', 'Kalite', 'Hukuk', 'İdari İşler', 'Teknik Servis', 'Sürdürülebilirlik', 'Ar-Ge'] %}
                                 {% for dept in departments %}
                                 <option value="{{ dept }}" {% if user and user.department == dept %}selected{% endif %}>{{ dept }}</option>
