@@ -76,7 +76,7 @@ def restore_dashboard():
         # This is harder because the href comes BEFORE the text.
         # <a href="{{ '#' }}" class="btn ...">\n                            <i ...></i> {{ _('create_report_btn') }}
         
-        pattern2 = f'href="{{{{" \'#\' }}}}"([\\s\\S]*?{{{{ _\(\'{key}\'\) }}}})'
+        pattern2 = f'href="{{{{" \'#\' }}}}"([\\s\\S]*?{{{{ _\\(\'{key}\'\\) }}}})'
         replacement2 = f'href="{{{{ url_for(\'{endpoint}\') }}}}"\\1'
         
         # Apply pattern 1

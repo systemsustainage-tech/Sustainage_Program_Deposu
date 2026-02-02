@@ -29,7 +29,7 @@ def check_python_syntax(path):
     try:
         with open(path, 'r', encoding='utf-8') as f:
             source = f.read()
-        ast.parse(source)
+        ast.parse(source, filename=path)
         return None
     except SyntaxError as e:
         return f"{e.msg} (Line {e.lineno})"
@@ -146,18 +146,18 @@ def scan_files():
     if errors:
         print(f"\nFound {len(errors)} CRITICAL ISSUES:")
         for err in errors:
-            print(f"  ❌ {err}")
+            print(f"  [X] {err}")
     else:
-        print("\n✅ No CRITICAL ISSUES found.")
+        print("\n[OK] No CRITICAL ISSUES found.")
 
     if warnings:
         print(f"\nFound {len(warnings)} WARNINGS (Cleanup recommended):")
         for warn in warnings[:10]:
-            print(f"  ⚠️ {warn}")
+            print(f"  [!] {warn}")
         if len(warnings) > 10:
             print(f"  ...and {len(warnings)-10} more.")
     else:
-        print("\n✅ No WARNINGS found.")
+        print("\n[OK] No WARNINGS found.")
         
     print(f"\nINFO: {len(defined_keys - used_keys)} keys in tr.json appear to be unused in scanned code (dynamic keys excluded).")
     

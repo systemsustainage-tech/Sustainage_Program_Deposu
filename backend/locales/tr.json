@@ -662,5 +662,7 @@
     "common.btn_save": "Btn Save",
     "common.save": "Save",
     "confirm_delete_selected": "Confirm Delete Selected",
-    "sdg.data_entry": "Sdg Data Entry"
+    "sdg.data_entry": "Sdg Data Entry",
+    "log_schema_created": "Kullanıcı yönetimi şeması başarıyla oluşturuldu",
+    "log_role_creation_error": "Rol oluşturulurken hata: {}"
 }

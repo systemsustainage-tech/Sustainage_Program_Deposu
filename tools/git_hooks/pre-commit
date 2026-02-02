@@ -23,10 +23,10 @@ $PYTHON_CMD tools/audit_system.py
 RESULT=$?
 
 if [ $RESULT -ne 0 ]; then
-    echo "❌ Audit failed. Commit blocked."
+    echo "[X] Audit failed. Commit blocked."
     echo "Fix errors or use 'git commit --no-verify' to bypass."
     exit 1
 fi
 
-echo "✅ Audit passed."
+echo "[OK] Audit passed."
 exit 0
