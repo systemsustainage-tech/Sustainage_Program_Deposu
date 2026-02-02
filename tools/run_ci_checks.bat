@@ -1,23 +1,23 @@
 @echo off
 setlocal
 
-echo [CI] Starting Translation Checks...
+echo [CI] Starting System Audit (Translation, Syntax, Code Patterns)...
 
 :: Navigate to tools directory to ensure relative paths work
 pushd %~dp0
 
-:: Run audit script with CI flag
-python audit_translations.py --ci
+:: Run comprehensive audit script
+python audit_system.py
 set EXIT_CODE=%ERRORLEVEL%
 
-if %EXIT_CODE% NEQ 0 (
-    echo [CI] ERROR: Missing translation keys detected!
-    echo [CI] Please run 'python add_missing_keys.py' to generate placeholders.
-    echo [CI] Then update the locale files with correct translations.
+if "%EXIT_CODE%" NEQ "0" (
+    echo [CI] ERROR: Critical issues detected in the system!
+    echo [CI] Please check the 'AUDIT REPORT' above for details.
+    echo [CI] If translation keys are missing, run 'python add_missing_keys.py' ^(after updating it to use the new report format if needed^).
     popd
     exit /b 1
 )
 
-echo [CI] Translation checks passed.
+echo [CI] All system checks passed.
 popd
 exit /b 0

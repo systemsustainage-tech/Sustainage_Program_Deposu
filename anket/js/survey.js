@@ -111,7 +111,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (!stakeholderName || !stakeholderEmail) {
             e.preventDefault();
-            alert('Lütfen adınızı ve e-posta adresinizi girin.');
+            showNotification('Lütfen adınızı ve e-posta adresinizi girin.', 'error');
             return false;
         }
         
@@ -119,7 +119,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(stakeholderEmail)) {
             e.preventDefault();
-            alert('Lütfen geçerli bir e-posta adresi girin.');
+            showNotification('Lütfen geçerli bir e-posta adresi girin.', 'error');
             return false;
         }
         
@@ -152,7 +152,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 message += `${i + 1}. ${topic}\n`;
             });
             
-            alert(message);
+            showNotification(message, 'warning');
             
             // İlk eksik konuya scroll
             const firstMissing = document.querySelector('.topic-card:not(.completed)');
@@ -252,26 +252,7 @@ document.addEventListener('DOMContentLoaded', function() {
             updateProgress();
             
             // Bilgilendirme göster
-            const notification = document.createElement('div');
-            notification.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background: #4CAF50;
-                color: white;
-                padding: 16px 24px;
-                border-radius: 8px;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-                z-index: 9999;
-                animation: slideIn 0.3s ease;
-            `;
-            notification.textContent = '✓ Kaydedilmiş verileriniz yüklendi';
-            document.body.appendChild(notification);
-            
-            setTimeout(() => {
-                notification.style.animation = 'slideOut 0.3s ease';
-                setTimeout(() => notification.remove(), 300);
-            }, 3000);
+            showNotification('✓ Kaydedilmiş verileriniz yüklendi', 'success');
             
         } catch (e) {
             console.error('Form verileri yüklenemedi:', e);
@@ -301,7 +282,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (e.ctrlKey && e.key === 's') {
             e.preventDefault();
             saveFormData();
-            alert('✓ İlerlemeniz kaydedildi!');
+            showNotification('✓ İlerlemeniz kaydedildi!', 'success');
         }
         
         // Escape ile onay
@@ -344,11 +325,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // ==================== BAŞLANGIÇ MESAJI ====================
-    console.log('%cSustainage Anket Sistemi', 'color: #2E7D32; font-size: 20px; font-weight: bold;');
-    console.log('%c✓ Form validasyonu aktif', 'color: #4CAF50;');
-    console.log('%c✓ Otomatik kaydetme aktif', 'color: #4CAF50;');
-    console.log('%c✓ İlerleme takibi aktif', 'color: #4CAF50;');
-    console.log('%cKısayollar: Ctrl+S = Kaydet, Esc = Çık', 'color: #757575; font-style: italic;');
+    // Console logları temizlendi
     
     // İlk yüklemede progress güncelle
     updateProgress();

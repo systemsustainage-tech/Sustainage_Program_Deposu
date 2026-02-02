@@ -51,9 +51,9 @@ function copySurveyLink() {
     input.select();
     input.setSelectionRange(0, 99999);
     navigator.clipboard.writeText(input.value).then(function() {
-        alert('Anket linki panoya kopyalandı.');
+        showNotification('Anket linki panoya kopyalandı.', 'success');
     }).catch(function() {
-        alert('Link kopyalanamadı, lütfen elle kopyalayın.');
+        showNotification('Link kopyalanamadı, lütfen elle kopyalayın.', 'error');
     });
 }
 </script>

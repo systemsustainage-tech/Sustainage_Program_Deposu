@@ -130,7 +130,7 @@
                     const form = document.getElementById('feedbackForm');
                     const formData = new FormData(form);
                     if (!formData.get('rating')) {
-                        alert("Lütfen bir puan verin.");
+                        showNotification("Lütfen bir puan verin.", 'warning');
                         return;
                     }
                     
@@ -144,12 +144,12 @@
                             form.style.display = 'none';
                             document.getElementById('feedbackMessage').style.display = 'block';
                         } else {
-                            alert("Hata: " + (data.error || "Bilinmeyen hata"));
+                            showNotification("Hata: " + (data.error || "Bilinmeyen hata"), 'error');
                         }
                     })
                     .catch(err => {
                         console.error(err);
-                        alert("İletişim hatası oluştu.");
+                        showNotification("İletişim hatası oluştu.", 'error');
                     });
                 }
                 </script>

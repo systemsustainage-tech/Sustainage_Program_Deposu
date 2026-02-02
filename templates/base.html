@@ -195,6 +195,55 @@
           }, 100);
         });
       });
+
+      // Global Notification System
+      function showNotification(message, type = 'info') {
+          const existing = document.querySelector('.custom-notification');
+          if (existing) existing.remove();
+          
+          const notification = document.createElement('div');
+          notification.className = 'custom-notification';
+          
+          let bgColor = '#0d6efd'; // primary/info
+          if (type === 'success') bgColor = '#198754'; // success
+          if (type === 'error') bgColor = '#dc3545'; // danger
+          if (type === 'warning') bgColor = '#ffc107'; // warning
+          
+          const textColor = type === 'warning' ? '#000' : '#fff';
+
+          notification.style.cssText = `
+              position: fixed;
+              top: 20px;
+              right: 20px;
+              background: ${bgColor};
+              color: ${textColor};
+              padding: 16px 24px;
+              border-radius: 8px;
+              box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+              z-index: 9999;
+              font-family: system-ui, -apple-system, sans-serif;
+              max-width: 300px;
+              white-space: pre-wrap;
+              opacity: 0;
+              transform: translateX(100%);
+              transition: all 0.3s ease;
+          `;
+          
+          notification.textContent = message;
+          document.body.appendChild(notification);
+          
+          // Trigger animation
+          requestAnimationFrame(() => {
+              notification.style.opacity = '1';
+              notification.style.transform = 'translateX(0)';
+          });
+          
+          setTimeout(() => {
+              notification.style.opacity = '0';
+              notification.style.transform = 'translateX(100%)';
+              setTimeout(() => notification.remove(), 300);
+          }, 4000);
+      }
     </script>
     {% block scripts %}{% endblock %}
   </body>
