@@ -65,7 +65,7 @@
 <div class="table-responsive">
     <form id="bulkDeleteForm" action="{{ url_for('reports_bulk_delete') }}" method="POST">
     <div class="mb-2" id="bulkActions" style="display:none;">
-        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('{{ lang('confirm_delete_selected', 'Seçilenleri silmek istediğinize emin misiniz?') }}');">
+        <button type="submit" class="btn btn-sm btn-danger" class="btn-delete-selected" data-confirm-message="{{ lang('confirm_delete_selected', 'Seçilenleri silmek istediğinize emin misiniz?') }}">
             <i class="bi bi-trash"></i> {{ lang('delete_selected', 'Seçilenleri Sil') }}
         </button>
     </div>
@@ -90,7 +90,7 @@
                     <a class="btn btn-sm btn-outline-info" href="{{ url_for('view_report', report_id=report['id']) }}" target="_blank" title="{{ lang('view') }}"><i class="bi bi-eye"></i></a>
                     <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('report_download', report_id=report['id']) }}" title="{{ lang('download') }}"><i class="bi bi-download"></i></a>
                     {% if session.role|lower in ['admin', 'super_admin', 'test admin'] %}
-                    <form action="{{ url_for('report_delete', report_id=report['id']) }}" method="POST" onsubmit="return confirm('{{ lang('confirm_delete_report') | replace("'", "\\'") }}');" style="display:inline;">
+                    <form action="{{ url_for('report_delete', report_id=report['id']) }}" method="POST" class="d-inline form-delete-report" data-confirm-message="{{ lang('confirm_delete_report') }}">
                         <button class="btn btn-sm btn-outline-danger" title="{{ lang('delete') }}" type="submit"><i class="bi bi-trash"></i></button>
                     </form>
                     {% endif %}
@@ -145,84 +145,112 @@
     </div>
   </div>
 </div>
+{% endblock %}
 
+{% block scripts %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const selectAll = document.getElementById('selectAll');
-    const checkboxes = document.querySelectorAll('.report-checkbox');
-    const bulkActions = document.getElementById('bulkActions');
-
-    function updateBulkActions() {
-        const checkedCount = document.querySelectorAll('.report-checkbox:checked').length;
-        if (checkedCount > 0) {
-            bulkActions.style.display = 'block';
-        } else {
-            bulkActions.style.display = 'none';
-        }
-    }
-
-    if (selectAll) {
-        selectAll.addEventListener('change', function() {
-            checkboxes.forEach(function(checkbox) {
-                checkbox.checked = selectAll.checked;
+    document.addEventListener('DOMContentLoaded', function() {
+        // Bulk delete confirmation
+        const bulkDeleteBtn = document.querySelector('#bulkDeleteForm button[type="submit"]');
+        if (bulkDeleteBtn) {
+            bulkDeleteBtn.addEventListener('click', function(e) {
+                const msg = this.getAttribute('data-confirm-message');
+                if (!confirm(msg)) {
+                    e.preventDefault();
+                }
             });
-            updateBulkActions();
-        });
-    }
+        }
 
-    checkboxes.forEach(function(checkbox) {
-        checkbox.addEventListener('change', function() {
-            updateBulkActions();
-            if (!this.checked) {
-                selectAll.checked = false;
-            } else {
-                if (document.querySelectorAll('.report-checkbox:checked').length === checkboxes.length) {
-                    selectAll.checked = true;
+        // Individual report delete confirmation
+        const deleteForms = document.querySelectorAll('.form-delete-report');
+        deleteForms.forEach(form => {
+            form.addEventListener('submit', function(e) {
+                const msg = this.getAttribute('data-confirm-message');
+                if (!confirm(msg)) {
+                    e.preventDefault();
+                }
+            });
+        });
+
+        // Select all functionality
+        const selectAll = document.getElementById('selectAll');
+        const checkboxes = document.querySelectorAll('.report-checkbox');
+        const bulkActions = document.getElementById('bulkActions');
+
+        function updateBulkActions() {
+            const checkedCount = document.querySelectorAll('.report-checkbox:checked').length;
+            if (bulkActions) {
+                if (checkedCount > 0) {
+                    bulkActions.style.display = 'block';
+                } else {
+                    bulkActions.style.display = 'none';
                 }
             }
+        }
+
+        if (selectAll) {
+            selectAll.addEventListener('change', function() {
+                checkboxes.forEach(function(checkbox) {
+                    checkbox.checked = selectAll.checked;
+                });
+                updateBulkActions();
+            });
+        }
+
+        checkboxes.forEach(function(checkbox) {
+            checkbox.addEventListener('change', function() {
+                updateBulkActions();
+                if (selectAll) {
+                    if (!this.checked) {
+                        selectAll.checked = false;
+                    } else {
+                        if (document.querySelectorAll('.report-checkbox:checked').length === checkboxes.length) {
+                            selectAll.checked = true;
+                        }
+                    }
+                }
+            });
         });
     });
-});
 
-function openFeedbackModal(reportId, reportName) {
-    document.getElementById('feedbackReportId').value = reportId;
-    document.getElementById('feedbackForm').reset();
-    var myModal = new bootstrap.Modal(document.getElementById('feedbackModal'));
-    myModal.show();
-}
+    function openFeedbackModal(reportId, reportName) {
+        document.getElementById('feedbackReportId').value = reportId;
+        document.getElementById('feedbackForm').reset();
+        var myModal = new bootstrap.Modal(document.getElementById('feedbackModal'));
+        myModal.show();
+    }
 
-function submitFeedback() {
-    const reportId = document.getElementById('feedbackReportId').value;
-    const rating = document.getElementById('feedbackRating').value;
-    const comment = document.getElementById('feedbackComment').value;
+    function submitFeedback() {
+        const reportId = document.getElementById('feedbackReportId').value;
+        const rating = document.getElementById('feedbackRating').value;
+        const comment = document.getElementById('feedbackComment').value;
 
-    fetch('/api/ai/feedback', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            report_id: reportId,
-            rating: rating,
-            comment: comment
+        fetch('/api/ai/feedback', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                report_id: reportId,
+                rating: rating,
+                comment: comment
+            })
         })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert('Geri bildiriminiz kaydedildi. Teşekkürler!');
-            var modalEl = document.getElementById('feedbackModal');
-            var modal = bootstrap.Modal.getInstance(modalEl);
-            modal.hide();
-        } else {
-            alert('Hata: ' + (data.message || 'Bilinmeyen hata'));
-        }
-    })
-    .catch((error) => {
-        console.error('Error:', error);
-        alert('Bir hata oluştu.');
-    });
-}
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Geri bildiriminiz kaydedildi. Teşekkürler!');
+                var modalEl = document.getElementById('feedbackModal');
+                var modal = bootstrap.Modal.getInstance(modalEl);
+                modal.hide();
+            } else {
+                alert('Hata: ' + (data.message || 'Bilinmeyen hata'));
+            }
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+            alert('Bir hata oluştu.');
+        });
+    }
 </script>
-
 {% endblock %}
