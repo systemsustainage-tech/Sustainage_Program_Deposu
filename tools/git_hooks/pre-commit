@@ -1,0 +1,32 @@
+#!/bin/sh
+# Git pre-commit hook to run system audit
+
+echo "Running pre-commit audit (audit_system.py)..."
+
+# Ensure we are in the project root
+# $0 is .git/hooks/pre-commit
+# dirname $0 is .git/hooks
+# ../../ is project root
+cd "$(dirname "$0")/../../"
+
+# Run the python audit script
+# Note: "python" must be in PATH. On some systems might need "python3"
+if command -v python3 &> /dev/null; then
+    PYTHON_CMD=python3
+else
+    PYTHON_CMD=python
+fi
+
+$PYTHON_CMD tools/audit_system.py
+
+# Capture exit code
+RESULT=$?
+
+if [ $RESULT -ne 0 ]; then
+    echo "❌ Audit failed. Commit blocked."
+    echo "Fix errors or use 'git commit --no-verify' to bypass."
+    exit 1
+fi
+
+echo "✅ Audit passed."
+exit 0
