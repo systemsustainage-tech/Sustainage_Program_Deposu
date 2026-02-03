@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    container_name: sustainage_web
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - FLASK_ENV=production
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    volumes:
+      - .:/app
+      - ./backend/data:/app/backend/data
+      - ./logs:/var/log/sustainage
+    depends_on:
+      - redis
+
+  worker:
+    build: .
+    container_name: sustainage_worker
+    command: celery -A backend.celery_app.celery worker --loglevel=info
+    restart: always
+    environment:
+      - FLASK_ENV=production
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    volumes:
+      - .:/app
+      - ./backend/data:/app/backend/data
+      - ./logs:/var/log/sustainage
+    depends_on:
+      - redis
+      - web
+
+  beat:
+    build: .
+    container_name: sustainage_beat
+    command: celery -A backend.celery_app.celery beat --loglevel=info
+    restart: always
+    environment:
+      - FLASK_ENV=production
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    volumes:
+      - .:/app
+      - ./backend/data:/app/backend/data
+      - ./logs:/var/log/sustainage
+    depends_on:
+      - redis
+      - web
+
+  redis:
+    image: redis:7-alpine
+    container_name: sustainage_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+volumes:
+  redis_data:

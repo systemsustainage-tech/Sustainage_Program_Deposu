@@ -8,13 +8,13 @@ REMOTE_PATH = "/var/www/sustainage"
 KEY_FILE = os.path.expanduser("~/.ssh/id_rsa")
 
 # Directories to sync (recursive)
-DIRS_TO_SYNC = ["templates", "anket", "tools", "locales", "static"]
+DIRS_TO_SYNC = ["templates", "anket", "tools", "locales", "static", "backend", "TESTLER", "tests"]
 # Files to sync (in root)
-FILES_TO_SYNC = ["web_app.py", "requirements.txt", "wsgi.py", "gunicorn_config.py"]
+FILES_TO_SYNC = ["web_app.py", "requirements.txt", "wsgi.py", "gunicorn_config.py", "mocks_for_missing_deps.py", "target_schema.sql"]
 
 # Exclude patterns
-EXCLUDE_EXT = ['.pyc', '.pyo', '.git', '.DS_Store']
-EXCLUDE_DIRS = ['__pycache__', 'node_modules', 'venv', '.git', '.idea', '.vscode']
+EXCLUDE_EXT = ['.pyc', '.pyo', '.git', '.DS_Store', '.sqlite', '.db']
+EXCLUDE_DIRS = ['__pycache__', 'node_modules', 'venv', '.git', '.idea', '.vscode', 'data']
 
 def should_skip(name):
     if name in EXCLUDE_DIRS:

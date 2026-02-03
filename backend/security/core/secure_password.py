@@ -29,9 +29,15 @@ def _now() -> int:
 
 
 def hash_password(password: str) -> str:
+    """
+    Hashes the password using Argon2.
+    Format: argon2$<argon2_hash>
+    Example: argon2$$argon2id$v=19$m=65536,t=3,p=4$...
+    """
     try:
         from yonetim.security.core.crypto import hash_password as _hp
         h = _hp(password)
+        # Ensure we store the algorithm identifier
         if h.startswith("$"):
             return "argon2$" + h
         return h
@@ -42,19 +48,53 @@ def hash_password(password: str) -> str:
 
 
 def verify_password(stored_hash: str, password: str) -> Tuple[bool, bool]:
+    """
+    Verifies a password against a stored hash.
+    Returns (is_valid, needs_rehash)
+    """
     try:
+        # 1. Handle Migrated SHA-256 -> Argon2
+        if stored_hash.startswith("argon2_sha256$"):
+            # Format: argon2_sha256$$argon2id$...
+            # The inner hash expects SHA-256 hex digest as the "password"
+            inner_hash = stored_hash.replace("argon2_sha256$", "")
+            # Remove redundant argon2$ if present (double prefix case)
+            if inner_hash.startswith("argon2$"):
+                inner_hash = inner_hash.replace("argon2$", "")
+            
+            hashed_input = hashlib.sha256(password.encode("utf-8")).hexdigest()
+            
+            from yonetim.security.core.crypto import verify_password as _vp
+            if _vp(inner_hash, hashed_input):
+                return True, False # It's secure enough, no need to rehash immediately unless we want to remove the SHA256 layer
+            return False, False
+
+        # 2. Standard Argon2 / Legacy Handling
         from yonetim.security.core.crypto import verify_password_compat
         s = stored_hash
+        
+        # Handle argon2$ prefix
         if s.startswith("argon2$") and s.count("$") >= 3:
             s = s.split("argon2$", 1)[1]
+            
         ok = verify_password_compat(s, password)
-        needs = not s.startswith("$argon2")
+        
+        # Determine if rehash is needed (upgrade legacy to Argon2)
+        needs = False
+        if ok:
+            # If it was not Argon2 (e.g. it was pbkdf2 or plain sha256), we need rehash
+            if not stored_hash.startswith("argon2$") and not stored_hash.startswith("$argon2"):
+                needs = True
+                
         return ok, needs
-    except Exception:
+    except Exception as e:
+        logging.error(f"Password verification error: {e}")
+        # Fallback manual verification logic (preserved from original)
         if stored_hash.startswith("argon2$"):
             s = stored_hash.split("argon2$", 1)[1]
         else:
             s = stored_hash
+            
         if s.startswith("$argon2"):
             try:
                 from argon2 import PasswordHasher
@@ -63,16 +103,20 @@ def verify_password(stored_hash: str, password: str) -> Tuple[bool, bool]:
                 return True, False
             except Exception:
                 return False, False
+                
         if stored_hash.startswith("pbkdf2$"):
             payload = stored_hash.split("pbkdf2$", 1)[1]
         else:
             payload = stored_hash
+            
         if ":" in payload:
             salt, h = payload.split(":", 1)
             calc = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt.encode("utf-8"), 100000).hex()
             return calc == h, True
+            
         if len(payload) == 64 and all(c in "0123456789abcdefABCDEF" for c in payload):
             return hashlib.sha256(password.encode("utf-8")).hexdigest() == payload, True
+            
         return False, False
 
 

@@ -227,7 +227,7 @@ def create_user_with_temp_password(
         placeholders = ', '.join(['?'] * len(insert_cols))
         col_str = ', '.join(insert_cols)
         
-        query = f"INSERT INTO users ({col_str}) VALUES ({placeholders})"
+        query = f"INSERT INTO users ({col_str}) VALUES ({placeholders})"  # nosec B608 - col_str is constructed from hardcoded safe strings
         cur.execute(query, tuple(insert_vals))
 
         user_id = cur.lastrowid

@@ -602,60 +602,74 @@
     });
     
     // ISO 26000 Social Performance Radar Chart
-    const socialCtx = document.getElementById('socialPerformanceChart').getContext('2d');
-    new Chart(socialCtx, {
-        type: 'radar',
-        data: {
-            labels: [
-                "{{ lang('satisfaction', 'Memnuniyet') }}", 
-                "{{ lang('training', 'Eğitim') }}", 
-                "{{ lang('ohs', 'İSG') }}", 
-                "{{ lang('human_rights', 'İnsan Hakları') }}", 
-                "{{ lang('fair_labor', 'Adil Çalışma') }}"
-            ],
-            datasets: [{
-                label: "{{ lang('social_score', 'Sosyal Skor') }}",
-                data: JSON.parse('{{ social_chart_data | tojson | replace("\'", "\\\'") | safe }}'),
-                fill: true,
-                backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                borderColor: 'rgb(54, 162, 235)',
-                pointBackgroundColor: 'rgb(54, 162, 235)',
-                pointBorderColor: '#fff',
-                pointHoverBackgroundColor: '#fff',
-                pointHoverBorderColor: 'rgb(54, 162, 235)'
-            }]
-        },
-        options: {
-            elements: {
-                line: {
-                    borderWidth: 3
-                }
-            },
-            scales: {
-                r: {
-                    angleLines: {
-                        display: true
+    const socialCanvas = document.getElementById('socialPerformanceChart');
+    if (socialCanvas) {
+        if (typeof Chart === 'undefined') {
+            console.error('Chart.js library is not loaded!');
+            socialCanvas.parentElement.innerHTML = '<div class="alert alert-danger">Grafik kütüphanesi yüklenemedi. Lütfen internet bağlantınızı kontrol edin.</div>';
+        } else {
+            const socialCtx = socialCanvas.getContext('2d');
+            const socialData = {{ social_chart_data | tojson | safe }} || [0,0,0,0,0];
+                const emissionData = {{ emission_trend_data | tojson | safe }} || Array(12).fill(0);
+                
+                new Chart(socialCtx, {
+                type: 'radar',
+                data: {
+                    labels: [
+                        "{{ lang('satisfaction', 'Memnuniyet') }}", 
+                        "{{ lang('training', 'Eğitim') }}", 
+                        "{{ lang('ohs', 'İSG') }}", 
+                        "{{ lang('human_rights', 'İnsan Hakları') }}", 
+                        "{{ lang('fair_labor', 'Adil Çalışma') }}"
+                    ],
+                    datasets: [{
+                        label: "{{ lang('social_score', 'Sosyal Skor') }}",
+                        data: socialData,
+                        fill: true,
+                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                        borderColor: 'rgb(54, 162, 235)',
+                        pointBackgroundColor: 'rgb(54, 162, 235)',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgb(54, 162, 235)'
+                    }]
+                },
+                options: {
+                    elements: {
+                        line: {
+                            borderWidth: 3
+                        }
                     },
-                    suggestedMin: 0,
-                    suggestedMax: 100
+                    scales: {
+                        r: {
+                            angleLines: {
+                                display: true
+                            },
+                            suggestedMin: 0,
+                            suggestedMax: 100
+                        }
+                    }
                 }
+            });
+
+            const trendCanvas = document.getElementById('trendChart');
+            if (trendCanvas) {
+                const trendCtx = trendCanvas.getContext('2d');
+                new Chart(trendCtx, {
+                    type: 'line',
+                    data: {
+                        labels: ["{{ lang('month_jan') }}", "{{ lang('month_feb') }}", "{{ lang('month_mar') }}", "{{ lang('month_apr') }}", "{{ lang('month_may') }}", "{{ lang('month_jun') }}", "{{ lang('month_jul') }}", "{{ lang('month_aug') }}", "{{ lang('month_sep') }}", "{{ lang('month_oct') }}", "{{ lang('month_nov') }}", "{{ lang('month_dec') }}"],
+                        datasets: [{
+                            label: "{{ lang('emission_tco2e') }}",
+                            data: emissionData,
+                            borderColor: '#4bc0c0',
+                            fill: false
+                        }]
+                    }
+                });
             }
         }
-    });
-
-    const trendCtx = document.getElementById('trendChart').getContext('2d');
-    new Chart(trendCtx, {
-        type: 'line',
-        data: {
-            labels: ["{{ lang('month_jan') }}", "{{ lang('month_feb') }}", "{{ lang('month_mar') }}", "{{ lang('month_apr') }}", "{{ lang('month_may') }}", "{{ lang('month_jun') }}"],
-            datasets: [{
-                label: "{{ lang('emission_tco2e') }}",
-                data: [65, 59, 80, 81, 56, 55],
-                borderColor: '#4bc0c0',
-                fill: false
-            }]
-        }
-    });
+    }
 </script>
 
 {% endblock %}

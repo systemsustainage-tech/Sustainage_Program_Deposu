@@ -73,7 +73,7 @@ def cached(ttl: int = 300) -> None:
                 'args': args,
                 'kwargs': kwargs
             }
-            cache_key = hashlib.md5(
+            cache_key = hashlib.sha256(
                 json.dumps(key_data, sort_keys=True, default=str).encode()
             ).hexdigest()
 
@@ -138,12 +138,12 @@ class QueryCache:
 
     def get_query_result(self, query: str, params: tuple = ()) -> Optional[Any]:
         """Sorgu sonucunu cache'den al"""
-        key = hashlib.md5(f"{query}_{params}".encode()).hexdigest()
+        key = hashlib.sha256(f"{query}_{params}".encode()).hexdigest()
         return self.cache.get(key)
 
     def set_query_result(self, query: str, params: tuple, result: Any) -> None:
         """Sorgu sonucunu cache'e ekle"""
-        key = hashlib.md5(f"{query}_{params}".encode()).hexdigest()
+        key = hashlib.sha256(f"{query}_{params}".encode()).hexdigest()
         self.cache.set(key, result)
 
     def clear(self) -> None:

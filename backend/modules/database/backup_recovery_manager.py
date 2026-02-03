@@ -18,6 +18,14 @@ from typing import Dict, List, Tuple
 
 import schedule
 
+try:
+    from backend.modules.integration.cloud_storage_manager import CloudStorageManager
+except ImportError:
+    # Fallback for standalone execution or different path structure
+    try:
+        from modules.integration.cloud_storage_manager import CloudStorageManager
+    except ImportError:
+        CloudStorageManager = None
 
 class BackupRecoveryManager:
     """Yedekleme ve kurtarma yöneticisi"""
@@ -35,6 +43,9 @@ class BackupRecoveryManager:
         os.makedirs(backup_dir, exist_ok=True)
         self._init_backup_config()
         self._init_backup_tables()
+        
+        # Cloud Storage Init
+        self.cloud_manager = CloudStorageManager() if CloudStorageManager else None
     
     def _init_backup_config(self) -> None:
         """Yedekleme yapılandırması"""
@@ -97,7 +108,8 @@ class BackupRecoveryManager:
     
     def create_backup(self, backup_type: str = 'full', 
                      created_by: str = 'system',
-                     include_files: bool = True) -> Tuple[bool, str]:
+                     include_files: bool = True,
+                     upload_to_cloud: bool = True) -> Tuple[bool, str]:
         """
         Yedekleme oluştur
         
@@ -105,6 +117,7 @@ class BackupRecoveryManager:
             backup_type: 'full', 'database_only', 'files_only'
             created_by: Kim oluşturdu
             include_files: Dosyaları dahil et
+            upload_to_cloud: Cloud'a yükle (varsayılan True)
         
         Returns:
             Tuple[bool, str]: (Başarı, backup dosya yolu veya hata mesajı)
@@ -137,6 +150,15 @@ class BackupRecoveryManager:
             self._log_backup(backup_name, backup_type, backup_size, backup_path, 
                            'completed', created_by=created_by)
             
+            # Cloud Upload
+            if upload_to_cloud and self.cloud_manager:
+                logging.info(f"Cloud'a yükleniyor: {backup_path}")
+                success = self.cloud_manager.upload_file(backup_path)
+                if success:
+                    logging.info("[OK] Cloud yedekleme başarılı")
+                else:
+                    logging.error("[HATA] Cloud yedekleme başarısız")
+
             # Eski yedekleri temizle
             self.cleanup_old_backups()
             
@@ -227,6 +249,70 @@ class BackupRecoveryManager:
         finally:
             conn.close()
     
+    def verify_backup(self, backup_path: str) -> Tuple[bool, str]:
+        """
+        Yedeğin sağlamlığını doğrula (Restore testi)
+        
+        Args:
+            backup_path: Yedek dosya yolu
+            
+        Returns:
+            Tuple[bool, str]: (Başarı, mesaj)
+        """
+        if not os.path.exists(backup_path):
+            return False, "Yedek dosyası bulunamadı"
+            
+        temp_dir = os.path.join(self.backup_dir, f"verify_{datetime.now().strftime('%Y%m%d_%H%M%S')}")
+        os.makedirs(temp_dir, exist_ok=True)
+        
+        try:
+            # 1. Zip bütünlüğünü test et
+            if not zipfile.is_zipfile(backup_path):
+                return False, "Dosya geçerli bir ZIP arşivi değil"
+                
+            with zipfile.ZipFile(backup_path, 'r') as zipf:
+                # CRC hatası kontrolü için testzip
+                bad_file = zipf.testzip()
+                if bad_file:
+                    return False, f"ZIP içeriği bozuk: {bad_file}"
+                    
+                # 2. Veritabanını geçici alana çıkar
+                if 'database/sdg_desktop.sqlite' not in zipf.namelist():
+                    return False, "Yedek içinde veritabanı bulunamadı"
+                    
+                zipf.extract('database/sdg_desktop.sqlite', temp_dir)
+                temp_db_path = os.path.join(temp_dir, 'database', 'sdg_desktop.sqlite')
+                
+                # 3. Veritabanı bütünlüğünü kontrol et
+                if not os.path.exists(temp_db_path):
+                    return False, "Veritabanı çıkarılamadı"
+                    
+                verify_conn = sqlite3.connect(temp_db_path)
+                try:
+                    cursor = verify_conn.cursor()
+                    cursor.execute("PRAGMA integrity_check")
+                    result = cursor.fetchone()
+                    if result[0] != "ok":
+                        return False, f"Veritabanı integrity check başarısız: {result[0]}"
+                        
+                    # Tablo sayısını kontrol et (basit bir kontrol)
+                    cursor.execute("SELECT count(*) FROM sqlite_master WHERE type='table'")
+                    table_count = cursor.fetchone()[0]
+                    if table_count == 0:
+                        return False, "Veritabanı boş (tablo yok)"
+                        
+                finally:
+                    verify_conn.close()
+                    
+            return True, "Yedek başarıyla doğrulandı (Integrity Check OK)"
+            
+        except Exception as e:
+            return False, f"Doğrulama hatası: {str(e)}"
+        finally:
+            # Temizlik
+            if os.path.exists(temp_dir):
+                shutil.rmtree(temp_dir)
+
     def restore_backup(self, backup_path: str, restored_by: str = 'system') -> Tuple[bool, str]:
         """
         Yedekten geri yükle
@@ -505,40 +591,7 @@ class BackupRecoveryManager:
         finally:
             conn.close()
     
-    def verify_backup(self, backup_path: str) -> Tuple[bool, str]:
-        """
-        Yedek dosyasını doğrula
-        
-        Returns:
-            Tuple[bool, str]: (Geçerli mi, mesaj)
-        """
-        try:
-            if not os.path.exists(backup_path):
-                return False, "Dosya bulunamadı"
-            
-            # Zip dosyası geçerli mi?
-            if not zipfile.is_zipfile(backup_path):
-                return False, "Geçersiz zip dosyası"
-            
-            # İçeriği kontrol et
-            with zipfile.ZipFile(backup_path, 'r') as zipf:
-                files = zipf.namelist()
-                
-                # Veritabanı var mı?
-                has_db = any('sdg_desktop.sqlite' in f for f in files)
-                
-                if not has_db:
-                    return False, "Veritabanı bulunamadı"
-                
-                # Zip bozuk mu?
-                bad_file = zipf.testzip()
-                if bad_file:
-                    return False, f"Bozuk dosya bulundu: {bad_file}"
-            
-            return True, "Yedek dosyası geçerli"
-            
-        except Exception as e:
-            return False, f"Doğrulama hatası: {e}"
+    # Removed duplicate verify_backup method
     
     def export_backup_report(self) -> str:
         """Yedekleme raporu oluştur"""

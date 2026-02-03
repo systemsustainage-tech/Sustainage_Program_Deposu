@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sustainage-web
+  labels:
+    app: sustainage
+    component: web
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: sustainage
+      component: web
+  template:
+    metadata:
+      labels:
+        app: sustainage
+        component: web
+    spec:
+      containers:
+      - name: sustainage-web
+        image: sustainage:latest
+        ports:
+        - containerPort: 8000
+        env:
+        - name: FLASK_ENV
+          value: "production"
+        - name: REDIS_URL
+          value: "redis://sustainage-redis:6379/0"
+        - name: CELERY_BROKER_URL
+          value: "redis://sustainage-redis:6379/0"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        volumeMounts:
+        - name: data-volume
+          mountPath: /app/backend/data
+      volumes:
+      - name: data-volume
+        persistentVolumeClaim:
+          claimName: sustainage-pvc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sustainage-worker
+  labels:
+    app: sustainage
+    component: worker
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: sustainage
+      component: worker
+  template:
+    metadata:
+      labels:
+        app: sustainage
+        component: worker
+    spec:
+      containers:
+      - name: sustainage-worker
+        image: sustainage:latest
+        command: ["celery", "-A", "backend.celery_app.celery", "worker", "--loglevel=info"]
+        env:
+        - name: FLASK_ENV
+          value: "production"
+        - name: REDIS_URL
+          value: "redis://sustainage-redis:6379/0"
+        - name: CELERY_BROKER_URL
+          value: "redis://sustainage-redis:6379/0"
+        volumeMounts:
+        - name: data-volume
+          mountPath: /app/backend/data
+      volumes:
+      - name: data-volume
+        persistentVolumeClaim:
+          claimName: sustainage-pvc

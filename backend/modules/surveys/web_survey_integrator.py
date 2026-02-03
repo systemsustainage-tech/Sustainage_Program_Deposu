@@ -759,8 +759,8 @@ class WebSurveyIntegrator:
 
     def _get_api_key(self) -> str:
         """API key'i al - config.php ile aynı"""
-        # PHP: define('ADMIN_API_KEY', 'sustainage_secure_api_key_2025_' . md5('sustainage.tr'));
-        return "sustainage_secure_api_key_2025_" + hashlib.md5(b"sustainage.tr").hexdigest()
+        # PHP: define('ADMIN_API_KEY', 'sustainage_secure_api_key_2025_' . hash('sha256', 'sustainage.tr'));
+        return "sustainage_secure_api_key_2025_" + hashlib.sha256(b"sustainage.tr").hexdigest()
 
     def send_survey_email(
         self,

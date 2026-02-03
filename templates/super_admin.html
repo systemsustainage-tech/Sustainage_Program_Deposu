@@ -110,6 +110,20 @@
         </div>
     </div>
     {% endif %}
+    <div class="col-md-3">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-2">
+                    <div class="display-6 text-purple me-2"><i class="bi bi-cpu-fill"></i></div>
+                    <div>
+                        <h5 class="card-title mb-0">{{ lang('admin_menu_tests', 'Test Merkezi') }}</h5>
+                        <small class="text-muted">{{ lang('admin_menu_tests_desc', 'Sistem testleri ve doğrulama') }}</small>
+                    </div>
+                </div>
+                <a class="btn btn-sm btn-outline-primary mt-2" href="{{ url_for('super_admin_tests') }}">{{ lang('btn_open', 'Aç') }}</a>
+            </div>
+        </div>
+    </div>
 </div>
 <div class="row g-4 mb-4">
     <div class="col-md-3">

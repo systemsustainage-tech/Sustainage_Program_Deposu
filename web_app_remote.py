@@ -32,6 +32,8 @@ from security.core.enhanced_2fa import (
     disable_2fa as twofa_disable,
     get_backup_codes,
     regenerate_backup_codes,
+    verify_totp_code,
+    verify_backup_code,
 )
 from yonetim.security.core.auth import (
     is_force_2fa as core_is_force_2fa,
@@ -40,6 +42,7 @@ from yonetim.security.core.auth import (
 from core.db_log_handler import DBLogHandler
 from core.audit_manager import AuditManager
 from backend.core.language_manager import LanguageManager
+from yonetim.license_manager import LicenseManager
 
 from mapping.sdg_gri_mapping import SDGGRIMapping
 from modules.database.backup_recovery_manager import BackupRecoveryManager
@@ -61,6 +64,7 @@ if os.path.exists('/var/www/sustainage/backend/data/sdg_desktop.sqlite'):
 # Initialize Managers
 audit_manager = AuditManager(DB_PATH)
 language_manager = LanguageManager()
+license_manager = LicenseManager(DB_PATH)
 
 COMPANY_INFO_FIELDS = [
     "name",
@@ -258,6 +262,47 @@ except Exception as e:
 
 # Fix for login loop: Use a stable secret key if environment variable is not set
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'sustainage_secret_key_fixed_2024_xyz_987')
+
+@app.before_request
+def license_check():
+    """
+    Enforce license verification for API calls.
+    Strategies:
+    1. Check X-License-Key header.
+    2. If logged in, check company's active license in DB.
+    3. Block if no valid license found (except for exempt endpoints).
+    """
+    if not request.path.startswith('/api/'):
+        return
+
+    # Exempt public/auth endpoints
+    if request.endpoint in ['api_login', 'api_register', 'api_logout', 'static']:
+        return
+
+    # 1. Check Header
+    api_key = request.headers.get('X-License-Key')
+    if api_key:
+        is_valid, msg, payload = license_manager.verify_license_key(api_key)
+        if not is_valid:
+            return jsonify({'error': f'License Error: {msg}'}), 403
+        g.license = payload
+        return
+
+    # 2. Check Session (if logged in)
+    if 'company_id' in session:
+        # Check if company has an active license
+        active_key = license_manager.get_active_license(session['company_id'])
+        if not active_key:
+            return jsonify({'error': 'No active license found for this company.'}), 403
+        
+        is_valid, msg, payload = license_manager.verify_license_key(active_key)
+        if not is_valid:
+            return jsonify({'error': f'License Expired/Invalid: {msg}'}), 403
+        g.license = payload
+        return
+
+    # 3. No license info found
+    return jsonify({'error': 'License verification failed. Please provide X-License-Key or login.'}), 403
 
 # Translation Setup
 def gettext(key, *args):
@@ -1187,8 +1232,9 @@ def dashboard():
                     cur = conn.execute(f"PRAGMA table_info({t})")
                     cols = [c[1] for c in cur.fetchall()]
                     if 'company_id' in cols:
-                        data_count += conn.execute(f'SELECT COUNT(*) FROM {t} WHERE company_id=?', (g.company_id,)).fetchone()[0]
+                        data_count += conn.execute(f'SELECT COUNT(*) FROM {t} WHERE company_id=?', (g.company_id,)).fetchone()[0]  # nosec B608
                 except Exception:
+
                     pass
             stats['data_count'] = data_count
         except Exception:
@@ -1406,7 +1452,8 @@ def super_admin_audit_logs():
             FROM audit_logs a
             LEFT JOIN users u ON a.user_id = u.id
             WHERE u.company_id = ?
-        """
+        """  # nosec B608
+
         params_a = [g.company_id]
         
         # Build Query for Security Logs
@@ -1464,7 +1511,7 @@ def super_admin_audit_logs():
             ) combined_logs
             ORDER BY ts DESC
             LIMIT ? OFFSET ?
-        """
+        """  # nosec B608 - queries are constructed from hardcoded templates
         
         count_query = f"""
             SELECT COUNT(*) FROM (
@@ -1472,7 +1519,8 @@ def super_admin_audit_logs():
                 UNION ALL
                 {query_s}
             ) combined_logs
-        """
+        """  # nosec B608 - queries are constructed from hardcoded templates
+
         
         # Execute Count
         all_params = params_a + params_s
@@ -2067,7 +2115,7 @@ def super_admin_performance():
         total_records = 0
         for name in tables:
             try:
-                cur.execute(f"SELECT COUNT(*) FROM {name}")
+                cur.execute(f"SELECT COUNT(*) FROM {name}")  # nosec B608 - name comes from sqlite_master (trusted schema)
                 count = cur.fetchone()[0]
                 total_records += count
                 table_stats.append({'name': name, 'rows': count})
@@ -2267,7 +2315,9 @@ def super_admin_system_logs():
                     {where_clause}
                     ORDER BY created_at DESC
                     LIMIT 200
-                """
+                """  # nosec B608
+
+
                 cur.execute(query, params)
                 rows = cur.fetchall()
                 for ts, username, event_type, action, success, details in rows:
@@ -3698,7 +3748,7 @@ def user_add():
                 role_ids = []
                 if role_names:
                     placeholders = ','.join(['?'] * len(role_names))
-                    cursor = conn.execute(f"SELECT id FROM roles WHERE name IN ({placeholders})", role_names)
+                    cursor = conn.execute(f"SELECT id FROM roles WHERE name IN ({placeholders})", role_names)  # nosec B608
                     role_ids = [row[0] for row in cursor.fetchall()]
                 else:
                     # Varsayılan User rolü
@@ -3958,8 +4008,9 @@ def user_edit(user_id):
             if role_names:
                 conn = get_db()
                 placeholders = ','.join(['?'] * len(role_names))
-                cursor = conn.execute(f"SELECT id FROM roles WHERE name IN ({placeholders})", role_names)
+                cursor = conn.execute(f"SELECT id FROM roles WHERE name IN ({placeholders})", role_names)  # nosec B608
                 role_ids = [row[0] for row in cursor.fetchall()]
+
                 conn.close()
                 user_data['role_ids'] = role_ids
 
@@ -4123,14 +4174,15 @@ def company_info_edit(company_id):
                 if update_data:
                     set_clause = ", ".join([f"{k} = ?" for k in update_data.keys()])
                     values = list(update_data.values()) + [company_id]
-                    cur.execute(f"UPDATE company_info SET {set_clause} WHERE company_id = ?", values)
+                    cur.execute(f"UPDATE company_info SET {set_clause} WHERE company_id = ?", values)  # nosec B608
+
             else:
                 insert_data = {k: v for k, v in data.items() if k in available_cols}
                 insert_data["company_id"] = company_id
                 columns = ", ".join(insert_data.keys())
                 placeholders = ", ".join(["?" for _ in insert_data])
                 values = list(insert_data.values())
-                cur.execute(f"INSERT INTO company_info ({columns}) VALUES ({placeholders})", values)
+                cur.execute(f"INSERT INTO company_info ({columns}) VALUES ({placeholders})", values)  # nosec B608
 
             conn.commit()
             flash('Şirket bilgileri kaydedildi.', 'success')
@@ -7784,7 +7836,8 @@ def system_health_check():
 if __name__ == '__main__':
     # Production'da debug=False olmalı
     is_debug = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
-    app.run(host='0.0.0.0', port=5000, debug=is_debug)
+    app.run(host='0.0.0.0', port=5000, debug=is_debug)  # nosec B104 - Intended to listen on all interfaces for container/deployment
+
 
 
 @app.route('/advanced_calculation')

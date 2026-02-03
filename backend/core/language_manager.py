@@ -28,8 +28,15 @@ class LanguageManager:
         try:
             abs_path = os.path.abspath(__file__)
             base_dir = os.path.dirname(os.path.dirname(abs_path)) # backend/
-            locales_dir = os.path.join(base_dir, 'locales')
+            project_root = os.path.dirname(base_dir) # root/
             
+            # Priority 1: Check root/locales (where we deploy updates)
+            locales_dir = os.path.join(project_root, 'locales')
+            
+            if not os.path.exists(locales_dir):
+                # Priority 2: Check backend/locales (legacy)
+                locales_dir = os.path.join(base_dir, 'locales')
+                
             if not os.path.exists(locales_dir):
                 # Try alternative path relative to CWD
                 alt_dir = os.path.join(os.getcwd(), 'backend', 'locales')

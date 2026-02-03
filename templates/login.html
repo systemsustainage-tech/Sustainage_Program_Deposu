@@ -9,6 +9,7 @@
             <div class="card-body">
                 <h3 class="card-title text-center mb-4">{{ lang('login_header') }}</h3>
                 <form method="POST" action="{{ url_for('login') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="mb-3">
                         <label for="username" class="form-label">{{ lang('login_username') }}</label>
                         <input type="text" class="form-control" id="username" name="username" required autofocus>
@@ -17,6 +18,19 @@
                         <label for="password" class="form-label">{{ lang('login_password') }}</label>
                         <input type="password" class="form-control" id="password" name="password" required>
                     </div>
+
+                    {% if captcha_required %}
+                    <div class="mb-3">
+                        <label class="form-label">Güvenlik Kodu</label>
+                        <div class="d-flex align-items-center mb-2">
+                            <img src="{{ url_for('captcha_image', t=range(1, 10000) | random) }}" alt="CAPTCHA" class="img-fluid border rounded me-2" style="height: 50px;">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="this.previousElementSibling.src='{{ url_for('captcha_image') }}?t=' + Math.random()">
+                                <i class="bi bi-arrow-clockwise"></i> Yenile
+                            </button>
+                        </div>
+                        <input type="text" class="form-control" name="captcha" placeholder="Resimdeki kodu girin" required>
+                    </div>
+                    {% endif %}
                     
                     <div class="mb-3 form-check">
                         <input type="checkbox" class="form-check-input" id="remember" name="remember">

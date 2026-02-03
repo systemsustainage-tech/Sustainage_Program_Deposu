@@ -92,10 +92,17 @@ def check_modules():
     modules = [
         '/governance', '/social', '/environmental', '/supply_chain', '/economic',
         '/esg', '/csrd', '/eu_taxonomy', '/issb', '/iirc', '/esrs', '/tcfd', '/tnfd', '/cdp',
-        '/gri', '/sasb', '/ungc', '/sdg',
+        '/gri', '/sasb', '/ungc', '/sdg', '/ai', '/mapping', '/lca', '/realtime',
         '/reports', '/users', '/companies', '/prioritization', '/targets',
-        '/surveys', '/cbam', '/lca', '/realtime', '/biodiversity', '/regulation', '/benchmark', '/training',
-        '/human_rights', '/labor', '/consumer', '/community'
+        '/surveys', '/cbam', '/biodiversity', '/regulation', '/benchmark', '/training',
+        '/human_rights', '/labor', '/consumer', '/community', '/product_technology',
+        '/advanced_calculation', '/advanced_inventory', '/advanced_reporting',
+        '/automation', '/auto_tasks', '/data_provenance', '/digital_security',
+        '/emergency', '/emission_reduction', '/innovation', '/integration',
+        '/quality', '/risk_management', '/scenario_analysis', '/scope3',
+        '/security', '/skdm', '/stakeholder', '/strategic', '/tracking',
+        '/validation', '/visualization', '/waste_management', '/water_management',
+        '/workflow', '/user_experience'
     ]
     
     failed_modules = []

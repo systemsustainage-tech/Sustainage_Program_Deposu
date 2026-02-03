@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Hizmet Seviyesi Anlaşması (SLA) - Sustainage{% endblock %}
+
+{% block content %}
+<div class="container mt-5 mb-5">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white p-4 border-bottom-0">
+                    <h1 class="h2 text-primary mb-0">Hizmet Seviyesi Anlaşması (SLA)</h1>
+                    <p class="text-muted mt-2">Yürürlük Tarihi: 3 Şubat 2026</p>
+                </div>
+                <div class="card-body p-4">
+                    <h3>1. Anlaşmanın Kapsamı</h3>
+                    <p>Bu Hizmet Seviyesi Anlaşması (SLA), Sustainage SaaS platformunun kullanılabilirliği ve destek hizmetlerine ilişkin standartları belirler.</p>
+
+                    <h3>2. Hizmet Kullanılabilirliği (Uptime)</h3>
+                    <p>Sustainage, platformun aylık bazda <strong>%99.5</strong> oranında erişilebilir olmasını hedefler. Planlı bakım çalışmaları bu sürenin dışındadır.</p>
+                    <div class="alert alert-info">
+                        <strong>Planlı Bakım:</strong> Bakım çalışmaları mümkün olduğunca iş saatleri dışında yapılacak ve kullanıcılara en az 24 saat önceden bildirilecektir.
+                    </div>
+
+                    <h3>3. Destek Hizmetleri</h3>
+                    <p>Müşterilerimiz için aşağıdaki destek kanalları ve yanıt süreleri geçerlidir:</p>
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Öncelik Seviyesi</th>
+                                <th>Tanım</th>
+                                <th>İlk Yanıt Süresi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><span class="badge bg-danger">Kritik</span></td>
+                                <td>Sisteme erişimin tamamen kesilmesi, veri kaybı riski.</td>
+                                <td>2 Saat</td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-warning text-dark">Yüksek</span></td>
+                                <td>Ana fonksiyonların çalışmaması, performans düşüklüğü.</td>
+                                <td>4 Saat</td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-info text-dark">Normal</span></td>
+                                <td>Genel sorular, raporlama hataları, kullanıcı yönetimi.</td>
+                                <td>24 Saat</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h3>4. Veri Yedekleme ve Kurtarma</h3>
+                    <p>Verileriniz günlük olarak tam yedek, saatlik olarak veritabanı yedeği şeklinde otomatik olarak yedeklenmektedir. Olası bir felaket durumunda (Disaster Recovery), veri kaybını en aza indirmek için RPO (Recovery Point Objective) 1 saat, RTO (Recovery Time Objective) 4 saat olarak hedeflenmektedir.</p>
+
+                    <h3>5. İstisnalar</h3>
+                    <p>Mücbir sebepler (doğal afetler, savaş vb.), internet servis sağlayıcılarından kaynaklı kesintiler ve kullanıcının hatalı kullanımından kaynaklanan sorunlar SLA kapsamı dışındadır.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

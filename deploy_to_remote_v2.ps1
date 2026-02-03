@@ -38,7 +38,10 @@ Copy-ToRemote "c:\SUSTAINAGESERVER\locales" "$remote_path/"
 # 7. Copy top-level config (DB_PATH ve ayarlar için)
 Copy-ToRemote "c:\SUSTAINAGESERVER\config" "$remote_path/"
 
-# 8. Restart Service via systemd
-Run-Remote "systemctl stop sustainage; pkill -f 'gunicorn --bind 0.0.0.0:5000 web_app:app' || true; systemctl start sustainage"
+# 8. Copy tools (Schema updates etc.)
+Copy-ToRemote "c:\SUSTAINAGESERVER\tools" "$remote_path/"
+
+# 9. Run schema update and Restart Service
+Run-Remote "systemctl stop sustainage; pkill -f 'gunicorn --bind 0.0.0.0:5000 web_app:app' || true; python3 $remote_path/tools/update_remote_schema_multitenant.py; systemctl start sustainage"
 
 Write-Host "Deployment complete."

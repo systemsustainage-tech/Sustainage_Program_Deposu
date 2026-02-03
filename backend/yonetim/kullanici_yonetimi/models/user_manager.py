@@ -1065,7 +1065,7 @@ class UserManager:
                     assert spec.loader is not None
                     spec.loader.exec_module(_sup_mod)
                     check_delete_protection = _sup_mod.check_delete_protection
-                can_delete, message = check_delete_protection(self.db_path, username)
+                can_delete, message = check_delete_protection(self.db_path, username, actor_id=deleted_by)
                 if not can_delete:
                     logging.info(f" {message}")
                     return False
@@ -1708,7 +1708,7 @@ class UserManager:
                 assert spec.loader is not None
                 spec.loader.exec_module(_sup_mod)
                 check_password_change_protection = _sup_mod.check_password_change_protection
-            can_change, message = check_password_change_protection(self.db_path, username, new_password)
+            can_change, message = check_password_change_protection(self.db_path, username, new_password, actor_id=updated_by)
             if not can_change:
                 logging.info(f" {message}")
                 return False

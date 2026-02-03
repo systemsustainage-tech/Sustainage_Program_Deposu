@@ -362,7 +362,7 @@ class AdvancedFileManager:
 
             # Benzersiz dosya adı oluştur
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            unique_name = f"{timestamp}_{hashlib.md5(original_name.encode()).hexdigest()[:8]}{file_ext}"
+            unique_name = f"{timestamp}_{hashlib.sha256(original_name.encode()).hexdigest()[:12]}{file_ext}"
 
             # Hedef yolu belirle
             if folder_id:

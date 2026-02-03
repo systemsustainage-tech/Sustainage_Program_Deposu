@@ -1,111 +1,217 @@
 {% extends "base.html" %}
 
-{% block title %}{{ lang('advanced_reporting_title', 'Advanced Reporting') }} - SDG{% endblock %}
+{% block title %}{{ lang('advanced_reporting_title', 'Gelişmiş Raporlama') }} - SDG{% endblock %}
 
 {% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12 d-flex justify-content-between align-items-center">
+            <h1><i class="fas fa-file-contract me-2"></i>{{ lang('advanced_reporting_title', 'Gelişmiş Raporlama Servisi') }}</h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+                    <li class="breadcrumb-item active">{{ lang('advanced_reporting_title', 'Gelişmiş Raporlama') }}</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
 
-<div class="row mb-4">
-<div class="col-md-12">
-<div class="d-flex justify-content-between align-items-center">
-<h1><i class="fas fa-cube me-2"></i>{{ lang('advanced_reporting_title', 'Advanced Reporting') }}</h1>
-<div>
-<span class="badge bg-{{ 'success' if manager_available else 'secondary' }}">
-                    {{ lang('module_active_badge') if manager_available else lang('module_passive_badge') }}
-                </span>
-<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}</button></div>
-</div>
-<p class="lead text-muted">{{ lang('advanced_reporting_desc', 'Module description for Advanced Reporting') }}</p>
-</div>
-</div>
-<div class="row">
-<div class="col-12">
-<div class="card shadow-sm border-0">
-<div class="card-body">
-                
-                    {% if stats or records %}
-                        <!-- Dashboard View -->
-<div class="row mb-4">
-                            {% if stats %}
-                            <div class="col-12 mb-4">
-<div class="card">
-<div class="card-header">
-<h5 class="mb-0">{{ lang('statistics', 'İstatistikler') }}</h5>
-</div>
-<div class="card-body">
-<div class="row">
-                                            {% for key, value in stats.items() %}
-                                            <div class="col-md-3 mb-3">
-<div class="border rounded p-3 text-center bg-light">
-<h6 class="text-muted text-uppercase small">{{ key|replace('_', ' ')|title }}</h6>
-<h3 class="mb-0 text-primary">{{ value }}</h3>
-</div>
-</div>
-                                            {% endfor %}
-                                        </div>
-</div>
-</div>
-</div>
-                            {% endif %}
-
-                            {% if records %}
-                            <div class="col-12">
-<div class="card">
-<div class="card-header d-flex justify-content-between align-items-center">
-<h5 class="mb-0">{{ lang('records', 'Kayıtlar') }}</h5>
-<button class="btn btn-sm btn-primary">
-<i class="fas fa-plus"></i> {{ lang('btn_add_data', 'Yeni Veri Girişi') }}
-                                        </button>
-</div>
-<div class="card-body">
-<div class="table-responsive">
-<table class="table table-hover">
-<thead>
-<tr>
-                                                        {% if columns %}
-                                                            {% for col in columns %}
-                                                            <th>{{ col|replace('_', ' ')|title }}</th>
-                                                            {% endfor %}
-                                                        {% else %}
-                                                            <th>{{ lang('details', 'Detaylar') }}</th>
-                                                        {% endif %}
-                                                    </tr>
-</thead>
-<tbody>
-                                                    {% for record in records %}
-                                                    <tr>
-                                                        {% if columns %}
-                                                            {% for col in columns %}
-                                                                {% if record is mapping %}
-                                                                    <td>{{ record[col] }}</td>
-                                                                {% else %}
-                                                                    <td>{{ record }}</td>
-                                                                {% endif %}
-                                                            {% endfor %}
-                                                        {% else %}
-                                                            <td>{{ record }}</td>
-                                                        {% endif %}
-                                                    </tr>
-                                                    {% endfor %}
-                                                </tbody>
-</table>
-</div>
-</div>
-</div>
-</div>
-                            {% endif %}
+    <div class="row">
+        <!-- Rapor Oluşturma Kartı -->
+        <div class="col-md-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i>{{ lang('new_report', 'Yeni Rapor Oluştur') }}</h5>
+                </div>
+                <div class="card-body">
+                    <form id="generateReportForm">
+                        <div class="mb-3">
+                            <label for="reportPeriod" class="form-label">{{ lang('period', 'Dönem') }}</label>
+                            <input type="text" class="form-control" id="reportPeriod" placeholder="2024" value="2024" required>
+                            <div class="form-text">Yıl veya Yıl-Çeyrek (örn. 2024, 2024-Q1)</div>
                         </div>
-                    {% else %}
-                        <!-- Fallback to Under Construction if no data -->
-<div class="text-center py-5">
-<i class="bi bi-cone-striped display-1 text-warning mb-3"></i>
-<h3>{{ lang('module_under_construction') }}</h3>
-<p class="text-muted">{{ lang('module_coming_soon_desc', 'Bu modülün web arayüzü entegrasyonu devam etmektedir.') }}</p>
-<p class="small text-muted">{{ lang('no_data_msg', 'Veri bulunamadı veya modül henüz aktif değil.') }}</p>
-</div>
-                    {% endif %}
+                        
+                        <div class="mb-3">
+                            <label for="reportScope" class="form-label">{{ lang('scope', 'Kapsam') }}</label>
+                            <select class="form-select" id="reportScope">
+                                <option value="full">{{ lang('scope_full', 'Tam Kapsam (Tüm Modüller)') }}</option>
+                                <option value="environmental">{{ lang('scope_environmental', 'Çevresel (E)') }}</option>
+                                <option value="social">{{ lang('scope_social', 'Sosyal (S)') }}</option>
+                                <option value="governance">{{ lang('scope_governance', 'Yönetişim (G)') }}</option>
+                            </select>
+                        </div>
 
+                        <button type="submit" class="btn btn-primary w-100" id="btnGenerate">
+                            <i class="fas fa-cogs me-2"></i>{{ lang('generate', 'Raporu Başlat') }}
+                        </button>
+                    </form>
+                </div>
             </div>
+        </div>
+
+        <!-- Durum ve Sonuçlar -->
+        <div class="col-md-8">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-tasks me-2"></i>{{ lang('process_status', 'İşlem Durumu') }}</h5>
+                </div>
+                <div class="card-body">
+                    <div id="statusArea" style="display: none;">
+                        <h5 id="statusTitle" class="card-title">İşleniyor...</h5>
+                        <div class="progress mb-3" style="height: 25px;">
+                            <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                        </div>
+                        <p id="statusMessage" class="card-text text-muted">Lütfen bekleyin...</p>
+                        
+                        <div id="resultArea" class="mt-4" style="display: none;">
+                            <div class="alert alert-success">
+                                <i class="fas fa-check-circle me-2"></i>Rapor başarıyla oluşturuldu!
+                            </div>
+                            <div class="d-grid gap-2 d-md-block">
+                                <a id="jsonLink" href="#" class="btn btn-outline-dark" target="_blank">
+                                    <i class="fas fa-file-code me-2"></i>JSON İndir
+                                </a>
+                                <a id="pdfLink" href="#" class="btn btn-outline-danger" target="_blank">
+                                    <i class="fas fa-file-pdf me-2"></i>PDF İndir
+                                </a>
+                            </div>
+                        </div>
+
+                        <div id="errorArea" class="mt-4" style="display: none;">
+                            <div class="alert alert-danger">
+                                <i class="fas fa-exclamation-triangle me-2"></i><span id="errorMessage"></span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="emptyState" class="text-center py-5 text-muted">
+                        <i class="fas fa-chart-pie display-4 mb-3"></i>
+                        <p>Yeni bir rapor oluşturmak için soldaki formu kullanın.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
-</div>
-</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('generateReportForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const period = document.getElementById('reportPeriod').value;
+    const scope = document.getElementById('reportScope').value;
+    const btn = document.getElementById('btnGenerate');
+    
+    // UI Reset
+    btn.disabled = true;
+    document.getElementById('emptyState').style.display = 'none';
+    document.getElementById('statusArea').style.display = 'block';
+    document.getElementById('resultArea').style.display = 'none';
+    document.getElementById('errorArea').style.display = 'none';
+    document.getElementById('progressBar').style.width = '10%';
+    document.getElementById('progressBar').classList.add('bg-primary');
+    document.getElementById('progressBar').classList.remove('bg-success', 'bg-danger');
+    document.getElementById('statusTitle').innerText = 'Başlatılıyor...';
+    document.getElementById('statusMessage').innerText = 'Sunucuya istek gönderiliyor...';
+
+    // API Call
+    fetch('/api/reports/generate', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ period: period, scope: scope })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            throw new Error(data.error);
+        }
+        
+        const taskId = data.task_id;
+        document.getElementById('progressBar').style.width = '20%';
+        document.getElementById('statusMessage').innerText = 'Görev kuyruğa eklendi. ID: ' + taskId;
+        
+        // Start polling
+        pollStatus(taskId);
+    })
+    .catch(error => {
+        showError(error.message);
+        btn.disabled = false;
+    });
+});
+
+function pollStatus(taskId) {
+    const interval = setInterval(() => {
+        fetch(`/api/reports/status/${taskId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                clearInterval(interval);
+                showError(data.error);
+                return;
+            }
+            
+            updateStatusUI(data);
+            
+            if (data.state === 'SUCCESS' || data.state === 'FAILURE') {
+                clearInterval(interval);
+                document.getElementById('btnGenerate').disabled = false;
+            }
+        })
+        .catch(error => {
+            clearInterval(interval);
+            showError("Durum kontrolü başarısız: " + error.message);
+            document.getElementById('btnGenerate').disabled = false;
+        });
+    }, 2000); // Poll every 2 seconds
+}
+
+function updateStatusUI(data) {
+    const statusMsg = document.getElementById('statusMessage');
+    const progressBar = document.getElementById('progressBar');
+    const statusTitle = document.getElementById('statusTitle');
+    
+    statusMsg.innerText = data.status;
+    
+    if (data.state === 'PENDING') {
+        progressBar.style.width = '30%';
+        statusTitle.innerText = 'Bekleniyor...';
+    } else if (data.state === 'STARTED') {
+        progressBar.style.width = '50%';
+        statusTitle.innerText = 'Başlatıldı';
+    } else if (data.state === 'PROGRESS') {
+        progressBar.style.width = '70%';
+        statusTitle.innerText = 'İşleniyor';
+    } else if (data.state === 'SUCCESS') {
+        progressBar.style.width = '100%';
+        progressBar.classList.remove('bg-primary');
+        progressBar.classList.add('bg-success');
+        statusTitle.innerText = 'Tamamlandı';
+        
+        // Show results
+        const result = data.result;
+        if (result) {
+            document.getElementById('resultArea').style.display = 'block';
+            document.getElementById('jsonLink').href = result.json_url;
+            document.getElementById('pdfLink').href = result.pdf_url;
+        }
+    } else if (data.state === 'FAILURE') {
+        progressBar.style.width = '100%';
+        progressBar.classList.remove('bg-primary');
+        progressBar.classList.add('bg-danger');
+        statusTitle.innerText = 'Hata';
+        showError(data.error || 'Bilinmeyen hata');
+    }
+}
+
+function showError(msg) {
+    document.getElementById('errorArea').style.display = 'block';
+    document.getElementById('errorMessage').innerText = msg;
+    document.getElementById('statusTitle').innerText = 'Hata Oluştu';
+}
+</script>
 {% endblock %}

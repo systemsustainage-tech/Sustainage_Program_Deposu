@@ -1,19 +1,57 @@
 import logging
 import io
 import sqlite3
+import os
 from typing import List, Tuple
+from cryptography.fernet import Fernet
+from dotenv import load_dotenv
 
+# Load .env explicitly to ensure we get the key
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+ENV_PATH = os.path.join(BASE_DIR, '.env')
+load_dotenv(ENV_PATH)
+
+ENCRYPTION_KEY = os.getenv("TOTP_ENCRYPTION_KEY")
+_fernet = Fernet(ENCRYPTION_KEY) if ENCRYPTION_KEY else None
+
+def _encrypt_secret(secret: str) -> str:
+    """Encrypts the TOTP secret using Fernet (AES)."""
+    if not _fernet or not secret:
+        return secret
+    try:
+        return _fernet.encrypt(secret.encode()).decode()
+    except Exception as e:
+        logging.error(f"Error encrypting TOTP secret: {e}")
+        return secret
+
+def _decrypt_secret(encrypted_secret: str) -> str:
+    """Decrypts the TOTP secret. Returns original if decryption fails (backward compatibility)."""
+    if not _fernet or not encrypted_secret:
+        return encrypted_secret
+    try:
+        return _fernet.decrypt(encrypted_secret.encode()).decode()
+    except Exception:
+        # If decryption fails, it might be an old unencrypted secret or invalid key
+        return encrypted_secret
 
 def enable_totp_for_user(db_path: str, username: str) -> Tuple[bool, str, str, bytes]:
     from yonetim.security.core.auth import (enable_2fa, generate_totp_secret,
                                             get_otpauth_uri)
     secret = generate_totp_secret()
+    
+    # Encrypt secret before storing in DB
+    encrypted_secret = _encrypt_secret(secret)
+    
     conn = sqlite3.connect(db_path)
     try:
         _ensure_2fa_columns(conn)
-        res = enable_2fa(conn, username, secret)
+        # Pass encrypted secret to enable_2fa (which saves it to DB)
+        res = enable_2fa(conn, username, encrypted_secret)
+        
+        # Use PLAIN secret for QR code generation (so user can scan it)
         uri = get_otpauth_uri(username, secret)
         qr_bytes = _qr_bytes(uri)
+        
         return bool(res.get("ok")), "2FA etkin", secret, qr_bytes
     finally:
         conn.close()
@@ -27,7 +65,11 @@ def verify_totp_code(db_path: str, username: str, code: str) -> Tuple[bool, str]
     conn.close()
     if not row or not row[0]:
         return False, "secret yok"
-    ok = verify_totp(row[0], str(code))
+    
+    # Decrypt secret before verifying
+    secret = _decrypt_secret(row[0])
+    
+    ok = verify_totp(secret, str(code))
     return ok, "ok" if ok else "geçersiz"
 
 def get_backup_codes(db_path: str, username: str) -> Tuple[bool, str, List[str]]:

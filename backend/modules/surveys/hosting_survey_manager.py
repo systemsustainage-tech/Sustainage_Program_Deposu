@@ -50,7 +50,7 @@ class HostingSurveyManager:
         self.direct_create_url = f"{self.base_url}/direct_create.php"
         self.survey_page_url = f"{self.base_url}/survey.php"
         # API key
-        self.api_key = hosting_cfg.get('ADMIN_API_KEY', "sustainage_secure_api_key_2025_" + hashlib.md5(b"sustainage.cloud").hexdigest())
+        self.api_key = hosting_cfg.get('ADMIN_API_KEY', "sustainage_secure_api_key_2025_" + hashlib.sha256(b"sustainage.tr").hexdigest())
 
         self.headers = {
             'X-API-Key': self.api_key,

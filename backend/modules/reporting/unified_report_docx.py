@@ -92,8 +92,8 @@ class UnifiedReportDocxGenerator:
                     SUM(waste_amount) as total_waste,
                     SUM(water_consumption) as total_water
                 FROM supplier_environmental_data
-                WHERE period = ?
-            """, (period,))
+                WHERE period = ? AND company_id = ?
+            """, (period, company_id))
             
             row = cur.fetchone()
             if not row or row[0] == 0:

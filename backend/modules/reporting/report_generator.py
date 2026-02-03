@@ -173,7 +173,8 @@ class ReportGenerator:
         try:
             try:
                 rows = conn.execute(
-                    "SELECT * FROM carbon_emissions ORDER BY created_at DESC LIMIT 5"
+                    "SELECT * FROM carbon_emissions WHERE company_id = ? ORDER BY created_at DESC LIMIT 5",
+                    (company_id,)
                 ).fetchall()
                 report_data["carbon"] = [dict(r) for r in rows]
             except Exception:
@@ -181,7 +182,8 @@ class ReportGenerator:
 
             try:
                 rows = conn.execute(
-                    "SELECT * FROM energy_consumption ORDER BY created_at DESC LIMIT 5"
+                    "SELECT * FROM energy_consumption WHERE company_id = ? ORDER BY created_at DESC LIMIT 5",
+                    (company_id,)
                 ).fetchall()
                 report_data["energy"] = [dict(r) for r in rows]
             except Exception:
@@ -189,7 +191,8 @@ class ReportGenerator:
 
             try:
                 rows = conn.execute(
-                    "SELECT * FROM water_consumption ORDER BY created_at DESC LIMIT 5"
+                    "SELECT * FROM water_consumption WHERE company_id = ? ORDER BY created_at DESC LIMIT 5",
+                    (company_id,)
                 ).fetchall()
                 report_data["water"] = [dict(r) for r in rows]
             except Exception:
@@ -197,7 +200,8 @@ class ReportGenerator:
 
             try:
                 rows = conn.execute(
-                    "SELECT * FROM waste_generation ORDER BY created_at DESC LIMIT 5"
+                    "SELECT * FROM waste_generation WHERE company_id = ? ORDER BY created_at DESC LIMIT 5",
+                    (company_id,)
                 ).fetchall()
                 report_data["waste"] = [dict(r) for r in rows]
             except Exception:

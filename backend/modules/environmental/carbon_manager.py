@@ -251,7 +251,7 @@ class CarbonManager:
             if year:
                 query += " AND year = ?"
                 params.append(year)
-                
+            
             cursor.execute(query, tuple(params))
             result = cursor.fetchone()
             return result[0] if result and result[0] else 0.0
@@ -261,6 +261,45 @@ class CarbonManager:
             return 0.0
         finally:
             conn.close()
+
+    def get_monthly_emission_stats(self, company_id: int, year: int) -> List[float]:
+        """Get monthly aggregated emissions for the given year (Scope 1+2+3)"""
+        monthly_data = [0.0] * 12
+        
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            tables = ['scope1_emissions', 'scope2_emissions', 'scope3_emissions']
+            
+            for table in tables:
+                # Use invoice_date if available, otherwise fallback to created_at
+                # Handle empty strings as NULL using NULLIF
+                query = f"""
+                    SELECT 
+                        strftime('%m', COALESCE(NULLIF(invoice_date, ''), NULLIF(created_at, ''), CURRENT_DATE)) as month,
+                        SUM(total_emissions)
+                    FROM {table}
+                    WHERE company_id = ? AND year = ?
+                    GROUP BY month
+                """
+                cursor.execute(query, (company_id, year))
+                rows = cursor.fetchall()
+                
+                for month_str, total in rows:
+                    if month_str:
+                        try:
+                            m_idx = int(month_str) - 1
+                            if 0 <= m_idx < 12:
+                                monthly_data[m_idx] += total
+                        except ValueError:
+                            pass
+                            
+            conn.close()
+        except Exception as e:
+            logging.error(f"Error getting monthly emission stats: {e}")
+            
+        return monthly_data
 
     def get_recent_records(self, company_id: int, limit: int = 10) -> List[Dict]:
         """Son eklenen karbon verilerini getir"""
@@ -464,159 +503,9 @@ class CarbonManager:
         finally:
             conn.close()
 
-    def get_dashboard_stats(self, company_id: int) -> Dict:
-        """Dashboard için özet istatistikleri getir"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        stats = {'total_co2e': 0, 'scope1': 0, 'scope2': 0, 'scope3': 0}
+    # Deleted block 1
 
-        try:
-            # Scope 1
-            cursor.execute("SELECT SUM(total_emissions) FROM scope1_emissions WHERE company_id = ?", (company_id,))
-            stats['scope1'] = cursor.fetchone()[0] or 0
-
-            # Scope 2
-            cursor.execute("SELECT SUM(total_emissions) FROM scope2_emissions WHERE company_id = ?", (company_id,))
-            stats['scope2'] = cursor.fetchone()[0] or 0
-
-            # Scope 3
-            cursor.execute("SELECT SUM(total_emissions) FROM scope3_emissions WHERE company_id = ?", (company_id,))
-            stats['scope3'] = cursor.fetchone()[0] or 0
-
-            stats['total_co2e'] = stats['scope1'] + stats['scope2'] + stats['scope3']
-            
-            return stats
-        except Exception as e:
-            logging.error(f"Carbon dashboard stats error: {e}")
-            return stats
-        finally:
-            conn.close()
-
-    def get_recent_records(self, company_id: int, limit: int = 10) -> List[Dict]:
-        """Dashboard tablosu için son eklenen kayıtları getir"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        records: List[Dict] = []
-
-        try:
-            query = """
-                SELECT 
-                    'Scope 1' AS scope,
-                    emission_source AS category,
-                    fuel_consumption AS quantity,
-                    fuel_unit AS unit,
-                    total_emissions AS co2e_emissions,
-                    CAST(year AS TEXT) AS period,
-                    created_at
-                FROM scope1_emissions
-                WHERE company_id = ?
-
-                UNION ALL
-
-                SELECT 
-                    'Scope 2' AS scope,
-                    energy_source AS category,
-                    energy_consumption AS quantity,
-                    energy_unit AS unit,
-                    total_emissions AS co2e_emissions,
-                    CAST(year AS TEXT) AS period,
-                    created_at
-                FROM scope2_emissions
-                WHERE company_id = ?
-
-                UNION ALL
-
-                SELECT 
-                    'Scope 3' AS scope,
-                    category AS category,
-                    activity_data AS quantity,
-                    activity_unit AS unit,
-                    total_emissions AS co2e_emissions,
-                    CAST(year AS TEXT) AS period,
-                    created_at
-                FROM scope3_emissions
-                WHERE company_id = ?
-
-                ORDER BY created_at DESC
-                LIMIT ?
-            """
-
-            cursor.execute(query, (company_id, company_id, company_id, limit))
-
-            for row in cursor.fetchall():
-                records.append({
-                    'scope': row[0],
-                    'category': row[1],
-                    'quantity': row[2],
-                    'unit': row[3],
-                    'co2e_emissions': row[4],
-                    'period': row[5],
-                    'created_at': row[6],
-                })
-
-            return records
-        except Exception as e:
-            logging.error(f"Carbon recent records error: {e}")
-            return []
-        finally:
-            conn.close()
-
-    def get_dashboard_stats(self, company_id: int) -> Dict:
-        """Dashboard istatistiklerini getir"""
-        year = datetime.now().year
-        footprint = self.get_total_carbon_footprint(company_id, year)
-        
-        # Map to template expected keys
-        return {
-            'total_co2e': footprint.get('total_footprint', 0),
-            'scope1': footprint.get('scope1_total', 0),
-            'scope2': footprint.get('scope2_total', 0),
-            'scope3': footprint.get('scope3_total', 0)
-        }
-
-    def get_total_carbon_footprint(self, company_id: int, year: int) -> Dict:
-        """Toplam karbon ayak izini hesapla"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
-        try:
-            # Scope 1 toplam
-            cursor.execute("""
-                SELECT SUM(total_emissions) FROM scope1_emissions 
-                WHERE company_id = ? AND year = ?
-            """, (company_id, year))
-            scope1_total = cursor.fetchone()[0] or 0
-
-            # Scope 2 toplam
-            cursor.execute("""
-                SELECT SUM(total_emissions) FROM scope2_emissions 
-                WHERE company_id = ? AND year = ?
-            """, (company_id, year))
-            scope2_total = cursor.fetchone()[0] or 0
-
-            # Scope 3 toplam
-            cursor.execute("""
-                SELECT SUM(total_emissions) FROM scope3_emissions 
-                WHERE company_id = ? AND year = ?
-            """, (company_id, year))
-            scope3_total = cursor.fetchone()[0] or 0
-
-            total_footprint = scope1_total + scope2_total + scope3_total
-
-            return {
-                'scope1_total': scope1_total,
-                'scope2_total': scope2_total,
-                'scope3_total': scope3_total,
-                'total_footprint': total_footprint,
-                'year': year,
-                'company_id': company_id
-            }
-
-        except Exception as e:
-            logging.error(f"{self.lm.tr('carbon_footprint_calc_error', 'Karbon ayak izi hesaplama hatası')}: {e}")
-            return {}
-        finally:
-            conn.close()
+    # Deleted block 2
 
     def set_carbon_target(self, company_id: int, target_year: int, target_type: str,
                          baseline_year: int, baseline_emissions: float,

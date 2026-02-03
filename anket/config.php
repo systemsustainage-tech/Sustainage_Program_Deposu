@@ -23,7 +23,7 @@ function get_db_path() {
 }
 
 // API Güvenlik
-define('ADMIN_API_KEY', 'sustainage_secure_api_key_2025_6b2c4b5a054d5046c92c6274389f27c5');
+define('ADMIN_API_KEY', 'sustainage_secure_api_key_2025_47884f05b78690ad8c7ca16c7d1020eecb695dd110be37e32abe34409a6caacf');
 
 // Şirket Bilgileri
 define('COMPANY_NAME', 'Sustainage');

@@ -8,7 +8,8 @@ from jinja2 import Environment, FileSystemLoader
 # Configuration
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEMPLATES_DIR = os.path.join(BASE_DIR, 'templates')
-LOCALES_PATH = os.path.join(BASE_DIR, 'locales', 'tr.json')
+LOCALES_PATH_TR = os.path.join(BASE_DIR, 'locales', 'tr.json')
+LOCALES_PATH_EN = os.path.join(BASE_DIR, 'locales', 'en.json')
 EXCLUDE_DIRS = ['venv', '__pycache__', '.git', 'node_modules', 'static/vendor', 'frontend']
 
 # Regex Patterns
@@ -49,6 +50,8 @@ def scan_files():
     print(f"Scanning project rooted at {BASE_DIR}...")
     
     used_keys = set()
+    missing_keys_tr = set()
+    missing_keys_en = set()
     errors = []
     warnings = []
     
@@ -56,9 +59,13 @@ def scan_files():
     jinja_env = Environment(loader=FileSystemLoader(TEMPLATES_DIR))
 
     # 1. Load Translation Keys
-    tr_data = load_json(LOCALES_PATH)
-    defined_keys = set(tr_data.keys())
-    print(f"Loaded {len(defined_keys)} translation keys from tr.json")
+    tr_data = load_json(LOCALES_PATH_TR)
+    defined_keys_tr = set(tr_data.keys())
+    print(f"Loaded {len(defined_keys_tr)} translation keys from tr.json")
+
+    en_data = load_json(LOCALES_PATH_EN)
+    defined_keys_en = set(en_data.keys())
+    print(f"Loaded {len(defined_keys_en)} translation keys from en.json")
 
     # 2. Walk through files
     for root, dirs, files in os.walk(BASE_DIR):
@@ -83,8 +90,12 @@ def scan_files():
                         matches = LANG_PATTERN.findall(content)
                         for key in matches:
                             used_keys.add(key)
-                            if key not in defined_keys:
-                                errors.append(f"[MISSING TRANS] {rel_path}: Key '{key}' not found in tr.json")
+                            if key not in defined_keys_tr:
+                                missing_keys_tr.add(key)
+                                errors.append(f"[MISSING TRANS TR] {rel_path}: Key '{key}' not found in tr.json")
+                            if key not in defined_keys_en:
+                                missing_keys_en.add(key)
+                                errors.append(f"[MISSING TRANS EN] {rel_path}: Key '{key}' not found in en.json")
                 except:
                     pass
 
@@ -109,8 +120,12 @@ def scan_files():
                     matches = LANG_PATTERN.findall(content)
                     for key in matches:
                         used_keys.add(key)
-                        if key not in defined_keys:
-                            errors.append(f"[MISSING TRANS] {rel_path}: Key '{key}' not found in tr.json")
+                        if key not in defined_keys_tr:
+                            missing_keys_tr.add(key)
+                            errors.append(f"[MISSING TRANS TR] {rel_path}: Key '{key}' not found in tr.json")
+                        if key not in defined_keys_en:
+                            missing_keys_en.add(key)
+                            errors.append(f"[MISSING TRANS EN] {rel_path}: Key '{key}' not found in en.json")
 
                     # Dangerous Patterns
                     for i, line in enumerate(lines):
@@ -159,8 +174,21 @@ def scan_files():
     else:
         print("\n[OK] No WARNINGS found.")
         
-    print(f"\nINFO: {len(defined_keys - used_keys)} keys in tr.json appear to be unused in scanned code (dynamic keys excluded).")
+    print(f"\nINFO: {len(defined_keys_tr - used_keys)} keys in tr.json appear to be unused in scanned code (dynamic keys excluded).")
+    print(f"INFO: {len(defined_keys_en - used_keys)} keys in en.json appear to be unused in scanned code (dynamic keys excluded).")
     
+    # Save missing keys report (Merging both TR and EN missing keys)
+    if missing_keys_tr or missing_keys_en:
+        report_path = os.path.join(BASE_DIR, 'tools', 'missing_keys_report.json')
+        # Combine missing keys
+        all_missing = missing_keys_tr.union(missing_keys_en)
+        try:
+            with open(report_path, 'w', encoding='utf-8') as f:
+                json.dump(list(all_missing), f, indent=4)
+            print(f"Saved {len(all_missing)} missing keys to {report_path}")
+        except Exception as e:
+            print(f"Failed to save missing keys report: {e}")
+
     return len(errors)
 
 if __name__ == "__main__":

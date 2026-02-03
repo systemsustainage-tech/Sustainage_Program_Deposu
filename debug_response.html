@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Kullanıcı Yönetimi</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+    <style>
+      body { background-color: #f8f9fa; }
+      .navbar { margin-bottom: 20px; }
+    </style>
+  </head>
+  <body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+      <div class="container">
+        <a class="navbar-brand" href="/">Sustainage</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+          <ul class="navbar-nav ms-auto">
+            <!-- Dark Mode Toggle -->
+            <li class="nav-item">
+              <a class="nav-link" href="#" id="darkModeToggle" title="Dark/Light Mode">
+                <i class="bi bi-moon-fill"></i>
+              </a>
+            </li>
+
+            <!-- Language Switcher -->
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" id="langDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-globe"></i> TR
+              </a>
+              <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="langDropdown">
+                <li><a class="dropdown-item" href="/set-language/tr">Türkçe</a></li>
+                <li><a class="dropdown-item" href="/set-language/en">English</a></li>
+                <li><a class="dropdown-item" href="/set-language/de">Deutsch</a></li>
+                <li><a class="dropdown-item" href="/set-language/fr">Français</a></li>
+              </ul>
+            </li>
+
+            
+            <li class="nav-item">
+              <a class="nav-link" href="/dashboard">Panel</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/journey">Yol Haritası</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/reports">Raporlar</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/data">Veri Girişi</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/targets">Hedefler</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/help">Yardım</a>
+            </li>
+            
+            
+
+            <li class="nav-item">
+              <a class="nav-link" href="/logout">Logout</a>
+            </li>
+            
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container">
+      
+        
+          
+            <div class="alert alert-warning alert-dismissible fade show" role="alert">
+              ⚠️ GÜVENLİK UYARISI: Süper Yönetici (target) üzerinde işlem yapmak üzeresiniz. İşlemi onaylamak için lütfen 2 dakika içinde tekrar deneyin.
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+              Kullanıcı listesi alınamadı.
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          
+        
+      
+
+      
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Kullanıcılar</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        
+        <button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> Geri</button>
+    </div>
+</div>
+
+<!-- Search and Filter Form -->
+<div class="card mb-4 shadow-sm">
+    <div class="card-body">
+        <form method="get" action="/users" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label for="search" class="form-label">Common Search</label>
+                <input type="text" class="form-control" id="search" name="search" value="" placeholder="Users Search Placeholder">
+            </div>
+            <div class="col-md-3">
+                <label for="role" class="form-label">Rol</label>
+                <select class="form-select" id="role" name="role">
+                    <option value="">Common All Roles</option>
+                    
+                    <option value="admin" >Admin</option>
+                    
+                    <option value="manager" >Manager</option>
+                    
+                    <option value="editor" >Editor</option>
+                    
+                    <option value="viewer" >Viewer</option>
+                    
+                    <option value="user" >User</option>
+                    
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> Common Filter</button>
+                
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="table-responsive shadow-sm rounded">
+<table class="table table-striped table-hover align-middle mb-0 bg-white">
+<thead class="table-light">
+<tr>
+<th>ID</th>
+<th>Kullanıcı Adı</th>
+<th>Ad Soyad</th>
+<th>Rol</th>
+<th>Departman</th>
+<th>Durum</th>
+<th>Son Giriş</th>
+<th class="text-end">İşlemler</th>
+</tr>
+</thead>
+<tbody>
+            
+            <tr>
+<td class="text-center py-4" colspan="8">Kullanıcı bulunamadı.</td>
+</tr>
+            
+        </tbody>
+</table>
+</div>
+
+
+
+
+
+
+
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- DataTables JS -->
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    
+    <script>
+      // Dark Mode Logic
+      document.addEventListener('DOMContentLoaded', (event) => {
+        const html = document.documentElement;
+        const darkModeToggle = document.getElementById('darkModeToggle');
+        
+        if (darkModeToggle) {
+          const icon = darkModeToggle.querySelector('i');
+          
+          // Load preference
+          const savedTheme = localStorage.getItem('theme') || 'light';
+          html.setAttribute('data-bs-theme', savedTheme);
+          updateIcon(savedTheme);
+          
+          darkModeToggle.addEventListener('click', () => {
+            const currentTheme = html.getAttribute('data-bs-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            
+            html.setAttribute('data-bs-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateIcon(newTheme);
+          });
+          
+          function updateIcon(theme) {
+            if (theme === 'dark') {
+              icon.classList.remove('bi-moon-fill');
+              icon.classList.add('bi-sun-fill');
+            } else {
+              icon.classList.remove('bi-sun-fill');
+              icon.classList.add('bi-moon-fill');
+            }
+          }
+        }
+        
+        // Initialize DataTables
+        // Add 'data-table' class to any table you want to enhance, OR it applies to all .table by default
+        if ($.fn.DataTable) {
+          const lang = document.documentElement.lang || 'tr';
+          let langUrl = "//cdn.datatables.net/plug-ins/1.13.6/i18n/tr.json";
+          
+          if (lang === 'en') langUrl = "//cdn.datatables.net/plug-ins/1.13.6/i18n/en-GB.json";
+          else if (lang === 'de') langUrl = "//cdn.datatables.net/plug-ins/1.13.6/i18n/de-DE.json";
+          else if (lang === 'fr') langUrl = "//cdn.datatables.net/plug-ins/1.13.6/i18n/fr-FR.json";
+          else if (lang === 'es') langUrl = "//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json";
+          else if (lang === 'ru') langUrl = "//cdn.datatables.net/plug-ins/1.13.6/i18n/ru.json";
+
+          $('.table:not(.no-datatable)').DataTable({
+            language: {
+              url: langUrl
+            },
+            responsive: true,
+            retrieve: true, // Re-initialization hatasını önle
+            paging: true,
+            searching: true,
+            ordering: true
+          });
+        }
+      });
+
+      // Auto-dismiss alerts after 5 seconds
+      document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(function() {
+          var alerts = document.querySelectorAll('.alert');
+          alerts.forEach(function(alert) {
+            var bsAlert = new bootstrap.Alert(alert);
+            bsAlert.close();
+          });
+        }, 5000);
+      });
+
+      // Progress Bar Animation for data-width attribute
+      document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.progress-bar[data-width]').forEach(function(el) {
+          setTimeout(function() {
+            el.style.width = el.getAttribute('data-width') + '%';
+          }, 100);
+        });
+      });
+
+      // Global Notification System
+      function showNotification(message, type = 'info') {
+          const existing = document.querySelector('.custom-notification');
+          if (existing) existing.remove();
+          
+          const notification = document.createElement('div');
+          notification.className = 'custom-notification';
+          
+          let bgColor = '#0d6efd'; // primary/info
+          if (type === 'success') bgColor = '#198754'; // success
+          if (type === 'error') bgColor = '#dc3545'; // danger
+          if (type === 'warning') bgColor = '#ffc107'; // warning
+          
+          const textColor = type === 'warning' ? '#000' : '#fff';
+
+          notification.style.cssText = `
+              position: fixed;
+              top: 20px;
+              right: 20px;
+              background: ${bgColor};
+              color: ${textColor};
+              padding: 16px 24px;
+              border-radius: 8px;
+              box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+              z-index: 9999;
+              font-family: system-ui, -apple-system, sans-serif;
+              max-width: 300px;
+              white-space: pre-wrap;
+              opacity: 0;
+              transform: translateX(100%);
+              transition: all 0.3s ease;
+          `;
+          
+          notification.textContent = message;
+          document.body.appendChild(notification);
+          
+          // Trigger animation
+          requestAnimationFrame(() => {
+              notification.style.opacity = '1';
+              notification.style.transform = 'translateX(0)';
+          });
+          
+          setTimeout(() => {
+              notification.style.opacity = '0';
+              notification.style.transform = 'translateX(100%)';
+              setTimeout(() => notification.remove(), 300);
+          }, 4000);
+      }
+    </script>
+    
+  </body>
+</html>

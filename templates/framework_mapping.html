@@ -1,111 +1,186 @@
 {% extends "base.html" %}
 
-{% block title %}{{ lang('framework_mapping_title', 'Framework Mapping') }} - SDG{% endblock %}
+{% block title %}{{ lang('framework_mapping_title', 'Standart Eşleştirmeleri') }} - SDG{% endblock %}
 
 {% block content %}
-
 <div class="row mb-4">
-<div class="col-md-12">
-<div class="d-flex justify-content-between align-items-center">
-<h1><i class="fas fa-cube me-2"></i>{{ lang('framework_mapping_title', 'Framework Mapping') }}</h1>
-<div>
-<span class="badge bg-{{ 'success' if manager_available else 'secondary' }}">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1><i class="fas fa-exchange-alt me-2"></i>{{ lang('framework_mapping_title', 'Standart Eşleştirmeleri') }}</h1>
+            <div>
+                <span class="badge bg-{{ 'success' if manager_available else 'secondary' }}">
                     {{ lang('module_active_badge') if manager_available else lang('module_passive_badge') }}
                 </span>
-<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}</button></div>
-</div>
-<p class="lead text-muted">{{ lang('framework_mapping_desc', 'Module description for Framework Mapping') }}</p>
-</div>
-</div>
-<div class="row">
-<div class="col-12">
-<div class="card shadow-sm border-0">
-<div class="card-body">
-                
-                    {% if stats or records %}
-                        <!-- Dashboard View -->
-<div class="row mb-4">
-                            {% if stats %}
-                            <div class="col-12 mb-4">
-<div class="card">
-<div class="card-header">
-<h5 class="mb-0">{{ lang('statistics', 'İstatistikler') }}</h5>
-</div>
-<div class="card-body">
-<div class="row">
-                                            {% for key, value in stats.items() %}
-                                            <div class="col-md-3 mb-3">
-<div class="border rounded p-3 text-center bg-light">
-<h6 class="text-muted text-uppercase small">{{ key|replace('_', ' ')|title }}</h6>
-<h3 class="mb-0 text-primary">{{ value }}</h3>
-</div>
-</div>
-                                            {% endfor %}
-                                        </div>
-</div>
-</div>
-</div>
-                            {% endif %}
-
-                            {% if records %}
-                            <div class="col-12">
-<div class="card">
-<div class="card-header d-flex justify-content-between align-items-center">
-<h5 class="mb-0">{{ lang('records', 'Kayıtlar') }}</h5>
-<button class="btn btn-sm btn-primary">
-<i class="fas fa-plus"></i> {{ lang('btn_add_data', 'Yeni Veri Girişi') }}
-                                        </button>
-</div>
-<div class="card-body">
-<div class="table-responsive">
-<table class="table table-hover">
-<thead>
-<tr>
-                                                        {% if columns %}
-                                                            {% for col in columns %}
-                                                            <th>{{ col|replace('_', ' ')|title }}</th>
-                                                            {% endfor %}
-                                                        {% else %}
-                                                            <th>{{ lang('details', 'Detaylar') }}</th>
-                                                        {% endif %}
-                                                    </tr>
-</thead>
-<tbody>
-                                                    {% for record in records %}
-                                                    <tr>
-                                                        {% if columns %}
-                                                            {% for col in columns %}
-                                                                {% if record is mapping %}
-                                                                    <td>{{ record[col] }}</td>
-                                                                {% else %}
-                                                                    <td>{{ record }}</td>
-                                                                {% endif %}
-                                                            {% endfor %}
-                                                        {% else %}
-                                                            <td>{{ record }}</td>
-                                                        {% endif %}
-                                                    </tr>
-                                                    {% endfor %}
-                                                </tbody>
-</table>
-</div>
-</div>
-</div>
-</div>
-                            {% endif %}
-                        </div>
-                    {% else %}
-                        <!-- Fallback to Under Construction if no data -->
-<div class="text-center py-5">
-<i class="bi bi-cone-striped display-1 text-warning mb-3"></i>
-<h3>{{ lang('module_under_construction') }}</h3>
-<p class="text-muted">{{ lang('module_coming_soon_desc', 'Bu modülün web arayüzü entegrasyonu devam etmektedir.') }}</p>
-<p class="small text-muted">{{ lang('no_data_msg', 'Veri bulunamadı veya modül henüz aktif değil.') }}</p>
-</div>
-                    {% endif %}
-
+                <button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}</button>
             </div>
+        </div>
+        <p class="lead text-muted">2026 Regülasyonları (ESRS, TSRS) ve Global Standartlar (GRI, SASB, SDG) Arası Eşleştirmeler</p>
+    </div>
 </div>
-</div>
+
+<div class="row">
+    <div class="col-12">
+        
+        <!-- Stats Overview -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card bg-light border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted">TSRS - ESRS Eşleşmesi</h6>
+                        <h3 class="text-primary">{{ stats.get('tsrs_esrs_count', 0) }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card bg-light border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted">SASB - GRI Eşleşmesi</h6>
+                        <h3 class="text-primary">{{ stats.get('sasb_gri_count', 0) }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card bg-light border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted">SDG - GRI Eşleşmesi</h6>
+                        <h3 class="text-primary">{{ stats.get('sdg_gri_count', 0) }}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="card shadow-sm border-0">
+            <div class="card-header">
+                <ul class="nav nav-tabs card-header-tabs" id="mappingTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="tsrs-tab" data-bs-toggle="tab" data-bs-target="#tsrs" type="button" role="tab" aria-selected="true">TSRS - ESRS</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="sasb-tab" data-bs-toggle="tab" data-bs-target="#sasb" type="button" role="tab" aria-selected="false">SASB - GRI</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="sdg-tab" data-bs-toggle="tab" data-bs-target="#sdg" type="button" role="tab" aria-selected="false">SDG - GRI</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="tsrs-std-tab" data-bs-toggle="tab" data-bs-target="#tsrs-std" type="button" role="tab" aria-selected="false">TSRS Standartları</button>
+                    </li>
+                </ul>
+            </div>
+            <div class="card-body">
+                <div class="tab-content" id="mappingTabsContent">
+                    
+                    <!-- TSRS - ESRS Tab -->
+                    <div class="tab-pane fade show active" id="tsrs" role="tabpanel" aria-labelledby="tsrs-tab">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>TSRS Kodu</th>
+                                        <th>ESRS Kodu</th>
+                                        <th>İlişki Türü</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in mappings.get('tsrs_esrs', []) %}
+                                    <tr>
+                                        <td><span class="badge bg-primary">{{ item.tsrs_code }}</span></td>
+                                        <td><span class="badge bg-info text-dark">{{ item.esrs_code }}</span></td>
+                                        <td>{{ item.relation_type }}</td>
+                                    </tr>
+                                    {% else %}
+                                    <tr><td colspan="3" class="text-center text-muted">Veri bulunamadı.</td></tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- SASB - GRI Tab -->
+                    <div class="tab-pane fade" id="sasb" role="tabpanel" aria-labelledby="sasb-tab">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>SASB Kodu</th>
+                                        <th>GRI Kodu</th>
+                                        <th>İlişki Türü</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in mappings.get('sasb_gri', []) %}
+                                    <tr>
+                                        <td><span class="badge bg-secondary">{{ item.sasb_code }}</span></td>
+                                        <td><span class="badge bg-success">{{ item.gri_code }}</span></td>
+                                        <td>{{ item.relation_type }}</td>
+                                    </tr>
+                                    {% else %}
+                                    <tr><td colspan="3" class="text-center text-muted">Veri bulunamadı.</td></tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- SDG - GRI Tab -->
+                    <div class="tab-pane fade" id="sdg" role="tabpanel" aria-labelledby="sdg-tab">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>SDG İndikatörü</th>
+                                        <th>GRI Bildirimi</th>
+                                        <th>İlişki Türü</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in mappings.get('sdg_gri', []) %}
+                                    <tr>
+                                        <td><strong>{{ item.sdg_indicator_code }}</strong></td>
+                                        <td>{{ item.gri_disclosure }}</td>
+                                        <td>{{ item.relation_type }}</td>
+                                    </tr>
+                                    {% else %}
+                                    <tr><td colspan="3" class="text-center text-muted">Veri bulunamadı.</td></tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- TSRS Standards List Tab -->
+                    <div class="tab-pane fade" id="tsrs-std" role="tabpanel" aria-labelledby="tsrs-std-tab">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Kod</th>
+                                        <th>Başlık (TR)</th>
+                                        <th>Başlık (EN)</th>
+                                        <th>Kategori</th>
+                                        <th>Yıl</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in mappings.get('tsrs_standards', []) %}
+                                    <tr>
+                                        <td><span class="badge bg-primary">{{ item.code }}</span></td>
+                                        <td>{{ item.title_tr }}</td>
+                                        <td>{{ item.title_en }}</td>
+                                        <td>{{ item.category }}</td>
+                                        <td>{{ item.year }}</td>
+                                    </tr>
+                                    {% else %}
+                                    <tr><td colspan="5" class="text-center text-muted">Veri bulunamadı.</td></tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}

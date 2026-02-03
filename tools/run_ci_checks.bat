@@ -18,6 +18,14 @@ if "%EXIT_CODE%" NEQ "0" (
     exit /b 1
 )
 
+echo [CI] Running Translation Tests...
+python ../tests/test_translations.py
+if %ERRORLEVEL% NEQ 0 (
+    echo [CI] ERROR: Translation tests failed!
+    popd
+    exit /b 1
+)
+
 echo [CI] All system checks passed.
 popd
 exit /b 0

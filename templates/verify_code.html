@@ -11,11 +11,25 @@
                 <p class="text-center text-muted">Lütfen e-posta adresinize gönderilen 6 haneli kodu girin.</p>
                 
                 <form method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="mb-3">
                         <label for="code" class="form-label">Doğrulama Kodu</label>
                         <input type="text" class="form-control text-center fs-4" id="code" name="code" maxlength="6" required autofocus placeholder="XXXXXX">
                     </div>
                     
+                    {% if captcha_required %}
+                    <div class="mb-3">
+                        <label class="form-label">Güvenlik Kodu</label>
+                        <div class="d-flex align-items-center mb-2">
+                            <img src="{{ url_for('captcha_image', t=range(1, 10000) | random) }}" alt="CAPTCHA" class="img-fluid border rounded me-2" style="height: 50px;">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="this.previousElementSibling.src='{{ url_for('captcha_image') }}?t=' + Math.random()">
+                                <i class="bi bi-arrow-clockwise"></i> Yenile
+                            </button>
+                        </div>
+                        <input type="text" class="form-control" name="captcha" placeholder="Resimdeki kodu girin" required>
+                    </div>
+                    {% endif %}
+
                     <div class="d-grid gap-2">
                         <button type="submit" class="btn btn-primary">Doğrula</button>
                         <a href="{{ url_for('forgot_password') }}" class="btn btn-outline-secondary">Geri</a>

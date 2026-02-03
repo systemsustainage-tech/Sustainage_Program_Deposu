@@ -9,40 +9,56 @@ class AuditManager:
         self.db_path = db_path
         self.logger = logging.getLogger(__name__)
 
-    def log_action(self, user_id: Optional[int], action: str, resource: str, details: str = "", ip_address: str = "", company_id: Optional[int] = None):
+    def log_action(self, user_id: Optional[int], action: str, resource: str, details: str = "", ip_address: str = "", company_id: Optional[int] = None, resource_id: Optional[int] = None):
         """
         Kullanıcı eylemini veritabanına kaydeder.
         
         Args:
             user_id: Eylemi yapan kullanıcı ID (varsa)
             action: Eylem türü (örn: "CREATE", "UPDATE", "LOGIN")
-            resource: Etkilenen kaynak (örn: "company_targets", "supplier_data")
+            resource: Etkilenen kaynak tipi (örn: "company_targets", "user") - resource_type sütununa yazılır
             details: JSON formatında detay veya açıklama
             ip_address: Kullanıcı IP adresi
             company_id: Şirket ID (varsa) - Multi-tenant izolasyon için
+            resource_id: Etkilenen kaynağın ID'si (varsa)
         """
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         try:
-            # Check if company_id column exists (backward compatibility)
+            # Check schema columns
             cursor.execute("PRAGMA table_info(audit_logs)")
             cols = [c[1] for c in cursor.fetchall()]
+            
             has_company_id = 'company_id' in cols
+            has_resource_type = 'resource_type' in cols
+            has_resource_id = 'resource_id' in cols
+            
+            # Construct query based on available columns
+            columns = ['user_id', 'action', 'details', 'ip_address']
+            values = [user_id, action, details, ip_address]
             
             if has_company_id:
-                cursor.execute("""
-                    INSERT INTO audit_logs (user_id, action, resource, details, ip_address, company_id)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                """, (user_id, action, resource, details, ip_address, company_id))
-            else:
-                # Fallback for old schema
-                cursor.execute("""
-                    INSERT INTO audit_logs (user_id, action, resource, details, ip_address)
-                    VALUES (?, ?, ?, ?, ?)
-                """, (user_id, action, resource, details, ip_address))
+                columns.append('company_id')
+                values.append(company_id)
+                
+            if has_resource_type:
+                columns.append('resource_type')
+                values.append(resource)
+            elif 'resource' in cols:
+                columns.append('resource')
+                values.append(resource)
+                
+            if has_resource_id:
+                columns.append('resource_id')
+                values.append(resource_id)
+                
+            placeholders = ', '.join(['?'] * len(columns))
+            sql = f"INSERT INTO audit_logs ({', '.join(columns)}) VALUES ({placeholders})"
+            
+            cursor.execute(sql, values)
                 
             conn.commit()
-            self.logger.info(f"Audit Log: User={user_id} Action={action} Resource={resource} Company={company_id}")
+            self.logger.info(f"Audit Log: User={user_id} Action={action} Resource={resource} ID={resource_id} Company={company_id}")
         except Exception as e:
             self.logger.error(f"Audit log error: {e}")
         finally:
@@ -52,8 +68,24 @@ class AuditManager:
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         try:
-            query = """
-                SELECT id, user_id, action, resource, details, ip_address, created_at, company_id
+            # Check available columns for selection
+            cursor.execute("PRAGMA table_info(audit_logs)")
+            cols = [c[1] for c in cursor.fetchall()]
+            
+            select_cols = ['id', 'user_id', 'action', 'details', 'ip_address', 'created_at']
+            if 'resource_type' in cols:
+                select_cols.append('resource_type as resource') # Alias for compatibility
+            elif 'resource' in cols:
+                select_cols.append('resource')
+                
+            if 'resource_id' in cols:
+                select_cols.append('resource_id')
+            
+            if 'company_id' in cols:
+                select_cols.append('company_id')
+
+            query = f"""
+                SELECT {', '.join(select_cols)}
                 FROM audit_logs
                 WHERE 1=1
             """

@@ -212,9 +212,16 @@ class SocialManager:
             cursor = conn.cursor()
             
             # Satisfaction (Latest year)
-            cursor.execute("SELECT satisfaction_score FROM employee_satisfaction WHERE company_id=? ORDER BY year DESC LIMIT 1", (company_id,))
-            row = cursor.fetchone()
-            if row and row[0]: stats['satisfaction_score'] = row[0]
+            # Try to adapt to schema differences
+            try:
+                cursor.execute("SELECT satisfaction_score FROM employee_satisfaction WHERE company_id=? ORDER BY year DESC LIMIT 1", (company_id,))
+                row = cursor.fetchone()
+                if row and row[0]: stats['satisfaction_score'] = row[0]
+            except sqlite3.OperationalError:
+                # Fallback for alternative schema (average_score, survey_year)
+                cursor.execute("SELECT average_score FROM employee_satisfaction WHERE company_id=? ORDER BY survey_year DESC LIMIT 1", (company_id,))
+                row = cursor.fetchone()
+                if row and row[0]: stats['satisfaction_score'] = row[0]
             
             # Training Hours (Sum)
             cursor.execute("SELECT SUM(hours) FROM training_records WHERE company_id=?", (company_id,))

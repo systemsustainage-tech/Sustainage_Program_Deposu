@@ -218,10 +218,14 @@ class AdvancedReportManager:
         finally:
             conn.close()
 
-    def delete_reports(self, report_ids: List[int]) -> Tuple[int, int]:
+    def delete_reports(self, report_ids: List[int], company_id: int) -> Tuple[int, int]:
         """
         Raporları sil (toplu silme destekli)
         
+        Args:
+            report_ids: Silinecek rapor ID'leri
+            company_id: Şirket ID (Güvenlik için zorunlu)
+            
         Returns:
             (silinen_sayisi, hata_sayisi)
         """
@@ -234,10 +238,10 @@ class AdvancedReportManager:
         try:
             for report_id in report_ids:
                 try:
-                    # Rapor bilgisini al
+                    # Rapor bilgisini al (Sadece ilgili şirketin raporu)
                     cursor.execute("""
-                        SELECT file_path FROM report_registry WHERE id = ?
-                    """, (report_id,))
+                        SELECT file_path FROM report_registry WHERE id = ? AND company_id = ?
+                    """, (report_id, company_id))
 
                     result = cursor.fetchone()
                     if result:
@@ -245,14 +249,20 @@ class AdvancedReportManager:
 
                         # Dosyayı sil
                         if os.path.exists(file_path):
-                            os.remove(file_path)
+                            try:
+                                os.remove(file_path)
+                            except OSError:
+                                pass # Dosya yoksa veya silinemezse devam et
 
                         # Veritabanından sil
                         cursor.execute("""
-                            DELETE FROM report_registry WHERE id = ?
-                        """, (report_id,))
+                            DELETE FROM report_registry WHERE id = ? AND company_id = ?
+                        """, (report_id, company_id))
 
                         deleted_count += 1
+                    else:
+                        # Rapor bulunamadı veya şirkete ait değil
+                        error_count += 1
 
                 except Exception as e:
                     logging.error(f"Rapor silme hatasi (ID: {report_id}): {e}")

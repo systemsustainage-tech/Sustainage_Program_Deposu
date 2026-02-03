@@ -4,10 +4,10 @@ TSRS Modülü
 Türkiye Sürdürülebilirlik Raporlama Standartları
 """
 
-from modules.tsrs.tsrs_manager import TSRSManager
+from backend.modules.tsrs.tsrs_manager import TSRSManager
 
 try:
-    from modules.tsrs.tsrs_gui import TSRSGUI
+    from backend.modules.tsrs.tsrs_gui import TSRSGUI
 except ImportError:
     TSRSGUI = None
 

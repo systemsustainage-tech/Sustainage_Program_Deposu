@@ -11,7 +11,7 @@ import sqlite3
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 
-from modules.tsrs.tsrs_manager import TSRSManager
+from backend.modules.tsrs.tsrs_manager import TSRSManager
 from config.database import DB_PATH
 
 

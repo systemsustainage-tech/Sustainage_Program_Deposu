@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Veri İşleme Sözleşmesi (DPA) - Sustainage{% endblock %}
+
+{% block content %}
+<div class="container mt-5 mb-5">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white p-4 border-bottom-0">
+                    <h1 class="h2 text-primary mb-0">Veri İşleme Sözleşmesi (DPA)</h1>
+                    <p class="text-muted mt-2">Kapsam: GDPR & KVKK Uyumu</p>
+                </div>
+                <div class="card-body p-4">
+                    <h3>1. Taraflar ve Amaç</h3>
+                    <p>Bu sözleşme, Veri Sorumlusu (Müşteri) ile Veri İşleyen (Sustainage) arasındaki kişisel veri işleme faaliyetlerinin şartlarını belirler.</p>
+
+                    <h3>2. İşlemenin Konusu ve Süresi</h3>
+                    <p>Veri İşleyen, Müşteri'nin Sustainage platformunu kullanımı kapsamında sağladığı verileri, hizmet süresi boyunca işleyecektir. Sözleşme sona erdiğinde, yasal saklama yükümlülükleri hariç olmak üzere veriler 30 gün içinde silinir veya anonim hale getirilir.</p>
+
+                    <h3>3. Veri Güvenliği Önlemleri</h3>
+                    <p>Veri İşleyen, kişisel verilerin güvenliğini sağlamak için aşağıdaki teknik ve idari tedbirleri almayı taahhüt eder:</p>
+                    <ul>
+                        <li><strong>Şifreleme:</strong> Verilerin iletimi ve saklanması sırasında güçlü şifreleme (SSL/TLS, AES-256).</li>
+                        <li><strong>Erişim Kontrolü:</strong> Çok faktörlü kimlik doğrulama (MFA) ve rol tabanlı erişim (RBAC).</li>
+                        <li><strong>Düzenli Denetim:</strong> Güvenlik açıklarına karşı periyodik taramalar ve sızma testleri.</li>
+                    </ul>
+
+                    <h3>4. Alt İşleyiciler (Sub-processors)</h3>
+                    <p>Veri İşleyen, hizmetin sağlanması için üçüncü taraf altyapı sağlayıcıları (örn. Bulut Depolama, E-posta Servisleri) kullanabilir. Bu alt işleyicilerin listesi aşağıdadır:</p>
+                    <ul>
+                        <li>Bulut Altyapısı: [Bulut Sağlayıcı Adı] (Veri barındırma)</li>
+                        <li>E-posta Servisi: [E-posta Servis Adı] (Bildirim gönderimi)</li>
+                    </ul>
+
+                    <h3>5. Veri İhlali Bildirimi</h3>
+                    <p>Herhangi bir veri ihlali durumunda, Veri İşleyen, ihlalin farkına vardıktan sonra en geç 72 saat içinde Veri Sorumlusu'nu bilgilendirecektir.</p>
+
+                    <h3>6. Denetim Hakları</h3>
+                    <p>Veri Sorumlusu, Veri İşleyen'in bu sözleşmeye uyumunu denetleme veya bağımsız bir denetçi aracılığıyla denetletme hakkına sahiptir.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

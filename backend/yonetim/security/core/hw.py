@@ -16,8 +16,10 @@ def _sha256(txt: str) -> str:
 
 def _wmic_first(cmd: str) -> str:
     try:
+        # shell=True removed for security (B602)
+        cmd_parts = cmd.split()
         out = subprocess.check_output(
-            cmd, shell=True, stderr=subprocess.DEVNULL, text=True
+            cmd_parts, shell=False, stderr=subprocess.DEVNULL, text=True
         )
         lines = [line.strip() for line in out.splitlines() if line.strip()]
         if len(lines) >= 2:

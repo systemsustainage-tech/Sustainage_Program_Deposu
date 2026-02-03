@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: sustainage-web
+  labels:
+    app: sustainage
+spec:
+  selector:
+    app: sustainage
+    component: web
+  ports:
+  - port: 80
+    targetPort: 8000
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sustainage-redis
+spec:
+  selector:
+    app: sustainage
+    component: redis
+  ports:
+  - port: 6379
+    targetPort: 6379

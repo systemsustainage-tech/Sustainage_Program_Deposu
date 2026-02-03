@@ -44,7 +44,7 @@ class GRIPerformanceCache:
     def generate_cache_key(self, query: str, params: tuple = ()) -> str:
         """Cache key oluştur"""
         key_string = f"{query}:{str(params)}"
-        return hashlib.md5(key_string.encode()).hexdigest()
+        return hashlib.sha256(key_string.encode()).hexdigest()
 
     def is_cache_valid(self, cache_entry: Dict) -> bool:
         """Cache geçerliliğini kontrol et"""

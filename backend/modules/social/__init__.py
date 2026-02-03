@@ -2,7 +2,7 @@
 from .diversity_manager import DiversityManager
 from .hr_manager import HRManager
 from .safety_manager import SafetyManager
-from .social_dashboard_gui import SocialDashboardGUI
+# from .social_dashboard_gui import SocialDashboardGUI
 from .training_manager import TrainingManager
 
 
@@ -48,6 +48,5 @@ __all__ = [
     'HRManager', 'HRMetrics',
     'SafetyManager', 'OHSMetrics',
     'TrainingManager', 'TrainingMetrics',
-    'DiversityManager',
-    'SocialDashboardGUI'
+    'DiversityManager'
 ]

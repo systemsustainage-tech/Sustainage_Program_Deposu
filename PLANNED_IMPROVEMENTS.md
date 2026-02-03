@@ -56,3 +56,41 @@
 - [x] **Mobile Responsiveness Check**
   - Verified all new forms and tables on mobile view.
   - Improved responsiveness of Reports filter form.
+
+## Recent Compliance & Reporting Updates
+- [x] **Task 8: Database Schema & Security**
+  - Implemented Two-Stage Approval for Super Admin.
+  - Enforced License Verification & API Keys.
+  - Added Rate Limiting & CAPTCHA.
+  - Migrated Passwords to Argon2.
+  - Updated `users` table schema (lockout, totp, etc.).
+- [x] **Task 9: Standard Mappings (2026)**
+  - Updated GRI, SDG, TSRS, ESRS, SASB mappings.
+  - Added new indicators for ESRS 2026 & TSRS 2026.
+- [x] **Task 10: Reporting Service**
+  - Created centralized `reporting_service.py`.
+  - Integrated Celery/RQ for background generation.
+  - Implemented JSON/PDF report engine.
+- [x] **Task 11: Report Templates Expansion**
+  - Expanded `report_templates.py` with multi-language support (TR, EN, DE).
+  - Added Carbon, CBAM, TCFD templates.
+  - Added HTML preview support (`template_type='html'`).
+- [x] **Task 12: Mandatory Report Sections**
+  - Configured mandatory sections (Data Source, Methodology, Standard Reference) in `report_templates.py`.
+  - Enforced `is_required=1` in `report_sections` table.
+  - Implemented backend protection against deleting mandatory sections.
+- [x] **Legal Compliance & Documentation**
+  - Created Privacy Policy, SLA, DPA templates (`templates/legal/`).
+  - Implemented routes `/legal/privacy`, `/legal/sla`, `/legal/dpa` in `web_app.py`.
+  - Added Footer links and Cookie Consent Banner in `base.html`.
+  - Documented features in `docs/LEGAL_COMPLIANCE.md`.
+- [x] **Infrastructure & Scalability**
+  - Created Docker ecosystem: `Dockerfile`, `docker-compose.yml`, `requirements.txt`.
+  - Implemented Kubernetes manifests: `k8s/deployment.yaml`, `k8s/service.yaml`, `k8s/hpa.yaml` (Auto-scaling).
+  - Created Load Testing Tool: `tools/load_test_simulation.py` for verifying stability.
+- [x] **Security Testing & Quality**
+  - Conducted OWASP Top 10 Dynamic Analysis (`tools/verify_security_dynamic.py`).
+  - Implemented Static Analysis (Bandit, Pylint) with `tools/run_security_scan.py`.
+  - Fixed SQL Injection vulnerabilities (B608) in `web_app_remote.py`.
+  - Set Quality Thresholds (`tools/check_quality.py`) and enforced them.
+  - Mitigated CSRF, XSS, and weak hashing issues.
