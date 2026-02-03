@@ -2,7 +2,10 @@ import sqlite3
 import logging
 import json
 from typing import List, Dict, Optional, Any
-from config.database import DB_PATH
+try:
+    from config.database import DB_PATH
+except ImportError:
+    from backend.config.database import DB_PATH
 
 class SupplyChainManager:
     def __init__(self, db_path: str = DB_PATH):

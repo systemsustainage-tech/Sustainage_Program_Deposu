@@ -11,7 +11,11 @@ import sqlite3
 from datetime import datetime, timedelta
 from typing import Dict
 
-from utils.language_manager import LanguageManager
+try:
+    from utils.language_manager import LanguageManager
+except ImportError:
+    from backend.utils.language_manager import LanguageManager
+
 
 
 class DetailedEnergyManager:

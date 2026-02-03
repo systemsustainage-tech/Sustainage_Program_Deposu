@@ -11,7 +11,10 @@ from typing import Dict
 from datetime import datetime
 
 from config.settings import ensure_directories, get_db_path
-from utils.language_manager import LanguageManager
+try:
+    from utils.language_manager import LanguageManager
+except ImportError:
+    from backend.utils.language_manager import LanguageManager
 
 
 class TrainingManager:

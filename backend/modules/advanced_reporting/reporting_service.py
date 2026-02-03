@@ -12,8 +12,17 @@ try:
     from backend.modules.social.social_manager import SocialManager
     from backend.modules.governance.corporate_governance import CorporateGovernanceManager
     from backend.modules.supply_chain.supply_chain_manager import SupplyChainManager
-except ImportError as e:
-    logging.error(f"Error importing managers in ReportingService: {e}")
+except ImportError:
+    try:
+        from modules.environmental.carbon_manager import CarbonManager
+        from modules.environmental.water_manager import WaterManager
+        from modules.environmental.waste_manager import WasteManager
+        from modules.environmental.biodiversity_manager import BiodiversityManager
+        from modules.social.social_manager import SocialManager
+        from modules.governance.corporate_governance import CorporateGovernanceManager
+        from modules.supply_chain.supply_chain_manager import SupplyChainManager
+    except ImportError as e:
+        logging.error(f"Error importing managers in ReportingService: {e}")
 
 class ReportingService:
     def __init__(self, db_path: str):

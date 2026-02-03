@@ -9,10 +9,14 @@ import datetime
 import sqlite3
 from typing import Dict, List, Tuple
 
+try:
+    from config.database import DB_PATH
+except ImportError:
+    from backend.config.database import DB_PATH
 
 class SocialManager:
-    def __init__(self, db_path: str = "data/sustainability.db"):
-        self.db_path = db_path
+    def __init__(self, db_path: str = None):
+        self.db_path = db_path if db_path else DB_PATH
         self.init_database()
 
     def init_database(self):

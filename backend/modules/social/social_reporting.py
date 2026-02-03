@@ -29,8 +29,12 @@ except ImportError:
     EXCEL_AVAILABLE = False
     logging.info("[UYARI] openpyxl yuklu degil. Excel raporlar olusturulamaz.")
 
-from config.settings import ensure_directories, get_db_path, get_export_dir
-from utils.language_manager import LanguageManager
+try:
+    from config.settings import ensure_directories, get_db_path, get_export_dir
+    from utils.language_manager import LanguageManager
+except ImportError:
+    from backend.config.settings import ensure_directories, get_db_path, get_export_dir
+    from backend.utils.language_manager import LanguageManager
 
 from .hr_metrics import HRMetrics
 from .ohs_metrics import OHSMetrics

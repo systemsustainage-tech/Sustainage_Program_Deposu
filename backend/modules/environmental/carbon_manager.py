@@ -11,8 +11,12 @@ import sqlite3
 from datetime import datetime
 from typing import Dict, List
 
-from utils.language_manager import LanguageManager
-from config.database import DB_PATH
+try:
+    from utils.language_manager import LanguageManager
+    from config.database import DB_PATH
+except ImportError:
+    from backend.utils.language_manager import LanguageManager
+    from backend.config.database import DB_PATH
 
 try:
     from .emission_factor_data import DEFRA_IPCC_DATA

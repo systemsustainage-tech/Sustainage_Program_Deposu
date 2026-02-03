@@ -10,7 +10,7 @@ if os.name == 'nt':
     DB_PATH = os.path.join(ROOT_DIR, 'data', 'sdg_desktop.sqlite')
 else:
     # Linux (Remote Server)
-    DB_PATH = '/var/www/sustainage/sustainage.db'
+    DB_PATH = '/var/www/sustainage/backend/data/sdg_desktop.sqlite'
 
 def get_db_path():
     """Veritabanı yolunu döndürür"""

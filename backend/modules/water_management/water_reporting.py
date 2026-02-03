@@ -27,10 +27,18 @@ except ImportError:
     EXCEL_AVAILABLE = False
     logging.info("[UYARI] openpyxl yuklu degil. Excel raporlar olusturulamaz.")
 
-from config.settings import ensure_directories, get_db_path, get_export_dir
+try:
+    from config.settings import ensure_directories, get_db_path, get_export_dir
+    from utils.language_manager import LanguageManager
+except ImportError:
+    from backend.config.settings import ensure_directories, get_db_path, get_export_dir
+    from backend.utils.language_manager import LanguageManager
 
-from utils.language_manager import LanguageManager
-from .water_manager import WaterManager
+try:
+    from .water_manager import WaterManager
+except ImportError:
+    from backend.modules.water_management.water_manager import WaterManager
+
 
 
 def _add_turkish_paragraph(doc, text, style=None, font_name='Calibri', font_size=11):

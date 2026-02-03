@@ -9,7 +9,10 @@ import logging
 import os
 import sqlite3
 from typing import Dict, List
-from config.database import DB_PATH
+try:
+    from config.database import DB_PATH
+except ImportError:
+    from backend.config.database import DB_PATH
 
 
 class CorporateGovernanceManager:

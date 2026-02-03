@@ -12,7 +12,10 @@ import sqlite3
 from typing import Dict
 
 
-from utils.language_manager import LanguageManager
+try:
+    from utils.language_manager import LanguageManager
+except ImportError:
+    from backend.utils.language_manager import LanguageManager
 
 
 class TrainingMetrics:
