@@ -8,7 +8,12 @@ def update_translations():
     defined in translation_dictionary.json.
     """
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    locales_dir = os.path.join(base_dir, "backend", "locales")
+    # Define directories to update
+    directories_to_update = [
+        os.path.join(base_dir, "backend", "locales"),
+        os.path.join(base_dir, "locales")
+    ]
+    
     dict_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "translation_dictionary.json")
     
     # Load translation dictionary
@@ -20,9 +25,17 @@ def update_translations():
         print(f"Error loading translation dictionary: {e}")
         sys.exit(1)
 
-    # Process each language
-    for lang in ['en', 'de']:
-        file_path = os.path.join(locales_dir, f"{lang}.json")
+    # Process each directory
+    for locales_dir in directories_to_update:
+        if not os.path.exists(locales_dir):
+            print(f"Warning: Directory {locales_dir} not found. Skipping.")
+            continue
+            
+        print(f"Processing directory: {locales_dir}")
+        
+        # Process each language
+        for lang in ['en', 'de']:
+            file_path = os.path.join(locales_dir, f"{lang}.json")
         
         if not os.path.exists(file_path):
             print(f"Warning: {file_path} not found. Skipping.")
