@@ -42,15 +42,24 @@ def migrate_secrets(db_path):
     cursor = conn.cursor()
     
     try:
-        # Check if column exists first
+        # Check which column exists
         cursor.execute("PRAGMA table_info(users)")
         columns = [info[1] for info in cursor.fetchall()]
-        if 'totp_secret' not in columns:
-            logging.warning("Column 'totp_secret' does not exist in users table. Nothing to migrate.")
+        
+        target_column = None
+        if 'totp_secret' in columns:
+            target_column = 'totp_secret'
+        elif 'totp_secret_encrypted' in columns:
+            target_column = 'totp_secret_encrypted'
+            
+        if not target_column:
+            logging.warning("Neither 'totp_secret' nor 'totp_secret_encrypted' columns exist in users table. Nothing to migrate.")
             return True
 
-        # Get users with totp_secret
-        cursor.execute("SELECT id, username, totp_secret FROM users WHERE totp_secret IS NOT NULL AND totp_secret != ''")
+        logging.info(f"Using column: {target_column}")
+
+        # Get users with secret
+        cursor.execute(f"SELECT id, username, {target_column} FROM users WHERE {target_column} IS NOT NULL AND {target_column} != ''")
         users = cursor.fetchall()
         
         logging.info(f"Found {len(users)} users with TOTP secrets.")
@@ -60,26 +69,14 @@ def migrate_secrets(db_path):
         for user_id, username, current_secret in users:
             try:
                 # Step 1: Decrypt (handles backward compatibility)
-                # If current_secret is plain, returns plain.
-                # If current_secret is encrypted, returns decrypted plain.
                 plain_secret = _decrypt_secret(current_secret)
                 
                 # Step 2: Encrypt
-                # Always returns encrypted version
                 new_encrypted_secret = _encrypt_secret(plain_secret)
                 
-                # Check if it actually changed (ignoring IV randomization for a moment, just check if it looks encrypted)
-                # But Fernet produces different output every time, so direct comparison might not be useful to skip.
-                # However, if it was already encrypted, we are re-encrypting it, which is fine (key rotation support effectively).
-                
                 # Step 3: Save
-                cursor.execute("UPDATE users SET totp_secret = ? WHERE id = ?", (new_encrypted_secret, user_id))
+                cursor.execute(f"UPDATE users SET {target_column} = ? WHERE id = ?", (new_encrypted_secret, user_id))
                 updated_count += 1
-                
-                # Verify immediately (optional but good for debugging logs)
-                # decrypted_check = _decrypt_secret(new_encrypted_secret)
-                # if decrypted_check != plain_secret:
-                #     logging.error(f"Verification failed for user {username}!")
                 
             except Exception as e:
                 logging.error(f"Error processing user {username} (ID: {user_id}): {e}")

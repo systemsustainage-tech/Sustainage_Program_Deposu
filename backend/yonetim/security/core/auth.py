@@ -29,7 +29,7 @@ def _get_user_row(conn, username: str) -> None:
     cur = conn.cursor()
     cur.execute("""
         SELECT id, username, password_hash, is_superadmin, is_active,
-               totp_secret, totp_enabled, backup_codes,
+               totp_secret_encrypted, totp_enabled, backup_codes,
                is_admin, last_login, must_change_password, deleted_at
           FROM users WHERE username=?
     """, (username,))
@@ -202,14 +202,14 @@ def _generate_backup_codes(n: int=10) -> None:
 def enable_2fa(conn, username: str, secret: str) -> dict:
     cur = conn.cursor()
     plain, hashed = _generate_backup_codes()
-    cur.execute("UPDATE users SET totp_secret=?, totp_enabled=1, backup_codes=? WHERE username=?",
+    cur.execute("UPDATE users SET totp_secret_encrypted=?, totp_enabled=1, backup_codes=? WHERE username=?",
                 (secret, json.dumps(hashed), username))
     conn.commit()
     return {"ok": True, "backup_plain": plain}
 
 def disable_2fa(conn, username: str) -> dict:
     cur = conn.cursor()
-    cur.execute("UPDATE users SET totp_secret=NULL, totp_enabled=0, backup_codes=NULL WHERE username=?", (username,))
+    cur.execute("UPDATE users SET totp_secret_encrypted=NULL, totp_enabled=0, backup_codes=NULL WHERE username=?", (username,))
     conn.commit()
     return {"ok": True}
 

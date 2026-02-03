@@ -60,7 +60,7 @@ def verify_totp_code(db_path: str, username: str, code: str) -> Tuple[bool, str]
     from yonetim.security.core.auth import verify_totp
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
-    cur.execute("SELECT totp_secret FROM users WHERE username=?", (username,))
+    cur.execute("SELECT totp_secret_encrypted FROM users WHERE username=?", (username,))
     row = cur.fetchone()
     conn.close()
     if not row or not row[0]:
@@ -124,7 +124,7 @@ def _qr_bytes(data: str) -> bytes:
 def _ensure_2fa_columns(conn: sqlite3.Connection) -> None:
     cur = conn.cursor()
     try:
-        cur.execute("ALTER TABLE users ADD COLUMN totp_secret TEXT")
+        cur.execute("ALTER TABLE users ADD COLUMN totp_secret_encrypted TEXT")
     except Exception as e:
         logging.error(f'Silent error in enhanced_2fa.py: {str(e)}')
     try:
