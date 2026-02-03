@@ -29,6 +29,10 @@ Copy-ToRemote "c:\SUSTAINAGESERVER\web_app.py" "$remote_path/web_app.py"
 # 4. Copy templates (CSRF fixes)
 Copy-ToRemote "c:\SUSTAINAGESERVER\templates" "$remote_path/"
 
+# 4.5 Ensure TOTP Key exists in .env
+$totp_key = "zbF62s1uGyONqlBL7ks4ca-OXBCoXfM5dAkdcA18DZs="
+Run-Remote "grep -q 'TOTP_ENCRYPTION_KEY' $remote_path/.env || echo 'TOTP_ENCRYPTION_KEY=$totp_key' >> $remote_path/.env"
+
 # 5. Run TOTP Migration
 Write-Host "Running TOTP Migration on remote..."
 Run-Remote "cd $remote_path && python3 tools/migrate_totp_secrets.py"
