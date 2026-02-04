@@ -36,39 +36,47 @@ def update_translations():
         # Process each language
         for lang in ['en', 'de']:
             file_path = os.path.join(locales_dir, f"{lang}.json")
+            print(f"Checking {file_path}...")
         
-        if not os.path.exists(file_path):
-            print(f"Warning: {file_path} not found. Skipping.")
-            continue
+            if not os.path.exists(file_path):
+                print(f"Warning: {file_path} not found. Skipping.")
+                continue
             
-        try:
-            # Read existing file
-            with open(file_path, 'r', encoding='utf-8') as f:
-                current_data = json.load(f)
-            
-            # Update with new translations
-            updates_count = 0
-            if lang in translation_dict:
-                for key, value in translation_dict[lang].items():
-                    # Update if key exists (to replace lazy translation) 
-                    # OR if we want to enforce this key's presence
-                    if key in current_data:
-                        if current_data[key] != value:
+            try:
+                # Read existing file
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    current_data = json.load(f)
+                
+                # Update with new translations
+                updates_count = 0
+                if lang in translation_dict:
+                    print(f"Dictionary has entries for {lang}")
+                    for key, value in translation_dict[lang].items():
+                        # Update if key exists (to replace lazy translation) 
+                        # OR if we want to enforce this key's presence
+                        if key in current_data:
+                            if current_data[key] != value:
+                                print(f"Updating {key}: {current_data[key]} -> {value}")
+                                current_data[key] = value
+                                updates_count += 1
+                        else:
+                            # Optionally add new keys if they don't exist
+                            print(f"Adding new key {key}: {value}")
                             current_data[key] = value
                             updates_count += 1
-                    else:
-                        # Optionally add new keys if they don't exist
-                        current_data[key] = value
-                        updates_count += 1
+                else:
+                    print(f"No dictionary entries for {lang}")
             
-            # Write back to file
-            with open(file_path, 'w', encoding='utf-8') as f:
-                json.dump(current_data, f, ensure_ascii=False, indent=4)
-                
-            print(f"Updated {lang}.json with {updates_count} changes.")
-            
-        except Exception as e:
-            print(f"Error processing {file_path}: {e}")
+                # Write back to file
+                if updates_count > 0:
+                    with open(file_path, 'w', encoding='utf-8') as f:
+                        json.dump(current_data, f, ensure_ascii=False, indent=4)
+                    print(f"Updated {lang}.json with {updates_count} changes.")
+                else:
+                    print(f"No changes for {lang}.json")
+
+            except Exception as e:
+                print(f"Error processing {file_path}: {e}")
 
 if __name__ == "__main__":
     update_translations()

@@ -78,6 +78,12 @@ def verify_password_compat(stored_hash: str, plain: str) -> bool:
         # Argon2
         if stored_hash.startswith("$argon2"):
             return verify_password(stored_hash, plain)
+        if stored_hash.startswith("argon2$"):
+            try:
+                s = stored_hash.split("argon2$", 1)[1]
+            except Exception:
+                s = stored_hash
+            return verify_password(s, plain)
         # Werkzeug (pbkdf2:...)
         if stored_hash.startswith("pbkdf2:") or stored_hash.startswith("scrypt:"):
             try:

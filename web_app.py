@@ -312,7 +312,9 @@ Talisman(app,
     content_security_policy=csp, 
     content_security_policy_nonce_in=['script-src'],
     force_https=False, # Set to True if SSL is handled by Flask (usually Nginx handles it)
-    strict_transport_security=False # Handled by Nginx or manually below
+    strict_transport_security=False, # Handled by Nginx or manually below
+    session_cookie_secure=False, # Allow HTTP for IP access
+    session_cookie_samesite='Lax'
 )
 
 # 4. WAF MIDDLEWARE (Basic)
@@ -417,6 +419,9 @@ except Exception as e:
 
 # Fix for login loop: Use a stable secret key if environment variable is not set
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'sustainage_secret_key_fixed_2024_xyz_987')
+app.config['SESSION_COOKIE_SECURE'] = False # Allow HTTP for IP access
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
 # Translation Setup
 def gettext(key, *args):
@@ -2207,20 +2212,20 @@ def super_admin_tests():
     
     # Legacy tests in tests/ folder
     legacy_tests = {
-        'connectivity': 'tests/test_connectivity.py',
-        'performance': 'tests/test_database_performance.py',
-        'users': 'tests/test_user_management.py',
-        'reporting': 'tests/test_reporting.py',
-        'email': 'tests/test_email_service.py'
+        'connectivity': {'path': 'tests/test_connectivity.py', 'name': 'Bağlantı Testi'},
+        'performance': {'path': 'tests/test_database_performance.py', 'name': 'Veritabanı Performans Testi'},
+        'users': {'path': 'tests/test_user_management.py', 'name': 'Kullanıcı Yönetimi Testi'},
+        'reporting': {'path': 'tests/test_reporting.py', 'name': 'Raporlama Testi'},
+        'email': {'path': 'tests/test_email_service.py', 'name': 'E-posta Servis Testi'}
     }
     
-    for key, path in legacy_tests.items():
-        if os.path.exists(os.path.join(BASE_DIR, path)):
+    for key, info in legacy_tests.items():
+        if os.path.exists(os.path.join(BASE_DIR, info['path'])):
             test_files.append({
                 'id': key,
-                'name': f"Legacy: {key.capitalize()}",
-                'path': path,
-                'category': 'Legacy'
+                'name': info['name'],
+                'path': info['path'],
+                'category': 'Sistem Testleri'
             })
             
     # Scan TESTLER directory

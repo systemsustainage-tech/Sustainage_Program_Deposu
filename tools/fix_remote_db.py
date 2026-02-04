@@ -1,77 +1,52 @@
-
-import sqlite3
 import os
-import sys
+import subprocess
+import time
 
-DB_PATH = '/var/www/sustainage/backend/data/sdg_desktop.sqlite'
+# Configuration
+REMOTE_HOST = "root@72.62.150.207"
+REMOTE_DIR = "/var/www/sustainage"
+LOCAL_DB = "backend/data/sdg_desktop.sqlite"
+REMOTE_DB = f"{REMOTE_DIR}/backend/data/sdg_desktop.sqlite"
 
-def fix_db():
-    print(f"Checking database at {DB_PATH}...")
-    if not os.path.exists(DB_PATH):
-        print("Database file not found!")
+def run_command(command):
+    print(f"Running: {command}")
+    result = subprocess.run(command, shell=True, capture_output=True, text=True)
+    if result.returncode != 0:
+        print(f"Error: {result.stderr}")
+        return False
+    print(f"Success: {result.stdout}")
+    return True
+
+def fix_database():
+    print("--- Fixing Remote Database ---")
+    
+    # 1. Stop service to release file lock
+    print("Stopping sustainage service...")
+    if not run_command(f"ssh {REMOTE_HOST} 'systemctl stop sustainage'"):
+        print("Failed to stop service, proceeding anyway...")
+
+    # 2. Upload healthy database
+    print("Uploading healthy database...")
+    # scp uses forward slashes even on windows for local path if run from git bash/powershell usually, but let's be safe
+    # In python subprocess on windows, standard paths work.
+    cmd = f"scp {LOCAL_DB} {REMOTE_HOST}:{REMOTE_DB}"
+    if not run_command(cmd):
+        print("Failed to upload database.")
         return
 
-    try:
-        conn = sqlite3.connect(DB_PATH)
-        cursor = conn.cursor()
-        
-        # 1. Check users table for company_id
-        print("Checking 'users' table schema...")
-        cursor.execute("PRAGMA table_info(users)")
-        columns = [info[1] for info in cursor.fetchall()]
-        
-        if 'company_id' not in columns:
-            print("Adding 'company_id' column to 'users' table...")
-            cursor.execute("ALTER TABLE users ADD COLUMN company_id INTEGER DEFAULT 1")
-            conn.commit()
-            print("Added 'company_id' column.")
-        else:
-            print("'company_id' column already exists in 'users'.")
+    # 3. Fix permissions
+    print("Fixing permissions...")
+    run_command(f"ssh {REMOTE_HOST} 'chown -R www-data:www-data {REMOTE_DIR}/backend/data'")
+    run_command(f"ssh {REMOTE_HOST} 'chmod 775 {REMOTE_DIR}/backend/data'")
+    run_command(f"ssh {REMOTE_HOST} 'chmod 664 {REMOTE_DB}'")
 
-        # 2. Check employee_satisfaction table schema
-        print("Checking 'employee_satisfaction' table schema...")
-        cursor.execute("PRAGMA table_info(employee_satisfaction)")
-        columns = [info[1] for info in cursor.fetchall()]
-        
-        # Check for 'average_score' vs 'satisfaction_score'
-        if 'average_score' in columns and 'satisfaction_score' not in columns:
-             print("Note: Table uses 'average_score' (Remote Schema).")
-        elif 'satisfaction_score' in columns:
-             print("Note: Table uses 'satisfaction_score' (Local Schema).")
-        else:
-             print("Warning: Neither 'average_score' nor 'satisfaction_score' found.")
-
-        # 3. Ensure company_id=1 exists in companies table if table exists
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='companies'")
-        if cursor.fetchone():
-             cursor.execute("SELECT count(*) FROM companies WHERE id=1")
-             if cursor.fetchone()[0] == 0:
-                 print("Inserting default company (id=1)...")
-                 cursor.execute("INSERT INTO companies (id, name) VALUES (1, 'Demo Company')")
-                 conn.commit()
-
-        # 4. Create licenses table if not exists
-        print("Checking 'licenses' table...")
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS licenses (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                company_id INTEGER NOT NULL,
-                license_key TEXT UNIQUE NOT NULL,
-                issued_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                expires_at TIMESTAMP,
-                max_users INTEGER DEFAULT 1,
-                status TEXT DEFAULT 'active',
-                FOREIGN KEY (company_id) REFERENCES companies(id)
-            )
-        """)
-        conn.commit()
-        print("Licenses table checked/created.")
-
-        conn.close()
-        print("Database fix completed.")
-
-    except Exception as e:
-        print(f"Error fixing database: {e}")
+    # 4. Restart service
+    print("Restarting sustainage service...")
+    run_command(f"ssh {REMOTE_HOST} 'systemctl start sustainage'")
+    
+    # 5. Check status
+    print("Checking service status...")
+    run_command(f"ssh {REMOTE_HOST} 'systemctl status sustainage --no-pager'")
 
 if __name__ == "__main__":
-    fix_db()
+    fix_database()
