@@ -7,29 +7,27 @@ Rapor şablonları ve otomatik rapor üretimi
 
 import logging
 import os
-import sqlite3
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 from config.database import DB_PATH
 
 
-class ReportGenerator:
+from backend.core.base_manager import BaseTenantManager
+
+class ReportGenerator(BaseTenantManager):
     """Rapor oluşturma ve şablon yönetimi"""
 
-    def __init__(self, db_path: str = DB_PATH) -> None:
+    def __init__(self, db_path: str = DB_PATH, company_id: Optional[int] = None) -> None:
         if not os.path.isabs(db_path):
             base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
             db_path = os.path.join(base_dir, db_path)
-        self.db_path = db_path
+        super().__init__(db_path, company_id)
         self._init_db_tables()
 
     def _init_db_tables(self) -> None:
         """Raporlama tablolarını oluştur"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS report_templates (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -44,7 +42,7 @@ class ReportGenerator:
                 )
             """)
 
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS generated_reports (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -62,98 +60,79 @@ class ReportGenerator:
                 )
             """)
 
-            conn.commit()
             logging.info("[OK] Raporlama modulu tablolari basariyla olusturuldu")
 
         except Exception as e:
             logging.error(f"[HATA] Raporlama modulu tablo olusturma: {e}")
-            conn.rollback()
-        finally:
-            conn.close()
 
     def add_report_template(self, company_id: int, template_name: str, template_type: str,
                           template_content: str, template_variables: Optional[str] = None,
                           language_code: str = 'tr') -> bool:
         """Rapor şablonu ekle"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
+        cid = self._ensure_context(company_id)
+        
         try:
-            cursor.execute("""
+            self.execute_update("""
                 INSERT INTO report_templates 
                 (company_id, template_name, template_type, template_content,
                  template_variables, language_code)
                 VALUES (?, ?, ?, ?, ?, ?)
-            """, (company_id, template_name, template_type, template_content,
+            """, (cid, template_name, template_type, template_content,
                   template_variables, language_code))
-
-            conn.commit()
             return True
 
         except Exception as e:
             logging.error(f"Rapor şablonu ekleme hatası: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
     def generate_report(self, company_id: int, template_id: int, report_name: str,
                        report_period: str, report_format: str, generated_by: Optional[str] = None) -> bool:
         """Rapor oluştur"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
             generation_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             file_path = f"reports/{report_name}_{report_period}.{report_format}"
 
-            cursor.execute("""
+            self.execute_update("""
                 INSERT INTO generated_reports 
                 (company_id, template_id, report_name, report_period, report_format,
                  file_path, generation_date, generated_by)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """, (company_id, template_id, report_name, report_period, report_format,
-                  file_path, generation_date, generated_by))
+                  file_path, generation_date, generated_by), company_id=company_id)
 
-            conn.commit()
             return True
 
         except Exception as e:
             logging.error(f"Rapor oluşturma hatası: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
     def get_report_templates(self, company_id: int, template_type: Optional[str] = None) -> List[Dict]:
         """Rapor şablonlarını getir"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
             if template_type:
-                cursor.execute("""
+                # BaseTenantManager automatically injects company_id filter
+                rows = self.execute_query("""
                     SELECT id, template_name, template_type, template_content, language_code
                     FROM report_templates 
-                    WHERE company_id = ? AND template_type = ? AND status = 'active'
+                    WHERE template_type = ? AND status = 'active'
                     ORDER BY template_name
-                """, (company_id, template_type))
+                """, (template_type,), company_id=company_id)
             else:
-                cursor.execute("""
+                rows = self.execute_query("""
                     SELECT id, template_name, template_type, template_content, language_code
                     FROM report_templates 
-                    WHERE company_id = ? AND status = 'active'
+                    WHERE status = 'active'
                     ORDER BY template_name
-                """, (company_id,))
+                """, (), company_id=company_id)
 
             templates = []
-            for row in cursor.fetchall():
+            for row in rows:
                 templates.append({
-                    'id': row[0],
-                    'template_name': row[1],
-                    'template_type': row[2],
-                    'template_content': row[3],
-                    'language_code': row[4]
+                    'id': row['id'],
+                    'template_name': row['template_name'],
+                    'template_type': row['template_type'],
+                    'template_content': row['template_content'],
+                    'language_code': row['language_code']
                 })
 
             return templates
@@ -161,53 +140,49 @@ class ReportGenerator:
         except Exception as e:
             logging.error(f"Rapor şablonları getirme hatası: {e}")
             return []
-        finally:
-            conn.close()
 
     def _get_sustainability_context(self, company_id: int, report_period: str) -> Tuple[Dict[str, List[Dict]], str]:
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-
         report_data: Dict[str, List[Dict]] = {}
 
         try:
             try:
-                rows = conn.execute(
-                    "SELECT * FROM carbon_emissions WHERE company_id = ? ORDER BY created_at DESC LIMIT 5",
-                    (company_id,)
-                ).fetchall()
-                report_data["carbon"] = [dict(r) for r in rows]
+                # BaseTenantManager returns List[dict] and injects company_id
+                rows = self.execute_query(
+                    "SELECT * FROM carbon_emissions ORDER BY created_at DESC LIMIT 5",
+                    (), company_id=company_id
+                )
+                report_data["carbon"] = rows
             except Exception:
                 report_data["carbon"] = []
 
             try:
-                rows = conn.execute(
-                    "SELECT * FROM energy_consumption WHERE company_id = ? ORDER BY created_at DESC LIMIT 5",
-                    (company_id,)
-                ).fetchall()
-                report_data["energy"] = [dict(r) for r in rows]
+                rows = self.execute_query(
+                    "SELECT * FROM energy_consumption ORDER BY created_at DESC LIMIT 5",
+                    (), company_id=company_id
+                )
+                report_data["energy"] = rows
             except Exception:
                 report_data["energy"] = []
 
             try:
-                rows = conn.execute(
-                    "SELECT * FROM water_consumption WHERE company_id = ? ORDER BY created_at DESC LIMIT 5",
-                    (company_id,)
-                ).fetchall()
-                report_data["water"] = [dict(r) for r in rows]
+                rows = self.execute_query(
+                    "SELECT * FROM water_consumption ORDER BY created_at DESC LIMIT 5",
+                    (), company_id=company_id
+                )
+                report_data["water"] = rows
             except Exception:
                 report_data["water"] = []
 
             try:
-                rows = conn.execute(
-                    "SELECT * FROM waste_generation WHERE company_id = ? ORDER BY created_at DESC LIMIT 5",
-                    (company_id,)
-                ).fetchall()
-                report_data["waste"] = [dict(r) for r in rows]
+                rows = self.execute_query(
+                    "SELECT * FROM waste_generation ORDER BY created_at DESC LIMIT 5",
+                    (), company_id=company_id
+                )
+                report_data["waste"] = rows
             except Exception:
                 report_data["waste"] = []
-        finally:
-            conn.close()
+        except Exception as e:
+            logging.error(f"Context retrieval error: {e}")
 
         try:
             from modules.ai.ai_manager import AIManager

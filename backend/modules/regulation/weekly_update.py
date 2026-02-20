@@ -1,7 +1,8 @@
 import sys
 import os
 import logging
-import sqlite3
+# import sqlite3
+from backend.core.database_manager import DatabaseManager
 from datetime import datetime, timedelta
 
 # Add project root to path
@@ -36,32 +37,31 @@ except ImportError:
 def get_admin_users():
     """Get list of admin user IDs to notify"""
     try:
-        conn = sqlite3.connect(DB_PATH)
-        cursor = conn.cursor()
-        # Get users with role_id that corresponds to admin/super_admin
-        # Assuming roles table: 1=super_admin, 2=admin etc. 
-        # Or just get all users for now if roles are complex
-        # Let's try to find users with role 'admin' or 'super_admin' via user_roles if exists
-        
-        # First check if user_roles exists
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='user_roles'")
-        if cursor.fetchone():
-            cursor.execute("""
-                SELECT ur.user_id 
-                FROM user_roles ur
-                JOIN roles r ON ur.role_id = r.id
-                WHERE r.name IN ('admin', 'super_admin')
-            """)
+        db = DatabaseManager(DB_PATH)
+        with db.get_connection() as conn:
+            cursor = conn.cursor()
+            # Get users with role_id that corresponds to admin/super_admin
+            # Assuming roles table: 1=super_admin, 2=admin etc. 
+            # Or just get all users for now if roles are complex
+            # Let's try to find users with role 'admin' or 'super_admin' via user_roles if exists
+            
+            # First check if user_roles exists
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='user_roles'")
+            if cursor.fetchone():
+                cursor.execute("""
+                    SELECT ur.user_id 
+                    FROM user_roles ur
+                    JOIN roles r ON ur.role_id = r.id
+                    WHERE r.name IN ('admin', 'super_admin')
+                """)
+                users = [row[0] for row in cursor.fetchall()]
+                if users:
+                    return users
+            
+            # Fallback: Just get ID 1 (usually super admin)
+            cursor.execute("SELECT id FROM users WHERE id = 1") 
             users = [row[0] for row in cursor.fetchall()]
-            if users:
-                conn.close()
-                return users
-        
-        # Fallback: Just get ID 1 (usually super admin)
-        cursor.execute("SELECT id FROM users WHERE id = 1") 
-        users = [row[0] for row in cursor.fetchall()]
-        conn.close()
-        return users if users else [1]
+            return users if users else [1]
     except Exception as e:
         logging.error(f"Error fetching users: {e}")
         return [1]

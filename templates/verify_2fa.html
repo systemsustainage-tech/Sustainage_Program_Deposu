@@ -1,17 +1,17 @@
 {% extends "base.html" %}
 
-{% block title %}İki Faktörlü Doğrulama - SustainAge{% endblock %}
+{% block title %}{{ lang('two_factor_auth_title') }}{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center mt-5">
     <div class="col-md-6 col-lg-4">
         <div class="card shadow">
             <div class="card-header bg-primary text-white text-center">
-                <h4 class="mb-0"><i class="bi bi-shield-lock"></i> 2FA Doğrulama</h4>
+                <h4 class="mb-0"><i class="bi bi-shield-lock"></i> {{ lang('two_factor_auth_header') }}</h4>
             </div>
             <div class="card-body p-4">
                 <div class="text-center mb-4">
-                    <p class="text-muted">Lütfen doğrulama uygulamanızdaki 6 haneli kodu giriniz.</p>
+                    <p class="text-muted">{{ lang('enter_2fa_code_instruction') }}</p>
                 </div>
                 
                 {% set captcha_ts = range(1, 10000) | random %}
@@ -19,35 +19,35 @@
                 <form method="POST" action="{{ url_for('verify_2fa') }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="mb-3">
-                        <label for="code" class="form-label">Doğrulama Kodu</label>
+                        <label for="code" class="form-label">{{ lang('verification_code') }}</label>
                         <input type="text" class="form-control form-control-lg text-center" id="code" name="code" 
                                placeholder="000000" maxlength="6" pattern="\d{6}" required autofocus autocomplete="one-time-code">
                     </div>
                     
                     {% if captcha_required %}
                     <div class="mb-3">
-                        <label class="form-label">Güvenlik Kodu</label>
+                        <label class="form-label">{{ lang('security_code') }}</label>
                         <div class="d-flex align-items-center mb-2">
                             <img src="{{ url_for('captcha_image', t=captcha_ts) }}" alt="CAPTCHA" class="img-fluid border rounded me-2" style="height: 50px;">
                             <button type="button" class="btn btn-sm btn-outline-secondary" onclick="this.previousElementSibling.src='{{ url_for('captcha_image') }}?t=' + Math.random()">
-                                <i class="bi bi-arrow-clockwise"></i> Yenile
+                                <i class="bi bi-arrow-clockwise"></i> {{ lang('refresh') }}
                             </button>
                         </div>
-                        <input type="text" class="form-control" name="captcha" placeholder="Resimdeki kodu girin" required>
+                        <input type="text" class="form-control" name="captcha" placeholder="{{ lang('enter_captcha_code') }}" required>
                     </div>
                     {% endif %}
 
                     <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-primary btn-lg">Doğrula</button>
+                        <button type="submit" class="btn btn-primary btn-lg">{{ lang('verify_btn') }}</button>
                     </div>
                 </form>
                 
                 <hr class="my-4">
                 
                 <div class="text-center">
-                    <p class="small text-muted mb-2">Telefonunuza erişemiyor musunuz?</p>
+                    <p class="small text-muted mb-2">{{ lang('lost_phone_question') }}</p>
                     <button class="btn btn-link btn-sm text-decoration-none" type="button" data-bs-toggle="collapse" data-bs-target="#backupCodeArea">
-                        Yedek Kod Kullan
+                        {{ lang('use_backup_code') }}
                     </button>
                 </div>
                 
@@ -55,19 +55,19 @@
                     <div class="card card-body bg-light">
                         <form method="POST" action="{{ url_for('verify_2fa') }}">
                             <div class="mb-2">
-                                <label for="backup_code" class="form-label small">Yedek Kod</label>
+                                <label for="backup_code" class="form-label small">{{ lang('backup_code') }}</label>
                                 <input type="text" class="form-control form-control-sm" id="backup_code" name="backup_code" placeholder="XXXX-XXXX" required>
                             </div>
                             
                             {% if captcha_required %}
                             <div class="mb-2">
-                                <label class="form-label small">Güvenlik Kodu</label>
-                                <input type="text" class="form-control form-control-sm" name="captcha" placeholder="Yukarıdaki kodu girin" required>
+                                <label class="form-label small">{{ lang('security_code') }}</label>
+                                <input type="text" class="form-control form-control-sm" name="captcha" placeholder="{{ lang('enter_captcha_code') }}" required>
                             </div>
                             {% endif %}
 
                             <div class="d-grid">
-                                <button type="submit" class="btn btn-secondary btn-sm">Yedek Kod ile Giriş</button>
+                                <button type="submit" class="btn btn-secondary btn-sm">{{ lang('login_with_backup_code') }}</button>
                             </div>
                         </form>
                     </div>

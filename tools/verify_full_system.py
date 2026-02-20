@@ -16,8 +16,8 @@ BASE_URL = "https://72.62.150.207"
 LOGIN_URL = f"{BASE_URL}/login"
 DASHBOARD_URL = f"{BASE_URL}/dashboard"
 
-USERNAME = "__super__"
-PASSWORD = "Kayra_1507"
+USERNAME = "super.admin"
+PASSWORD = "SuperPassword123!"
 
 session = requests.Session()
 
@@ -32,6 +32,13 @@ def check_login():
 
         # Extract CSRF token
         csrf_token = None
+        
+        # Check title
+        print(f"Page Content Head: {response.text[:500]}")
+        title_match = re.search(r'<title>(.*?)</title>', response.text, re.IGNORECASE)
+        if title_match:
+            logging.info(f"Page Title: {title_match.group(1)}")
+            
         match = re.search(r'name="csrf_token" value="([^"]+)"', response.text)
         if match:
             csrf_token = match.group(1)

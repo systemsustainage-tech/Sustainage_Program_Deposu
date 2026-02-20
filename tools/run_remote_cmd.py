@@ -6,6 +6,8 @@ import sys
 HOST = "72.62.150.207"
 USER = "root"
 KEY_FILE = os.path.expanduser("~/.ssh/id_rsa")
+if not os.path.exists(KEY_FILE):
+    KEY_FILE = os.path.expanduser("~/.ssh/id_ed25519")
 
 def run_command(cmd):
     print(f"Executing remote command: {cmd}")

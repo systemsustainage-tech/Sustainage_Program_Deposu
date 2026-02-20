@@ -7,37 +7,25 @@ Risk değerlendirme raporları ve eşleştirme özetleri
 
 import logging
 import os
-import sqlite3
 from typing import Dict
 
 import pandas as pd
-from config.database import DB_PATH
+from backend.core.base_manager import BaseTenantManager
 
 
-class GRIRiskReports:
+class GRIRiskReports(BaseTenantManager):
     """GRI Risk ve Eşleştirme raporları sınıfı"""
 
-    def __init__(self, db_path: str = DB_PATH) -> None:
-        # db_path göreli ise proje köküne göre mutlak hale getir
-        if not os.path.isabs(db_path):
-            base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-            db_path = os.path.join(base_dir, db_path)
-        self.db_path = db_path
-
-    def get_connection(self) -> None:
-        """Veritabanı bağlantısı"""
-        return sqlite3.connect(self.db_path)
+    def __init__(self, db_path=None):
+        super().__init__(db_path)
 
     def generate_risk_assessment(self, company_id: int = 1) -> Dict:
         """Risk değerlendirme raporu oluştur"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
             logging.info("GRI Risk Değerlendirme raporu oluşturuluyor...")
 
             # Risk verilerini al
-            cursor.execute("""
+            query = """
                 SELECT 
                     r.id,
                     r.indicator_id,
@@ -67,9 +55,11 @@ class GRIRiskReports:
                         ELSE 5
                     END,
                     gs.category, gi.code
-            """, (company_id,))
-
-            risk_data = cursor.fetchall()
+            """
+            
+            # Use skip_tenant_filter=True because we are querying global tables (gri_risks, gri_indicators)
+            # and handling company filtering manually in the LEFT JOIN
+            risk_data = self.execute_query(query, (company_id,), skip_tenant_filter=True)
 
             # Risk'leri seviyeye göre organize et
             risk_assessment = {
@@ -88,27 +78,27 @@ class GRIRiskReports:
             }
 
             for risk in risk_data:
-                risk_level = risk[2]  # r.risk_level
-                has_response = risk[11] is not None  # gr.response_value
+                risk_level = risk['risk_level']
+                has_response = risk['response_value'] is not None
 
                 risk_info = {
-                    'risk_id': risk[0],
-                    'indicator_id': risk[1],
+                    'risk_id': risk['id'],
+                    'indicator_id': risk['indicator_id'],
                     'risk_level': risk_level,
-                    'impact': risk[3],
-                    'likelihood': risk[4],
-                    'notes': risk[5],
-                    'disclosure_code': risk[6],
-                    'disclosure_title': risk[7],
-                    'description': risk[8],
-                    'standard_code': risk[9],
-                    'category': risk[10],
-                    'response_value': risk[11],
-                    'numerical_value': risk[12],
-                    'reporting_status': risk[13],
-                    'period': risk[14],
+                    'impact': risk['impact'],
+                    'likelihood': risk['likelihood'],
+                    'notes': risk['notes'],
+                    'disclosure_code': risk['disclosure_code'],
+                    'disclosure_title': risk['disclosure_title'],
+                    'description': risk['description'],
+                    'standard_code': risk['standard_code'],
+                    'category': risk['category'],
+                    'response_value': risk['response_value'],
+                    'numerical_value': risk['numerical_value'],
+                    'reporting_status': risk['reporting_status'],
+                    'period': risk['period'],
                     'has_response': has_response,
-                    'risk_score': self.calculate_risk_score(risk[3], risk[4])
+                    'risk_score': self.calculate_risk_score(risk['impact'], risk['likelihood'])
                 }
 
                 # Risk seviyesine göre kategorize et
@@ -126,7 +116,7 @@ class GRIRiskReports:
                     risk_assessment['summary']['low_risks'] += 1
 
                 # Kategori bazında sayım
-                category = risk[10]  # gs.category
+                category = risk['category']
                 if category not in risk_assessment['summary']['categories']:
                     risk_assessment['summary']['categories'][category] = {
                         'total': 0,
@@ -147,10 +137,8 @@ class GRIRiskReports:
         except Exception as e:
             logging.error(f"Risk Değerlendirme oluşturma hatası: {e}")
             return {}
-        finally:
-            conn.close()
 
-    def calculate_risk_score(self, impact, likelihood) -> None:
+    def calculate_risk_score(self, impact, likelihood) -> int:
         """Risk skoru hesapla (1-25)"""
         impact_scores = {'Low': 1, 'Medium': 2, 'High': 3, 'Critical': 4}
         likelihood_scores = {'Low': 1, 'Medium': 2, 'High': 3, 'Critical': 4}
@@ -162,14 +150,11 @@ class GRIRiskReports:
 
     def generate_sdg_gri_mapping_summary(self) -> Dict:
         """SDG-GRI eşleştirme özeti oluştur"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
             logging.info("SDG-GRI eşleştirme özeti oluşturuluyor...")
 
             # SDG-GRI eşleştirmelerini al
-            cursor.execute("""
+            query = """
                 SELECT 
                     sg.sdg_indicator_code,
                     sg.gri_standard,
@@ -182,15 +167,15 @@ class GRIRiskReports:
                 LEFT JOIN gri_indicators gi ON sg.gri_disclosure = gi.code
                 LEFT JOIN gri_standards gs ON gi.standard_id = gs.id
                 ORDER BY sg.sdg_indicator_code, sg.gri_standard, sg.gri_disclosure
-            """)
-
-            mapping_data = cursor.fetchall()
+            """
+            
+            mapping_data = self.execute_query(query, skip_tenant_filter=True)
 
             # SDG bazında grupla
             sdg_mapping = {}
 
             for mapping in mapping_data:
-                sdg_code = mapping[0]  # sg.sdg_indicator_code
+                sdg_code = mapping['sdg_indicator_code']
 
                 if sdg_code not in sdg_mapping:
                     sdg_mapping[sdg_code] = {
@@ -200,12 +185,12 @@ class GRIRiskReports:
                     }
 
                 gri_info = {
-                    'gri_standard': mapping[1],
-                    'gri_disclosure': mapping[2],
-                    'disclosure_code': mapping[3],
-                    'disclosure_title': mapping[4],
-                    'category': mapping[5],
-                    'standard_code': mapping[6]
+                    'gri_standard': mapping['gri_standard'],
+                    'gri_disclosure': mapping['gri_disclosure'],
+                    'disclosure_code': mapping['disclosure_code'],
+                    'disclosure_title': mapping['disclosure_title'],
+                    'category': mapping['category'],
+                    'standard_code': mapping['standard_code']
                 }
 
                 sdg_mapping[sdg_code]['gri_standards'].append(gri_info)
@@ -235,19 +220,14 @@ class GRIRiskReports:
         except Exception as e:
             logging.error(f"SDG-GRI eşleştirme özeti oluşturma hatası: {e}")
             return {}
-        finally:
-            conn.close()
 
     def generate_gri_tsrs_mapping_summary(self) -> Dict:
         """GRI-TSRS eşleştirme özeti oluştur"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
             logging.info("GRI-TSRS eşleştirme özeti oluşturuluyor...")
 
             # GRI-TSRS eşleştirmelerini al
-            cursor.execute("""
+            query = """
                 SELECT 
                     gt.gri_disclosure,
                     gt.tsrs_section,
@@ -260,15 +240,15 @@ class GRIRiskReports:
                 LEFT JOIN gri_indicators gi ON gt.gri_disclosure = gi.code
                 LEFT JOIN gri_standards gs ON gi.standard_id = gs.id
                 ORDER BY gt.gri_disclosure, gt.tsrs_section, gt.tsrs_metric
-            """)
-
-            mapping_data = cursor.fetchall()
+            """
+            
+            mapping_data = self.execute_query(query, skip_tenant_filter=True)
 
             # GRI bazında grupla
             gri_mapping = {}
 
             for mapping in mapping_data:
-                gri_disclosure = mapping[0]  # gt.gri_disclosure
+                gri_disclosure = mapping['gri_disclosure']
 
                 if gri_disclosure not in gri_mapping:
                     gri_mapping[gri_disclosure] = {
@@ -278,12 +258,12 @@ class GRIRiskReports:
                     }
 
                 tsrs_info = {
-                    'tsrs_section': mapping[1],
-                    'tsrs_metric': mapping[2],
-                    'disclosure_code': mapping[3],
-                    'disclosure_title': mapping[4],
-                    'category': mapping[5],
-                    'standard_code': mapping[6]
+                    'tsrs_section': mapping['tsrs_section'],
+                    'tsrs_metric': mapping['tsrs_metric'],
+                    'disclosure_code': mapping['disclosure_code'],
+                    'disclosure_title': mapping['disclosure_title'],
+                    'category': mapping['category'],
+                    'standard_code': mapping['standard_code']
                 }
 
                 gri_mapping[gri_disclosure]['tsrs_sections'].append(tsrs_info)
@@ -313,8 +293,6 @@ class GRIRiskReports:
         except Exception as e:
             logging.error(f"GRI-TSRS eşleştirme özeti oluşturma hatası: {e}")
             return {}
-        finally:
-            conn.close()
 
     def export_risk_assessment_excel(self, output_path: str, company_id: int = 1) -> bool:
         """Risk değerlendirme raporunu Excel'e export et"""

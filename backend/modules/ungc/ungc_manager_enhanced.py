@@ -1,25 +1,16 @@
 import logging
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-UN Global Compact - Enhanced Manager
-- KPI-based scoring system
-- Level classification (Learner/Active/Advanced)
-- Progress tracking
-- COP data generation
-"""
 import json
-import sqlite3
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 from config.database import DB_PATH
+from backend.modules.common.base_tenant_manager import BaseTenantManager
 
 
-class UNGCManagerEnhanced:
+class UNGCManagerEnhanced(BaseTenantManager):
     """Enhanced UNGC Manager with full KPI and scoring system"""
 
     def __init__(self, db_path: str, config_path: str = 'config/ungc_config.json') -> None:
-        self.db_path = db_path
+        super().__init__(db_path)
         self.config_path = config_path
         self.config = self._load_config()
 
@@ -37,11 +28,7 @@ class UNGCManagerEnhanced:
                 "levels": {},
                 "thresholds": {"full": 0.7, "partial": 0.4}
             }
-
-    def _conn(self) -> sqlite3.Connection:
-        """Database connection"""
-        return sqlite3.connect(self.db_path)
-
+    
     def get_principle_info(self, principle_id: str, lang: str = 'tr') -> Optional[Dict]:
         """Get principle information"""
         for p in self.config.get('principles', []):
@@ -72,24 +59,20 @@ class UNGCManagerEnhanced:
         if period is None:
             period = str(datetime.now().year)
 
-        conn = self._conn()
         try:
             # KPI verisini ungc_kpi_data tablosundan çek
-            cursor = conn.cursor()
-            result = cursor.execute("""
+            rows = self.execute_query("""
                 SELECT value FROM ungc_kpi_data
                 WHERE company_id = ? AND kpi_id = ? AND period = ?
                 ORDER BY updated_at DESC LIMIT 1
-            """, (company_id, kpi_id, period)).fetchone()
+            """, (company_id, kpi_id, period))
 
-            if result:
-                return float(result[0])
+            if rows:
+                return float(rows[0]['value'])
             return None
         except Exception:
             # Tablo yoksa None dön
             return None
-        finally:
-            conn.close()
 
     def calculate_kpi_score(self, kpi: Dict, current_value: Optional[float]) -> float:
         """
@@ -190,33 +173,28 @@ class UNGCManagerEnhanced:
         }
 
     def _get_principle_evidence_types(self, company_id: int, principle_id: str) -> List[str]:
-        conn = self._conn()
-        try:
-            cursor = conn.cursor()
-            cursor.execute(
-                """
-                CREATE TABLE IF NOT EXISTS ungc_evidence (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    company_id INTEGER NOT NULL,
-                    principle_id VARCHAR(10) NOT NULL,
-                    evidence_type TEXT,
-                    file_path TEXT,
-                    url TEXT,
-                    notes TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-                """
+        self.execute_update(
+            """
+            CREATE TABLE IF NOT EXISTS ungc_evidence (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                company_id INTEGER NOT NULL,
+                principle_id VARCHAR(10) NOT NULL,
+                evidence_type TEXT,
+                file_path TEXT,
+                url TEXT,
+                notes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
-            rows = cursor.execute(
-                """
-                SELECT DISTINCT COALESCE(evidence_type, '') FROM ungc_evidence
-                WHERE company_id=? AND principle_id=?
-                """,
-                (company_id, principle_id)
-            ).fetchall()
-            return [r[0] for r in rows if r and r[0]]
-        finally:
-            conn.close()
+            """
+        )
+        rows = self.execute_query(
+            """
+            SELECT DISTINCT COALESCE(evidence_type, '') as evidence_type FROM ungc_evidence
+            WHERE company_id=? AND principle_id=?
+            """,
+            (company_id, principle_id)
+        )
+        return [r['evidence_type'] for r in rows if r['evidence_type']]
 
     def compute_principle_gaps(self, company_id: int, principle_id: str, period: Optional[str] = None) -> Dict:
         if period is None:
@@ -480,12 +458,9 @@ class UNGCManagerEnhanced:
         if period is None:
             period = str(datetime.now().year)
 
-        conn = self._conn()
         try:
-            cursor = conn.cursor()
-
             # Create table if not exists
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS ungc_kpi_data (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -500,21 +475,17 @@ class UNGCManagerEnhanced:
             """)
 
             # Insert or update
-            cursor.execute("""
+            self.execute_update("""
                 INSERT OR REPLACE INTO ungc_kpi_data 
                 (company_id, kpi_id, value, period, evidence_id, updated_at)
                 VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
             """, (company_id, kpi_id, value, period, evidence_id))
 
-            conn.commit()
             return True
 
         except Exception as e:
             logging.error(f"KPI save error: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
     def seed_company_kpis(self, company_id: int, period: Optional[str] = None) -> int:
         if period is None:
@@ -544,10 +515,8 @@ class UNGCManagerEnhanced:
         if period is None:
             period = str(datetime.now().year)
         thresholds = self.config.get('thresholds', {'full': 0.7, 'partial': 0.4, 'none': 0})
-        conn = self._conn()
         try:
-            cursor = conn.cursor()
-            cursor.execute(
+            self.execute_update(
                 """
                 CREATE TABLE IF NOT EXISTS ungc_compliance (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -573,7 +542,7 @@ class UNGCManagerEnhanced:
                     level = 'Partial'
                 else:
                     level = 'None'
-                cursor.execute(
+                self.execute_update(
                     """
                     INSERT OR REPLACE INTO ungc_compliance
                     (id, company_id, principle_id, compliance_level, evidence_count, score, last_assessed, notes)
@@ -584,19 +553,13 @@ class UNGCManagerEnhanced:
                     """,
                     (company_id, pid, company_id, pid, level, 0, normalized)
                 )
-            conn.commit()
         except Exception as e:
-            conn.rollback()
             raise e
-        finally:
-            conn.close()
         return self.calculate_overall_score(company_id, period)
 
     def save_compliance_edit(self, company_id: int, principle_id: str, compliance_level: str, notes: Optional[str] = None) -> bool:
-        conn = self._conn()
         try:
-            cursor = conn.cursor()
-            cursor.execute(
+            self.execute_update(
                 """
                 CREATE TABLE IF NOT EXISTS ungc_compliance (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -611,7 +574,7 @@ class UNGCManagerEnhanced:
                 )
                 """
             )
-            cursor.execute(
+            self.execute_update(
                 """
                 INSERT OR REPLACE INTO ungc_compliance
                 (id, company_id, principle_id, compliance_level, evidence_count, score, last_assessed, notes)
@@ -625,20 +588,14 @@ class UNGCManagerEnhanced:
                 """,
                 (company_id, principle_id, company_id, principle_id, compliance_level, company_id, principle_id, company_id, principle_id, notes)
             )
-            conn.commit()
             return True
         except Exception as e:
             logging.error(f"Evidence save error: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
     def add_evidence(self, company_id: int, principle_id: str, evidence_type: str = 'file', file_path: Optional[str] = None, url: Optional[str] = None, notes: Optional[str] = None) -> bool:
-        conn = self._conn()
         try:
-            cursor = conn.cursor()
-            cursor.execute(
+            self.execute_update(
                 """
                 CREATE TABLE IF NOT EXISTS ungc_evidence (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -652,12 +609,16 @@ class UNGCManagerEnhanced:
                 )
                 """
             )
-            cols = [row[1] for row in cursor.execute("PRAGMA table_info(ungc_evidence)").fetchall()]
+            
+            rows = self.execute_query("PRAGMA table_info(ungc_evidence)")
+            cols = [row['name'] for row in rows]
+            
             if 'url' not in cols:
-                cursor.execute("ALTER TABLE ungc_evidence ADD COLUMN url TEXT")
+                self.execute_update("ALTER TABLE ungc_evidence ADD COLUMN url TEXT")
             if 'file_path' not in cols:
-                cursor.execute("ALTER TABLE ungc_evidence ADD COLUMN file_path TEXT")
-            cursor.execute(
+                self.execute_update("ALTER TABLE ungc_evidence ADD COLUMN file_path TEXT")
+                
+            self.execute_update(
                 """
                 INSERT INTO ungc_evidence(company_id, principle_id, evidence_type, file_path, url, notes)
                 VALUES (?, ?, ?, ?, ?, ?)
@@ -665,7 +626,7 @@ class UNGCManagerEnhanced:
                 (company_id, principle_id, evidence_type, file_path, url, notes)
             )
             try:
-                cursor.execute(
+                self.execute_update(
                     """
                     UPDATE ungc_compliance
                     SET evidence_count = COALESCE(evidence_count,0) + 1, last_assessed = CURRENT_TIMESTAMP
@@ -675,23 +636,17 @@ class UNGCManagerEnhanced:
                 )
             except Exception as e:
                 logging.error(f"Silent error caught: {str(e)}")
-            conn.commit()
+            
             return True
         except Exception as e:
             logging.error(f"Error updating compliance evidence: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
     def create_tables(self) -> None:
         """Create necessary UNGC tables"""
-        conn = self._conn()
         try:
-            cursor = conn.cursor()
-
             # KPI data table
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS ungc_kpi_data (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -706,7 +661,7 @@ class UNGCManagerEnhanced:
             """)
 
             # Compliance table
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS ungc_compliance (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -721,7 +676,7 @@ class UNGCManagerEnhanced:
             """)
 
             # Evidence table
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS ungc_evidence (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -735,14 +690,10 @@ class UNGCManagerEnhanced:
                 )
             """)
 
-            conn.commit()
             logging.info("UNGC tables created successfully")
 
         except Exception as e:
             logging.error(f"Table creation error: {e}")
-            conn.rollback()
-        finally:
-            conn.close()
 
 
 if __name__ == '__main__':

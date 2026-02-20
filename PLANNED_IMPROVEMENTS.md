@@ -1,96 +1,84 @@
-# Planned Improvements and Task Tracking
+# Planned Improvements & Progress Tracking
 
 ## Completed Tasks
-- [x] **Item 39: Benchmark Module Improvements**
-  - Added "Şirketim" column to benchmark tables.
-  - Updated `web_app.py` to pass `company_values` to the template.
-  - Deployed and verified.
-- [x] **Item 40: Regulation Module**
-  - Verified Regulation Manager and initial data population.
-  - Deployed and verified.
-- [x] **Item 41: ESG Score Module Improvements**
-  - Analyzed `esg_manager.py` and `esg.html`.
-  - Fixed `_safe_count` restriction in `esg_manager.py`.
-  - Verified `web_app.py` routes and UI.
-- [x] **Item 37: Biodiversity Module**
-  - Verified `biodiversity.html` and `web_app.py`.
-  - Deployed to remote server.
-- [x] **Economic Module Improvements**
-  - Verified `economic.html` and `web_app.py`.
-  - Deployed to remote server.
-- [x] **Item 3780: Training Module Integration**
-  - Completed manager, UI, and routes.
-  - Deployed to remote server.
-- [x] **Survey Module Integration**
-  - Implemented automatic training program creation from survey results.
-  - Added "Eğitim Planı Oluştur" button.
-- [x] **ISO 26000 Social Modules**
-  - Standardized data entry forms for Human Rights, Labor, Consumer, Community.
-  - Verified form alignment with backend `social_manager.py`.
-  - Deployed and verified.
-- [x] **Supply Chain (Item 35)**
-  - Added Risk Analysis, Audit mechanisms, and Supplier Scorecards.
-  - Implemented Search and Risk Level filtering in backend and UI.
-  - Added Pagination to Supply Chain list.
-  - Deployed and verified.
-- [x] **General UI/UX Improvements**
-  - Implemented Pagination and Advanced Filtering for Reports, Companies, Audit Logs, Users, Surveys, and Supply Chain.
-  - Standardized "Add" modals across Social Modules.
-  - Deployed and verified.
 
-## Future Tasks
-- [x] **Dashboard Widgets**
-  - Added "Recent Activities" and "Pending Actions" list to Dashboard.
-- [x] **Dashboard Charts**
-  - Added specific charts for ISO 26000 modules (Social Performance Radar Chart).
-- [x] **Supply Chain Advanced Features**
-  - Implement Bulk Risk Import (Excel/CSV).
-  - Add Real-time Risk Alerts system.
-- [x] **Dashboard Advanced Filtering**
-  - Add Date Range and Module-specific filters.
-- [x] **Fair Operating Practices Module (ISO 26000)**
-  - Implement full CRUD functionality.
-  - Add "Add New" modal and data entry form.
-  - Ensure statistics calculation.
-  - Deployed and Verified.
-- [x] **Mobile Responsiveness Check**
-  - Verified all new forms and tables on mobile view.
-  - Improved responsiveness of Reports filter form.
+- [x] **Multi-tenant Isolation Hardening (Managers)**
+  - Updated `SupplyChainManager` to accept `company_id`.
+  - Updated `StakeholderManager` to accept `company_id`.
+  - Updated `SDGManager` to accept `company_id`.
+  - Updated `ESGManager` to accept `company_id`.
+  - Refactored `TargetManager` to inherit from `BaseTenantManager` and support multi-tenancy.
+  - Updated `ProductTechManager` to accept `company_id`.
+  - Updated `SASBManager` to accept `company_id`.
+  - Refactored `CDPManager` to inherit from `BaseTenantManager`.
+  - Refactored `NotificationManager` to inherit from `BaseTenantManager`.
+  - Verified all managers compliance via `tools/verify_all_managers_compliance.py`.
+  - Fixed false positive compliance errors in `WaterManager` and `SASBManager`.
+  - Refactored legacy `backend/modules/reporting/sasb_manager.py` to be compliant.
+  - Deployed all changes to remote server (72.62.150.207) and restarted service.
 
-## Recent Compliance & Reporting Updates
-- [x] **Task 8: Database Schema & Security**
-  - Implemented Two-Stage Approval for Super Admin.
-  - Enforced License Verification & API Keys.
-  - Added Rate Limiting & CAPTCHA.
-  - Migrated Passwords to Argon2.
-  - Updated `users` table schema (lockout, totp, etc.).
-- [x] **Task 9: Standard Mappings (2026)**
-  - Updated GRI, SDG, TSRS, ESRS, SASB mappings.
-  - Added new indicators for ESRS 2026 & TSRS 2026.
-- [x] **Task 10: Reporting Service**
-  - Created centralized `reporting_service.py`.
-  - Integrated Celery/RQ for background generation.
-  - Implemented JSON/PDF report engine.
-- [x] **Task 11: Report Templates Expansion**
-  - Expanded `report_templates.py` with multi-language support (TR, EN, DE).
-  - Added Carbon, CBAM, TCFD templates.
-  - Added HTML preview support (`template_type='html'`).
-- [x] **Task 12: Mandatory Report Sections**
-  - Configured mandatory sections (Data Source, Methodology, Standard Reference) in `report_templates.py`.
-  - Enforced `is_required=1` in `report_sections` table.
-  - Implemented backend protection against deleting mandatory sections.
-- [x] **Legal Compliance & Documentation**
-  - Created Privacy Policy, SLA, DPA templates (`templates/legal/`).
-  - Implemented routes `/legal/privacy`, `/legal/sla`, `/legal/dpa` in `web_app.py`.
-  - Added Footer links and Cookie Consent Banner in `base.html`.
-  - Documented features in `docs/LEGAL_COMPLIANCE.md`.
-- [x] **Infrastructure & Scalability**
-  - Created Docker ecosystem: `Dockerfile`, `docker-compose.yml`, `requirements.txt`.
-  - Implemented Kubernetes manifests: `k8s/deployment.yaml`, `k8s/service.yaml`, `k8s/hpa.yaml` (Auto-scaling).
-  - Created Load Testing Tool: `tools/load_test_simulation.py` for verifying stability.
-- [x] **Security Testing & Quality**
-  - Conducted OWASP Top 10 Dynamic Analysis (`tools/verify_security_dynamic.py`).
-  - Implemented Static Analysis (Bandit, Pylint) with `tools/run_security_scan.py`.
-  - Fixed SQL Injection vulnerabilities (B608) in `web_app_remote.py`.
-  - Set Quality Thresholds (`tools/check_quality.py`) and enforced them.
-  - Mitigated CSRF, XSS, and weak hashing issues.
+- [x] **Frontend Integration: Auto Tasks & Visualization**
+  - Updated `AutoTaskManager` and `VisualizationManager` to support `BaseTenantManager`.
+  - Created test data via `tools/add_dummy_data_new_modules.py`.
+  - Integrated into `web_app.py` with multi-tenant routes.
+  - Deployed to remote and verified.
+
+- [x] **Frontend Integration: Automated Reporting & Analytics**
+  - Updated `AutoReportManager` and `TrendAnalyzer` to support `BaseTenantManager`.
+  - Fixed import paths in `web_app.py` and verification tools.
+  - Integrated into `web_app.py` with multi-tenant routes (`/automated_reporting`, `/analytics`).
+  - Verified data integrity on remote via `tools/verify_reporting_analytics_data.py`.
+  - Confirmed templates (`automated_reporting.html`, `analytics.html`) exist and are linked.
+
+- [x] **Advanced File Manager Integration & Hardening**
+  - Analyzed `AdvancedFileManager` for multi-tenant security risks.
+  - Fixed global tags issue by adding `company_id` to `file_tags` table and enforcing isolation.
+  - Updated `_ensure_tag`, `add_tags_to_file`, `get_all_tags` methods.
+  - Added `/api/files/tags` endpoint with `@require_company_context`.
+  - Created and executed schema migration script `tools/update_file_manager_schema.py` on remote.
+  - Verified tag isolation via `tools/verify_file_manager_tags.py`.
+
+- [x] **Notification System UI Integration**
+  - Refactored `NotificationManager` for multi-tenant support (added `company_id` column and logic).
+  - Created `backend/api/notification_api.py` with multi-tenant endpoints.
+  - Updated `web_app.py` to register notification blueprint and initialize manager.
+  - Added notification bell and polling logic to `templates/base.html`.
+  - Created `templates/notifications.html` for full list view.
+  - Created migration script `tools/update_notification_schema.py` (and verified auto-creation via manager init).
+  - Deployed to remote and verified initialization.
+
+- [x] **Audit Logs UI & Export**
+  - Create UI for viewing audit logs.
+  - Add export functionality (CSV/Excel).
+  - Ensure super-admin only access or scoped access.
+  - Added pagination and total count support.
+  - Deployed to remote and verified.
+
+- [x] **Rate Limiting Hardening & Verification**
+  - Fixed `DatabaseManager` import in `remote_web_app.py`.
+  - Added missing legal routes (`/legal/sla`, `/legal/dpa`) to fix rate limit page rendering errors.
+  - Verified rate limiting via `tools/test_rate_limits.py`.
+
+- [x] **Advanced File Manager Multi-Tenant Fixes (Tag Relations & Metadata)**
+  - Added `company_id` to `file_tag_relations` and `file_metadata` tables.
+  - Updated `add_tags_to_file`, `add_metadata`, `share_file` for strict isolation.
+  - Backfilled existing data via `migrate_file_manager_isolation.py`.
+  - Deployed and verified on remote.
+
+- [x] **Survey & Report Manager Audit**
+  - Audited `SurveyManager` for tenant isolation (confirmed compliant).
+  - Audited `ReportManager` for tenant isolation (confirmed hybrid model: global templates, isolated data).
+
+- [x] **Strategic Module Multi-Tenant Fixes**
+  - Updated `SustainabilityStrategyManager` to enforce strict tenant isolation via JOINs (strategic_goals, goal_progress).
+  - Refactored raw SQLite connections to use `BaseTenantManager` methods.
+  - Verified `record_goal_progress` and `get_goal_progress` with company context.
+  - Deployed fixes to remote.
+
+- [x] **System-Wide Compliance Verification**
+  - Ran `tools/verify_all_managers_compliance.py`: 75 Managers passed, 0 failed.
+  - Ran `tools/run_ci_checks.bat`: All translation, security, and syntax checks passed.
+  - Verified `report_registry` schema on remote (contains company_id).
+  - Verified no duplicate translation keys in `tr.json`.
+
+## Next Steps

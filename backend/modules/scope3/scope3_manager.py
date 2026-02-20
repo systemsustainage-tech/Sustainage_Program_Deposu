@@ -7,36 +7,25 @@ GHG Protocol Scope 3 kategorileri için veri yönetimi
 
 import logging
 import os
-import sqlite3
 from datetime import datetime
-from typing import Dict, List
+from typing import Dict, List, Optional
 from config.database import DB_PATH
+from backend.core.base_manager import BaseTenantManager
 
 
-class Scope3Manager:
+class Scope3Manager(BaseTenantManager):
     """Scope 3 kategorileri yöneticisi - GHG Protocol uyumlu"""
 
-    def __init__(self, db_path: str = DB_PATH) -> None:
-        # db_path göreli ise proje köküne göre mutlak hale getir
-        if not os.path.isabs(db_path):
-            base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-            db_path = os.path.join(base_dir, db_path)
-        self.db_path = db_path
+    def __init__(self, db_path: str = DB_PATH, company_id: Optional[int] = None) -> None:
+        super().__init__(db_path, company_id)
         self.create_tables()
         self.load_scope3_categories()
 
-    def get_connection(self) -> None:
-        """Veritabanı bağlantısı"""
-        return sqlite3.connect(self.db_path)
-
     def create_tables(self) -> None:
         """Gerekli tabloları oluştur"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
             # Scope 3 kategorileri tablosu
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS scope3_categories (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     category_number INTEGER UNIQUE NOT NULL,
@@ -51,7 +40,7 @@ class Scope3Manager:
             """)
 
             # Scope 3 emisyon kayıtları tablosu
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS scope3_emissions (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -74,7 +63,7 @@ class Scope3Manager:
             """)
 
             # Scope 3 hedefleri tablosu
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS scope3_targets (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -93,39 +82,34 @@ class Scope3Manager:
                 )
             """)
 
-            conn.commit()
             logging.info("[OK] Scope 3 tabloları oluşturuldu")
 
         except Exception as e:
             logging.error(f"[HATA] Scope 3 tablo oluşturma hatası: {e}")
-            conn.rollback()
-        finally:
-            conn.close()
 
     def add_emission_record(self, emission_data: Dict) -> bool:
         """Scope 3 emisyon kaydı ekle"""
         try:
-            conn = self.get_connection()
-            cursor = conn.cursor()
-
             # Kategori ID'sini bul
             category_name = emission_data['category']
-            cursor.execute("SELECT id FROM scope3_categories WHERE category_name = ?", (category_name,))
-            category_row = cursor.fetchone()
-
+            # scope3_categories is global
+            category_row = self.execute_query("SELECT id FROM scope3_categories WHERE category_name = ?", (category_name,))
+            
             if not category_row:
                 # Kategori yoksa ekle
                 category_number = category_name.split('.')[0] if '.' in category_name else '1'
-                cursor.execute("""
+                self.execute_update("""
                     INSERT INTO scope3_categories (category_number, category_name, description)
                     VALUES (?, ?, ?)
                 """, (int(category_number), category_name, f"Scope 3 Kategori {category_number}"))
-                category_id = cursor.lastrowid
+                
+                category_row = self.execute_query("SELECT id FROM scope3_categories WHERE category_name = ?", (category_name,))
+                category_id = category_row[0]['id']
             else:
-                category_id = category_row[0]
+                category_id = category_row[0]['id']
 
             # Emisyon kaydını ekle
-            cursor.execute("""
+            self.execute_update("""
                 INSERT INTO scope3_emissions (
                     company_id, category_id, activity_data, activity_unit,
                     emission_factor, total_emissions, reporting_period,
@@ -145,8 +129,6 @@ class Scope3Manager:
                 datetime.now().isoformat()
             ))
 
-            conn.commit()
-            conn.close()
             return True
 
         except Exception as e:
@@ -156,27 +138,25 @@ class Scope3Manager:
     def add_target_record(self, target_data: Dict) -> bool:
         """Scope 3 hedef kaydı ekle"""
         try:
-            conn = self.get_connection()
-            cursor = conn.cursor()
-
             # Kategori ID'sini bul
             category_name = target_data['category']
-            cursor.execute("SELECT id FROM scope3_categories WHERE category_name = ?", (category_name,))
-            category_row = cursor.fetchone()
-
+            category_row = self.execute_query("SELECT id FROM scope3_categories WHERE category_name = ?", (category_name,))
+            
             if not category_row:
                 # Kategori yoksa ekle
                 category_number = category_name.split('.')[0] if '.' in category_name else '1'
-                cursor.execute("""
+                self.execute_update("""
                     INSERT INTO scope3_categories (category_number, category_name, description)
                     VALUES (?, ?, ?)
                 """, (int(category_number), category_name, f"Scope 3 Kategori {category_number}"))
-                category_id = cursor.lastrowid
+                
+                category_row = self.execute_query("SELECT id FROM scope3_categories WHERE category_name = ?", (category_name,))
+                category_id = category_row[0]['id']
             else:
-                category_id = category_row[0]
+                category_id = category_row[0]['id']
 
             # Hedef kaydını ekle
-            cursor.execute("""
+            self.execute_update("""
                 INSERT INTO scope3_targets (
                     company_id, category_id, target_type, baseline_year, target_year,
                     baseline_emissions, target_emissions, reduction_percentage,
@@ -195,8 +175,6 @@ class Scope3Manager:
                 datetime.now().isoformat()
             ))
 
-            conn.commit()
-            conn.close()
             return True
 
         except Exception as e:
@@ -208,9 +186,8 @@ class Scope3Manager:
         """Scope 3 raporu oluştur"""
         try:
             import os
-            from datetime import datetime
-
             import pandas as pd
+            from docx import Document
 
             # Rapor klasörü oluştur
             report_dir = os.path.join(os.path.dirname(self.db_path), '..', 'reports', 'scope3')
@@ -222,63 +199,62 @@ class Scope3Manager:
             filename = f"{safe_name}_{timestamp}.{format_type.lower()}"
             filepath = os.path.join(report_dir, filename)
 
-            # Verileri al
-            conn = self.get_connection()
-            cursor = conn.cursor()
-
             report_data = {}
 
             # Emisyon verileri
             if content_options.get('include_emissions', True):
-                cursor.execute("""
+                # skip_tenant_filter=True because we handle company_id manually in the query
+                emissions_rows = self.execute_query("""
                     SELECT e.*, c.category_number, c.category_name, c.description
                     FROM scope3_emissions e
                     JOIN scope3_categories c ON e.category_id = c.id
                     WHERE e.company_id = ? AND e.reporting_period = ?
                     ORDER BY c.category_number
-                """, (company_id, period))
+                """, (company_id, period), skip_tenant_filter=True)
 
                 emissions_data = []
-                for row in cursor.fetchall():
+                for row in emissions_rows:
                     emissions_data.append({
-                        'Kategori': f"{row[14]} - {row[15]}",
-                        'Aktivite Verisi': row[3],
-                        'Aktivite Birimi': row[4],
-                        'Emisyon Faktörü': row[5],
-                        'Toplam Emisyon (tCO2e)': row[7],
-                        'Raporlama Dönemi': row[8],
-                        'Veri Kaynağı': row[9],
-                        'Notlar': row[12]
+                        'Kategori': f"{row['category_number']} - {row['category_name']}",
+                        'Aktivite Verisi': row['activity_data'],
+                        'Aktivite Birimi': row['activity_unit'],
+                        'Emisyon Faktörü': row['emission_factor'],
+                        'Toplam Emisyon (tCO2e)': row['total_emissions'],
+                        'Raporlama Dönemi': row['reporting_period'],
+                        'Veri Kaynağı': row['data_source'],
+                        'Notlar': row['notes']
                     })
                 report_data['emissions'] = emissions_data
 
             # Hedef verileri
             if content_options.get('include_targets', True):
-                cursor.execute("""
+                # skip_tenant_filter=True because we handle company_id manually in the query
+                targets_rows = self.execute_query("""
                     SELECT t.*, c.category_number, c.category_name
                     FROM scope3_targets t
                     JOIN scope3_categories c ON t.category_id = c.id
                     WHERE t.company_id = ?
                     ORDER BY c.category_number
-                """, (company_id,))
+                """, (company_id,), skip_tenant_filter=True)
 
                 targets_data = []
-                for row in cursor.fetchall():
+                for row in targets_rows:
                     targets_data.append({
-                        'Kategori': f"{row[13]} - {row[14]}",
-                        'Hedef Tipi': row[3],
-                        'Baz Yılı': row[4],
-                        'Hedef Yılı': row[5],
-                        'Baz Emisyon (tCO2e)': row[6],
-                        'Hedef Emisyon (tCO2e)': row[7],
-                        'Azaltım (%)': row[8],
-                        'Açıklama': row[9]
+                        'Kategori': f"{row['category_number']} - {row['category_name']}",
+                        'Hedef Tipi': row['target_type'],
+                        'Baz Yılı': row['baseline_year'],
+                        'Hedef Yılı': row['target_year'],
+                        'Baz Emisyon (tCO2e)': row['baseline_emissions'],
+                        'Hedef Emisyon (tCO2e)': row['target_emissions'],
+                        'Azaltım (%)': row['reduction_percentage'],
+                        'Açıklama': row['target_description']
                     })
                 report_data['targets'] = targets_data
 
             # Özet istatistikler
             if content_options.get('include_summary', True):
-                cursor.execute("""
+                # skip_tenant_filter=True because we handle company_id manually in the query
+                summary_rows = self.execute_query("""
                     SELECT 
                         COUNT(*) as toplam_kategori,
                         SUM(total_emissions) as toplam_emisyon,
@@ -287,18 +263,17 @@ class Scope3Manager:
                         MIN(total_emissions) as min_emisyon
                     FROM scope3_emissions e
                     WHERE e.company_id = ? AND e.reporting_period = ?
-                """, (company_id, period))
+                """, (company_id, period), skip_tenant_filter=True)
 
-                summary_row = cursor.fetchone()
-                report_data['summary'] = {
-                    'Toplam Kategori': summary_row[0],
-                    'Toplam Emisyon (tCO2e)': summary_row[1] or 0,
-                    'Ortalama Emisyon (tCO2e)': summary_row[2] or 0,
-                    'Maksimum Emisyon (tCO2e)': summary_row[3] or 0,
-                    'Minimum Emisyon (tCO2e)': summary_row[4] or 0
-                }
-
-            conn.close()
+                if summary_rows:
+                    summary_row = summary_rows[0]
+                    report_data['summary'] = {
+                        'Toplam Kategori': summary_row['toplam_kategori'],
+                        'Toplam Emisyon (tCO2e)': summary_row['toplam_emisyon'] or 0,
+                        'Ortalama Emisyon (tCO2e)': summary_row['ortalama_emisyon'] or 0,
+                        'Maksimum Emisyon (tCO2e)': summary_row['max_emisyon'] or 0,
+                        'Minimum Emisyon (tCO2e)': summary_row['min_emisyon'] or 0
+                    }
 
             # Rapor oluştur
             if format_type.lower() == 'excel':
@@ -321,8 +296,6 @@ class Scope3Manager:
                     df_emissions.to_csv(filepath, index=False, encoding='utf-8-sig')
 
             elif format_type.lower() == 'docx':
-                from docx import Document
-
                 doc = Document()
                 doc.add_heading(f'{report_name} - {period}', 0)
 
@@ -367,35 +340,33 @@ class Scope3Manager:
 
     def get_target_data(self, company_id: int) -> List[Dict]:
         """Scope 3 hedef verilerini getir"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            # skip_tenant_filter=True because we handle company_id manually in the query
+            targets_rows = self.execute_query("""
                 SELECT t.*, c.category_number, c.category_name
                 FROM scope3_targets t
                 JOIN scope3_categories c ON t.category_id = c.id
                 WHERE t.company_id = ?
                 ORDER BY c.category_number
-            """, (company_id,))
+            """, (company_id,), skip_tenant_filter=True)
 
             targets = []
-            for row in cursor.fetchall():
+            for row in targets_rows:
                 targets.append({
-                    'id': row[0],
-                    'company_id': row[1],
-                    'category_id': row[2],
-                    'target_type': row[3],
-                    'baseline_year': row[4],
-                    'target_year': row[5],
-                    'baseline_emissions': row[6],
-                    'target_emissions': row[7],
-                    'reduction_percentage': row[8],
-                    'target_description': row[9],
-                    'status': row[10],
-                    'created_at': row[11],
-                    'category_number': row[12],
-                    'category_name': row[13]
+                    'id': row['id'],
+                    'company_id': row['company_id'],
+                    'category_id': row['category_id'],
+                    'target_type': row['target_type'],
+                    'baseline_year': row['baseline_year'],
+                    'target_year': row['target_year'],
+                    'baseline_emissions': row['baseline_emissions'],
+                    'target_emissions': row['target_emissions'],
+                    'reduction_percentage': row['reduction_percentage'],
+                    'target_description': row['target_description'],
+                    'status': row['status'],
+                    'created_at': row['created_at'],
+                    'category_number': row['category_number'],
+                    'category_name': row['category_name']
                 })
 
             return targets
@@ -403,18 +374,13 @@ class Scope3Manager:
         except Exception as e:
             logging.error(f"Scope 3 hedef verileri getirme hatası: {e}")
             return []
-        finally:
-            conn.close()
 
     def load_scope3_categories(self) -> None:
         """Scope 3 kategorilerini yükle"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
             # Kategorilerin zaten var olup olmadığını kontrol et
-            cursor.execute("SELECT COUNT(*) FROM scope3_categories")
-            count = cursor.fetchone()[0]
+            count_result = self.execute_query("SELECT COUNT(*) as count FROM scope3_categories")
+            count = count_result[0]['count'] if count_result else 0
 
             if count == 0:
                 # Scope 3 kategorilerini ekle
@@ -436,28 +402,22 @@ class Scope3Manager:
                     (15, "Yatırımlar", "Finansal yatırımlar", "Indirect", 1, 0)
                 ]
 
-                cursor.executemany("""
-                    INSERT INTO scope3_categories 
-                    (category_number, category_name, description, scope_type, is_upstream, is_downstream)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                """, categories)
+                for cat in categories:
+                    self.execute_update("""
+                        INSERT INTO scope3_categories 
+                        (category_number, category_name, description, scope_type, is_upstream, is_downstream)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                    """, cat)
 
-                conn.commit()
                 logging.info(f"[OK] {len(categories)} Scope 3 kategorisi eklendi")
 
         except Exception as e:
             logging.error(f"[HATA] Scope 3 kategorileri yükleme hatası: {e}")
-            conn.rollback()
-        finally:
-            conn.close()
 
     def get_categories(self) -> List[Dict]:
         """Tüm Scope 3 kategorilerini getir"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            rows = self.execute_query("""
                 SELECT id, category_number, category_name, description, 
                        scope_type, is_upstream, is_downstream, is_active
                 FROM scope3_categories 
@@ -466,151 +426,20 @@ class Scope3Manager:
             """)
 
             categories = []
-            for row in cursor.fetchall():
+            for row in rows:
                 categories.append({
-                    'id': row[0],
-                    'category_number': row[1],
-                    'category_name': row[2],
-                    'description': row[3],
-                    'scope_type': row[4],
-                    'is_upstream': bool(row[5]),
-                    'is_downstream': bool(row[6]),
-                    'is_active': bool(row[7])
+                    'id': row['id'],
+                    'category_number': row['category_number'],
+                    'category_name': row['category_name'],
+                    'description': row['description'],
+                    'scope_type': row['scope_type'],
+                    'is_upstream': bool(row['is_upstream']),
+                    'is_downstream': bool(row['is_downstream']),
+                    'is_active': bool(row['is_active'])
                 })
 
             return categories
 
         except Exception as e:
-            logging.error(f"[HATA] Kategoriler getirme hatası: {e}")
+            logging.error(f"Scope 3 kategorileri getirme hatası: {e}")
             return []
-        finally:
-            conn.close()
-
-    def save_emission_data(self, company_id: int, category_id: int,
-                          activity_data: float, activity_unit: str,
-                          emission_factor: float, emission_factor_unit: str,
-                          total_emissions: float, reporting_period: str,
-                          data_source: str = "", methodology: str = "",
-                          uncertainty_level: str = "", notes: str = "") -> bool:
-        """Scope 3 emisyon verisi kaydet"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
-        try:
-            cursor.execute("""
-                INSERT OR REPLACE INTO scope3_emissions 
-                (company_id, category_id, activity_data, activity_unit,
-                 emission_factor, emission_factor_unit, total_emissions,
-                 reporting_period, data_source, methodology, uncertainty_level, notes)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (company_id, category_id, activity_data, activity_unit,
-                  emission_factor, emission_factor_unit, total_emissions,
-                  reporting_period, data_source, methodology, uncertainty_level, notes))
-
-            conn.commit()
-            return True
-
-        except Exception as e:
-            logging.error(f"[HATA] Emisyon verisi kaydetme hatası: {e}")
-            conn.rollback()
-            return False
-        finally:
-            conn.close()
-
-    def get_emission_data(self, company_id: int, reporting_period: str = None) -> List[Dict]:
-        """Scope 3 emisyon verilerini getir"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
-        try:
-            if reporting_period:
-                cursor.execute("""
-                    SELECT e.*, c.category_number, c.category_name, c.description
-                    FROM scope3_emissions e
-                    JOIN scope3_categories c ON e.category_id = c.id
-                    WHERE e.company_id = ? AND e.reporting_period = ?
-                    ORDER BY c.category_number
-                """, (company_id, reporting_period))
-            else:
-                cursor.execute("""
-                    SELECT e.*, c.category_number, c.category_name, c.description
-                    FROM scope3_emissions e
-                    JOIN scope3_categories c ON e.category_id = c.id
-                    WHERE e.company_id = ?
-                    ORDER BY c.category_number, e.reporting_period DESC
-                """, (company_id,))
-
-            emissions = []
-            for row in cursor.fetchall():
-                emissions.append({
-                    'id': row[0],
-                    'company_id': row[1],
-                    'category_id': row[2],
-                    'activity_data': row[3],
-                    'activity_unit': row[4],
-                    'emission_factor': row[5],
-                    'emission_factor_unit': row[6],
-                    'total_emissions': row[7],
-                    'reporting_period': row[8],
-                    'data_source': row[9],
-                    'methodology': row[10],
-                    'uncertainty_level': row[11],
-                    'notes': row[12],
-                    'created_at': row[13],
-                    'updated_at': row[14],
-                    'category_number': row[15],
-                    'category_name': row[16],
-                    'description': row[17]
-                })
-
-            return emissions
-
-        except Exception as e:
-            logging.error(f"[HATA] Emisyon verileri getirme hatası: {e}")
-            return []
-        finally:
-            conn.close()
-
-    def get_emissions_summary(self, company_id: int, reporting_period: str = None) -> Dict:
-        """Scope 3 emisyon özetini getir"""
-        emissions = self.get_emission_data(company_id, reporting_period)
-
-        summary = {
-            'total_emissions': 0,
-            'upstream_emissions': 0,
-            'downstream_emissions': 0,
-            'category_breakdown': {},
-            'data_quality': {
-                'high': 0,
-                'medium': 0,
-                'low': 0
-            }
-        }
-
-        for emission in emissions:
-            total = emission.get('total_emissions', 0) or 0
-            summary['total_emissions'] += total
-
-            category_name = emission.get('category_name', '')
-            if category_name in summary['category_breakdown']:
-                summary['category_breakdown'][category_name] += total
-            else:
-                summary['category_breakdown'][category_name] = total
-
-            # Upstream/Downstream ayrımı
-            if emission.get('category_number', 0) <= 8:
-                summary['upstream_emissions'] += total
-            else:
-                summary['downstream_emissions'] += total
-
-            # Veri kalitesi
-            uncertainty = emission.get('uncertainty_level', '') or ''
-            uncertainty = uncertainty.lower() if uncertainty else ''
-            if uncertainty in ['high', 'düşük']:
-                summary['data_quality']['low'] += 1
-            elif uncertainty in ['medium', 'orta']:
-                summary['data_quality']['medium'] += 1
-            else:
-                summary['data_quality']['high'] += 1
-
-        return summary

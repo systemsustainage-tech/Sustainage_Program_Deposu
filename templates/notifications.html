@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}{{ lang('notifications', 'Bildirimler') }} - Sustainage{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>{{ lang('notifications', 'Bildirimler') }}</h2>
+        <button class="btn btn-outline-primary" onclick="markAllRead()">
+            <i class="bi bi-check-all"></i> {{ lang('mark_all_read', 'Tümünü Okundu İşaretle') }}
+        </button>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="list-group list-group-flush" id="all-notifications-list">
+                <!-- Notifications will be loaded here -->
+                <div class="text-center p-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Yükleniyor...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadNotifications();
+});
+
+function loadNotifications() {
+    fetch('/api/notifications/all?limit=50')
+        .then(response => response.json())
+        .then(data => {
+            const listContainer = document.getElementById('all-notifications-list');
+            if (data.length > 0) {
+                let html = '';
+                data.forEach(notif => {
+                    const date = new Date(notif.created_at).toLocaleString('tr-TR');
+                    const icon = notif.type === 'error' ? 'bi-x-circle text-danger' : 
+                                 notif.type === 'success' ? 'bi-check-circle text-success' : 
+                                 notif.type === 'warning' ? 'bi-exclamation-triangle text-warning' : 'bi-info-circle text-primary';
+                    const bgClass = notif.is_read ? '' : 'bg-light';
+                    
+                    html += `
+                        <div class="list-group-item list-group-item-action ${bgClass} p-3">
+                            <div class="d-flex w-100 justify-content-between align-items-center">
+                                <div class="d-flex align-items-start">
+                                    <i class="bi ${icon} fs-4 me-3"></i>
+                                    <div>
+                                        <h5 class="mb-1">${notif.title}</h5>
+                                        <p class="mb-1 text-muted">${notif.message}</p>
+                                        <small class="text-muted">${date}</small>
+                                    </div>
+                                </div>
+                                <div>
+                                    ${notif.link ? `<a href="${notif.link}" class="btn btn-sm btn-outline-secondary me-2">{{ lang('go', 'Git') }}</a>` : ''}
+                                    ${!notif.is_read ? `<button class="btn btn-sm btn-light" onclick="markAsReadItem(${notif.id}, this)" title="{{ lang('mark_read', 'Okundu İşaretle') }}"><i class="bi bi-check"></i></button>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                listContainer.innerHTML = html;
+            } else {
+                listContainer.innerHTML = '<div class="text-center p-5 text-muted">{{ lang("no_notifications", "Bildirim bulunmuyor") }}</div>';
+            }
+        })
+        .catch(err => {
+            console.error('Error loading notifications:', err);
+            document.getElementById('all-notifications-list').innerHTML = '<div class="text-center p-5 text-danger">Yükleme hatası. Lütfen sayfayı yenileyin.</div>';
+        });
+}
+
+function markAsReadItem(id, btn) {
+    fetch(`/api/notifications/${id}/read`, { method: 'POST' })
+        .then(() => {
+            // Remove highlight and button
+            const item = btn.closest('.list-group-item');
+            item.classList.remove('bg-light');
+            btn.remove();
+            // Update global badge
+            if (typeof updateNotifications === 'function') {
+                updateNotifications();
+            }
+        });
+}
+
+function markAllRead() {
+    fetch('/api/notifications/mark-all-read', { method: 'POST' })
+        .then(() => {
+            loadNotifications();
+            if (typeof updateNotifications === 'function') {
+                updateNotifications();
+            }
+        });
+}
+</script>
+{% endblock %}

@@ -7,9 +7,17 @@ Scope 1, 2, 3 emisyonlarını yönetir ve karbon ayak izini hesaplar
 
 import logging
 import os
-import sqlite3
 from datetime import datetime
-from typing import Dict, List
+from typing import Dict, List, Optional, Union, Any
+
+# BaseTenantManager'ı içe aktar
+try:
+    from backend.core.base_manager import BaseTenantManager
+except ImportError:
+    # Eğer backend modülü olarak çalıştırılmazsa path ayarı gerekebilir
+    import sys
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..')))
+    from backend.core.base_manager import BaseTenantManager
 
 try:
     from utils.language_manager import LanguageManager
@@ -21,28 +29,34 @@ except ImportError:
 try:
     from .emission_factor_data import DEFRA_IPCC_DATA
 except ImportError:
-    from emission_factor_data import DEFRA_IPCC_DATA
+    # Bağıl import hatası durumunda (test vs)
+    try:
+        from backend.modules.environmental.emission_factor_data import DEFRA_IPCC_DATA
+    except ImportError:
+        # Fallback empty list or mock
+        DEFRA_IPCC_DATA = []
 
 
-class CarbonManager:
+class CarbonManager(BaseTenantManager):
     """Karbon emisyonları ve karbon ayak izi yönetimi"""
 
-    def __init__(self, db_path: str = DB_PATH) -> None:
+    def __init__(self, db_path: str = None, company_id: Optional[int] = None) -> None:
         self.lm = LanguageManager()
-        if not os.path.isabs(db_path):
-            base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
-            db_path = os.path.join(base_dir, db_path)
-        self.db_path = db_path
+        # db_path çözümü BaseTenantManager'da yapılabilir ama burada da path fix var
+        final_db_path = db_path or DB_PATH
+        if final_db_path and not os.path.isabs(final_db_path):
+             base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
+             final_db_path = os.path.join(base_dir, final_db_path)
+        
+        super().__init__(final_db_path, company_id)
         self._init_db_tables()
+        self._migrate_tables()
 
     def _init_db_tables(self) -> None:
         """Karbon yönetimi tablolarını oluştur"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
             # Scope 1 - Direkt emisyonlar
-            cursor.execute("""
+            self.db.execute_update("""
                 CREATE TABLE IF NOT EXISTS scope1_emissions (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -62,7 +76,7 @@ class CarbonManager:
             """)
 
             # Scope 2 - Enerji kaynaklı emisyonlar
-            cursor.execute("""
+            self.db.execute_update("""
                 CREATE TABLE IF NOT EXISTS scope2_emissions (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -81,7 +95,7 @@ class CarbonManager:
             """)
 
             # Scope 3 - Diğer dolaylı emisyonlar
-            cursor.execute("""
+            self.db.execute_update("""
                 CREATE TABLE IF NOT EXISTS scope3_emissions (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -101,7 +115,7 @@ class CarbonManager:
             """)
 
             # Emisyon faktörleri
-            cursor.execute("""
+            self.db.execute_update("""
                 CREATE TABLE IF NOT EXISTS emission_factors (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     source TEXT NOT NULL,
@@ -111,22 +125,13 @@ class CarbonManager:
                     scope INTEGER,
                     country TEXT,
                     source_reference TEXT,
+                    category TEXT,
                     created_at TEXT DEFAULT CURRENT_TIMESTAMP
                 )
             """)
 
-            # Şema güncellemesi: category kolonu kontrolü
-            cursor.execute("PRAGMA table_info(emission_factors)")
-            columns = [info[1] for info in cursor.fetchall()]
-            if 'category' not in columns:
-                try:
-                    cursor.execute("ALTER TABLE emission_factors ADD COLUMN category TEXT")
-                    logging.info("Added 'category' column to emission_factors table")
-                except Exception as e:
-                    logging.error(f"Error adding category column: {e}")
-
             # Karbon hedefleri
-            cursor.execute("""
+            self.db.execute_update("""
                 CREATE TABLE IF NOT EXISTS carbon_targets (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -143,42 +148,56 @@ class CarbonManager:
             """)
 
             # Varsayılan emisyon faktörlerini ekle
-            self._add_default_emission_factors(cursor)
+            self._add_default_emission_factors()
             # DEFRA/IPCC Kütüphanesini içe aktar
-            self.import_defra_ipcc_factors(cursor)
+            self.import_defra_ipcc_factors()
 
-            conn.commit()
             logging.info(f"[OK] {self.lm.tr('carbon_module_tables_created', 'Karbon modülü tabloları başarıyla oluşturuldu')}")
 
         except Exception as e:
             logging.error(f"[{self.lm.tr('error', 'HATA')}] {self.lm.tr('carbon_module_table_error', 'Karbon modülü tablo oluşturma')}: {e}")
-            conn.rollback()
-        finally:
-            conn.close()
 
-    def import_defra_ipcc_factors(self, cursor) -> None:
+    def _migrate_tables(self) -> None:
+        """Tablo şemalarını güncelle"""
+        try:
+            # Check for category column in emission_factors
+            # We check if we can select the column
+            try:
+                self.db.execute_query("SELECT category FROM emission_factors LIMIT 1")
+            except Exception:
+                logging.info("Adding 'category' column to emission_factors table")
+                self.db.execute_update("ALTER TABLE emission_factors ADD COLUMN category TEXT")
+                
+        except Exception as e:
+            # Column might already exist or table issue, log but continue
+            logging.debug(f"Migration check/update note: {e}")
+
+    def import_defra_ipcc_factors(self) -> None:
         """DEFRA/IPCC veri setini veritabanına aktar"""
         try:
             count = 0
+            if not DEFRA_IPCC_DATA:
+                return
+
             for item in DEFRA_IPCC_DATA:
                 # Mükerrer kayıt kontrolü (Source + Fuel Type + Scope)
-                cursor.execute("""
+                existing = self.db.execute_query("""
                     SELECT id FROM emission_factors 
                     WHERE source = ? AND fuel_type = ? AND scope = ?
                 """, (item['source'], item['fuel_type'], item['scope']))
                 
-                if not cursor.fetchone():
-                    cursor.execute("""
+                if not existing:
+                    self.db.execute_update("""
                         INSERT INTO emission_factors 
                         (source, fuel_type, factor_value, unit, scope, category, source_reference, country)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                     """, (
-                        item['source'], 
-                        item['fuel_type'], 
-                        item['factor_value'], 
-                        item['unit'], 
-                        item['scope'], 
-                        item.get('category', ''), 
+                        item['source'],
+                        item['fuel_type'],
+                        item['factor_value'],
+                        item['unit'],
+                        item['scope'],
+                        item.get('category', ''),
                         item.get('ref', ''),
                         'International'
                     ))
@@ -190,7 +209,7 @@ class CarbonManager:
         except Exception as e:
             logging.error(f"DEFRA/IPCC import hatası: {e}")
 
-    def _add_default_emission_factors(self, cursor) -> None:
+    def _add_default_emission_factors(self) -> None:
         """Varsayılan emisyon faktörlerini ekle"""
         factors = [
             # Scope 1 - Yakıtlar
@@ -215,7 +234,8 @@ class CarbonManager:
         ]
 
         for source, fuel_type, factor, unit, scope, country, ref in factors:
-            cursor.execute("""
+            # Use INSERT OR IGNORE via execute_update
+            self.db.execute_update("""
                 INSERT OR IGNORE INTO emission_factors 
                 (source, fuel_type, factor_value, unit, scope, country, source_reference)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -223,25 +243,25 @@ class CarbonManager:
 
     def get_dashboard_stats(self, company_id: int) -> Dict:
         """Dashboard için özet istatistikleri getir"""
+        cid = self._ensure_context(company_id)
         return {
-            'total_co2e': self.get_total_carbon_footprint(company_id),
-            'scope1': self.get_scope_emissions(company_id, 1),
-            'scope2': self.get_scope_emissions(company_id, 2),
-            'scope3': self.get_scope_emissions(company_id, 3)
+            'total_co2e': self.get_total_carbon_footprint(cid),
+            'scope1': self.get_scope_emissions(cid, 1),
+            'scope2': self.get_scope_emissions(cid, 2),
+            'scope3': self.get_scope_emissions(cid, 3)
         }
 
     def get_total_carbon_footprint(self, company_id: int, year: int = None) -> float:
         """Toplam karbon ayak izini hesapla (kg CO2e)"""
-        s1 = self.get_scope_emissions(company_id, 1, year)
-        s2 = self.get_scope_emissions(company_id, 2, year)
-        s3 = self.get_scope_emissions(company_id, 3, year)
+        cid = self._ensure_context(company_id)
+        s1 = self.get_scope_emissions(cid, 1, year)
+        s2 = self.get_scope_emissions(cid, 2, year)
+        s3 = self.get_scope_emissions(cid, 3, year)
         return s1 + s2 + s3
 
     def get_scope_emissions(self, company_id: int, scope: int, year: int = None) -> float:
         """Belirli bir kapsamdaki toplam emisyonu getir"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
+        cid = self._ensure_context(company_id)
         table_map = {1: 'scope1_emissions', 2: 'scope2_emissions', 3: 'scope3_emissions'}
         table = table_map.get(scope)
         
@@ -249,31 +269,26 @@ class CarbonManager:
             return 0.0
             
         try:
-            query = f"SELECT SUM(total_emissions) FROM {table} WHERE company_id = ?"
-            params = [company_id]
+            query = f"SELECT SUM(total_emissions) as total FROM {table} WHERE company_id = ?"
+            params = [cid]
             
             if year:
                 query += " AND year = ?"
                 params.append(year)
             
-            cursor.execute(query, tuple(params))
-            result = cursor.fetchone()
-            return result[0] if result and result[0] else 0.0
+            result = self.execute_query(query, tuple(params))
+            return result[0]['total'] if result and result[0]['total'] else 0.0
             
         except Exception as e:
             logging.error(f"Error calculating scope {scope} emissions: {e}")
             return 0.0
-        finally:
-            conn.close()
 
     def get_monthly_emission_stats(self, company_id: int, year: int) -> List[float]:
         """Get monthly aggregated emissions for the given year (Scope 1+2+3)"""
+        cid = self._ensure_context(company_id)
         monthly_data = [0.0] * 12
         
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-            
             tables = ['scope1_emissions', 'scope2_emissions', 'scope3_emissions']
             
             for table in tables:
@@ -282,24 +297,24 @@ class CarbonManager:
                 query = f"""
                     SELECT 
                         strftime('%m', COALESCE(NULLIF(invoice_date, ''), NULLIF(created_at, ''), CURRENT_DATE)) as month,
-                        SUM(total_emissions)
+                        SUM(total_emissions) as total
                     FROM {table}
                     WHERE company_id = ? AND year = ?
                     GROUP BY month
                 """
-                cursor.execute(query, (company_id, year))
-                rows = cursor.fetchall()
+                rows = self.execute_query(query, (cid, year))
                 
-                for month_str, total in rows:
+                for row in rows:
+                    month_str = row['month']
+                    total = row['total']
                     if month_str:
                         try:
                             m_idx = int(month_str) - 1
                             if 0 <= m_idx < 12:
-                                monthly_data[m_idx] += total
+                                monthly_data[m_idx] += total or 0.0
                         except ValueError:
                             pass
                             
-            conn.close()
         except Exception as e:
             logging.error(f"Error getting monthly emission stats: {e}")
             
@@ -307,10 +322,8 @@ class CarbonManager:
 
     def get_recent_records(self, company_id: int, limit: int = 10) -> List[Dict]:
         """Son eklenen karbon verilerini getir"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        records = []
-
+        cid = self._ensure_context(company_id)
+        
         try:
             # Scope 1
             query1 = """
@@ -351,137 +364,142 @@ class CarbonManager:
                 ORDER BY date DESC LIMIT ?
             """
             
-            cursor.execute(full_query, (company_id, company_id, company_id, limit))
+            rows = self.execute_query(full_query, (cid, cid, cid, limit))
             
-            for row in cursor.fetchall():
+            records = []
+            for row in rows:
                 records.append({
-                        'scope': row[0],
-                        'category': row[1],
-                        'quantity': row[2],
-                        'unit': row[3],
-                        'emissions': row[4],
-                        'period': row[5],
-                        'created_at': row[6]
+                        'scope': row['scope'],
+                        'category': row['category'],
+                        'quantity': row['quantity'],
+                        'unit': row['unit'],
+                        'emissions': row['emissions'],
+                        'period': row['period'],
+                        'created_at': row['date']
                     })
             
             return records
         except Exception as e:
             logging.error(f"Carbon recent records error: {e}")
             return []
-        finally:
-            conn.close()
 
     def add_scope1_emission(self, company_id: int, year: int, emission_source: str,
                            fuel_type: str, fuel_consumption: float, fuel_unit: str,
                            emission_factor: float = None, invoice_date: str = None,
                            due_date: str = None, supplier: str = None) -> bool:
         """Scope 1 emisyonu ekle"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        cid = self._ensure_context(company_id)
 
         try:
             # Emisyon faktörü yoksa veritabanından al
             if emission_factor is None:
-                cursor.execute("""
+                result = self.execute_query("""
                     SELECT factor_value FROM emission_factors 
                     WHERE (fuel_type = ? OR source = ?) AND scope = 1
                 """, (fuel_type, fuel_type))
-                result = cursor.fetchone()
+                
                 if result:
-                    emission_factor = result[0]
+                    emission_factor = result[0]['factor_value']
                 else:
                     raise ValueError(f"{self.lm.tr('emission_factor_not_found', 'Emisyon faktörü bulunamadı')}: {fuel_type}")
 
             total_emissions = fuel_consumption * emission_factor
 
-            cursor.execute("""
-                INSERT INTO scope1_emissions 
-                (company_id, year, emission_source, fuel_type, fuel_consumption, 
-                 fuel_unit, emission_factor, total_emissions, invoice_date, due_date, supplier)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (company_id, year, emission_source, fuel_type, fuel_consumption,
-                  fuel_unit, emission_factor, total_emissions, invoice_date, due_date, supplier))
+            self.insert('scope1_emissions', {
+                'company_id': cid,
+                'year': year,
+                'emission_source': emission_source,
+                'fuel_type': fuel_type,
+                'fuel_consumption': fuel_consumption,
+                'fuel_unit': fuel_unit,
+                'emission_factor': emission_factor,
+                'total_emissions': total_emissions,
+                'invoice_date': invoice_date,
+                'due_date': due_date,
+                'supplier': supplier
+            })
 
-            conn.commit()
             return True
 
         except Exception as e:
             logging.error(f"{self.lm.tr('scope1_add_error', 'Scope 1 emisyon ekleme hatası')}: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
     def add_scope2_emission(self, company_id: int, year: int, energy_source: str,
                            energy_consumption: float, energy_unit: str,
                            grid_emission_factor: float = None, invoice_date: str = None,
                            due_date: str = None, supplier: str = None) -> bool:
         """Scope 2 emisyonu ekle"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        cid = self._ensure_context(company_id)
 
         try:
             # Grid emisyon faktörü yoksa veritabanından al
             if grid_emission_factor is None:
-                cursor.execute("""
+                result = self.execute_query("""
                     SELECT factor_value FROM emission_factors 
                     WHERE source = 'Elektrik' AND scope = 2
                 """)
-                result = cursor.fetchone()
                 if result:
-                    grid_emission_factor = result[0]
+                    grid_emission_factor = result[0]['factor_value']
                 else:
                     grid_emission_factor = 0.526  # Türkiye ortalama
 
             total_emissions = energy_consumption * grid_emission_factor
 
-            cursor.execute("""
-                INSERT INTO scope2_emissions 
-                (company_id, year, energy_source, energy_consumption, 
-                 energy_unit, grid_emission_factor, total_emissions, invoice_date, due_date, supplier)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (company_id, year, energy_source, energy_consumption,
-                  energy_unit, grid_emission_factor, total_emissions, invoice_date, due_date, supplier))
+            self.insert('scope2_emissions', {
+                'company_id': cid,
+                'year': year,
+                'energy_source': energy_source,
+                'energy_consumption': energy_consumption,
+                'energy_unit': energy_unit,
+                'grid_emission_factor': grid_emission_factor,
+                'total_emissions': total_emissions,
+                'invoice_date': invoice_date,
+                'due_date': due_date,
+                'supplier': supplier
+            })
 
-            conn.commit()
             return True
 
         except Exception as e:
             logging.error(f"{self.lm.tr('scope2_add_error', 'Scope 2 emisyon ekleme hatası')}: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
     def add_scope3_emission(self, company_id: int, year: int, category: str,
                            subcategory: str, activity_data: float, activity_unit: str,
                            emission_factor: float = None, invoice_date: str = None,
                            due_date: str = None, supplier: str = None) -> bool:
         """Scope 3 emisyonu ekle"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        cid = self._ensure_context(company_id)
 
         try:
             # Emisyon faktörü yoksa veritabanından al
             if emission_factor is None:
                 # TR/EN esnek eşleştirme: source veya fuel_type ile kategori/alt kategori eşleştir
-                cursor.execute("""
+                rows = self.execute_query("""
                     SELECT factor_value, source, fuel_type FROM emission_factors 
                     WHERE scope = 3
                 """)
-                rows = cursor.fetchall()
+                
                 cat = (category or "").strip().lower()
                 sub = (subcategory or "").strip().lower()
                 matched = None
-                for factor_value, src, fuel in rows:
+                
+                for row in rows:
+                    factor_value = row['factor_value']
+                    src = row['source']
+                    fuel = row['fuel_type']
+                    
                     src_l = (src or "").strip().lower()
                     fuel_l = (fuel or "").strip().lower()
+                    
                     if cat and (cat == src_l or cat == fuel_l):
                         matched = factor_value
                         break
                     if sub and (sub == src_l or sub == fuel_l):
                         matched = factor_value
                         break
+                
                 if matched is not None:
                     emission_factor = matched
                 else:
@@ -489,80 +507,75 @@ class CarbonManager:
 
             total_emissions = activity_data * emission_factor
 
-            cursor.execute("""
-                INSERT INTO scope3_emissions 
-                (company_id, year, category, subcategory, activity_data, 
-                 activity_unit, emission_factor, total_emissions, invoice_date, due_date, supplier)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (company_id, year, category, subcategory, activity_data,
-                  activity_unit, emission_factor, total_emissions, invoice_date, due_date, supplier))
+            self.insert('scope3_emissions', {
+                'company_id': cid,
+                'year': year,
+                'category': category,
+                'subcategory': subcategory,
+                'activity_data': activity_data,
+                'activity_unit': activity_unit,
+                'emission_factor': emission_factor,
+                'total_emissions': total_emissions,
+                'invoice_date': invoice_date,
+                'due_date': due_date,
+                'supplier': supplier
+            })
 
-            conn.commit()
             return True
 
         except Exception as e:
             logging.error(f"{self.lm.tr('scope3_add_error', 'Scope 3 emisyon ekleme hatası')}: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
-
-    # Deleted block 1
-
-    # Deleted block 2
 
     def set_carbon_target(self, company_id: int, target_year: int, target_type: str,
                          baseline_year: int, baseline_emissions: float,
                          target_reduction_percent: float) -> bool:
         """Karbon hedefi belirle"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        cid = self._ensure_context(company_id)
 
         try:
             target_emissions = baseline_emissions * (1 - target_reduction_percent / 100)
 
-            cursor.execute("""
+            # REPLACE INTO behavior can be simulated or we assume insert works with primary key checks?
+            # Actually sqlite supports INSERT OR REPLACE. BaseTenantManager usually wraps execution.
+            # We'll use execute_update for raw query.
+            self.execute_update("""
                 INSERT OR REPLACE INTO carbon_targets 
                 (company_id, target_year, target_type, baseline_year, 
                  baseline_emissions, target_reduction_percent, target_emissions)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (company_id, target_year, target_type, baseline_year,
+            """, (cid, target_year, target_type, baseline_year,
                   baseline_emissions, target_reduction_percent, target_emissions))
 
-            conn.commit()
             return True
 
         except Exception as e:
             logging.error(f"{self.lm.tr('carbon_target_set_error', 'Karbon hedefi belirleme hatası')}: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
     def get_carbon_targets(self, company_id: int) -> List[Dict]:
         """Karbon hedeflerini getir"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        cid = self._ensure_context(company_id)
 
         try:
-            cursor.execute("""
+            rows = self.execute_query("""
                 SELECT target_year, target_type, baseline_year, baseline_emissions,
                        target_reduction_percent, target_emissions, status
                 FROM carbon_targets 
                 WHERE company_id = ? AND status = 'active'
                 ORDER BY target_year
-            """, (company_id,))
+            """, (cid,))
 
             targets = []
-            for row in cursor.fetchall():
+            for row in rows:
                 targets.append({
-                    'target_year': row[0],
-                    'target_type': row[1],
-                    'baseline_year': row[2],
-                    'baseline_emissions': row[3],
-                    'target_reduction_percent': row[4],
-                    'target_emissions': row[5],
-                    'status': row[6]
+                    'target_year': row['target_year'],
+                    'target_type': row['target_type'],
+                    'baseline_year': row['baseline_year'],
+                    'baseline_emissions': row['baseline_emissions'],
+                    'target_reduction_percent': row['target_reduction_percent'],
+                    'target_emissions': row['target_emissions'],
+                    'status': row['status']
                 })
 
             return targets
@@ -570,39 +583,34 @@ class CarbonManager:
         except Exception as e:
             logging.error(f"{self.lm.tr('carbon_targets_get_error', 'Karbon hedefleri getirme hatası')}: {e}")
             return []
-        finally:
-            conn.close()
 
     def get_emission_factors(self, scope: int = None) -> List[Dict]:
         """Emisyon faktörlerini getir"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
             if scope:
-                cursor.execute("""
+                rows = self.execute_query("""
                     SELECT source, fuel_type, factor_value, unit, scope, country, source_reference
                     FROM emission_factors 
                     WHERE scope = ?
                     ORDER BY scope, source
                 """, (scope,))
             else:
-                cursor.execute("""
+                rows = self.execute_query("""
                     SELECT source, fuel_type, factor_value, unit, scope, country, source_reference
                     FROM emission_factors 
                     ORDER BY scope, source
                 """)
 
             factors = []
-            for row in cursor.fetchall():
+            for row in rows:
                 factors.append({
-                    'source': row[0],
-                    'fuel_type': row[1],
-                    'factor_value': row[2],
-                    'unit': row[3],
-                    'scope': row[4],
-                    'country': row[5],
-                    'source_reference': row[6]
+                    'source': row['source'],
+                    'fuel_type': row['fuel_type'],
+                    'factor_value': row['factor_value'],
+                    'unit': row['unit'],
+                    'scope': row['scope'],
+                    'country': row['country'],
+                    'source_reference': row['source_reference']
                 })
 
             return factors
@@ -610,77 +618,77 @@ class CarbonManager:
         except Exception as e:
             logging.error(f"{self.lm.tr('emission_factors_get_error', 'Emisyon faktörleri getirme hatası')}: {e}")
             return []
-        finally:
-            conn.close()
 
     def get_carbon_records(self, company_id: int, year: int) -> List[Dict]:
         """Tüm scope emisyon kayıtlarını getir (Raporlama için)"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        cid = self._ensure_context(company_id)
         records = []
 
         try:
             # Scope 1
-            cursor.execute("""
+            rows1 = self.execute_query("""
                 SELECT 'Scope 1' as scope, emission_source, fuel_type, fuel_consumption, fuel_unit, 
                        total_emissions, invoice_date, due_date, supplier, created_at
                 FROM scope1_emissions 
                 WHERE company_id = ? AND year = ?
-            """, (company_id, year))
-            for row in cursor.fetchall():
+            """, (cid, year))
+            
+            for row in rows1:
                 records.append({
-                    'scope': row[0],
-                    'source': row[1],
-                    'type': row[2],
-                    'amount': row[3],
-                    'unit': row[4],
-                    'total_emissions': row[5],
-                    'invoice_date': row[6],
-                    'due_date': row[7],
-                    'supplier': row[8],
-                    'date': row[9]
+                    'scope': row['scope'],
+                    'source': row['emission_source'],
+                    'type': row['fuel_type'],
+                    'amount': row['fuel_consumption'],
+                    'unit': row['fuel_unit'],
+                    'total_emissions': row['total_emissions'],
+                    'invoice_date': row['invoice_date'],
+                    'due_date': row['due_date'],
+                    'supplier': row['supplier'],
+                    'date': row['created_at']
                 })
 
             # Scope 2
-            cursor.execute("""
+            rows2 = self.execute_query("""
                 SELECT 'Scope 2' as scope, energy_source, 'Elektrik' as type, energy_consumption, energy_unit, 
                        total_emissions, invoice_date, due_date, supplier, created_at
                 FROM scope2_emissions 
                 WHERE company_id = ? AND year = ?
-            """, (company_id, year))
-            for row in cursor.fetchall():
+            """, (cid, year))
+            
+            for row in rows2:
                 records.append({
-                    'scope': row[0],
-                    'source': row[1],
-                    'type': row[2],
-                    'amount': row[3],
-                    'unit': row[4],
-                    'total_emissions': row[5],
-                    'invoice_date': row[6],
-                    'due_date': row[7],
-                    'supplier': row[8],
-                    'date': row[9]
+                    'scope': row['scope'],
+                    'source': row['energy_source'],
+                    'type': row['type'],
+                    'amount': row['energy_consumption'],
+                    'unit': row['energy_unit'],
+                    'total_emissions': row['total_emissions'],
+                    'invoice_date': row['invoice_date'],
+                    'due_date': row['due_date'],
+                    'supplier': row['supplier'],
+                    'date': row['created_at']
                 })
 
             # Scope 3
-            cursor.execute("""
+            rows3 = self.execute_query("""
                 SELECT 'Scope 3' as scope, category, subcategory, activity_data, activity_unit, 
                        total_emissions, invoice_date, due_date, supplier, created_at
                 FROM scope3_emissions 
                 WHERE company_id = ? AND year = ?
-            """, (company_id, year))
-            for row in cursor.fetchall():
+            """, (cid, year))
+            
+            for row in rows3:
                 records.append({
-                    'scope': row[0],
-                    'source': row[1],
-                    'type': row[2], # using subcategory as type
-                    'amount': row[3],
-                    'unit': row[4],
-                    'total_emissions': row[5],
-                    'invoice_date': row[6],
-                    'due_date': row[7],
-                    'supplier': row[8],
-                    'date': row[9]
+                    'scope': row['scope'],
+                    'source': row['category'],
+                    'type': row['subcategory'], # using subcategory as type
+                    'amount': row['activity_data'],
+                    'unit': row['activity_unit'],
+                    'total_emissions': row['total_emissions'],
+                    'invoice_date': row['invoice_date'],
+                    'due_date': row['due_date'],
+                    'supplier': row['supplier'],
+                    'date': row['created_at']
                 })
 
             return records
@@ -688,5 +696,3 @@ class CarbonManager:
         except Exception as e:
             logging.error(f"Karbon kayıtları getirme hatası: {e}")
             return []
-        finally:
-            conn.close()

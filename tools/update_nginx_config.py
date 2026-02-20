@@ -22,7 +22,7 @@ def update_nginx():
         
         # 1. Upload config
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        local_path = os.path.join(base_dir, 'deploy', 'sustainage.nginx')
+        local_path = os.path.join(base_dir, 'deploy', 'sustainage_full.nginx')
         remote_tmp = '/tmp/sustainage.nginx'
         
         if not os.path.exists(local_path):

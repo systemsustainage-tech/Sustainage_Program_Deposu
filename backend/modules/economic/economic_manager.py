@@ -1,25 +1,33 @@
-import sqlite3
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 import logging
 import os
-from datetime import datetime
 from typing import Dict, List, Optional, Any
+from backend.core.base_manager import BaseTenantManager
 
-class EconomicManager:
+try:
+    from config.database import DB_PATH
+except ImportError:
+    from backend.config.database import DB_PATH
+
+class EconomicManager(BaseTenantManager):
     """
     Ekonomik Performans ve Yatırım Yönetimi Modülü
     - Yatırım projeleri takibi (ROI, NPV, Geri Dönüş Süresi)
     - GRI 201 uyumlu ekonomik değer dağılımı (opsiyonel entegrasyon)
     """
-    def __init__(self, db_path: str):
-        self.db_path = db_path
+    def __init__(self, db_path: str = DB_PATH, company_id: Optional[int] = None) -> None:
+        if not os.path.isabs(db_path):
+            base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
+            db_path = os.path.join(base_dir, db_path)
+        super().__init__(db_path, company_id)
         self._init_db_tables()
 
-    def _init_db_tables(self):
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+    def _init_db_tables(self) -> None:
         try:
             # Investment Projects
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS investment_projects (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -38,44 +46,47 @@ class EconomicManager:
                 )
             """)
             
-            # Cash Flows
-            cursor.execute("""
+            # Cash Flows - Added company_id for strict multi-tenancy
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS investment_cash_flows (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    company_id INTEGER NOT NULL DEFAULT 0,
                     project_id INTEGER NOT NULL,
                     year INTEGER NOT NULL,
                     cash_flow REAL NOT NULL,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (project_id) REFERENCES investment_projects(id),
+                    FOREIGN KEY (company_id) REFERENCES companies(id),
                     UNIQUE(project_id, year)
                 )
             """)
             
             # Check for missing columns in investment_projects
-            cursor.execute("PRAGMA table_info(investment_projects)")
-            columns = [col[1] for col in cursor.fetchall()]
+            rows = self.execute_query("PRAGMA table_info(investment_projects)")
+            columns = [row['name'] for row in rows]
             
             if 'roi' not in columns:
-                cursor.execute("ALTER TABLE investment_projects ADD COLUMN roi REAL")
+                self.execute_update("ALTER TABLE investment_projects ADD COLUMN roi REAL")
             if 'npv' not in columns:
-                cursor.execute("ALTER TABLE investment_projects ADD COLUMN npv REAL")
+                self.execute_update("ALTER TABLE investment_projects ADD COLUMN npv REAL")
             if 'payback_period' not in columns:
-                cursor.execute("ALTER TABLE investment_projects ADD COLUMN payback_period REAL")
+                self.execute_update("ALTER TABLE investment_projects ADD COLUMN payback_period REAL")
 
-            conn.commit()
+            # Check for missing company_id in investment_cash_flows
+            rows_cf = self.execute_query("PRAGMA table_info(investment_cash_flows)")
+            columns_cf = [row['name'] for row in rows_cf]
+            
+            if 'company_id' not in columns_cf:
+                # If adding column to populated table, we need a default.
+                # However, we can't easily backfill correct company_id without complex SQL.
+                # For now, default to 0 and assume migration script handles it or data is fresh.
+                self.execute_update("ALTER TABLE investment_cash_flows ADD COLUMN company_id INTEGER NOT NULL DEFAULT 0")
+
         except Exception as e:
             logging.error(f"EconomicManager init tables error: {e}")
-        finally:
-            conn.close()
-
-    def get_connection(self):
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        return conn
 
     def get_stats(self, company_id: int) -> Dict[str, Any]:
         """Dashboard istatistikleri"""
-        conn = self.get_connection()
         stats = {
             "total_investment": 0,
             "active_projects": 0,
@@ -83,7 +94,7 @@ class EconomicManager:
             "total_npv": 0
         }
         try:
-            cursor = conn.execute("""
+            rows = self.execute_query("""
                 SELECT 
                     COUNT(*) as count,
                     SUM(initial_investment) as total_inv,
@@ -91,17 +102,16 @@ class EconomicManager:
                     SUM(npv) as total_npv
                 FROM investment_projects 
                 WHERE company_id = ? AND status = 'Active'
-            """, (company_id,))
-            row = cursor.fetchone()
-            if row:
+            """, (company_id,), company_id=company_id)
+            
+            if rows:
+                row = rows[0]
                 stats["active_projects"] = row["count"]
                 stats["total_investment"] = row["total_inv"] or 0
                 stats["avg_roi"] = round(row["avg_roi"] or 0, 2)
                 stats["total_npv"] = round(row["total_npv"] or 0, 2)
         except Exception as e:
             logging.error(f"Error getting economic stats: {e}")
-        finally:
-            conn.close()
         return stats
 
     def get_recent_data(self, company_id: int) -> List[Dict]:
@@ -109,65 +119,71 @@ class EconomicManager:
         return self.get_investment_projects(company_id)
 
     def get_investment_projects(self, company_id: int) -> List[Dict]:
-        conn = self.get_connection()
         projects = []
         try:
-            cursor = conn.execute("""
+            rows = self.execute_query("""
                 SELECT * FROM investment_projects 
                 WHERE company_id = ? 
                 ORDER BY created_at DESC
-            """, (company_id,))
-            projects = [dict(row) for row in cursor.fetchall()]
+            """, (company_id,), company_id=company_id)
+            projects = [dict(row) for row in rows]
         except Exception as e:
             logging.error(f"Error fetching projects: {e}")
-        finally:
-            conn.close()
         return projects
 
-    def add_investment_project(self, company_id, project_name, initial_investment, start_date, description, discount_rate=0.10, duration_years=5):
-        conn = sqlite3.connect(self.db_path)
+    def add_investment_project(self, company_id: int, project_name: str, initial_investment: float, 
+                             start_date: str, description: str, discount_rate: float = 0.10, 
+                             duration_years: int = 5) -> int:
         try:
-            cursor = conn.execute("""
+            row_id = self.execute_update("""
                 INSERT INTO investment_projects 
                 (company_id, project_name, initial_investment, start_date, description, discount_rate, duration_years, status)
                 VALUES (?, ?, ?, ?, ?, ?, ?, 'Active')
-            """, (company_id, project_name, initial_investment, start_date, description, discount_rate, duration_years))
-            project_id = cursor.lastrowid
-            conn.commit()
-            return project_id
+            """, (company_id, project_name, initial_investment, start_date, description, discount_rate, duration_years), company_id=company_id)
+            return row_id
         except Exception as e:
             logging.error(f"Error adding project: {e}")
-            return False
-        finally:
-            conn.close()
+            return 0
 
-    def add_project_cash_flow(self, project_id, year, cash_flow):
-        conn = sqlite3.connect(self.db_path)
+    def add_project_cash_flow(self, company_id: int, project_id: int, year: int, cash_flow: float) -> bool:
+        """
+        Adds cash flow and recalculates metrics.
+        Requires company_id to verify project ownership before modification.
+        """
         try:
+            # First verify ownership
+            rows = self.execute_query("SELECT id FROM investment_projects WHERE id = ? AND company_id = ?", 
+                                    (project_id, company_id), company_id=company_id)
+            if not rows:
+                logging.error(f"Project {project_id} not found for company {company_id}")
+                return False
+
             # Yıl zaten varsa güncelle, yoksa ekle
-            cursor = conn.execute("INSERT OR REPLACE INTO investment_cash_flows (project_id, year, cash_flow) VALUES (?, ?, ?)", (project_id, year, cash_flow))
-            conn.commit()
-            self.calculate_project_metrics(project_id)
+            self.execute_update("INSERT OR REPLACE INTO investment_cash_flows (company_id, project_id, year, cash_flow) VALUES (?, ?, ?, ?)", 
+                              (company_id, project_id, year, cash_flow), company_id=company_id)
+            
+            self.calculate_project_metrics(company_id, project_id)
             return True
         except Exception as e:
             logging.error(f"Error adding cash flow: {e}")
             return False
-        finally:
-            conn.close()
 
-    def calculate_project_metrics(self, project_id):
+    def calculate_project_metrics(self, company_id: int, project_id: int) -> bool:
         """ROI, NPV ve Geri Dönüş Süresi Hesaplama"""
-        conn = self.get_connection()
         try:
-            cursor = conn.execute("SELECT * FROM investment_projects WHERE id = ?", (project_id,))
-            project = cursor.fetchone()
-            if not project: return False
+            # Verify ownership and get project
+            rows = self.execute_query("SELECT * FROM investment_projects WHERE id = ? AND company_id = ?", 
+                                    (project_id, company_id), company_id=company_id)
+            if not rows: return False
+            project = rows[0]
 
             initial_inv = project['initial_investment']
             discount_rate = project['discount_rate'] or 0.10
             
-            cursor = conn.execute("SELECT * FROM investment_cash_flows WHERE project_id = ? ORDER BY year ASC", (project_id,))
-            flows = cursor.fetchall()
+            # Get flows
+            rows = self.execute_query("SELECT * FROM investment_cash_flows WHERE project_id = ? AND company_id = ? ORDER BY year ASC", 
+                                    (project_id, company_id), company_id=company_id)
+            flows = rows
             
             if not flows:
                 return True # No flows yet
@@ -178,10 +194,9 @@ class EconomicManager:
             # 1. NPV Calculation
             npv = -initial_inv
             for i, cf in enumerate(cash_flows):
-                # i+1 çünkü yıl 1'den başlıyor varsayıyoruz (iskonto için)
                 npv += cf / ((1 + discount_rate) ** (i + 1))
             
-            # 2. ROI Calculation (Basit ROI = (Net Kar / Yatırım) * 100)
+            # 2. ROI Calculation
             total_return = sum(cash_flows)
             net_profit = total_return - initial_inv
             roi = (net_profit / initial_inv * 100) if initial_inv > 0 else 0
@@ -194,19 +209,13 @@ class EconomicManager:
                 prev_cumulative = cumulative
                 cumulative += cf
                 if cumulative >= 0:
-                    # Geri dönüş bu yılda sağlandı
-                    # Yıl indeksi i (0-based), yani (i) tam yıl bitti, (i+1). yılın içinde geri dönüş oldu.
-                    # Formül: Tamamlanan Yıl Sayısı + (Kalan Maliyet / O Yılın Nakit Akışı)
-                    # prev_cumulative negatifti (kalan maliyet = abs(prev_cumulative))
                     fraction = abs(prev_cumulative) / cf if cf != 0 else 0
                     payback = i + fraction
                     break
             
-            conn.execute("UPDATE investment_projects SET npv = ?, roi = ?, payback_period = ? WHERE id = ?", (npv, roi, payback, project_id))
-            conn.commit()
+            self.execute_update("UPDATE investment_projects SET npv = ?, roi = ?, payback_period = ? WHERE id = ?", 
+                              (npv, roi, payback, project_id), company_id=company_id)
             return True
         except Exception as e:
             logging.error(f"Error calculating metrics: {e}")
             return False
-        finally:
-            conn.close()

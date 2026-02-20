@@ -1,34 +1,27 @@
 import logging
-import sqlite3
 from datetime import datetime
-from typing import Dict, List
+from typing import Dict, List, Optional, Any
 
 from config.settings import ensure_directories, get_db_path
+from backend.core.base_manager import BaseTenantManager
 
 
-class GRIManager:
+class GRIManager(BaseTenantManager):
     """GRI (Global Reporting Initiative) modülü yöneticisi"""
 
-    def __init__(self, db_path: str | None = None) -> None:
-        if db_path:
-            self.db_path = db_path
-        else:
+    def __init__(self, db_path: str | None = None, company_id: int | None = None) -> None:
+        if not db_path:
             ensure_directories()
-            self.db_path = get_db_path()
-        self.company_id = 1  # Varsayılan company_id
+            db_path = get_db_path()
+        super().__init__(db_path, company_id)
 
         # Tabloları oluştur ve veri doldur
         self.create_gri_tables()
         self.populate_gri_standards()
 
-    def get_connection(self) -> None:
-        """Veritabanı bağlantısı"""
-        return sqlite3.connect(self.db_path)
-
     def get_dashboard_stats(self, company_id: int) -> Dict:
         """Dashboard için özet istatistikleri getir"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
+        cid = self._ensure_context(company_id)
         stats = {
             'selected_goals': 0,
             'indicators': 0,
@@ -37,78 +30,72 @@ class GRIManager:
         
         try:
             # Seçilen SDG hedefleri
-            cursor.execute("SELECT COUNT(*) FROM user_sdg_selections WHERE company_id = ?", (company_id,))
-            row = cursor.fetchone()
+            row = self.select_one(
+                "SELECT COUNT(*) as count FROM user_sdg_selections WHERE company_id = ?", 
+                (cid,)
+            )
             if row:
-                stats['selected_goals'] = row[0]
+                stats['selected_goals'] = row['count']
                 
             # Haritalanmış GRI göstergeleri (tahmini)
-            selected_ids = self.get_selected_sdg_goals(company_id)
+            selected_ids = self.get_selected_sdg_goals(cid)
             indicators = self.get_sdg_indicators_for_goals(selected_ids)
             stats['indicators'] = len(indicators)
             
-            gri_mappings = self.get_gri_indicators_for_sdg_selection(company_id)
+            gri_mappings = self.get_gri_indicators_for_sdg_selection(cid)
             stats['disclosures'] = len(gri_mappings)
                 
         except Exception as e:
             logging.error(f"GRI stats error: {e}")
-        finally:
-            conn.close()
             
         return stats
 
     def get_selected_sdg_goals(self, company_id: int) -> List[int]:
         """Şirket için seçilen SDG hedeflerini getir"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
+        cid = self._ensure_context(company_id)
 
         try:
             # user_sdg_selections tablosundan seçilen hedefleri al
-            cursor.execute("""
+            rows = self.select_all(
+                """
                 SELECT goal_id 
                 FROM user_sdg_selections 
                 WHERE company_id = ?
                 ORDER BY goal_id
-            """, (company_id,))
-
-            selected_ids = [row[0] for row in cursor.fetchall()]
-            return selected_ids
+                """, 
+                (cid,)
+            )
+            return [row['goal_id'] for row in rows]
 
         except Exception as e:
             logging.error(f"Seçilen SDG hedefleri getirilirken hata: {e}")
             return []
-        finally:
-            conn.close()
-
 
     def get_sdg_indicators_for_goals(self, goal_ids: List[int]) -> List[str]:
         """Seçilen SDG hedefleri için gösterge kodlarını getir"""
         if not goal_ids:
             return []
 
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
             placeholders = ','.join('?' * len(goal_ids))
-            cursor.execute(f"""
+            rows = self.select_all(f"""
                 SELECT DISTINCT si.code 
                 FROM sdg_indicators si
                 JOIN sdg_targets st ON si.target_id = st.id
                 WHERE st.goal_id IN ({placeholders})
-            """, goal_ids)
+            """, tuple(goal_ids))
 
-            return [row[0] for row in cursor.fetchall()]
+            return [row['code'] for row in rows]
         except Exception as e:
             logging.error(f"SDG gösterge kodları getirilirken hata: {e}")
             return []
-        finally:
-            conn.close()
 
     def get_gri_indicators_for_sdg_selection(self, company_id: int) -> List[Dict]:
         """SDG seçimlerine göre ilgili GRI göstergelerini getir"""
+        cid = self._ensure_context(company_id)
+        
         # Seçilen SDG hedeflerini al
-        selected_goals = self.get_selected_sdg_goals(company_id)
+        selected_goals = self.get_selected_sdg_goals(cid)
         if not selected_goals:
             return []
 
@@ -117,30 +104,26 @@ class GRIManager:
         if not sdg_indicator_codes:
             return []
 
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
             # SDG-GRI eşleştirmelerini al
             placeholders = ','.join('?' * len(sdg_indicator_codes))
-            cursor.execute(f"""
+            gri_mappings = self.select_all(f"""
                 SELECT DISTINCT mg.gri_standard, mg.gri_disclosure
                 FROM map_sdg_gri mg
                 WHERE mg.sdg_indicator_code IN ({placeholders})
-            """, sdg_indicator_codes)
+            """, tuple(sdg_indicator_codes))
 
-            gri_mappings = cursor.fetchall()
             if not gri_mappings:
                 return []
 
             # GRI göstergelerini al
-            gri_disclosures = [mapping[1] for mapping in gri_mappings if mapping[1].strip()]
-            gri_standards = [mapping[0] for mapping in gri_mappings]
+            gri_disclosures = [mapping['gri_disclosure'] for mapping in gri_mappings if mapping['gri_disclosure'] and mapping['gri_disclosure'].strip()]
+            gri_standards = [mapping['gri_standard'] for mapping in gri_mappings]
 
             # Eğer disclosure kodları yoksa, standart kodlarına göre ara
             if not gri_disclosures:
                 standard_placeholders = ','.join('?' * len(set(gri_standards)))
-                cursor.execute(f"""
+                rows = self.select_all(f"""
                     SELECT gi.id, gi.code, gi.title, gi.description, gi.unit, gi.methodology, 
                            gi.reporting_requirement, gs.code as standard_code, gs.title as standard_title,
                            gs.category
@@ -148,10 +131,10 @@ class GRIManager:
                     JOIN gri_standards gs ON gi.standard_id = gs.id
                     WHERE gs.code IN ({standard_placeholders})
                     ORDER BY gs.category, gs.code, gi.code
-                """, list(set(gri_standards)))
+                """, tuple(set(gri_standards)))
             else:
                 gri_placeholders = ','.join('?' * len(gri_disclosures))
-                cursor.execute(f"""
+                rows = self.select_all(f"""
                     SELECT gi.id, gi.code, gi.title, gi.description, gi.unit, gi.methodology, 
                            gi.reporting_requirement, gs.code as standard_code, gs.title as standard_title,
                            gs.category
@@ -159,29 +142,26 @@ class GRIManager:
                     JOIN gri_standards gs ON gi.standard_id = gs.id
                     WHERE gi.code IN ({gri_placeholders})
                     ORDER BY gs.category, gs.code, gi.code
-                """, gri_disclosures)
+                """, tuple(gri_disclosures))
 
-            columns = [description[0] for description in cursor.description]
             results = []
 
-            for row in cursor.fetchall():
-                result = dict(zip(columns, row))
+            for row in rows:
+                result = dict(row)
 
                 # Bu GRI göstergesine eşleşen SDG gösterge kodlarını bul
-                cursor.execute("""
+                sdg_rows = self.select_all("""
                     SELECT sdg_indicator_code FROM map_sdg_gri 
                     WHERE gri_disclosure = ?
                 """, (result['code'],))
-
-                result['mapped_sdg_indicators'] = [row[0] for row in cursor.fetchall()]
+                result['mapped_sdg_indicators'] = [r['sdg_indicator_code'] for r in sdg_rows]
 
                 # TSRS eşleştirmelerini bul
-                cursor.execute("""
+                tsrs_rows = self.select_all("""
                     SELECT tsrs_section, tsrs_metric FROM map_gri_tsrs 
                     WHERE gri_disclosure = ?
                 """, (result['code'],))
-
-                result['mapped_tsrs'] = [{'section': row[0], 'metric': row[1]} for row in cursor.fetchall()]
+                result['mapped_tsrs'] = [{'section': r['tsrs_section'], 'metric': r['tsrs_metric']} for r in tsrs_rows]
 
                 results.append(result)
 
@@ -190,12 +170,11 @@ class GRIManager:
         except Exception as e:
             logging.error(f"GRI göstergeleri getirilirken hata: {e}")
             return []
-        finally:
-            conn.close()
 
     def get_gri_standards_for_sdg_selection(self, company_id: int) -> Dict[str, List[Dict]]:
         """SDG seçimlerine göre GRI standartlarını kategorilere göre grupla"""
-        gri_indicators = self.get_gri_indicators_for_sdg_selection(company_id)
+        cid = self._ensure_context(company_id)
+        gri_indicators = self.get_gri_indicators_for_sdg_selection(cid)
 
         # Kategorilere göre grupla
         standards_by_category = {}
@@ -225,12 +204,9 @@ class GRIManager:
 
     def get_standards_by_category(self, category: str) -> List[Dict]:
         """Kategoriye göre standartları getir"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
             if category == "universal":
-                cursor.execute("""
+                rows = self.select_all("""
                     SELECT code, title, description, 
                            type, category, created_at
                     FROM gri_standards 
@@ -238,7 +214,7 @@ class GRIManager:
                     ORDER BY code
                 """)
             else:
-                cursor.execute("""
+                rows = self.select_all("""
                     SELECT code, title, description, 
                            type, category, created_at
                     FROM gri_standards 
@@ -246,11 +222,7 @@ class GRIManager:
                     ORDER BY code
                 """, (category.title(),))
 
-            columns = [description[0] for description in cursor.description]
-            results = []
-
-            for row in cursor.fetchall():
-                results.append(dict(zip(columns, row)))
+            results = [dict(row) for row in rows]
 
             # Standartları ve göstergeleri birleştir
             formatted_data = {
@@ -268,16 +240,11 @@ class GRIManager:
         except Exception as e:
             logging.error(f"GRI standartları getirilirken hata: {e}")
             return {'standards': [], 'indicators': []}
-        finally:
-            conn.close()
 
-    def get_indicators_by_standard(self, standard_code) -> None:
+    def get_indicators_by_standard(self, standard_code) -> List[Dict]:
         """Standart koduna göre göstergeleri getir"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            rows = self.select_all("""
                 SELECT gi.code, gi.title, gi.description, gi.unit, gi.methodology, 
                        gi.reporting_requirement, gi.priority, gi.requirement_level,
                        gi.data_quality, gi.audit_required, gi.validation_required,
@@ -294,11 +261,9 @@ class GRIManager:
                 ORDER BY gi.code
             """, (standard_code,))
 
-            columns = [description[0] for description in cursor.description]
             results = []
-
-            for row in cursor.fetchall():
-                indicator = dict(zip(columns, row))
+            for row in rows:
+                indicator = dict(row)
                 # Gösterge kodunu indicator_code olarak da ekle
                 indicator['indicator_code'] = indicator['code']
                 indicator['indicator_title'] = indicator['title']
@@ -309,17 +274,12 @@ class GRIManager:
         except Exception as e:
             logging.error(f"GRI göstergeleri getirilirken hata: {e}")
             return []
-        finally:
-            conn.close()
 
-    def create_gri_tables(self) -> None:
+    def create_gri_tables(self) -> bool:
         """GRI tablolarını oluştur"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
             # GRI Standartları
-            cursor.execute("""
+            self.db.execute_query("""
                 CREATE TABLE IF NOT EXISTS gri_standards (
                     id INTEGER PRIMARY KEY,
                     code TEXT UNIQUE NOT NULL,
@@ -333,16 +293,16 @@ class GRIManager:
 
             # Check if sector column exists (migration for existing dbs)
             try:
-                cursor.execute("SELECT sector FROM gri_standards LIMIT 1")
-            except sqlite3.OperationalError:
-                cursor.execute("ALTER TABLE gri_standards ADD COLUMN sector TEXT DEFAULT 'General'")
+                self.db.execute_query("SELECT sector FROM gri_standards LIMIT 1")
+            except Exception:
+                self.db.execute_query("ALTER TABLE gri_standards ADD COLUMN sector TEXT DEFAULT 'General'")
 
             # GRI Göstergeleri
-            cursor.execute("""
+            self.db.execute_query("""
                 CREATE TABLE IF NOT EXISTS gri_indicators (
                     id INTEGER PRIMARY KEY,
                     standard_id INTEGER NOT NULL,
-                    code TEXT NOT NULL,
+                    code TEXT NOT NULL UNIQUE,
                     title TEXT NOT NULL,
                     description TEXT,
                     unit TEXT,
@@ -352,9 +312,12 @@ class GRIManager:
                     FOREIGN KEY (standard_id) REFERENCES gri_standards(id)
                 )
             """)
+            
+            # Ensure unique index exists (for migration)
+            self.db.execute_query("CREATE UNIQUE INDEX IF NOT EXISTS idx_gri_indicators_code ON gri_indicators(code)")
 
             # GRI Cevapları
-            cursor.execute("""
+            self.db.execute_query("""
                 CREATE TABLE IF NOT EXISTS gri_responses (
                     id INTEGER PRIMARY KEY,
                     company_id INTEGER NOT NULL,
@@ -374,7 +337,7 @@ class GRIManager:
             """)
 
             # GRI Seçimleri
-            cursor.execute("""
+            self.db.execute_query("""
                 CREATE TABLE IF NOT EXISTS gri_selections (
                     id INTEGER PRIMARY KEY,
                     company_id INTEGER NOT NULL,
@@ -387,22 +350,15 @@ class GRIManager:
                 )
             """)
 
-            conn.commit()
             logging.info("GRI tablolari basariyla olusturuldu")
             return True
 
         except Exception as e:
             logging.error(f"GRI tablolari olusturma hatasi: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
-    def insert_gri_standards(self) -> None:
+    def insert_gri_standards(self) -> bool:
         """GRI standartlarını ekle"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
             # GRI Universal Standards (2021)
             universal_standards = [
@@ -470,31 +426,31 @@ class GRIManager:
             all_standards = universal_standards + economic_standards + environmental_standards + social_standards + sector_standards
 
             for code, title, category, description, sector in all_standards:
-                cursor.execute("""
-                    INSERT OR REPLACE INTO gri_standards (code, title, category, description, sector)
+                self.db.execute_update("""
+                    INSERT INTO gri_standards (code, title, category, description, sector)
                     VALUES (?, ?, ?, ?, ?)
+                    ON CONFLICT(code) DO UPDATE SET
+                        title=excluded.title,
+                        category=excluded.category,
+                        description=excluded.description,
+                        sector=excluded.sector
                 """, (code, title, category, description, sector))
 
-            conn.commit()
             logging.info(f"{len(all_standards)} GRI standardi eklendi/guncellendi")
             return True
 
         except Exception as e:
             logging.error(f"GRI standartlari ekleme hatasi: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
-    def insert_gri_indicators(self) -> None:
+    def insert_gri_indicators(self) -> bool:
         """GRI göstergelerini ekle"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
             # GRI 2 - General Disclosures göstergeleri
-            cursor.execute("SELECT id FROM gri_standards WHERE code = 'GRI 2'")
-            gri2_id = cursor.fetchone()[0]
+            rows = self.db.execute_query("SELECT id FROM gri_standards WHERE code = 'GRI 2'")
+            if not rows:
+                return False
+            gri2_id = rows[0]['id']
 
             gri2_indicators = [
                 ("2-1", "Organizational details", "Organizasyonel detaylar", "Text", "Genel", "Zorunlu"),
@@ -530,108 +486,113 @@ class GRIManager:
             ]
 
             for code, title, description, unit, methodology, requirement in gri2_indicators:
-                cursor.execute("""
-                    INSERT OR REPLACE INTO gri_indicators 
+                self.db.execute_update("""
+                    INSERT INTO gri_indicators 
                     (standard_id, code, title, description, unit, methodology, reporting_requirement)
                     VALUES (?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(code) DO UPDATE SET
+                        standard_id=excluded.standard_id,
+                        title=excluded.title,
+                        description=excluded.description,
+                        unit=excluded.unit,
+                        methodology=excluded.methodology,
+                        reporting_requirement=excluded.reporting_requirement
                 """, (gri2_id, code, title, description, unit, methodology, requirement))
 
             # GRI 3 - Material Topics göstergeleri
-            cursor.execute("SELECT id FROM gri_standards WHERE code = 'GRI 3'")
-            gri3_id = cursor.fetchone()[0]
+            rows = self.db.execute_query("SELECT id FROM gri_standards WHERE code = 'GRI 3'")
+            if rows:
+                gri3_id = rows[0]['id']
+                gri3_indicators = [
+                    ("3-1", "Process to determine material topics", "Materyal konu belirleme süreci", "Text", "Genel", "Zorunlu"),
+                    ("3-2", "List of material topics", "Materyal konular listesi", "Text", "Genel", "Zorunlu"),
+                    ("3-3", "Management of material topics", "Materyal konuların yönetimi", "Text", "Genel", "Zorunlu")
+                ]
 
-            gri3_indicators = [
-                ("3-1", "Process to determine material topics", "Materyal konu belirleme süreci", "Text", "Genel", "Zorunlu"),
-                ("3-2", "List of material topics", "Materyal konular listesi", "Text", "Genel", "Zorunlu"),
-                ("3-3", "Management of material topics", "Materyal konuların yönetimi", "Text", "Genel", "Zorunlu")
-            ]
-
-            for code, title, description, unit, methodology, requirement in gri3_indicators:
-                cursor.execute("""
-                    INSERT OR REPLACE INTO gri_indicators 
-                    (standard_id, code, title, description, unit, methodology, reporting_requirement)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                """, (gri3_id, code, title, description, unit, methodology, requirement))
+                for code, title, description, unit, methodology, requirement in gri3_indicators:
+                    self.db.execute_update("""
+                        INSERT INTO gri_indicators 
+                        (standard_id, code, title, description, unit, methodology, reporting_requirement)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                        ON CONFLICT(code) DO UPDATE SET
+                            standard_id=excluded.standard_id,
+                            title=excluded.title,
+                            description=excluded.description,
+                            unit=excluded.unit,
+                            methodology=excluded.methodology,
+                            reporting_requirement=excluded.reporting_requirement
+                    """, (gri3_id, code, title, description, unit, methodology, requirement))
 
             # GRI 301 - Materials göstergeleri
-            cursor.execute("SELECT id FROM gri_standards WHERE code = 'GRI 301'")
-            gri301_id = cursor.fetchone()[0]
+            rows = self.db.execute_query("SELECT id FROM gri_standards WHERE code = 'GRI 301'")
+            if rows:
+                gri301_id = rows[0]['id']
+                gri301_indicators = [
+                    ("301-1", "Materials used by weight or volume", "Ağırlık veya hacim olarak kullanılan malzemeler", "Ton/m³", "Ölçüm", "Zorunlu"),
+                    ("301-2", "Recycled input materials used", "Kullanılan geri dönüştürülmüş girdi malzemeleri", "Ton/m³", "Ölçüm", "Zorunlu"),
+                    ("301-3", "Reclaimed products and their packaging materials", "Geri kazanılan ürünler ve ambalaj malzemeleri", "Ton/m³", "Ölçüm", "Zorunlu")
+                ]
 
-            gri301_indicators = [
-                ("301-1", "Materials used by weight or volume", "Ağırlık veya hacim olarak kullanılan malzemeler", "Ton/m³", "Ölçüm", "Zorunlu"),
-                ("301-2", "Recycled input materials used", "Kullanılan geri dönüştürülmüş girdi malzemeleri", "Ton/m³", "Ölçüm", "Zorunlu"),
-                ("301-3", "Reclaimed products and their packaging materials", "Geri kazanılan ürünler ve ambalaj malzemeleri", "Ton/m³", "Ölçüm", "Zorunlu")
-            ]
-
-            for code, title, description, unit, methodology, requirement in gri301_indicators:
-                cursor.execute("""
-                    INSERT OR REPLACE INTO gri_indicators 
-                    (standard_id, code, title, description, unit, methodology, reporting_requirement)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                """, (gri301_id, code, title, description, unit, methodology, requirement))
+                for code, title, description, unit, methodology, requirement in gri301_indicators:
+                    self.db.execute_update("""
+                        INSERT INTO gri_indicators 
+                        (standard_id, code, title, description, unit, methodology, reporting_requirement)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                        ON CONFLICT(code) DO UPDATE SET
+                            standard_id=excluded.standard_id,
+                            title=excluded.title,
+                            description=excluded.description,
+                            unit=excluded.unit,
+                            methodology=excluded.methodology,
+                            reporting_requirement=excluded.reporting_requirement
+                    """, (gri301_id, code, title, description, unit, methodology, requirement))
 
             # GRI 302 - Energy göstergeleri
-            cursor.execute("SELECT id FROM gri_standards WHERE code = 'GRI 302'")
-            gri302_id = cursor.fetchone()[0]
+            rows = self.db.execute_query("SELECT id FROM gri_standards WHERE code = 'GRI 302'")
+            if rows:
+                gri302_id = rows[0]['id']
+                gri302_indicators = [
+                    ("302-1", "Energy consumption within the organization", "Organizasyon içi enerji tüketimi", "MWh", "Ölçüm", "Zorunlu"),
+                    ("302-2", "Energy consumption outside of the organization", "Organizasyon dışı enerji tüketimi", "MWh", "Ölçüm", "Zorunlu"),
+                    ("302-3", "Energy intensity", "Enerji yoğunluğu", "MWh/unit", "Hesaplama", "Zorunlu"),
+                    ("302-4", "Reduction of energy consumption", "Enerji tüketiminin azaltılması", "MWh", "Ölçüm", "Zorunlu"),
+                    ("302-5", "Reductions in energy requirements of products and services", "Ürün ve hizmetlerin enerji gereksinimlerinin azaltılması", "MWh", "Ölçüm", "Zorunlu")
+                ]
 
-            gri302_indicators = [
-                ("302-1", "Energy consumption within the organization", "Organizasyon içi enerji tüketimi", "MWh", "Ölçüm", "Zorunlu"),
-                ("302-2", "Energy consumption outside of the organization", "Organizasyon dışı enerji tüketimi", "MWh", "Ölçüm", "Zorunlu"),
-                ("302-3", "Energy intensity", "Enerji yoğunluğu", "MWh/unit", "Hesaplama", "Zorunlu"),
-                ("302-4", "Reduction of energy consumption", "Enerji tüketiminin azaltılması", "MWh", "Ölçüm", "Zorunlu"),
-                ("302-5", "Reductions in energy requirements of products and services", "Ürün ve hizmetlerin enerji gereksinimlerinin azaltılması", "MWh", "Ölçüm", "Zorunlu")
-            ]
+                for code, title, description, unit, methodology, requirement in gri302_indicators:
+                    self.db.execute_update("""
+                        INSERT INTO gri_indicators 
+                        (standard_id, code, title, description, unit, methodology, reporting_requirement)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                        ON CONFLICT(code) DO UPDATE SET
+                            standard_id=excluded.standard_id,
+                            title=excluded.title,
+                            description=excluded.description,
+                            unit=excluded.unit,
+                            methodology=excluded.methodology,
+                            reporting_requirement=excluded.reporting_requirement
+                    """, (gri302_id, code, title, description, unit, methodology, requirement))
 
-            for code, title, description, unit, methodology, requirement in gri302_indicators:
-                cursor.execute("""
-                    INSERT OR REPLACE INTO gri_indicators 
-                    (standard_id, code, title, description, unit, methodology, reporting_requirement)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                """, (gri302_id, code, title, description, unit, methodology, requirement))
-
-            conn.commit()
             logging.info("GRI gostergeleri eklendi")
             return True
 
         except Exception as e:
             logging.error(f"GRI gostergeleri ekleme hatasi: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
     def get_gri_standards(self) -> List[Dict]:
         """GRI standartlarını getir"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
-        cursor.execute("""
+        rows = self.select_all("""
             SELECT id, code, title, category, description, sector
             FROM gri_standards
             ORDER BY category, code
         """)
-
-        standards = []
-        for row in cursor.fetchall():
-            standards.append({
-                'id': row[0],
-                'code': row[1],
-                'title': row[2],
-                'category': row[3],
-                'description': row[4],
-                'sector': row[5]
-            })
-
-        conn.close()
-        return standards
+        return [dict(row) for row in rows]
 
     def get_gri_indicators(self, standard_id: int = None) -> List[Dict]:
         """GRI göstergelerini getir"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         if standard_id:
-            cursor.execute("""
+            rows = self.select_all("""
                 SELECT i.id, i.code, i.title, i.description, i.unit, i.methodology, i.reporting_requirement,
                        s.code as standard_code, s.title as standard_title
                 FROM gri_indicators i
@@ -640,7 +601,7 @@ class GRIManager:
                 ORDER BY i.code
             """, (standard_id,))
         else:
-            cursor.execute("""
+            rows = self.select_all("""
                 SELECT i.id, i.code, i.title, i.description, i.unit, i.methodology, i.reporting_requirement,
                        s.code as standard_code, s.title as standard_title
                 FROM gri_indicators i
@@ -648,66 +609,50 @@ class GRIManager:
                 ORDER BY s.code, i.code
             """)
 
-        indicators = []
-        for row in cursor.fetchall():
-            indicators.append({
-                'id': row[0],
-                'code': row[1],
-                'title': row[2],
-                'description': row[3],
-                'unit': row[4],
-                'methodology': row[5],
-                'reporting_requirement': row[6],
-                'standard_code': row[7],
-                'standard_title': row[8]
-            })
-
-        conn.close()
-        return indicators
+        return [dict(row) for row in rows]
 
     def get_mappings_for_gri_indicator(self, gri_code: str) -> Dict:
         """Belirli bir GRI gösterge kodu için eşleştirmeleri getir (SDG↔GRI ve GRI↔TSRS)."""
-        conn = self.get_connection()
-        cursor = conn.cursor()
         mappings = {
             'sdg_gri': [],
             'gri_tsrs': []
         }
         try:
             # SDG↔GRI: gri_disclosure alanı GRI gösterge kodu ile eşleşir
-            cursor.execute("""
+            rows = self.select_all("""
                 SELECT sdg_indicator_code, gri_standard, gri_disclosure, relation_type, notes
                 FROM map_sdg_gri
                 WHERE gri_disclosure = ?
             """, (gri_code,))
-            for row in cursor.fetchall():
+            
+            for row in rows:
                 mappings['sdg_gri'].append({
-                    'sdg_indicator_code': row[0],
-                    'gri_standard': row[1],
-                    'gri_disclosure': row[2],
-                    'relation_type': row[3],
-                    'notes': row[4]
+                    'sdg_indicator_code': row['sdg_indicator_code'],
+                    'gri_standard': row['gri_standard'],
+                    'gri_disclosure': row['gri_disclosure'],
+                    'relation_type': row['relation_type'],
+                    'notes': row['notes']
                 })
 
             # GRI↔TSRS: gri_disclosure GRI gösterge kodu ile eşleşir
-            cursor.execute("""
+            rows = self.execute_query("""
                 SELECT gri_standard, gri_disclosure, tsrs_section, tsrs_metric, relation_type, notes
                 FROM map_gri_tsrs
                 WHERE gri_disclosure = ?
             """, (gri_code,))
-            for row in cursor.fetchall():
+            
+            for row in rows:
                 mappings['gri_tsrs'].append({
-                    'gri_standard': row[0],
-                    'gri_disclosure': row[1],
-                    'tsrs_section': row[2],
-                    'tsrs_metric': row[3],
-                    'relation_type': row[4],
-                    'notes': row[5]
+                    'gri_standard': row['gri_standard'],
+                    'gri_disclosure': row['gri_disclosure'],
+                    'tsrs_section': row['tsrs_section'],
+                    'tsrs_metric': row['tsrs_metric'],
+                    'relation_type': row['relation_type'],
+                    'notes': row['notes']
                 })
         except Exception as e:
             logging.error(f"Eşleştirme getirirken hata: {e}")
-        finally:
-            conn.close()
+            
         return mappings
 
     def save_gri_response(self, company_id: int, indicator_id: int, period: str,
@@ -715,35 +660,28 @@ class GRIManager:
                          unit: str = None, methodology: str = None,
                          evidence_url: str = None, notes: str = None) -> bool:
         """GRI cevabını kaydet"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
+        cid = self._ensure_context(company_id)
 
         try:
-            cursor.execute("""
+            self.execute_update("""
                 INSERT OR REPLACE INTO gri_responses 
                 (company_id, indicator_id, period, response_value, numerical_value, 
                  unit, methodology, evidence_url, notes)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (company_id, indicator_id, period, response_value, numerical_value,
+            """, (cid, indicator_id, period, response_value, numerical_value,
                   unit, methodology, evidence_url, notes))
-
-            conn.commit()
             return True
 
         except Exception as e:
             logging.error(f"GRI cevap kaydetme hatasi: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
     def get_gri_responses(self, company_id: int, period: str = None) -> List[Dict]:
         """GRI cevaplarını getir"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
+        cid = self._ensure_context(company_id)
 
         if period:
-            cursor.execute("""
+            rows = self.execute_query("""
                 SELECT r.id, r.indicator_id, r.period, r.response_value, r.numerical_value,
                        r.unit, r.methodology, r.reporting_status, r.evidence_url, r.notes,
                        i.code as indicator_code, i.title as indicator_title,
@@ -753,9 +691,9 @@ class GRIManager:
                 JOIN gri_standards s ON i.standard_id = s.id
                 WHERE r.company_id = ? AND r.period = ?
                 ORDER BY s.code, i.code
-            """, (company_id, period))
+            """, (cid, period))
         else:
-            cursor.execute("""
+            rows = self.execute_query("""
                 SELECT r.id, r.indicator_id, r.period, r.response_value, r.numerical_value,
                        r.unit, r.methodology, r.reporting_status, r.evidence_url, r.notes,
                        i.code as indicator_code, i.title as indicator_title,
@@ -765,52 +703,31 @@ class GRIManager:
                 JOIN gri_standards s ON i.standard_id = s.id
                 WHERE r.company_id = ?
                 ORDER BY r.period DESC, s.code, i.code
-            """, (company_id,))
+            """, (cid,))
 
-        responses = []
-        for row in cursor.fetchall():
-            responses.append({
-                'id': row[0],
-                'indicator_id': row[1],
-                'period': row[2],
-                'response_value': row[3],
-                'numerical_value': row[4],
-                'unit': row[5],
-                'methodology': row[6],
-                'reporting_status': row[7],
-                'evidence_url': row[8],
-                'notes': row[9],
-                'indicator_code': row[10],
-                'indicator_title': row[11],
-                'standard_code': row[12],
-                'standard_title': row[13]
-            })
-
-        conn.close()
-        return responses
+        return [dict(row) for row in rows]
 
     def get_gri_statistics(self, company_id: int) -> Dict:
         """GRI istatistiklerini getir"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
+        cid = self._ensure_context(company_id)
 
         # Toplam standart sayısı
-        cursor.execute("SELECT COUNT(*) FROM gri_standards")
-        total_standards = cursor.fetchone()[0]
+        row = self.select_one("SELECT COUNT(*) as count FROM gri_standards")
+        total_standards = row['count'] if row else 0
 
         # Toplam gösterge sayısı
-        cursor.execute("SELECT COUNT(*) FROM gri_indicators")
-        total_indicators = cursor.fetchone()[0]
+        row = self.select_one("SELECT COUNT(*) as count FROM gri_indicators")
+        total_indicators = row['count'] if row else 0
 
         # Cevaplanan gösterge sayısı
-        cursor.execute("""
-            SELECT COUNT(DISTINCT indicator_id) FROM gri_responses 
+        row = self.select_one("""
+            SELECT COUNT(DISTINCT indicator_id) as count FROM gri_responses 
             WHERE company_id = ?
-        """, (company_id,))
-        answered_indicators = cursor.fetchone()[0]
+        """, (cid,))
+        answered_indicators = row['count'] if row else 0
 
         # Kategori bazında istatistikler
-        cursor.execute("""
+        rows = self.execute_query("""
             SELECT s.category, COUNT(i.id) as indicator_count,
                    COUNT(r.id) as response_count
             FROM gri_standards s
@@ -818,17 +735,15 @@ class GRIManager:
             LEFT JOIN gri_responses r ON i.id = r.indicator_id AND r.company_id = ?
             GROUP BY s.category
             ORDER BY s.category
-        """, (company_id,))
+        """, (cid,))
 
         category_stats = []
-        for row in cursor.fetchall():
+        for row in rows:
             category_stats.append({
-                'category': row[0],
-                'indicator_count': row[1],
-                'response_count': row[2]
+                'category': row['category'],
+                'indicator_count': row['indicator_count'],
+                'response_count': row['response_count']
             })
-
-        conn.close()
 
         return {
             'total_standards': total_standards,
@@ -842,176 +757,121 @@ class GRIManager:
         """GRI gösterge yanıtını kaydet (hızlı yanıt).
         Not: DB şemasına uygun olarak yanıtı `gri_responses.response_value` alanına ve mevcut yıl period’una kaydeder.
         """
-        if company_id is None:
-            company_id = self.company_id
-
-        conn = self.get_connection()
-        cursor = conn.cursor()
+        cid = self._ensure_context(company_id)
 
         try:
             # Eğer indicator_id verilmemişse, koddan bul ve birim bilgisini al
             unit = None
             if not indicator_id:
-                cursor.execute("SELECT id, unit FROM gri_indicators WHERE code = ?", (indicator_code,))
-                result = cursor.fetchone()
-                if not result:
+                row = self.select_one("SELECT id, unit FROM gri_indicators WHERE code = ?", (indicator_code,))
+                if not row:
                     logging.info(f"Gösterge bulunamadı: {indicator_code}")
                     return False
-                indicator_id = result[0]
-                unit = result[1]
+                indicator_id = row['id']
+                unit = row['unit']
 
             period = datetime.now().strftime("%Y")  # Varsayılan period: içinde bulunulan yıl
 
             # Mevcut period için yanıt var mı kontrol et
-            cursor.execute(
+            existing = self.select_one(
                 """
                 SELECT id FROM gri_responses
                 WHERE company_id = ? AND indicator_id = ? AND period = ?
                 """,
-                (company_id, indicator_id, period),
+                (cid, indicator_id, period),
             )
-            existing = cursor.fetchone()
 
             if existing:
-                cursor.execute(
+                self.execute_update(
                     """
                     UPDATE gri_responses
                     SET response_value = ?, unit = COALESCE(unit, ?)
                     WHERE id = ?
                     """,
-                    (response_text, unit, existing[0]),
+                    (response_text, unit, existing['id']),
                 )
                 logging.info(f"GRI yanıtı güncellendi: {indicator_code} ({period})")
             else:
-                cursor.execute(
+                self.execute_update(
                     """
                     INSERT INTO gri_responses (company_id, indicator_id, period, response_value, unit, created_at)
                     VALUES (?, ?, ?, ?, ?, ?)
                     """,
-                    (company_id, indicator_id, period, response_text, unit, datetime.now().isoformat()),
+                    (cid, indicator_id, period, response_text, unit, datetime.now().isoformat()),
                 )
                 logging.info(f"Yeni GRI yanıtı eklendi: {indicator_code} ({period})")
 
-            conn.commit()
             return True
 
         except Exception as e:
             logging.error(f"GRI yanıt kaydetme hatası: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
     def populate_gri_standards(self) -> None:
         """GRI standartlarını ve göstergelerini doldur"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
+        
         try:
-            # GRI Standartları verisi
-            gri_standards_data = [
-                # GRI 200: Economic
-                ("GRI 200", "Economic", "Ekonomik Performans"),
-                ("GRI 201", "Economic", "Ekonomik Performans"),
-                ("GRI 202", "Economic", "Pazar Varlığı"),
-                ("GRI 203", "Economic", "Dolaylı Ekonomik Etkiler"),
-                ("GRI 204", "Economic", "Satın Alma Uygulamaları"),
-                ("GRI 205", "Economic", "Yolsuzlukla Mücadele"),
-                ("GRI 206", "Economic", "Rekabetçi Davranış"),
-                ("GRI 207", "Economic", "Vergi"),
+            # 1. Standartları ve temel göstergeleri doldur
+            self.insert_gri_standards()
+            self.insert_gri_indicators()
 
-                # GRI 300: Environmental
-                ("GRI 300", "Environmental", "Çevresel Performans"),
-                ("GRI 301", "Environmental", "Malzemeler"),
-                ("GRI 302", "Environmental", "Enerji"),
-                ("GRI 303", "Environmental", "Su ve Atık Su"),
-                ("GRI 304", "Environmental", "Biyoçeşitlilik"),
-                ("GRI 305", "Environmental", "Emisyonlar"),
-                ("GRI 306", "Environmental", "Atık ve Çevresel Etkiler"),
-                ("GRI 307", "Environmental", "Çevresel Uyum"),
-                ("GRI 308", "Environmental", "Tedarikçi Çevresel Değerlendirmesi"),
-
-                # GRI 400: Social
-                ("GRI 400", "Social", "Sosyal Performans"),
-                ("GRI 401", "Social", "İstihdam"),
-                ("GRI 402", "Social", "İşçi-İşveren İlişkileri"),
-                ("GRI 403", "Social", "İş Sağlığı ve Güvenliği"),
-                ("GRI 404", "Social", "Eğitim ve Öğretim"),
-                ("GRI 405", "Social", "Çeşitlilik ve Eşit Fırsatlar"),
-                ("GRI 406", "Social", "Ayrımcılıkla Mücadele"),
-                ("GRI 407", "Social", "Toplu Görüşme Özgürlüğü"),
-                ("GRI 408", "Social", "Çocuk İşçiliği"),
-                ("GRI 409", "Social", "Zorla ve Mecburi İşçilik"),
-                ("GRI 410", "Social", "Güvenlik Uygulamaları"),
-                ("GRI 411", "Social", "İnsan Hakları Değerlendirmesi"),
-                ("GRI 412", "Social", "İnsan Hakları Değerlendirmesi"),
-                ("GRI 413", "Social", "Yerel Topluluklar"),
-                ("GRI 414", "Social", "Tedarikçi Sosyal Değerlendirmesi"),
-                ("GRI 415", "Social", "Kamu Politikası"),
-                ("GRI 416", "Social", "Müşteri Sağlığı ve Güvenliği"),
-                ("GRI 417", "Social", "Pazarlama ve Etiketleme"),
-                ("GRI 418", "Social", "Müşteri Gizliliği"),
-                ("GRI 419", "Social", "Sosyoekonomik Uyum")
-            ]
-
-            # GRI standartlarını ekle
-            for code, category, title in gri_standards_data:
-                cursor.execute("""
-                    INSERT OR IGNORE INTO gri_standards (code, category, title, description)
-                    VALUES (?, ?, ?, ?)
-                """, (code, category, title, f"{title} standardı"))
-
-            # GRI Göstergeleri verisi
+            # 2. Ek göstergeleri doldur
             gri_indicators_data = [
                 # Economic Indicators
-                ("GRI 201-1", 2, "Toplam gelir", "Şirketin toplam geliri", "TL"),
-                ("GRI 201-2", 2, "Finansal etkiler", "İklim değişikliğinin finansal etkileri", "TL"),
-                ("GRI 202-1", 3, "Pazar varlığı", "Operasyonel pazarlar", "Sayı"),
-                ("GRI 203-1", 4, "Altyapı yatırımları", "Altyapıya yapılan yatırımlar", "TL"),
-                ("GRI 204-1", 5, "Yerel tedarikçi oranı", "Yerel tedarikçi yüzdesi", "%"),
+                ("GRI 201-1", "GRI 201", "Toplam gelir", "Şirketin toplam geliri", "TL"),
+                ("GRI 201-2", "GRI 201", "Finansal etkiler", "İklim değişikliğinin finansal etkileri", "TL"),
+                ("GRI 202-1", "GRI 202", "Pazar varlığı", "Operasyonel pazarlar", "Sayı"),
+                ("GRI 203-1", "GRI 203", "Altyapı yatırımları", "Altyapıya yapılan yatırımlar", "TL"),
+                ("GRI 204-1", "GRI 204", "Yerel tedarikçi oranı", "Yerel tedarikçi yüzdesi", "%"),
 
                 # Environmental Indicators
-                ("GRI 301-1", 10, "Malzeme tüketimi", "Kullanılan malzemelerin ağırlığı", "Ton"),
-                ("GRI 302-1", 11, "Enerji tüketimi", "Toplam enerji tüketimi", "MWh"),
-                ("GRI 303-1", 12, "Su çekimi", "Toplam su çekimi", "m³"),
-                ("GRI 304-1", 13, "Biyoçeşitlilik etkisi", "Operasyonların biyoçeşitlilik üzerindeki etkisi", "Sayı"),
-                ("GRI 305-1", 14, "Sera gazı emisyonları", "Doğrudan sera gazı emisyonları", "tCO2e"),
-                ("GRI 305-2", 14, "Sera gazı emisyonları", "Enerji dolaylı sera gazı emisyonları", "tCO2e"),
-                ("GRI 306-1", 15, "Atık üretimi", "Üretilen atık miktarı", "Ton"),
-                ("GRI 306-2", 15, "Atık yönetimi", "Atık yönetim uygulamaları", "Sayı"),
+                ("GRI 301-1", "GRI 301", "Malzeme tüketimi", "Kullanılan malzemelerin ağırlığı", "Ton"),
+                ("GRI 302-1", "GRI 302", "Enerji tüketimi", "Toplam enerji tüketimi", "MWh"),
+                ("GRI 303-1", "GRI 303", "Su çekimi", "Toplam su çekimi", "m³"),
+                ("GRI 304-1", "GRI 304", "Biyoçeşitlilik etkisi", "Operasyonların biyoçeşitlilik üzerindeki etkisi", "Sayı"),
+                ("GRI 305-1", "GRI 305", "Sera gazı emisyonları", "Doğrudan sera gazı emisyonları", "tCO2e"),
+                ("GRI 305-2", "GRI 305", "Sera gazı emisyonları", "Enerji dolaylı sera gazı emisyonları", "tCO2e"),
+                ("GRI 306-1", "GRI 306", "Atık üretimi", "Üretilen atık miktarı", "Ton"),
+                ("GRI 306-2", "GRI 306", "Atık yönetimi", "Atık yönetim uygulamaları", "Sayı"),
 
                 # Social Indicators
-                ("GRI 401-1", 20, "Yeni işe alımlar", "Yeni işe alınan çalışan sayısı", "Sayı"),
-                ("GRI 401-2", 20, "İşten çıkarmalar", "İşten çıkarılan çalışan sayısı", "Sayı"),
-                ("GRI 403-1", 22, "İş kazaları", "Mesleki yaralanma sayısı", "Sayı"),
-                ("GRI 403-2", 22, "İş hastalıkları", "Mesleki hastalık sayısı", "Sayı"),
-                ("GRI 404-1", 23, "Eğitim programları", "Çalışanlara verilen eğitim saatleri", "Saat"),
-                ("GRI 405-1", 24, "Çeşitlilik oranı", "Cinsiyet dağılımı", "%"),
-                ("GRI 405-2", 24, "Yönetim çeşitliliği", "Yönetim pozisyonlarında çeşitlilik", "%"),
-                ("GRI 412-1", 31, "İnsan hakları değerlendirmesi", "İnsan hakları değerlendirme süreçleri", "Sayı"),
-                ("GRI 413-1", 32, "Yerel topluluk katılımı", "Yerel topluluklarla etkileşim", "Sayı"),
-                ("GRI 414-1", 33, "Tedarikçi değerlendirmesi", "Tedarikçi sosyal değerlendirmeleri", "Sayı"),
-                ("GRI 416-1", 35, "Müşteri güvenliği", "Müşteri güvenliği olayları", "Sayı"),
-                ("GRI 417-1", 36, "Pazarlama uyumu", "Pazarlama ve etiketleme uyumu", "Sayı"),
-                ("GRI 418-1", 37, "Gizlilik ihlalleri", "Müşteri gizliliği ihlalleri", "Sayı")
+                ("GRI 401-1", "GRI 401", "Yeni işe alımlar", "Yeni işe alınan çalışan sayısı", "Sayı"),
+                ("GRI 401-2", "GRI 401", "İşten çıkarmalar", "İşten çıkarılan çalışan sayısı", "Sayı"),
+                ("GRI 403-1", "GRI 403", "İş kazaları", "Mesleki yaralanma sayısı", "Sayı"),
+                ("GRI 403-2", "GRI 403", "İş hastalıkları", "Mesleki hastalık sayısı", "Sayı"),
+                ("GRI 404-1", "GRI 404", "Eğitim programları", "Çalışanlara verilen eğitim saatleri", "Saat"),
+                ("GRI 405-1", "GRI 405", "Çeşitlilik oranı", "Cinsiyet dağılımı", "%"),
+                ("GRI 405-2", "GRI 405", "Yönetim çeşitliliği", "Yönetim pozisyonlarında çeşitlilik", "%"),
+                ("GRI 412-1", "GRI 412", "İnsan hakları değerlendirmesi", "İnsan hakları değerlendirme süreçleri", "Sayı"),
+                ("GRI 413-1", "GRI 413", "Yerel topluluk katılımı", "Yerel topluluklarla etkileşim", "Sayı"),
+                ("GRI 414-1", "GRI 414", "Tedarikçi değerlendirmesi", "Tedarikçi sosyal değerlendirmeleri", "Sayı"),
+                ("GRI 416-1", "GRI 416", "Müşteri güvenliği", "Müşteri güvenliği olayları", "Sayı"),
+                ("GRI 417-1", "GRI 417", "Pazarlama uyumu", "Pazarlama ve etiketleme uyumu", "Sayı"),
+                ("GRI 418-1", "GRI 418", "Gizlilik ihlalleri", "Müşteri gizliliği ihlalleri", "Sayı")
             ]
 
             # GRI göstergelerini ekle
-            for code, standard_id, title, description, unit in gri_indicators_data:
-                cursor.execute("""
-                    INSERT OR IGNORE INTO gri_indicators (code, standard_id, title, description, unit, reporting_requirement)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                """, (code, standard_id, title, description, unit, "Mandatory"))
+            for code, std_code, title, description, unit in gri_indicators_data:
+                rows = self.db.execute_query("SELECT id FROM gri_standards WHERE code = ?", (std_code,))
+                if rows:
+                    std_id = rows[0]['id']
+                    self.db.execute_update("""
+                        INSERT INTO gri_indicators (code, standard_id, title, description, unit, reporting_requirement)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                        ON CONFLICT(code) DO UPDATE SET
+                            standard_id=excluded.standard_id,
+                            title=excluded.title,
+                            description=excluded.description,
+                            unit=excluded.unit,
+                            reporting_requirement=excluded.reporting_requirement
+                    """, (code, std_id, title, description, unit, "Mandatory"))
 
-            conn.commit()
             logging.info("[OK] GRI standartları ve göstergeleri dolduruldu")
 
         except Exception as e:
-            logging.error(f"[HATA] GRI verileri doldurulurken hata: {e}")
-            conn.rollback()
-        finally:
-            conn.close()
-    def get_filtered_data(self, category, search_term="", priority_filter="Tümü", requirement_filter="Tümü") -> None:
+            logging.error(f"GRI verileri doldurulurken hata: {e}")
+
+    def get_filtered_data(self, category, search_term="", priority_filter="Tümü", requirement_filter="Tümü") -> Dict:
         """Filtrelenmiş veriyi getir"""
         try:
             # Kategori verilerini al

@@ -9,8 +9,9 @@ const error = ref('');
 const loading = ref(false);
 const router = useRouter();
 const authStore = useAuthStore();
+import { useI18n } from 'vue-i18n';
 
-import { t as $t } from '../plugins/i18n';
+const { t: $t } = useI18n();
 
 const handleLogin = async () => {
   error.value = '';

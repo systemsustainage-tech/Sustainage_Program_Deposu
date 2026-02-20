@@ -7,12 +7,13 @@ Sektör ortalamaları, best performers, trendler
 
 import logging
 import os
-import sqlite3
 from typing import Dict, List, Optional
 from config.database import DB_PATH
 
 
-class SectorBenchmarkDatabase:
+from backend.core.base_manager import BaseTenantManager
+
+class SectorBenchmarkDatabase(BaseTenantManager):
     """Sektör benchmark veritabanı yönetimi"""
 
     # Sektörler - KAPSAMLI LİSTE
@@ -59,22 +60,19 @@ class SectorBenchmarkDatabase:
         "arge_harcamasi": {"unit": "% ciro", "category": "ekonomik"},
     }
 
-    def __init__(self, db_path: str = DB_PATH) -> None:
+    def __init__(self, db_path: str = DB_PATH, company_id: Optional[int] = None) -> None:
         if not os.path.isabs(db_path):
             base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
             db_path = os.path.join(base_dir, db_path)
-        self.db_path = db_path
+        super().__init__(db_path, company_id)
         self._init_benchmark_tables()
         self._populate_benchmark_data()
 
     def _init_benchmark_tables(self) -> None:
         """Benchmark tablolarını oluştur"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
             # Sektör ortalamaları
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS sector_averages (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     sector_code TEXT NOT NULL,
@@ -96,8 +94,9 @@ class SectorBenchmarkDatabase:
                 )
             """)
 
+
             # Best performers (sektör liderleri)
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS best_performers (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     sector_code TEXT NOT NULL,
@@ -113,7 +112,7 @@ class SectorBenchmarkDatabase:
             """)
 
             # Sektör trendleri (5 yıllık)
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS sector_trends (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     sector_code TEXT NOT NULL,
@@ -128,7 +127,7 @@ class SectorBenchmarkDatabase:
             """)
 
             # Şirket benchmark karşılaştırmaları
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS company_benchmarks (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -147,7 +146,7 @@ class SectorBenchmarkDatabase:
             """)
 
             # Metrik tanımları
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS benchmark_metrics (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     metric_code TEXT UNIQUE NOT NULL,
@@ -161,22 +160,17 @@ class SectorBenchmarkDatabase:
                 )
             """)
 
-            conn.commit()
             logging.info("[OK] Benchmark tablolari olusturuldu")
 
         except Exception as e:
             logging.error(f"[ERROR] Benchmark tablolari olusturulurken hata: {e}")
-        finally:
-            conn.close()
 
     def get_all_metrics_for_sector(self, sector_code: str, data_year: int = 2024) -> Dict[str, Dict]:
         """Sektörün tüm metriklerini getirir (Trend bilgisi ile birlikte)"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
             # Sektör ortalamaları ve trend bilgisini birleştir
-            cursor.execute("""
+            # Global tablo sorgusu için dummy context (company_id=1)
+            rows = self.execute_query("""
                 SELECT a.*, t.trend_direction, t.yoy_change
                 FROM sector_averages a
                 LEFT JOIN sector_trends t 
@@ -184,42 +178,36 @@ class SectorBenchmarkDatabase:
                 AND a.metric_code = t.metric_code 
                 AND a.data_year = t.year
                 WHERE a.sector_code = ? AND a.data_year = ?
-            """, (sector_code, data_year))
+            """, (sector_code, data_year), company_id=1)
 
-            columns = [col[0] for col in cursor.description]
             results = {}
-            for row in cursor.fetchall():
-                data = dict(zip(columns, row))
-                results[data['metric_code']] = data
+            for row in rows:
+                # row is already a dictionary-like object (sqlite3.Row or dict from BaseTenantManager)
+                results[row['metric_code']] = dict(row)
             return results
 
         except Exception as e:
             logging.error(f"Sektör metrikleri getirme hatasi: {e}")
             return {}
-        finally:
-            conn.close()
 
     def _populate_benchmark_data(self) -> None:
         """Benchmark verilerini doldur - GERÇEK VERİLER"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
             # Metrik tanımlarını ekle
             for metric_code, metric_info in self.STANDARD_METRICS.items():
-                cursor.execute("""
+                self.execute_update("""
                     INSERT OR IGNORE INTO benchmark_metrics
                     (metric_code, metric_name, metric_category, unit)
                     VALUES (?, ?, ?, ?)
                 """, (metric_code, metric_code.replace('_', ' ').title(),
-                      metric_info['category'], metric_info['unit']))
+                      metric_info['category'], metric_info['unit']), company_id=1)
 
             # Sektör ortalamaları - KAPSAMLI VERİ
             sector_data_2024 = self._get_comprehensive_sector_data()
 
             for sector_code, metrics in sector_data_2024.items():
                 for metric_code, values in metrics.items():
-                    cursor.execute("""
+                    self.execute_update("""
                         INSERT OR REPLACE INTO sector_averages
                         (sector_code, sector_name, metric_code, metric_name, metric_category,
                          average_value, median_value, min_value, max_value, std_deviation,
@@ -240,7 +228,7 @@ class SectorBenchmarkDatabase:
                         values.get('sample_size', 100),
                         2024,
                         "Industry Reports 2024"
-                    ))
+                    ), company_id=1)
 
             # Best performers ekle
             best_performers_data = self._get_best_performers_data()
@@ -248,7 +236,7 @@ class SectorBenchmarkDatabase:
             for sector_code, performers in best_performers_data.items():
                 for metric_code, top_performers in performers.items():
                     for rank, performer in enumerate(top_performers, 1):
-                        cursor.execute("""
+                        self.execute_update("""
                             INSERT OR REPLACE INTO best_performers
                             (sector_code, metric_code, performer_name, performer_value,
                              performance_description, data_year, rank)
@@ -258,7 +246,7 @@ class SectorBenchmarkDatabase:
                             performer['name'], performer['value'],
                             performer.get('description', ''),
                             2024, rank
-                        ))
+                        ), company_id=1)
 
             # Sektör trendleri ekle (2020-2024)
             trends_data = self._get_sector_trends_data()
@@ -282,21 +270,18 @@ class SectorBenchmarkDatabase:
                             else:
                                 trend_direction = "stabil"
 
-                        cursor.execute("""
+                        self.execute_update("""
                             INSERT OR REPLACE INTO sector_trends
                             (sector_code, metric_code, year, value, yoy_change, trend_direction)
                             VALUES (?, ?, ?, ?, ?, ?)
-                        """, (sector_code, metric_code, year, value, yoy_change, trend_direction))
+                        """, (sector_code, metric_code, year, value, yoy_change, trend_direction), company_id=1)
 
-            conn.commit()
             logging.info("[OK] Benchmark verileri dolduruldu")
 
         except Exception as e:
             logging.error(f"[ERROR] Benchmark verileri doldurulurken hata: {e}")
             import traceback
             traceback.print_exc()
-        finally:
-            conn.close()
 
     def _get_comprehensive_sector_data(self) -> Dict:
         """Kapsamlı sektör verileri - GERÇEK VERİLER (2024 Endüstri Raporları)"""
@@ -463,34 +448,25 @@ class SectorBenchmarkDatabase:
     def get_sector_benchmark(self, sector_code: str, metric_code: str,
                             data_year: int = 2024) -> Optional[Dict]:
         """Sektör benchmark verisi getir"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            # Global tablo (sector_averages), dummy context (company_id=1) ile sorgulanabilir
+            rows = self.execute_query("""
                 SELECT * FROM sector_averages
                 WHERE sector_code = ? AND metric_code = ? AND data_year = ?
-            """, (sector_code, metric_code, data_year))
+            """, (sector_code, metric_code, data_year), company_id=1)
 
-            row = cursor.fetchone()
-            if row:
-                columns = [col[0] for col in cursor.description]
-                return dict(zip(columns, row))
+            if rows:
+                return dict(rows[0])
             return None
 
         except Exception as e:
             logging.error(f"Benchmark verisi getirme hatasi: {e}")
             return None
-        finally:
-            conn.close()
 
     def compare_to_sector(self, company_id: int, sector_code: str,
                          company_metrics: Dict[str, float],
                          comparison_year: int = 2024) -> Dict:
         """Şirketi sektör ile karşılaştır"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
             comparison_results = {
                 "sector": self.SECTORS.get(sector_code, sector_code),
@@ -550,13 +526,13 @@ class SectorBenchmarkDatabase:
                 metric_count += 1
 
                 # Karşılaştırmayı kaydet
-                cursor.execute("""
+                self.execute_update("""
                     INSERT OR REPLACE INTO company_benchmarks
                     (company_id, sector_code, metric_code, company_value, sector_average,
                      percentile, performance_level, gap_to_average, comparison_year)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (company_id, sector_code, metric_code, company_value, sector_avg,
-                      percentile, perf_level, gap_to_avg, comparison_year))
+                      percentile, perf_level, gap_to_avg, comparison_year), company_id=company_id)
 
             # Genel performans
             if metric_count > 0:
@@ -572,37 +548,32 @@ class SectorBenchmarkDatabase:
                 else:
                     comparison_results["performance_level"] = "Geliştirilmeli"
 
-            conn.commit()
             return comparison_results
 
         except Exception as e:
             logging.error(f"Karsilastirma hatasi: {e}")
             return {"error": str(e)}
-        finally:
-            conn.close()
 
     def get_sector_trend(self, sector_code: str, metric_code: str,
                         start_year: int = 2020, end_year: int = 2024) -> List[Dict]:
         """Sektör trendini getir"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            # Global tablo (sector_trends), dummy context (company_id=1)
+            rows = self.execute_query("""
                 SELECT year, value, yoy_change, trend_direction
                 FROM sector_trends
                 WHERE sector_code = ? AND metric_code = ?
                 AND year BETWEEN ? AND ?
                 ORDER BY year
-            """, (sector_code, metric_code, start_year, end_year))
+            """, (sector_code, metric_code, start_year, end_year), company_id=1)
 
             trends = []
-            for row in cursor.fetchall():
+            for row in rows:
                 trends.append({
-                    "year": row[0],
-                    "value": row[1],
-                    "yoy_change": row[2],
-                    "trend_direction": row[3]
+                    "year": row['year'],
+                    "value": row['value'],
+                    "yoy_change": row['yoy_change'],
+                    "trend_direction": row['trend_direction']
                 })
 
             return trends
@@ -610,5 +581,3 @@ class SectorBenchmarkDatabase:
         except Exception as e:
             logging.error(f"Trend getirme hatasi: {e}")
             return []
-        finally:
-            conn.close()

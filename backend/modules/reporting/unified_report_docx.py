@@ -10,8 +10,8 @@ from collections import defaultdict
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.shared import Pt
-import sqlite3
 import logging
+from backend.core.database_manager import DatabaseManager
 
 
 def _add_heading(doc: Document, text: str, level: int = 1) -> None:
@@ -41,22 +41,21 @@ class UnifiedReportDocxGenerator:
         self.db_path = DB_PATH
         self.logger = logging.getLogger(__name__)
 
-    def _build_target_summary(self, cur, company_id) -> tuple:
+    def _build_target_summary(self, db_manager, company_id) -> tuple:
         """Hedef takibi özetini oluşturur."""
         try:
             # company_targets tablosu var mı kontrol et
-            cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='company_targets'")
-            if not cur.fetchone():
+            rows = db_manager.execute_query("SELECT name FROM sqlite_master WHERE type='table' AND name='company_targets'")
+            if not rows:
                 return None, []
 
-            cur.execute("""
+            targets = db_manager.execute_query("""
                 SELECT metric_type, baseline_year, target_year, baseline_value, target_value, status
                 FROM company_targets 
                 WHERE company_id=? 
                 ORDER BY target_year ASC
             """, (company_id,))
             
-            targets = cur.fetchall()
             if not targets:
                 return None, []
                 
@@ -66,12 +65,12 @@ class UnifiedReportDocxGenerator:
             self.logger.error(f"Hedef özeti hatası: {e}")
             return None, []
 
-    def _build_supply_chain_summary(self, cur, company_id, period) -> tuple:
+    def _build_supply_chain_summary(self, db_manager, company_id, period) -> tuple:
         """Tedarik zinciri (Scope 3) verilerini özetler."""
         try:
             # supplier_environmental_data tablosu var mı kontrol et
-            cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='supplier_environmental_data'")
-            if not cur.fetchone():
+            rows = db_manager.execute_query("SELECT name FROM sqlite_master WHERE type='table' AND name='supplier_environmental_data'")
+            if not rows:
                 return None, {}
 
             # Bu şirkete bağlı tedarikçilerin verilerini çekmemiz lazım.
@@ -84,7 +83,7 @@ class UnifiedReportDocxGenerator:
             # Şimdilik basitçe supplier_environmental_data tablosundaki tüm verileri çekelim (tek şirket varsayımı veya demo için).
             # Gerçek senaryoda: SELECT * FROM supplier_environmental_data s JOIN users u ON s.supplier_id = u.id WHERE u.parent_company_id = ?
             
-            cur.execute("""
+            rows = db_manager.execute_query("""
                 SELECT 
                     COUNT(DISTINCT supplier_id) as supplier_count,
                     SUM(energy_consumption) as total_energy,
@@ -95,16 +94,16 @@ class UnifiedReportDocxGenerator:
                 WHERE period = ? AND company_id = ?
             """, (period, company_id))
             
-            row = cur.fetchone()
-            if not row or row[0] == 0:
+            if not rows or rows[0]['supplier_count'] == 0:
                 return None, {}
-                
+            
+            row = rows[0]
             data = {
-                'supplier_count': row[0],
-                'energy': row[1] or 0,
-                'emissions': row[2] or 0,
-                'waste': row[3] or 0,
-                'water': row[4] or 0
+                'supplier_count': row['supplier_count'],
+                'energy': row['total_energy'] or 0,
+                'emissions': row['total_emissions'] or 0,
+                'waste': row['total_waste'] or 0,
+                'water': row['total_water'] or 0
             }
             
             summary_text = (f"{period} döneminde {data['supplier_count']} tedarikçiden çevresel veri toplanmıştır. "
@@ -114,35 +113,37 @@ class UnifiedReportDocxGenerator:
             self.logger.error(f"Tedarik zinciri özeti hatası: {e}")
             return None, {}
 
-    def _build_summaries(self, cur, company_id, period) -> tuple:
+    def _build_summaries(self, db_manager, company_id, period) -> tuple:
         """SDG, GRI ve TSRS özetlerini oluşturur."""
         # SDG özet (responses tablosu bazlı)
         sdg_ozet = ""
         try:
             # responses tablosu var mı kontrol et
-            cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='responses'")
-            if cur.fetchone():
-                cur2 = cur.execute(
+            rows = db_manager.execute_query("SELECT name FROM sqlite_master WHERE type='table' AND name='responses'")
+            if rows:
+                rows2 = db_manager.execute_query(
                     """SELECT COUNT(*), AVG(progress_pct) FROM responses WHERE company_id=? AND period=?""",
                     (company_id, period)
-                ).fetchone()
-                total_resp = cur2[0] or 0
-                avg_progress = round(cur2[1] or 0, 1)
-                sdg_ozet = f"Toplam {total_resp} gösterge için veri girildi. Ortalama ilerleme: %{avg_progress}."
+                )
+                if rows2:
+                    total_resp = rows2[0][0] or 0
+                    avg_progress = round(rows2[0][1] or 0, 1)
+                    sdg_ozet = f"Toplam {total_resp} gösterge için veri girildi. Ortalama ilerleme: %{avg_progress}."
         except Exception as e:
             self.logger.error(f"SDG özet hatası: {e}")
 
         # GRI özet
         gri_ozet = ""
         try:
-            cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='gri_selections'")
-            if cur.fetchone():
-                cur3 = cur.execute(
+            rows = db_manager.execute_query("SELECT name FROM sqlite_master WHERE type='table' AND name='gri_selections'")
+            if rows:
+                rows3 = db_manager.execute_query(
                     """SELECT COUNT(*) FROM gri_selections WHERE company_id=? AND selected=1""",
                     (company_id,)
-                ).fetchone()
-                gri_count = cur3[0] or 0
-                gri_ozet = f"Seçilen GRI gösterge sayısı: {gri_count}."
+                )
+                if rows3:
+                    gri_count = rows3[0][0] or 0
+                    gri_ozet = f"Seçilen GRI gösterge sayısı: {gri_count}."
         except Exception as e:
             self.logger.error(f"GRI özet hatası: {e}")
 
@@ -153,14 +154,14 @@ class UnifiedReportDocxGenerator:
             
         return sdg_ozet, gri_ozet, tsrs_ozet
 
-    def _get_gri_selected_rows(self, cur, company_id) -> list:
+    def _get_gri_selected_rows(self, db_manager, company_id) -> list:
         """Seçilmiş GRI göstergelerini ve TSRS eşleştirmelerini döndürür."""
         try:
-            cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='gri_selections'")
-            if not cur.fetchone():
+            rows = db_manager.execute_query("SELECT name FROM sqlite_master WHERE type='table' AND name='gri_selections'")
+            if not rows:
                 return []
                 
-            rows = cur.execute(
+            rows = db_manager.execute_query(
                 """
                 SELECT gi.code AS indicator_code, gi.title AS indicator_title,
                        gs.code AS standard_code, gs.title AS standard_title
@@ -171,14 +172,14 @@ class UnifiedReportDocxGenerator:
                 ORDER BY gs.code, gi.code
                 """,
                 (company_id,)
-            ).fetchall()
+            )
             
             result = []
             for r in rows:
-                icode = r[0]
-                ititle = r[1]
-                scode = r[2]
-                stitle = r[3]
+                icode = r['indicator_code']
+                ititle = r['indicator_title']
+                scode = r['standard_code']
+                stitle = r['standard_title']
                 # row_data: (scode, icode, ititle, tsrs_summary)
                 result.append((scode, icode, ititle, ""))
             return result
@@ -186,27 +187,19 @@ class UnifiedReportDocxGenerator:
             self.logger.error(f"GRI satırları hatası: {e}")
             return []
 
-    def _get_ceo_messages(self, cur, company_id, period) -> list:
+    def _get_ceo_messages(self, db_manager, company_id, period) -> list:
         try:
-            cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='ceo_messages'")
-            if not cur.fetchone():
+            rows = db_manager.execute_query("SELECT name FROM sqlite_master WHERE type='table' AND name='ceo_messages'")
+            if not rows:
                 return []
 
-            cur.execute("SELECT * FROM ceo_messages WHERE company_id=? AND period=?", (company_id, period))
-            if cur.description:
-                cols = [description[0] for description in cur.description]
-                rows = cur.fetchall()
-                messages = []
-                for row in rows:
-                    msg = dict(zip(cols, row))
-                    messages.append(msg)
-                return messages
-            return []
+            rows = db_manager.execute_query("SELECT * FROM ceo_messages WHERE company_id=? AND period=?", (company_id, period))
+            return [dict(row) for row in rows]
         except Exception as e:
             self.logger.error(f"CEO mesajları hatası: {e}")
             return []
 
-    def _add_methodology_section(self, doc, cur, company_id):
+    def _add_methodology_section(self, doc, db_manager, company_id):
         """Metodoloji ve Veri Kalitesi bölümünü ekler."""
         _add_heading(doc, "6. Metodoloji ve Veri Kalitesi")
         
@@ -218,29 +211,30 @@ class UnifiedReportDocxGenerator:
         
         # SDG Validation Results
         try:
-            cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='sdg_validation_results'")
-            if cur.fetchone():
+            rows = db_manager.execute_query("SELECT name FROM sqlite_master WHERE type='table' AND name='sdg_validation_results'")
+            if rows:
                 # Kalite puanlarını al (son doğrulama)
                 # sdg_data_quality_scores tablosu varsa oradan, yoksa validation_results'dan özet çıkar
                 
                 # Önce sdg_data_quality_scores kontrolü
-                cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='sdg_data_quality_scores'")
-                if cur.fetchone():
-                    scores = cur.execute(
+                rows = db_manager.execute_query("SELECT name FROM sqlite_master WHERE type='table' AND name='sdg_data_quality_scores'")
+                if rows:
+                    scores_rows = db_manager.execute_query(
                         "SELECT completeness_score, accuracy_score, consistency_score, timeliness_score, overall_quality_score "
                         "FROM sdg_data_quality_scores WHERE company_id=? ORDER BY validation_date DESC LIMIT 1",
                         (company_id,)
-                    ).fetchone()
-                    if scores:
+                    )
+                    if scores_rows:
+                        scores = scores_rows[0]
                         _add_heading(doc, "Veri Kalitesi Puanları", level=2)
-                        _add_paragraph(doc, f"Genel Kalite Skoru: {scores[4]:.2f}/100")
-                        _add_paragraph(doc, f"- Tamlık: {scores[0]:.2f}")
-                        _add_paragraph(doc, f"- Doğruluk: {scores[1]:.2f}")
-                        _add_paragraph(doc, f"- Tutarlılık: {scores[2]:.2f}")
-                        _add_paragraph(doc, f"- Zamanlılık: {scores[3]:.2f}")
+                        _add_paragraph(doc, f"Genel Kalite Skoru: {scores['overall_quality_score']:.2f}/100")
+                        _add_paragraph(doc, f"- Tamlık: {scores['completeness_score']:.2f}")
+                        _add_paragraph(doc, f"- Doğruluk: {scores['accuracy_score']:.2f}")
+                        _add_paragraph(doc, f"- Tutarlılık: {scores['consistency_score']:.2f}")
+                        _add_paragraph(doc, f"- Zamanlılık: {scores['timeliness_score']:.2f}")
 
                 # Validation hataları özeti
-                issues = cur.execute(
+                issues = db_manager.execute_query(
                     """
                     SELECT r.rule_name, COUNT(*) as issue_count 
                     FROM sdg_validation_results vr
@@ -249,12 +243,12 @@ class UnifiedReportDocxGenerator:
                     GROUP BY r.rule_name
                     """, 
                     (company_id,)
-                ).fetchall()
+                )
                 
                 if issues:
                     _add_heading(doc, "Tespit Edilen Veri İyileştirme Alanları", level=2)
-                    for rule, count in issues:
-                        _add_paragraph(doc, f"- {rule}: {count} kayıt incelenmeli")
+                    for issue in issues:
+                        _add_paragraph(doc, f"- {issue['rule_name']}: {issue['issue_count']} kayıt incelenmeli")
                 else:
                     _add_paragraph(doc, "Veri doğrulama sürecinde kritik bir hata tespit edilmemiştir.")
                     
@@ -262,15 +256,15 @@ class UnifiedReportDocxGenerator:
             self.logger.error(f"Metodoloji bölümü hatası: {e}")
             _add_paragraph(doc, "Veri kalitesi bilgileri alınırken bir hata oluştu.")
 
-    def _add_materiality_section(self, doc, cur, company_id):
+    def _add_materiality_section(self, doc, db_manager, company_id):
         """Çifte Önemlilik (Double Materiality) bölümünü ekler."""
         try:
             # materiality_topics tablosu var mı kontrol et
-            cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='materiality_topics'")
-            if not cur.fetchone():
+            rows = db_manager.execute_query("SELECT name FROM sqlite_master WHERE type='table' AND name='materiality_topics'")
+            if not rows:
                 return
 
-            cur.execute("""
+            topics = db_manager.execute_query("""
                 SELECT topic_name, category, stakeholder_impact, business_impact, priority_score
                 FROM materiality_topics
                 WHERE company_id=?
@@ -278,7 +272,6 @@ class UnifiedReportDocxGenerator:
                 LIMIT 10
             """, (company_id,))
             
-            topics = cur.fetchall()
             if not topics:
                 return
 
@@ -295,24 +288,24 @@ class UnifiedReportDocxGenerator:
             
             for t in topics:
                 row = table.add_row().cells
-                row[0].text = str(t[0])
-                row[1].text = str(t[1])
-                row[2].text = f"{t[2]:.1f}" if t[2] else "-"
-                row[3].text = f"{t[3]:.1f}" if t[3] else "-"
+                row[0].text = str(t['topic_name'])
+                row[1].text = str(t['category'])
+                row[2].text = f"{t['stakeholder_impact']:.1f}" if t['stakeholder_impact'] else "-"
+                row[3].text = f"{t['business_impact']:.1f}" if t['business_impact'] else "-"
             
             _add_paragraph(doc, "Not: Etki Önemliliği (Impact Materiality) şirketin çevre ve toplum üzerindeki etkisini; Finansal Önemlilik (Financial Materiality) ise sürdürülebilirlik konularının şirketin finansal durumu üzerindeki etkisini ifade eder.")
 
         except Exception as e:
             self.logger.error(f"Önemlilik bölümü hatası: {e}")
 
-    def _add_esrs_section(self, doc, cur, company_id):
+    def _add_esrs_section(self, doc, db_manager, company_id):
         """ESRS Uyum bölümünü ekler."""
         try:
             has_data = False
             # Check esrs_disclosures (Genel istatistikler)
-            cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='esrs_disclosures'")
-            if cur.fetchone():
-                cur.execute("""
+            rows = db_manager.execute_query("SELECT name FROM sqlite_master WHERE type='table' AND name='esrs_disclosures'")
+            if rows:
+                stats_rows = db_manager.execute_query("""
                     SELECT 
                         COUNT(*) as total,
                         SUM(CASE WHEN completion_status = 'tamamlandi' THEN 1 ELSE 0 END) as completed,
@@ -320,14 +313,14 @@ class UnifiedReportDocxGenerator:
                     FROM esrs_disclosures
                     WHERE company_id=?
                 """, (company_id,))
-                stats = cur.fetchone()
+                stats = stats_rows[0] if stats_rows else None
                 
-                if stats and stats[0] > 0:
+                if stats and stats['total'] > 0:
                     has_data = True
                     _add_heading(doc, "ESRS (Avrupa Sürdürülebilirlik Raporlama Standartları) Uyumu")
-                    total = stats[0]
-                    completed = stats[1] or 0
-                    material = stats[2] or 0
+                    total = stats['total']
+                    completed = stats['completed'] or 0
+                    material = stats['material_count'] or 0
                     pct = (completed / total) * 100 if total > 0 else 0
                     
                     _add_paragraph(doc, f"Toplam ESRS Açıklaması: {total}")
@@ -335,17 +328,17 @@ class UnifiedReportDocxGenerator:
                     _add_paragraph(doc, f"Önemli (Material) Olarak Belirlenen: {material}")
 
             # Detaylı Değerlendirme (esrs_assessments)
-            cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='esrs_assessments'")
-            if cur.fetchone():
+            rows = db_manager.execute_query("SELECT name FROM sqlite_master WHERE type='table' AND name='esrs_assessments'")
+            if rows:
                 # Yeni eklenen not alanlarını da çekiyoruz
-                cur.execute("""
+                assessments = db_manager.execute_query("""
                     SELECT standard_code, status, 
                            governance_notes, strategy_notes, impact_risk_notes, metrics_notes
                     FROM esrs_assessments 
                     WHERE company_id=?
                     ORDER BY standard_code
                 """, (company_id,))
-                assessments = cur.fetchall()
+                
                 if assessments:
                     if not has_data:
                         _add_heading(doc, "ESRS (Avrupa Sürdürülebilirlik Raporlama Standartları) Uyumu")
@@ -354,12 +347,12 @@ class UnifiedReportDocxGenerator:
                     _add_heading(doc, "Standart Bazlı Değerlendirme ve Detaylar", level=2)
                     
                     for a in assessments:
-                        std_code = a[0]
-                        status = a[1]
-                        gov_notes = a[2]
-                        strat_notes = a[3]
-                        risk_notes = a[4]
-                        met_notes = a[5]
+                        std_code = a['standard_code']
+                        status = a['status']
+                        gov_notes = a['governance_notes']
+                        strat_notes = a['strategy_notes']
+                        risk_notes = a['impact_risk_notes']
+                        met_notes = a['metrics_notes']
                         
                         # Başlık: ESRS 1 - Tamamlandı
                         p = doc.add_paragraph()
@@ -466,6 +459,7 @@ class UnifiedReportDocxGenerator:
             doc = Document()
 
             db_path = self.db_path
+            db_manager = DatabaseManager(db_path)
 
             try:
                 from modules.reporting.brand_identity_manager import BrandIdentityManager
@@ -511,9 +505,7 @@ class UnifiedReportDocxGenerator:
             supply_chain_data = {}
 
             try:
-                conn = sqlite3.connect(db_path)
-                cur = conn.cursor()
-                sdg_ozet, gri_ozet, tsrs_ozet = self._build_summaries(cur, company_id, reporting_period)
+                sdg_ozet, gri_ozet, tsrs_ozet = self._build_summaries(db_manager, company_id, reporting_period)
                 # sdg_validation_results üzerinden doğrulama özeti zaten _add_methodology_section içinde kullanılıyor
                 # burada sadece özet metinleri alıyoruz
                 
@@ -522,15 +514,15 @@ class UnifiedReportDocxGenerator:
                 tsrs_summary_text = tsrs_ozet or ""
                 
                 # Hedef ve Tedarik Zinciri Özetleri
-                target_summary_text, target_data = self._build_target_summary(cur, company_id)
-                supply_chain_summary_text, supply_chain_data = self._build_supply_chain_summary(cur, company_id, reporting_period)
+                target_summary_text, target_data = self._build_target_summary(db_manager, company_id)
+                supply_chain_summary_text, supply_chain_data = self._build_supply_chain_summary(db_manager, company_id, reporting_period)
 
                 try:
-                    gri_selected_rows = self._get_gri_selected_rows(cur, company_id) or []
+                    gri_selected_rows = self._get_gri_selected_rows(db_manager, company_id) or []
                 except Exception:
                     gri_selected_rows = []
                 try:
-                    ceo_messages = self._get_ceo_messages(cur, company_id, reporting_period)
+                    ceo_messages = self._get_ceo_messages(db_manager, company_id, reporting_period)
                 except Exception:
                     ceo_messages = []
                 if ceo_messages:
@@ -538,11 +530,6 @@ class UnifiedReportDocxGenerator:
                     ceo_message = annual_message or ceo_messages[0]
             except Exception as e:
                 self.logger.error(f"Özet oluşturma hatası: {e}")
-            finally:
-                try:
-                    conn.close()
-                except Exception:
-                    pass
 
             try:
                 from modules.esg.esg_manager import ESGManager
@@ -673,17 +660,10 @@ class UnifiedReportDocxGenerator:
             supply_chain_data = {}
             
             try:
-                conn = sqlite3.connect(db_path)
-                cur = conn.cursor()
-                target_summary_text, target_list = self._build_target_summary(cur, company_id)
-                supply_chain_summary_text, supply_chain_data = self._build_supply_chain_summary(cur, company_id, reporting_period)
+                target_summary_text, target_list = self._build_target_summary(db_manager, company_id)
+                supply_chain_summary_text, supply_chain_data = self._build_supply_chain_summary(db_manager, company_id, reporting_period)
             except Exception as e:
                 self.logger.error(f"Hedef/Tedarik özeti hatası: {e}")
-            finally:
-                try:
-                    conn.close()
-                except:
-                    pass
 
             if target_summary_text or supply_chain_summary_text:
                  _add_heading(doc, "Kurumsal Performans ve Etki Analizi")
@@ -718,30 +698,16 @@ class UnifiedReportDocxGenerator:
 
             # 6. Çifte Önemlilik ve ESRS
             try:
-                conn = sqlite3.connect(db_path)
-                cur = conn.cursor()
-                self._add_materiality_section(doc, cur, company_id)
-                self._add_esrs_section(doc, cur, company_id)
+                self._add_materiality_section(doc, db_manager, company_id)
+                self._add_esrs_section(doc, db_manager, company_id)
             except Exception as e:
                 self.logger.error(f"Önemlilik/ESRS bölümü eklenirken hata: {e}")
-            finally:
-                try:
-                    conn.close()
-                except Exception:
-                    pass
 
             # 7. Metodoloji ve Veri Kalitesi
             try:
-                conn = sqlite3.connect(db_path)
-                cur = conn.cursor()
-                self._add_methodology_section(doc, cur, company_id)
+                self._add_methodology_section(doc, db_manager, company_id)
             except Exception as e:
                 self.logger.error(f"Metodoloji bölümü eklenirken hata: {e}")
-            finally:
-                try:
-                    conn.close()
-                except Exception:
-                    pass
 
             section_index = 7
             if ceo_message:

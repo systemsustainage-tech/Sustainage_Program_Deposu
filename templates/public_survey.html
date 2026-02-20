@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}{{ survey.title if survey else 'Anket' }} - Sustainage{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    {% if survey %}
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h2 class="mb-0">{{ survey.title }}</h2>
+            </div>
+            <div class="card-body">
+                <p class="lead">{{ survey.description }}</p>
+                <hr>
+                
+                <form method="POST" action="{{ url_for('submit_public_survey', token=token) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    
+                    <div id="survey-questions">
+                        <!-- Questions will be rendered here dynamically or server-side -->
+                        {% if questions %}
+                            {% for q in questions %}
+                            <div class="mb-4">
+                                <label class="form-label fw-bold">{{ loop.index }}. {{ q.text }}</label>
+                                {% if q.type == 'text' %}
+                                    <input type="text" class="form-control" name="q_{{ q.id }}" required>
+                                {% elif q.type == 'textarea' %}
+                                    <textarea class="form-control" name="q_{{ q.id }}" rows="3" required></textarea>
+                                {% elif q.type == 'select' %}
+                                    <select class="form-select" name="q_{{ q.id }}">
+                                        {% for opt in q.options %}
+                                            <option value="{{ opt }}">{{ opt }}</option>
+                                        {% endfor %}
+                                    </select>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted">Loading questions...</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="d-grid gap-2 mt-4">
+                        <button type="submit" class="btn btn-primary btn-lg">{{ lang('submit_survey', 'Anketi Gönder') }}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    {% else %}
+        <div class="alert alert-danger">
+            {{ lang('survey_not_found', 'Anket bulunamadı veya süresi dolmuş.') }}
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

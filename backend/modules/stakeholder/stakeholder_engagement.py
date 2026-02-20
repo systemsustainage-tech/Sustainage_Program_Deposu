@@ -9,13 +9,14 @@ import logging
 import json
 import os
 import secrets
-import sqlite3
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 from config.database import DB_PATH
+from backend.core.database_manager import DatabaseManager
+from backend.core.base_manager import BaseTenantManager
 
 
-class StakeholderEngagement:
+class StakeholderEngagement(BaseTenantManager):
     """Paydaş etkileşim sistemi"""
 
     STAKEHOLDER_GROUPS = {
@@ -277,22 +278,16 @@ class StakeholderEngagement:
     }
 
     def __init__(self, db_path: str = DB_PATH) -> None:
-        if not os.path.isabs(db_path):
-            base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
-            db_path = os.path.join(base_dir, db_path)
-        self.db_path = db_path
+        super().__init__(db_path)
         self._init_stakeholder_tables()
 
     def _init_stakeholder_tables(self) -> None:
         """Paydaş tablolarını oluştur"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
             # Paydaş kayıtları (Migration support)
-            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='stakeholders'")
-            if not cursor.fetchone():
-                cursor.execute("""
+            rows = self.db.execute_query("SELECT name FROM sqlite_master WHERE type='table' AND name='stakeholders'")
+            if not rows:
+                self.db.execute_update("""
                     CREATE TABLE stakeholders (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         company_id INTEGER NOT NULL,
@@ -320,12 +315,12 @@ class StakeholderEngagement:
                 ]
                 for col, type_def in cols_to_add:
                     try:
-                        cursor.execute(f"ALTER TABLE stakeholders ADD COLUMN {col} {type_def}")
-                    except sqlite3.OperationalError:
+                        self.db.execute_update(f"ALTER TABLE stakeholders ADD COLUMN {col} {type_def}")
+                    except Exception:
                         pass
 
             # Online anketler
-            cursor.execute("""
+            self.db.execute_update("""
                 CREATE TABLE IF NOT EXISTS online_surveys (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -346,13 +341,13 @@ class StakeholderEngagement:
 
             # Add survey_type column if not exists
             try:
-                cursor.execute("ALTER TABLE online_surveys ADD COLUMN survey_type TEXT DEFAULT 'sdg'")
-            except sqlite3.OperationalError:
+                self.db.execute_update("ALTER TABLE online_surveys ADD COLUMN survey_type TEXT DEFAULT 'sdg'")
+            except Exception:
                 pass
 
 
             # Anket yanıtları (external)
-            cursor.execute("""
+            self.db.execute_update("""
                 CREATE TABLE IF NOT EXISTS survey_responses (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     survey_id INTEGER NOT NULL,
@@ -367,7 +362,7 @@ class StakeholderEngagement:
             """)
 
             # Gerçek zamanlı feedback
-            cursor.execute("""
+            self.db.execute_update("""
                 CREATE TABLE IF NOT EXISTS stakeholder_feedback (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -388,7 +383,7 @@ class StakeholderEngagement:
             """)
 
             # Paydaş toplantıları
-            cursor.execute("""
+            self.db.execute_update("""
                 CREATE TABLE IF NOT EXISTS stakeholder_meetings (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -409,7 +404,7 @@ class StakeholderEngagement:
             """)
 
             # Eylem planı (commitment tracking)
-            cursor.execute("""
+            self.db.execute_update("""
                 CREATE TABLE IF NOT EXISTS stakeholder_commitments (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -431,7 +426,7 @@ class StakeholderEngagement:
             """)
 
             # Portal erişim logları
-            cursor.execute("""
+            self.db.execute_update("""
                 CREATE TABLE IF NOT EXISTS portal_access_logs (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     stakeholder_id INTEGER NOT NULL,
@@ -444,7 +439,7 @@ class StakeholderEngagement:
             """)
 
             # Eğitim Materyalleri
-            cursor.execute("""
+            self.db.execute_update("""
                 CREATE TABLE IF NOT EXISTS training_materials (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -460,7 +455,7 @@ class StakeholderEngagement:
             """)
 
             # Paydaş Eğitim İlerlemesi
-            cursor.execute("""
+            self.db.execute_update("""
                 CREATE TABLE IF NOT EXISTS stakeholder_training_progress (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     stakeholder_id INTEGER NOT NULL,
@@ -476,13 +471,10 @@ class StakeholderEngagement:
                 )
             """)
 
-            conn.commit()
             logging.info("[OK] Paydas etkilesim tablolari olusturuldu")
 
         except Exception as e:
             logging.error(f"[ERROR] Paydas tablolari olusturulurken hata: {e}")
-        finally:
-            conn.close()
 
     # =====================================================
     # 1. PAYDAŞ PORTALI (EXTERNAL ACCESS)
@@ -495,21 +487,16 @@ class StakeholderEngagement:
         Returns:
             Portal erişim token'ı
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
             # Güvenli token oluştur
             access_token = secrets.token_urlsafe(32)
 
-            cursor.execute("""
+            self.execute_update("""
                 UPDATE stakeholders
                 SET portal_access_token = ?,
                     portal_enabled = 1
                 WHERE id = ?
             """, (access_token, stakeholder_id))
-
-            conn.commit()
 
             # Portal URL'i
             portal_url = f"https://portal.sustainage.com/stakeholder/{access_token}"
@@ -520,32 +507,24 @@ class StakeholderEngagement:
         except Exception as e:
             logging.error(f"Portal aktifleştirme hatasi: {e}")
             return ""
-        finally:
-            conn.close()
 
     def verify_portal_access(self, access_token: str) -> Optional[Dict]:
         """Portal token'ı doğrula"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            # Bypass tenant filter for public access
+            rows = self.db.execute_query("""
                 SELECT * FROM stakeholders
                 WHERE portal_access_token = ? AND portal_enabled = 1
             """, (access_token,))
 
-            row = cursor.fetchone()
-            if row:
-                columns = [col[0] for col in cursor.description]
-                return dict(zip(columns, row))
+            if rows:
+                return dict(rows[0])
 
             return None
 
         except Exception as e:
             logging.error(f"Token dogrulama hatasi: {e}")
             return None
-        finally:
-            conn.close()
 
     # =====================================================
     # 2. ONLINE ANKET DAĞITIMI (WEB LINK)
@@ -569,16 +548,13 @@ class StakeholderEngagement:
         Returns:
             Anket web linki
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
             survey_token = secrets.token_urlsafe(16)
             base_url = os.environ.get("SURVEY_BASE_URL", "https://survey.sustainage.com").rstrip("/")
             survey_link = f"{base_url}/{survey_token}"
 
             # Anket kaydet
-            cursor.execute("""
+            survey_id = self.execute_update("""
                 INSERT INTO online_surveys
                 (company_id, survey_title, survey_description, target_groups,
                  survey_link, start_date, end_date, total_questions, survey_type)
@@ -591,10 +567,7 @@ class StakeholderEngagement:
                 (datetime.now() + timedelta(days=duration_days)).date(),
                 len(questions),
                 survey_type
-            ))
-
-            survey_id = cursor.lastrowid
-            conn.commit()
+            ), company_id=company_id)
 
             logging.info(f"[OK] Online anket olusturuldu: {survey_id} (Tip: {survey_type})")
             return survey_link
@@ -602,8 +575,6 @@ class StakeholderEngagement:
         except Exception as e:
             logging.error(f"Anket olusturma hatasi: {e}")
             return ""
-        finally:
-            conn.close()
 
     def create_employee_satisfaction_survey(self, company_id: int, 
                                           title: str = "Çalışan Memnuniyeti Anketi",
@@ -665,43 +636,36 @@ class StakeholderEngagement:
     def submit_survey_response(self, survey_link: str, responses: Dict,
                               stakeholder_id: int = None) -> bool:
         """Anket yanıtını kaydet (external)"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
             if "://" in survey_link:
-                cursor.execute("""
-                    SELECT id FROM online_surveys
-                    WHERE survey_link = ? AND is_active = 1
-                """, (survey_link,))
+                query = "SELECT id FROM online_surveys WHERE survey_link = ? AND is_active = 1"
+                params = (survey_link,)
             else:
-                cursor.execute("""
-                    SELECT id FROM online_surveys
-                    WHERE survey_link LIKE ? AND is_active = 1
-                """, (f"%/{survey_link}",))
+                query = "SELECT id FROM online_surveys WHERE survey_link LIKE ? AND is_active = 1"
+                params = (f"%/{survey_link}",)
 
-            result = cursor.fetchone()
+            # Bypass tenant filter for public survey lookup
+            result = self.db.execute_query(query, params)
             if not result:
                 return False
 
-            survey_id = result[0]
+            survey_id = result[0]['id']
             response_token = secrets.token_urlsafe(16)
 
-            # Yanıtı kaydet
-            cursor.execute("""
+            # Yanıtı kaydet - Bypass tenant filter as survey_responses has no company_id
+            self.db.execute_update("""
                 INSERT INTO survey_responses
                 (survey_id, stakeholder_id, response_token, responses)
                 VALUES (?, ?, ?, ?)
             """, (survey_id, stakeholder_id, response_token, json.dumps(responses)))
 
-            # Yanıt sayısını güncelle
-            cursor.execute("""
+            # Yanıt sayısını güncelle - Bypass tenant filter as we found survey_id already
+            self.db.execute_update("""
                 UPDATE online_surveys
                 SET response_count = response_count + 1
                 WHERE id = ?
             """, (survey_id,))
 
-            conn.commit()
             logging.info(f"[OK] Anket yaniti kaydedildi: {survey_id}")
             
             # Otomatik analiz tetikle
@@ -712,8 +676,6 @@ class StakeholderEngagement:
         except Exception as e:
             logging.error(f"Anket yanit kaydetme hatasi: {e}")
             return False
-        finally:
-            conn.close()
             
     def _update_survey_analytics(self, survey_id: int, new_response: Dict) -> None:
         """
@@ -721,12 +683,9 @@ class StakeholderEngagement:
         Bu fonksiyon, raporlamalarda kullanılacak olan 'sdg_survey_analytics' 
         tablosunu besler.
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
         try:
             # Tablo yoksa oluştur (Basit cache/summary tablosu)
-            cursor.execute("""
+            self.db.execute_update("""
                 CREATE TABLE IF NOT EXISTS sdg_survey_analytics (
                     survey_id INTEGER,
                     sdg_id TEXT,
@@ -746,7 +705,7 @@ class StakeholderEngagement:
                     score = int(value)
                     
                     # Mevcut kaydı kontrol et
-                    cursor.execute("""
+                    self.db.execute_update("""
                         INSERT INTO sdg_survey_analytics (survey_id, sdg_id, total_score, response_count, average_score)
                         VALUES (?, ?, ?, 1, ?)
                         ON CONFLICT(survey_id, sdg_id) DO UPDATE SET
@@ -756,41 +715,35 @@ class StakeholderEngagement:
                         updated_at = CURRENT_TIMESTAMP
                     """, (survey_id, q_id, score, float(score)))
             
-            conn.commit()
             logging.info(f"[OK] Anket analizi guncellendi: Survey {survey_id}")
             
         except Exception as e:
             logging.error(f"Analiz guncelleme hatasi: {e}")
-        finally:
-            conn.close()
 
     def get_sdg_performance_scores(self, company_id: int) -> Dict[str, float]:
         """
         Şirketin SDG performans skorlarını getir.
         Raporlama modülü bu fonksiyonu kullanacak.
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
         scores = {}
         
         try:
-            cursor.execute("""
+            # Explicit company_id in query allows us to use execute_query safely
+            rows = self.execute_query("""
                 SELECT ssa.sdg_id, AVG(ssa.average_score) as final_score
                 FROM sdg_survey_analytics ssa
                 JOIN online_surveys os ON ssa.survey_id = os.id
                 WHERE os.company_id = ? AND os.is_active = 1
                 GROUP BY ssa.sdg_id
-            """, (company_id,))
+            """, (company_id,), company_id=company_id)
             
-            for row in cursor.fetchall():
-                scores[row[0]] = round(row[1], 2)
+            for row in rows:
+                scores[row['sdg_id']] = round(row['final_score'], 2)
                 
             return scores
         except Exception as e:
             logging.error(f"Skor getirme hatasi: {e}")
             return {}
-        finally:
-            conn.close()
 
     # =====================================================
     # 3. GERÇEK ZAMANLI FEEDBACK
@@ -807,20 +760,14 @@ class StakeholderEngagement:
             category: cevre, sosyal, yonetisim, urun
             rating: 1-5 yıldız
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            feedback_id = self.execute_update("""
                 INSERT INTO stakeholder_feedback
                 (company_id, stakeholder_id, feedback_type, feedback_category,
                  feedback_text, rating, status)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
             """, (company_id, stakeholder_id, feedback_type, category,
-                  text, rating, 'yeni'))
-
-            feedback_id = cursor.lastrowid
-            conn.commit()
+                  text, rating, 'yeni'), company_id=company_id)
 
             logging.info(f"[OK] Feedback kaydedildi: {feedback_id}")
             return feedback_id
@@ -828,17 +775,12 @@ class StakeholderEngagement:
         except Exception as e:
             logging.error(f"Feedback kaydetme hatasi: {e}")
             return 0
-        finally:
-            conn.close()
 
     def respond_to_feedback(self, feedback_id: int, responded_by: int,
                            response_text: str) -> bool:
         """Feedback'e yanıt ver"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            self.execute_update("""
                 UPDATE stakeholder_feedback
                 SET status = 'yanitlandi',
                     responded_by = ?,
@@ -847,14 +789,11 @@ class StakeholderEngagement:
                 WHERE id = ?
             """, (responded_by, response_text, feedback_id))
 
-            conn.commit()
             return True
 
         except Exception as e:
             logging.error(f"Yanit verme hatasi: {e}")
             return False
-        finally:
-            conn.close()
 
     # =====================================================
     # 4. TOPLANTI YÖNETİMİ
@@ -871,20 +810,14 @@ class StakeholderEngagement:
             meeting_type: genel_kurul, paydas_toplantisi, odak_grubu, webinar
             participants: Katılımcı email listesi
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            meeting_id = self.execute_update("""
                 INSERT INTO stakeholder_meetings
                 (company_id, meeting_title, meeting_type, meeting_date,
                  location, meeting_link, agenda, participants, status)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (company_id, title, meeting_type, meeting_date.isoformat(),
-                  location, online_link, agenda, json.dumps(participants), 'planlandi'))
-
-            meeting_id = cursor.lastrowid
-            conn.commit()
+                  location, online_link, agenda, json.dumps(participants), 'planlandi'), company_id=company_id)
 
             logging.info(f"[OK] Toplanti planlandi: {meeting_id}")
             return meeting_id
@@ -892,17 +825,12 @@ class StakeholderEngagement:
         except Exception as e:
             logging.error(f"Toplanti planlama hatasi: {e}")
             return 0
-        finally:
-            conn.close()
 
     def add_meeting_minutes(self, meeting_id: int, minutes: str,
                            action_items: List[Dict]) -> bool:
         """Toplantı tutanağı ekle"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            self.execute_update("""
                 UPDATE stakeholder_meetings
                 SET minutes_of_meeting = ?,
                     action_items = ?,
@@ -910,14 +838,11 @@ class StakeholderEngagement:
                 WHERE id = ?
             """, (minutes, json.dumps(action_items), meeting_id))
 
-            conn.commit()
             return True
 
         except Exception as e:
             logging.error(f"Tutanak ekleme hatasi: {e}")
             return False
-        finally:
-            conn.close()
 
     # =====================================================
     # 5. EYLEM PLANI TAKİBİ (COMMITMENT TRACKING)
@@ -936,20 +861,14 @@ class StakeholderEngagement:
             responsible: Sorumlu kişi/birim
             target_group: Hedef paydaş grubu
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            commitment_id = self.execute_update("""
                 INSERT INTO stakeholder_commitments
                 (company_id, meeting_id, commitment_title, commitment_description,
                  responsible_person, target_stakeholder_group, due_date, priority, status)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (company_id, meeting_id, title, description, responsible,
-                  target_group, due_date.date(), priority, 'acik'))
-
-            commitment_id = cursor.lastrowid
-            conn.commit()
+                  target_group, due_date.date(), priority, 'acik'), company_id=company_id)
 
             logging.info(f"[OK] Taahhut olusturuldu: {commitment_id}")
             return commitment_id
@@ -957,19 +876,14 @@ class StakeholderEngagement:
         except Exception as e:
             logging.error(f"Taahhut olusturma hatasi: {e}")
             return 0
-        finally:
-            conn.close()
 
     def update_commitment_progress(self, commitment_id: int,
                                   progress: int, notes: str = "") -> bool:
         """Taahhüt ilerlemesini güncelle"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
             status = 'tamamlandi' if progress >= 100 else 'devam_ediyor' if progress > 0 else 'acik'
 
-            cursor.execute("""
+            self.execute_update("""
                 UPDATE stakeholder_commitments
                 SET progress_percentage = ?,
                     status = ?,
@@ -978,20 +892,14 @@ class StakeholderEngagement:
                 WHERE id = ?
             """, (progress, status, notes, progress, commitment_id))
 
-            conn.commit()
             return True
 
         except Exception as e:
             logging.error(f"Ilerleme guncelleme hatasi: {e}")
             return False
-        finally:
-            conn.close()
 
     def get_commitment_summary(self, company_id: int) -> Dict:
         """Taahhüt özeti"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
             summary = {
                 "total_commitments": 0,
@@ -1002,14 +910,14 @@ class StakeholderEngagement:
                 "average_progress": 0.0
             }
 
-            cursor.execute("""
+            rows = self.execute_query("""
                 SELECT status, COUNT(*), AVG(progress_percentage)
                 FROM stakeholder_commitments
                 WHERE company_id = ?
                 GROUP BY status
-            """, (company_id,))
+            """, (company_id,), company_id=company_id)
 
-            for row in cursor.fetchall():
+            for row in rows:
                 summary["total_commitments"] += row[1]
                 if row[0] == 'acik':
                     summary["open"] = row[1]
@@ -1019,30 +927,27 @@ class StakeholderEngagement:
                     summary["completed"] = row[1]
 
             # Genel ortalama ilerleme
-            cursor.execute("""
+            result = self.execute_query("""
                 SELECT AVG(progress_percentage) FROM stakeholder_commitments
                 WHERE company_id = ?
-            """, (company_id,))
+            """, (company_id,), company_id=company_id)
 
-            result = cursor.fetchone()
-            summary["average_progress"] = round(result[0], 1) if result[0] else 0.0
+            summary["average_progress"] = round(result[0][0], 1) if result and result[0][0] else 0.0
 
             # Vadesi geçenler
-            cursor.execute("""
+            overdue_res = self.execute_query("""
                 SELECT COUNT(*) FROM stakeholder_commitments
                 WHERE company_id = ? AND due_date < DATE('now')
                 AND status != 'tamamlandi'
-            """, (company_id,))
+            """, (company_id,), company_id=company_id)
 
-            summary["overdue"] = cursor.fetchone()[0]
+            summary["overdue"] = overdue_res[0][0] if overdue_res else 0
 
             return summary
 
         except Exception as e:
             logging.error(f"Ozet hesaplama hatasi: {e}")
             return summary
-        finally:
-            conn.close()
 
     # =====================================================
     # 6. YARDIMCI FONKSİYONLAR
@@ -1051,9 +956,6 @@ class StakeholderEngagement:
     def get_stakeholder_engagement_score(self, company_id: int) -> Dict:
         """Paydaş etkileşim skoru hesapla"""
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-
             score_data = {
                 "total_stakeholders": 0,
                 "portal_enabled": 0,
@@ -1064,20 +966,20 @@ class StakeholderEngagement:
             }
 
             # Toplam paydaş
-            cursor.execute("SELECT COUNT(*) FROM stakeholders WHERE company_id = ?", (company_id,))
-            score_data["total_stakeholders"] = cursor.fetchone()[0]
+            rows = self.execute_query("SELECT COUNT(*) FROM stakeholders WHERE company_id = ?", (company_id,), company_id=company_id)
+            score_data["total_stakeholders"] = rows[0][0] if rows else 0
 
             # Portal kullanımı
-            cursor.execute("SELECT COUNT(*) FROM stakeholders WHERE company_id = ? AND portal_enabled = 1", (company_id,))
-            score_data["portal_enabled"] = cursor.fetchone()[0]
+            rows = self.execute_query("SELECT COUNT(*) FROM stakeholders WHERE company_id = ? AND portal_enabled = 1", (company_id,), company_id=company_id)
+            score_data["portal_enabled"] = rows[0][0] if rows else 0
 
             # Anket katılımı
-            cursor.execute("""
+            rows = self.execute_query("""
                 SELECT AVG(response_count * 100.0 / total_questions)
                 FROM online_surveys WHERE company_id = ?
-            """, (company_id,))
-            result = cursor.fetchone()
-            score_data["survey_participation"] = round(result[0], 1) if result[0] else 0.0
+            """, (company_id,), company_id=company_id)
+            result = rows[0] if rows else None
+            score_data["survey_participation"] = round(result[0], 1) if result and result[0] else 0.0
 
             # Taahhüt tamamlanma
             commitment_summary = self.get_commitment_summary(company_id)
@@ -1091,7 +993,6 @@ class StakeholderEngagement:
             )
             score_data["overall_score"] = round(overall, 1)
 
-            conn.close()
             return score_data
 
         except Exception as e:
@@ -1107,96 +1008,68 @@ class StakeholderEngagement:
                              content_type: str = "video",
                              target_groups: List[str] = []) -> int:
         """Eğitim materyali ekle"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
         try:
-            cursor.execute("""
+            material_id = self.execute_update("""
                 INSERT INTO training_materials
                 (company_id, title, description, content_type, content_url, target_groups)
                 VALUES (?, ?, ?, ?, ?, ?)
-            """, (company_id, title, description, content_type, content_url, json.dumps(target_groups)))
+            """, (company_id, title, description, content_type, content_url, json.dumps(target_groups)), company_id=company_id)
             
-            material_id = cursor.lastrowid
-            conn.commit()
             return material_id
         except Exception as e:
             logging.error(f"Egitim ekleme hatasi: {e}")
             return 0
-        finally:
-            conn.close()
 
     def assign_training(self, material_id: int, stakeholder_id: int) -> bool:
         """Paydaşa eğitim ata"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
         try:
-            cursor.execute("""
+            self.db.execute_update("""
                 INSERT OR IGNORE INTO stakeholder_training_progress
                 (stakeholder_id, material_id, status)
                 VALUES (?, ?, 'assigned')
             """, (stakeholder_id, material_id))
-            conn.commit()
             return True
         except Exception as e:
             logging.error(f"Egitim atama hatasi: {e}")
             return False
-        finally:
-            conn.close()
 
     def update_training_status(self, stakeholder_id: int, material_id: int,
                               status: str, progress: int = 0) -> bool:
         """Eğitim durumunu güncelle"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
         try:
             completed_at = datetime.now() if status == 'completed' or progress >= 100 else None
-            cursor.execute("""
+            self.db.execute_update("""
                 UPDATE stakeholder_training_progress
                 SET status = ?, progress_percentage = ?, completed_at = ?
                 WHERE stakeholder_id = ? AND material_id = ?
             """, (status, progress, completed_at, stakeholder_id, material_id))
-            conn.commit()
             return True
         except Exception as e:
             logging.error(f"Egitim guncelleme hatasi: {e}")
             return False
-        finally:
-            conn.close()
 
     def get_training_materials(self, company_id: int) -> List[Dict]:
         """Eğitim materyallerini listele"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
         try:
-            cursor.execute("SELECT * FROM training_materials WHERE company_id = ? AND is_active = 1", (company_id,))
-            rows = cursor.fetchall()
-            cols = [c[0] for c in cursor.description]
-            return [dict(zip(cols, row)) for row in rows]
+            rows = self.execute_query("SELECT * FROM training_materials WHERE company_id = ? AND is_active = 1", (company_id,), company_id=company_id)
+            return [dict(row) for row in rows]
         except Exception as e:
             logging.error(f"Egitim listeleme hatasi: {e}")
             return []
-        finally:
-            conn.close()
 
     def get_stakeholder_trainings(self, stakeholder_id: int) -> List[Dict]:
         """Paydaşın eğitimlerini listele"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
         try:
-            cursor.execute("""
+            rows = self.db.execute_query("""
                 SELECT tm.title, tm.content_type, tm.content_url, stp.*
                 FROM stakeholder_training_progress stp
                 JOIN training_materials tm ON stp.material_id = tm.id
                 WHERE stp.stakeholder_id = ?
             """, (stakeholder_id,))
-            rows = cursor.fetchall()
-            cols = [c[0] for c in cursor.description]
-            return [dict(zip(cols, row)) for row in rows]
+            return [dict(row) for row in rows]
         except Exception as e:
             logging.error(f"Paydas egitim listeleme hatasi: {e}")
             return []
-        finally:
-            conn.close()
 
     def get_employee_satisfaction_questions(self) -> List[Dict]:
         return list(self.EMPLOYEE_SATISFACTION_QUESTIONS)

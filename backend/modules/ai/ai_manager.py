@@ -7,36 +7,43 @@ AI Manager - OpenAI entegrasyonu ve rapor olusturma
 import logging
 import json
 import os
-import sqlite3
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
 try:
     from backend.core.language_manager import LanguageManager
+    from backend.core.base_manager import BaseTenantManager
+    from backend.modules.reporting.advanced_report_manager import AdvancedReportManager
+    from backend.modules.ai.prompts import get_prompt
+    from backend.config.database import DB_PATH
+    from backend.modules.ai.report_validator import ReportValidator
 except ImportError:
-    try:
-        from core.language_manager import LanguageManager
-    except ImportError:
-        class LanguageManager:
-            def __init__(self, base_dir=None): pass
-            def get_text(self, key, lang=None, default=None): return default or key
+    # Fallback for local testing or different path structure
+    import sys
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
+    if base_dir not in sys.path:
+        sys.path.append(base_dir)
+    from backend.core.language_manager import LanguageManager
+    from backend.core.base_manager import BaseTenantManager
+    from backend.modules.reporting.advanced_report_manager import AdvancedReportManager
+    from backend.modules.ai.prompts import get_prompt
+    from backend.config.database import DB_PATH
+    from backend.modules.ai.report_validator import ReportValidator
 
-from modules.reporting.advanced_report_manager import AdvancedReportManager
-from modules.ai.prompts import get_prompt
-from config.database import DB_PATH
-from modules.ai.report_validator import ReportValidator
 
-
-class AIManager:
+class AIManager(BaseTenantManager):
     """AI islemlerini yoneten sinif"""
 
-    def __init__(self, db_path: str = DB_PATH):
+    def __init__(self, db_path: str = DB_PATH, company_id: Optional[int] = None):
+        super().__init__(db_path, company_id)
+        
         if not os.path.isabs(db_path):
             base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
-            db_path = os.path.join(base_dir, db_path)
-
-        self.db_path = db_path
-        self.base_dir = os.path.dirname(os.path.dirname(db_path))
+            self.db_path = os.path.join(base_dir, db_path)
+        else:
+            self.db_path = db_path
+            
+        self.base_dir = os.path.dirname(os.path.dirname(self.db_path))
         
         # Initialize LanguageManager
         try:
@@ -67,11 +74,8 @@ class AIManager:
     def _init_ai_tables(self):
         """AI log ve feedback tablolarini olustur"""
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-            
             # AI Logs
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS ai_logs (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER,
@@ -85,7 +89,7 @@ class AIManager:
             """)
             
             # AI Feedback
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS ai_feedback (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     log_id INTEGER,
@@ -96,9 +100,6 @@ class AIManager:
                     FOREIGN KEY (log_id) REFERENCES ai_logs(id)
                 )
             """)
-            
-            conn.commit()
-            conn.close()
         except Exception as e:
             logging.error(f"AI tables init error: {e}")
 
@@ -210,13 +211,12 @@ class AIManager:
             year = datetime.now().year
         snapshot["period"] = {"year": year, "label": str(reporting_period)}
         try:
-            conn = sqlite3.connect(self.db_path)
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
             company_info: Dict[str, Any] = {}
             try:
-                cursor.execute("PRAGMA table_info(companies)")
-                cols = [row[1] for row in cursor.fetchall()]
+                # Get table info to check available columns
+                cols_rows = self.execute_query("PRAGMA table_info(companies)", (), company_id=company_id)
+                cols = [row['name'] for row in cols_rows]
+                
                 if cols:
                     base_cols: List[str] = []
                     for name in ["id", "name", "sector", "industry", "country"]:
@@ -224,17 +224,17 @@ class AIManager:
                             base_cols.append(name)
                     if base_cols:
                         query = "SELECT " + ",".join(base_cols) + " FROM companies WHERE id = ?"
-                        cursor.execute(query, (company_id,))
-                        row = cursor.fetchone()
-                        if row:
-                            for idx, name in enumerate(base_cols):
-                                company_info[name] = row[idx]
+                        rows = self.execute_query(query, (company_id,), company_id=company_id)
+                        if rows:
+                            row = rows[0]
+                            for name in base_cols:
+                                company_info[name] = row[name]
             except Exception as e:
                 logging.error(f"Unified KPI snapshot company read error: {e}")
             snapshot["company"] = company_info
-            conn.close()
         except Exception as e:
             logging.error(f"Unified KPI snapshot connection error: {e}")
+            
         modules = selected_modules or []
         try:
             sdg_kpis = self._export_sdg_kpis(company_id)
@@ -303,7 +303,7 @@ class AIManager:
         except Exception as e:
             logging.error(f"Unified KPI snapshot social export error: {e}")
         try:
-            from modules.mapping.mapping_manager import MappingManager
+            from backend.modules.mapping.mapping_manager import MappingManager
             mapping_manager = MappingManager(self.db_path)
             mappings = mapping_manager.get_all_mappings({"verified_only": True})
             snapshot["alignments"]["standard_mappings"] = mappings
@@ -324,7 +324,7 @@ class AIManager:
 
     def _export_sdg_kpis(self, company_id: int) -> List[Dict[str, Any]]:
         try:
-            from modules.sdg.sdg_data_validation import SDGDataValidation
+            from backend.modules.sdg.sdg_data_validation import SDGDataValidation
         except ImportError:
             return []
         validator = SDGDataValidation(self.db_path)
@@ -334,19 +334,23 @@ class AIManager:
         kpis: List[Dict[str, Any]] = []
         goal_titles: Dict[int, Dict[str, Any]] = {}
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
             try:
-                cursor.execute("SELECT id, code, title_tr FROM sdg_goals")
-                for row in cursor.fetchall():
+                # sdg_goals is global, but we should pass company_id context for consistency or handle safely
+                # BaseTenantManager.execute_query handles GLOBAL_TABLES logic
+                rows = self.execute_query("SELECT id, code, title_tr FROM sdg_goals", (), company_id=company_id)
+                for row in rows:
                     try:
-                        num = int(str(row[1]))
-                        goal_titles[num] = {"code": row[1], "title": row[2]}
+                        num = int(str(row['id'])) # Assuming id is what we want, or code? code is row[1] in original.
+                        # Original: num = int(str(row[1])) -> row['code']
+                        # But wait, original SQL: SELECT id, code, title_tr. row[1] is code.
+                        # row[0] is id.
+                        # Let's check what code is. Usually SDG numbers.
+                        num = int(str(row['code']))
+                        goal_titles[num] = {"code": row['code'], "title": row['title_tr']}
                     except Exception:
                         continue
             except Exception:
                 pass
-            conn.close()
         except Exception as e:
             logging.error(f"Unified KPI snapshot SDG goal titles error: {e}")
         for sdg_no, scores in scores_by_sdg.items():
@@ -381,7 +385,7 @@ class AIManager:
 
     def _export_gri_kpis(self, company_id: int) -> List[Dict[str, Any]]:
         try:
-            from modules.gri.gri_kpi_reports import GRIKPIReports
+            from backend.modules.gri.gri_kpi_reports import GRIKPIReports
         except ImportError:
             return []
         reports = GRIKPIReports(self.db_path)
@@ -426,7 +430,7 @@ class AIManager:
 
     def _export_tsrs_kpis(self, company_id: int, reporting_period: str) -> List[Dict[str, Any]]:
         try:
-            from modules.tsrs.tsrs_manager import TSRSManager
+            from backend.modules.tsrs.tsrs_manager import TSRSManager
         except ImportError:
             return []
         manager = TSRSManager(self.db_path)
@@ -469,7 +473,7 @@ class AIManager:
 
     def _export_csrd_kpis(self, company_id: int, year: int) -> List[Dict[str, Any]]:
         try:
-            from modules.csrd.csrd_compliance_manager import CSRDComplianceManager
+            from backend.modules.csrd.csrd_compliance_manager import CSRDComplianceManager
         except ImportError:
             return []
         manager = CSRDComplianceManager(self.db_path)
@@ -615,7 +619,7 @@ class AIManager:
 
     def _export_issb_kpis(self, company_id: int, year: int) -> List[Dict[str, Any]]:
         try:
-            from modules.issb.issb_manager import ISSBManager
+            from backend.modules.issb.issb_manager import ISSBManager
         except ImportError:
             return []
         manager = ISSBManager(self.db_path)
@@ -648,15 +652,15 @@ class AIManager:
 
     def _export_carbon_kpis(self, company_id: int, year: int) -> List[Dict[str, Any]]:
         try:
-            from modules.environmental.carbon_manager import CarbonManager
+            from backend.modules.environmental.carbon_calculator import CarbonCalculator
         except ImportError:
             return []
-        manager = CarbonManager(self.db_path)
-        footprint = manager.get_total_carbon_footprint(company_id, year)
+        manager = CarbonCalculator(self.db_path)
+        footprint = manager.get_company_summary(company_id, year)
         if not footprint:
             return []
         kpis: List[Dict[str, Any]] = []
-        total = footprint.get("total_footprint")
+        total = footprint.get("total_ton")
         if total is not None:
             kpis.append(
                 {
@@ -670,17 +674,17 @@ class AIManager:
                     "direction": "lower_is_better",
                     "mappings": {},
                     "meta": {
-                        "scope1_total": footprint.get("scope1_total"),
-                        "scope2_total": footprint.get("scope2_total"),
-                        "scope3_total": footprint.get("scope3_total"),
+                        "scope1_total": footprint.get("scope1_ton"),
+                        "scope2_total": footprint.get("scope2_ton"),
+                        "scope3_total": footprint.get("scope3_ton"),
                         "company_id": company_id,
                     },
                 }
             )
         for key, scope_code, scope_name in [
-            ("scope1_total", "SCOPE1", "Scope 1 emisyonları"),
-            ("scope2_total", "SCOPE2", "Scope 2 emisyonları"),
-            ("scope3_total", "SCOPE3", "Scope 3 emisyonları"),
+            ("scope1_ton", "SCOPE1", "Scope 1 emisyonları"),
+            ("scope2_ton", "SCOPE2", "Scope 2 emisyonları"),
+            ("scope3_ton", "SCOPE3", "Scope 3 emisyonları"),
         ]:
             value = footprint.get(key)
             if value is None:
@@ -705,7 +709,7 @@ class AIManager:
 
     def _export_energy_kpis(self, company_id: int) -> List[Dict[str, Any]]:
         try:
-            from modules.environmental.energy_manager import EnergyManager
+            from backend.modules.environmental.energy_manager import EnergyManager
         except ImportError:
             return []
         manager = EnergyManager(self.db_path)
@@ -754,7 +758,7 @@ class AIManager:
 
     def _export_water_kpis(self, company_id: int, year: int) -> List[Dict[str, Any]]:
         try:
-            from modules.environmental.water_manager import WaterManager
+            from backend.modules.environmental.water_manager import WaterManager
         except ImportError:
             return []
         manager = WaterManager(self.db_path)
@@ -814,7 +818,7 @@ class AIManager:
 
     def _export_waste_kpis(self, company_id: int, year: Optional[int]) -> List[Dict[str, Any]]:
         try:
-            from modules.environmental.waste_manager import WasteManager
+            from backend.modules.environmental.waste_manager import WasteManager
         except ImportError:
             return []
         manager = WasteManager(self.db_path)
@@ -859,7 +863,7 @@ class AIManager:
 
     def _export_supply_chain_kpis(self, company_id: int) -> List[Dict[str, Any]]:
         try:
-            from modules.supply_chain.supply_chain_manager import SupplyChainManager
+            from backend.modules.supply_chain.supply_chain_manager import SupplyChainManager
         except ImportError:
             return []
         manager = SupplyChainManager(self.db_path)
@@ -899,7 +903,7 @@ class AIManager:
 
     def _export_social_kpis(self, company_id: int, year: int) -> List[Dict[str, Any]]:
         try:
-            from modules.social.social_manager import SocialManager
+            from backend.modules.social.social_manager import SocialManager
         except ImportError:
             return []
         manager = SocialManager(self.db_path)
@@ -1028,15 +1032,16 @@ class AIManager:
             # Log to DB
             log_id = None
             try:
-                conn = sqlite3.connect(self.db_path)
-                cursor = conn.cursor()
-                cursor.execute("""
-                    INSERT INTO ai_logs (company_id, module, prompt, response, model, tokens)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                """, (data.get('company_id'), report_type, prompt, content, self.model, response.usage.total_tokens))
-                log_id = cursor.lastrowid
-                conn.commit()
-                conn.close()
+                log_data = {
+                    "company_id": data.get('company_id'),
+                    "module": report_type,
+                    "prompt": prompt,
+                    "response": content,
+                    "model": self.model,
+                    "tokens": response.usage.total_tokens
+                }
+                # Use insert method from BaseTenantManager
+                log_id = self.insert("ai_logs", log_data, company_id=data.get('company_id'))
             except Exception as e:
                 logging.error(f"AI logging error: {e}")
 
@@ -1048,14 +1053,12 @@ class AIManager:
     def submit_feedback(self, log_id: int, rating: int, comment: str, user_id: Optional[int] = None) -> bool:
         """Kullanici geri bildirimi kaydet"""
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-            cursor.execute("""
-                INSERT INTO ai_feedback (log_id, rating, comment, user_id)
-                VALUES (?, ?, ?, ?)
-            """, (log_id, rating, comment, user_id))
-            conn.commit()
-            conn.close()
+            self.insert("ai_feedback", {
+                "log_id": log_id,
+                "rating": rating,
+                "comment": comment,
+                "user_id": user_id
+            })
             return True
         except Exception as e:
             logging.error(f"AI feedback error: {e}")

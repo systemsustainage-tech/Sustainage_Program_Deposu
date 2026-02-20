@@ -9,27 +9,28 @@ import logging
 import os
 import sqlite3
 from datetime import datetime
-from typing import Dict
+from typing import Dict, Optional
+try:
+    from backend.core.base_manager import BaseTenantManager
+except ImportError:
+    from core.base_manager import BaseTenantManager
 from config.database import DB_PATH
 
 
-class SSOManager:
+class SSOManager(BaseTenantManager):
     """SSO yönetimi ve kimlik doğrulama"""
 
-    def __init__(self, db_path: str = DB_PATH) -> None:
+    def __init__(self, db_path: str = DB_PATH, company_id: Optional[int] = None) -> None:
         if not os.path.isabs(db_path):
             base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
             db_path = os.path.join(base_dir, db_path)
-        self.db_path = db_path
+        super().__init__(db_path, company_id)
         self._init_db_tables()
 
     def _init_db_tables(self) -> None:
         """SSO yönetimi tablolarını oluştur"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS sso_providers (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -43,9 +44,9 @@ class SSOManager:
                     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (company_id) REFERENCES companies(id)
                 )
-            """)
+            """, skip_tenant_filter=True)
 
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS sso_sessions (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -59,9 +60,9 @@ class SSOManager:
                     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (company_id) REFERENCES companies(id)
                 )
-            """)
+            """, skip_tenant_filter=True)
 
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS sso_logs (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -76,32 +77,29 @@ class SSOManager:
                     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (company_id) REFERENCES companies(id)
                 )
-            """)
-
-            conn.commit()
+            """, skip_tenant_filter=True)
+            
             logging.info("[OK] SSO yonetimi modulu tablolari basariyla olusturuldu")
 
         except Exception as e:
             logging.error(f"[HATA] SSO yonetimi modulu tablo olusturma: {e}")
-            conn.rollback()
-        finally:
-            conn.close()
 
     def add_sso_provider(self, company_id: int, provider_name: str, provider_type: str,
                         client_id: str = None, client_secret: str = None,
                         redirect_uri: str = None, scope: str = None) -> bool:
         """SSO sağlayıcısı ekle"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            self.execute_update("""
                 INSERT INTO sso_providers 
                 (company_id, provider_name, provider_type, client_id, client_secret,
                  redirect_uri, scope)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
             """, (company_id, provider_name, provider_type, client_id, client_secret,
                   redirect_uri, scope))
+            return True
+        except Exception as e:
+            logging.error(f"[HATA] SSO provider ekleme: {e}")
+            return False
 
             conn.commit()
             return True

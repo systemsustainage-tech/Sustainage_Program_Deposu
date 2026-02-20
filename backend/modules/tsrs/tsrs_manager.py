@@ -13,31 +13,16 @@ from typing import Dict, List, Optional
 from config.database import DB_PATH
 
 
-class TSRSManager:
+from backend.core.base_manager import BaseTenantManager
+
+class TSRSManager(BaseTenantManager):
     """TSRS modülü yöneticisi"""
 
-    def __init__(self, db_path: str = DB_PATH) -> None:
-        # db_path göreli ise proje köküne (repo kökü) göre mutlak hale getir
-        if not os.path.isabs(db_path):
-            repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-            db_path = os.path.join(repo_root, db_path)
-        # Veritabanı klasörü yoksa oluştur
-        db_dir = os.path.dirname(db_path)
-        try:
-            os.makedirs(db_dir, exist_ok=True)
-        except Exception as e:
-            logging.error(f"Silent error caught: {str(e)}")
-        self.db_path = db_path
-
-    def get_connection(self) -> sqlite3.Connection:
-        """Veritabanı bağlantısı"""
-        return sqlite3.connect(self.db_path)
+    def __init__(self, db_path: str = DB_PATH, company_id: Optional[int] = None) -> None:
+        super().__init__(db_path, company_id)
 
     def create_tables(self) -> bool:
         """TSRS tablolarını oluştur"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
             # TSRS şema dosyasını oku ve çalıştır
             schema_file = os.path.join(os.path.dirname(__file__), 'tsrs_schema.sql')
@@ -45,206 +30,146 @@ class TSRSManager:
                 schema_sql = f.read()
 
             # SQL komutlarını çalıştır
-            cursor.executescript(schema_sql)
-            conn.commit()
+            self.db.execute_script(schema_sql)
             logging.info("TSRS tabloları başarıyla oluşturuldu")
             return True
 
         except Exception as e:
             logging.error(f"TSRS tabloları oluşturulurken hata: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
     def get_tsrs_standards(self, category: Optional[str] = None) -> List[Dict]:
         """TSRS standartlarını getir"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
             if category:
-                cursor.execute("""
+                query = """
                     SELECT id, code, title, description, category, subcategory, 
                            requirement_level, reporting_frequency, effective_date
                     FROM tsrs_standards 
                     WHERE category = ?
                     ORDER BY code
-                """, (category,))
+                """
+                return self.execute_query(query, (category,), skip_tenant_filter=True)
             else:
-                cursor.execute("""
+                query = """
                     SELECT id, code, title, description, category, subcategory, 
                            requirement_level, reporting_frequency, effective_date
                     FROM tsrs_standards 
                     ORDER BY category, code
-                """)
-
-            columns = [description[0] for description in cursor.description]
-            standards = []
-
-            for row in cursor.fetchall():
-                standard = dict(zip(columns, row))
-                standards.append(standard)
-
-            return standards
+                """
+                return self.execute_query(query, skip_tenant_filter=True)
 
         except Exception as e:
             logging.error(f"TSRS standartları getirilirken hata: {e}")
             return []
-        finally:
-            conn.close()
 
     def get_tsrs_indicators(self) -> List[Dict]:
         """Tüm TSRS göstergelerini getir"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            query = """
                 SELECT i.id, i.code, i.title, i.description, i.unit, i.methodology,
                        i.data_type, i.is_mandatory, i.is_quantitative, 
                        i.baseline_year, i.target_year, i.standard_id
                 FROM tsrs_indicators i
                 ORDER BY i.code
-            """)
-
-            columns = [description[0] for description in cursor.description]
-            indicators = []
-
-            for row in cursor.fetchall():
-                indicator = dict(zip(columns, row))
-                indicators.append(indicator)
-
-            return indicators
+            """
+            return self.execute_query(query, skip_tenant_filter=True)
 
         except Exception as e:
             logging.error(f"TSRS göstergeleri getirilirken hata: {e}")
             return []
-        finally:
-            conn.close()
 
     def get_tsrs_indicators_by_standard(self, standard_id: int) -> List[Dict]:
         """Belirli bir standart için göstergeleri getir"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            query = """
                 SELECT i.id, i.code, i.title, i.description, i.unit, i.methodology,
                        i.data_type, i.is_mandatory, i.is_quantitative, 
                        i.baseline_year, i.target_year
                 FROM tsrs_indicators i
                 WHERE i.standard_id = ?
                 ORDER BY i.code
-            """, (standard_id,))
-
-            columns = [description[0] for description in cursor.description]
-            indicators = []
-
-            for row in cursor.fetchall():
-                indicator = dict(zip(columns, row))
-                indicators.append(indicator)
-
-            return indicators
+            """
+            return self.execute_query(query, (standard_id,), skip_tenant_filter=True)
 
         except Exception as e:
             logging.error(f"TSRS göstergeleri getirilirken hata: {e}")
             return []
-        finally:
-            conn.close()
 
     def get_tsrs_categories(self) -> List[str]:
         """TSRS kategorilerini getir"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            query = """
                 SELECT DISTINCT category 
                 FROM tsrs_standards 
                 ORDER BY category
-            """)
-
-            return [row[0] for row in cursor.fetchall()]
+            """
+            results = self.execute_query(query, skip_tenant_filter=True)
+            return [row['category'] for row in results]
 
         except Exception as e:
             logging.error(f"TSRS kategorileri getirilirken hata: {e}")
             return []
-        finally:
-            conn.close()
 
     def save_tsrs_response(self, company_id: int, indicator_id: int,
                           reporting_period: str, response_data: Dict) -> bool:
         """TSRS yanıtını kaydet"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
             # Mevcut yanıtı kontrol et
-            cursor.execute("""
-                SELECT id FROM tsrs_responses 
-                WHERE company_id = ? AND indicator_id = ? AND reporting_period = ?
-            """, (company_id, indicator_id, reporting_period))
-
-            existing = cursor.fetchone()
+            existing = self.select_one(
+                "tsrs_responses", 
+                company_id=company_id,
+                columns="id",
+                where="indicator_id = ? AND reporting_period = ?",
+                params=(indicator_id, reporting_period)
+            )
 
             if existing:
                 # Güncelle
-                cursor.execute("""
-                    UPDATE tsrs_responses SET
-                        response_value = ?, numerical_value = ?, unit = ?,
-                        methodology_used = ?, data_source = ?, reporting_status = ?,
-                        evidence_url = ?, notes = ?, updated_at = ?
-                    WHERE id = ?
-                """, (
-                    response_data.get('response_value'),
-                    response_data.get('numerical_value'),
-                    response_data.get('unit'),
-                    response_data.get('methodology_used'),
-                    response_data.get('data_source'),
-                    response_data.get('reporting_status', 'Draft'),
-                    response_data.get('evidence_url'),
-                    response_data.get('notes'),
-                    datetime.now().isoformat(),
-                    existing[0]
-                ))
+                update_data = {
+                    'response_value': response_data.get('response_value'),
+                    'numerical_value': response_data.get('numerical_value'),
+                    'unit': response_data.get('unit'),
+                    'methodology_used': response_data.get('methodology_used'),
+                    'data_source': response_data.get('data_source'),
+                    'reporting_status': response_data.get('reporting_status', 'Draft'),
+                    'evidence_url': response_data.get('evidence_url'),
+                    'notes': response_data.get('notes'),
+                    'updated_at': datetime.now().isoformat()
+                }
+                self.update(
+                    "tsrs_responses", 
+                    update_data, 
+                    company_id=company_id,
+                    where="id = ?", 
+                    params=(existing['id'],)
+                )
             else:
                 # Yeni kayıt
-                cursor.execute("""
-                    INSERT INTO tsrs_responses 
-                    (company_id, indicator_id, reporting_period, response_value, 
-                     numerical_value, unit, methodology_used, data_source, 
-                     reporting_status, evidence_url, notes, created_at, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, (
-                    company_id, indicator_id, reporting_period,
-                    response_data.get('response_value'),
-                    response_data.get('numerical_value'),
-                    response_data.get('unit'),
-                    response_data.get('methodology_used'),
-                    response_data.get('data_source'),
-                    response_data.get('reporting_status', 'Draft'),
-                    response_data.get('evidence_url'),
-                    response_data.get('notes'),
-                    datetime.now().isoformat(),
-                    datetime.now().isoformat()
-                ))
+                insert_data = {
+                    'indicator_id': indicator_id,
+                    'reporting_period': reporting_period,
+                    'response_value': response_data.get('response_value'),
+                    'numerical_value': response_data.get('numerical_value'),
+                    'unit': response_data.get('unit'),
+                    'methodology_used': response_data.get('methodology_used'),
+                    'data_source': response_data.get('data_source'),
+                    'reporting_status': response_data.get('reporting_status', 'Draft'),
+                    'evidence_url': response_data.get('evidence_url'),
+                    'notes': response_data.get('notes'),
+                    'created_at': datetime.now().isoformat(),
+                    'updated_at': datetime.now().isoformat()
+                }
+                self.insert("tsrs_responses", insert_data, company_id=company_id)
 
-            conn.commit()
             return True
 
         except Exception as e:
             logging.error(f"TSRS yanıtı kaydedilirken hata: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
     def get_tsrs_esrs_mappings(self, tsrs_indicator_id: Optional[int] = None) -> List[Dict]:
         """TSRS-ESRS eşleştirmelerini getir"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
             query = """
                 SELECT m.id, m.tsrs_indicator_id, m.esrs_code, m.relationship_type, m.description,
@@ -260,39 +185,25 @@ class TSRSManager:
             
             query += " ORDER BY m.esrs_code"
 
-            cursor.execute(query, params)
-            columns = [description[0] for description in cursor.description]
-            mappings = []
-
-            for row in cursor.fetchall():
-                mappings.append(dict(zip(columns, row)))
-
-            return mappings
+            return self.execute_query(query, tuple(params), skip_tenant_filter=True)
 
         except Exception as e:
             logging.error(f"TSRS-ESRS eşleştirmeleri getirilirken hata: {e}")
             return []
-        finally:
-            conn.close()
 
     def add_tsrs_esrs_mapping(self, tsrs_indicator_id: int, esrs_code: str, 
                              relationship_type: str = 'Direct', description: str = '') -> bool:
         """TSRS-ESRS eşleştirmesi ekle"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            query = """
                 INSERT INTO map_tsrs_esrs (tsrs_indicator_id, esrs_code, relationship_type, description)
                 VALUES (?, ?, ?, ?)
-            """, (tsrs_indicator_id, esrs_code, relationship_type, description))
-            conn.commit()
+            """
+            self.execute_update(query, (tsrs_indicator_id, esrs_code, relationship_type, description), skip_tenant_filter=True)
             return True
         except Exception as e:
             logging.error(f"TSRS-ESRS eşleştirmesi eklenirken hata: {e}")
             return False
-        finally:
-            conn.close()
 
     def add_tsrs_risk(self, company_id: int, standard_id: int,
                        risk_title: str, risk_description: Optional[str],
@@ -301,42 +212,33 @@ class TSRSManager:
                        responsible_person: Optional[str], target_date: Optional[str],
                        status: str) -> bool:
         """TSRS risk kaydı ekle (tsrs_risks tablosu)"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
-            cursor.execute(
-                """
-                INSERT INTO tsrs_risks (
-                    company_id, standard_id, risk_title, risk_description, risk_category,
-                    probability, impact, risk_level, mitigation_strategy,
-                    responsible_person, target_date, status, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    company_id, standard_id, risk_title, risk_description, risk_category,
-                    probability, impact, risk_level, mitigation_strategy,
-                    responsible_person, target_date, status,
-                    datetime.now().isoformat(), datetime.now().isoformat()
-                )
-            )
-            conn.commit()
+            data = {
+                'standard_id': standard_id,
+                'risk_title': risk_title,
+                'risk_description': risk_description,
+                'risk_category': risk_category,
+                'probability': probability,
+                'impact': impact,
+                'risk_level': risk_level,
+                'mitigation_strategy': mitigation_strategy,
+                'responsible_person': responsible_person,
+                'target_date': target_date,
+                'status': status,
+                'created_at': datetime.now().isoformat(),
+                'updated_at': datetime.now().isoformat()
+            }
+            self.insert("tsrs_risks", data, company_id=company_id)
             return True
         except Exception as e:
             logging.error(f"TSRS risk kaydı eklenirken hata: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
     def get_tsrs_responses(self, company_id: int, reporting_period: Optional[str] = None) -> List[Dict]:
         """Şirket için TSRS yanıtlarını getir"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
             if reporting_period:
-                cursor.execute("""
+                query = """
                     SELECT r.id, r.indicator_id, r.reporting_period, r.response_value,
                            r.numerical_value, r.unit, r.methodology_used, r.data_source,
                            r.reporting_status, r.evidence_url, r.notes,
@@ -347,9 +249,10 @@ class TSRSManager:
                     JOIN tsrs_standards s ON i.standard_id = s.id
                     WHERE r.company_id = ? AND r.reporting_period = ?
                     ORDER BY s.category, s.code, i.code
-                """, (company_id, reporting_period))
+                """
+                return self.execute_query(query, (company_id, reporting_period), company_id=company_id)
             else:
-                cursor.execute("""
+                query = """
                     SELECT r.id, r.indicator_id, r.reporting_period, r.response_value,
                            r.numerical_value, r.unit, r.methodology_used, r.data_source,
                            r.reporting_status, r.evidence_url, r.notes,
@@ -360,58 +263,47 @@ class TSRSManager:
                     JOIN tsrs_standards s ON i.standard_id = s.id
                     WHERE r.company_id = ?
                     ORDER BY r.reporting_period DESC, s.category, s.code, i.code
-                """, (company_id,))
-
-            columns = [description[0] for description in cursor.description]
-            responses = []
-
-            for row in cursor.fetchall():
-                response = dict(zip(columns, row))
-                responses.append(response)
-
-            return responses
+                """
+                return self.execute_query(query, (company_id,), company_id=company_id)
 
         except Exception as e:
             logging.error(f"TSRS yanıtları getirilirken hata: {e}")
             return []
-        finally:
-            conn.close()
 
     def get_tsrs_statistics(self, company_id: int) -> Dict:
         """TSRS istatistiklerini getir"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
             # Toplam standart sayısı
-            cursor.execute("SELECT COUNT(*) FROM tsrs_standards")
-            total_standards = cursor.fetchone()[0]
+            total_standards_result = self.execute_query("SELECT COUNT(*) as cnt FROM tsrs_standards", skip_tenant_filter=True)
+            total_standards = total_standards_result[0]['cnt'] if total_standards_result else 0
 
             # Toplam gösterge sayısı
-            cursor.execute("SELECT COUNT(*) FROM tsrs_indicators")
-            total_indicators = cursor.fetchone()[0]
+            total_indicators_result = self.execute_query("SELECT COUNT(*) as cnt FROM tsrs_indicators", skip_tenant_filter=True)
+            total_indicators = total_indicators_result[0]['cnt'] if total_indicators_result else 0
 
             # Yanıtlanan göstergeler
-            cursor.execute("""
-                SELECT COUNT(DISTINCT indicator_id) 
+            answered_query = """
+                SELECT COUNT(DISTINCT indicator_id) as cnt
                 FROM tsrs_responses 
                 WHERE company_id = ? AND response_value IS NOT NULL
-            """, (company_id,))
-            answered_indicators = cursor.fetchone()[0]
+            """
+            answered_result = self.execute_query(answered_query, (company_id,), company_id=company_id)
+            answered_indicators = answered_result[0]['cnt'] if answered_result else 0
 
             # Kategori bazlı yanıtlar
-            cursor.execute("""
+            cat_query = """
                 SELECT s.category, COUNT(DISTINCT r.indicator_id) as answered_count
                 FROM tsrs_responses r
                 JOIN tsrs_indicators i ON r.indicator_id = i.id
                 JOIN tsrs_standards s ON i.standard_id = s.id
                 WHERE r.company_id = ? AND r.response_value IS NOT NULL
                 GROUP BY s.category
-            """, (company_id,))
+            """
+            cat_results = self.execute_query(cat_query, (company_id,), company_id=company_id)
 
             category_stats = {}
-            for row in cursor.fetchall():
-                category_stats[row[0]] = row[1]
+            for row in cat_results:
+                category_stats[row['category']] = row['answered_count']
 
             # Yanıt yüzdesi
             response_percentage = (answered_indicators / total_indicators * 100) if total_indicators > 0 else 0
@@ -433,93 +325,64 @@ class TSRSManager:
                 'response_percentage': 0,
                 'category_stats': {}
             }
-        finally:
-            conn.close()
 
     def get_tsrs_gri_mappings(self, tsrs_standard_code: Optional[str] = None) -> List[Dict]:
         """TSRS-GRI eşleştirmelerini getir"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
             if tsrs_standard_code:
-                cursor.execute("""
+                query = """
                     SELECT tsrs_standard_code, tsrs_indicator_code, 
                            gri_standard, gri_disclosure, relationship_type, notes
                     FROM map_tsrs_gri
                     WHERE tsrs_standard_code = ?
                     ORDER BY gri_standard, gri_disclosure
-                """, (tsrs_standard_code,))
+                """
+                return self.execute_query(query, (tsrs_standard_code,), skip_tenant_filter=True)
             else:
-                cursor.execute("""
+                query = """
                     SELECT tsrs_standard_code, tsrs_indicator_code, 
                            gri_standard, gri_disclosure, relationship_type, notes
                     FROM map_tsrs_gri
                     ORDER BY tsrs_standard_code, gri_standard
-                """)
-
-            columns = [description[0] for description in cursor.description]
-            mappings = []
-
-            for row in cursor.fetchall():
-                mapping = dict(zip(columns, row))
-                mappings.append(mapping)
-
-            return mappings
+                """
+                return self.execute_query(query, skip_tenant_filter=True)
 
         except Exception as e:
             logging.error(f"TSRS-GRI eşleştirmeleri getirilirken hata: {e}")
             return []
-        finally:
-            conn.close()
 
     def get_tsrs_sdg_mappings(self, tsrs_standard_code: Optional[str] = None) -> List[Dict]:
         """TSRS-SDG eşleştirmelerini getir"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
             if tsrs_standard_code:
-                cursor.execute("""
+                query = """
                     SELECT tsrs_standard_code, tsrs_indicator_code, 
                            sdg_goal_id, sdg_target_id, sdg_indicator_code, 
                            relationship_type, notes
                     FROM map_tsrs_sdg
                     WHERE tsrs_standard_code = ?
                     ORDER BY sdg_goal_id, sdg_target_id
-                """, (tsrs_standard_code,))
+                """
+                return self.execute_query(query, (tsrs_standard_code,), skip_tenant_filter=True)
             else:
-                cursor.execute("""
+                query = """
                     SELECT tsrs_standard_code, tsrs_indicator_code, 
                            sdg_goal_id, sdg_target_id, sdg_indicator_code, 
                            relationship_type, notes
                     FROM map_tsrs_sdg
                     ORDER BY tsrs_standard_code, sdg_goal_id
-                """)
-
-            columns = [description[0] for description in cursor.description]
-            mappings = []
-
-            for row in cursor.fetchall():
-                mapping = dict(zip(columns, row))
-                mappings.append(mapping)
-
-            return mappings
+                """
+                return self.execute_query(query, skip_tenant_filter=True)
 
         except Exception as e:
             logging.error(f"TSRS-SDG eşleştirmeleri getirilirken hata: {e}")
             return []
-        finally:
-            conn.close()
 
     def create_default_tsrs_data(self, sample: bool = False) -> bool:
         """Varsayılan TSRS verilerini oluştur.
         sample=True ise, eklenen kayıtlar 'TSRS-SAMPLE-' kod ön eki veya '(Sample)' adı ile işaretlenir
         ve ileride silinebilmeleri kolaylaştırılır.
         """
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
             # TSRS standartları
             prefix = "TSRS-SAMPLE-" if sample else "TSRS-"
@@ -712,7 +575,7 @@ class TSRSManager:
                         ),
                     ]
                 if indicators:
-                    cursor.executemany(
+                    self.db.execute_many(
                         """
                         INSERT OR IGNORE INTO tsrs_indicators (
                             standard_id, code, title, description, unit, methodology,
@@ -721,7 +584,7 @@ class TSRSManager:
                         """,
                         indicators
                     )
-            except sqlite3.Error as e:
+            except Exception as e:
                 logging.error(f"TSRS göstergeleri eklenirken hata: {e}")
 
             # Paydaş grupları
@@ -741,65 +604,53 @@ class TSRSManager:
             ]
 
             for group in stakeholder_groups:
-                cursor.execute("""
+                self.execute_update("""
                     INSERT OR IGNORE INTO tsrs_stakeholder_groups 
                     (name, description, engagement_method, frequency)
                     VALUES (?, ?, ?, ?)
-                """, group)
+                """, group, skip_tenant_filter=True)
 
-            conn.commit()
             logging.info("Varsayılan TSRS verileri başarıyla oluşturuldu" + (" (Sample)" if sample else ""))
             return True
 
         except Exception as e:
             logging.error(f"Varsayılan TSRS verileri oluşturulurken hata: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
     def delete_sample_tsrs_data(self) -> bool:
         """Örnek (sample) TSRS verilerini sil.
         'TSRS-SAMPLE-%' kodu ile eklenen standartları ve '(Sample)' adı taşıyan paydaş gruplarını temizler.
         """
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("SELECT id FROM tsrs_standards WHERE code LIKE ?", ("TSRS-SAMPLE-%",))
-            sample_standard_ids = [row[0] for row in cursor.fetchall()]
+            results = self.execute_query("SELECT id FROM tsrs_standards WHERE code LIKE ?", ("TSRS-SAMPLE-%",), skip_tenant_filter=True)
+            sample_standard_ids = [row['id'] for row in results]
+            
             if sample_standard_ids:
                 placeholders = ','.join(['?'] * len(sample_standard_ids))
-                cursor.execute(
+                self.execute_update(
                     (
                         "DELETE FROM tsrs_responses WHERE indicator_id IN ("
                         "SELECT id FROM tsrs_indicators WHERE standard_id IN (" + placeholders + "))"
                     ),
-                    sample_standard_ids,
+                    tuple(sample_standard_ids),
+                    skip_tenant_filter=True 
                 )
-                cursor.execute(
+                self.execute_update(
                     "DELETE FROM tsrs_indicators WHERE standard_id IN (" + placeholders + ")",
-                    sample_standard_ids,
+                    tuple(sample_standard_ids),
+                    skip_tenant_filter=True
                 )
             # Standartlar (TSRS-SAMPLE-%)
-            cursor.execute("DELETE FROM tsrs_standards WHERE code LIKE ?", ("TSRS-SAMPLE-%",))
-
-            # İlişkili göstergeler ve yanıtlar da zincirleme temizlenecek
-            # (ON DELETE CASCADE yok; code üzerinden, bu yüzden güvenli yaklaşım)
-            # Göstergeler sample veri ile eklenmediği için burada ek işlem yok.
+            self.execute_update("DELETE FROM tsrs_standards WHERE code LIKE ?", ("TSRS-SAMPLE-%",), skip_tenant_filter=True)
 
             # Paydaş grupları
-            cursor.execute("DELETE FROM tsrs_stakeholder_groups WHERE name LIKE ?", ("%(Sample)%",))
+            self.execute_update("DELETE FROM tsrs_stakeholder_groups WHERE name LIKE ?", ("%(Sample)%",), skip_tenant_filter=True)
 
-            conn.commit()
             logging.info("Örnek TSRS verileri silindi")
             return True
         except Exception as e:
             logging.error(f"Örnek TSRS verileri silinirken hata: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
     def purge_company_tsrs_data(
         self,
@@ -807,9 +658,6 @@ class TSRSManager:
         delete_exports: bool = True,
         exports_dir: Optional[str] = None,
     ) -> bool:
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
             tables = [
                 "tsrs_responses",
@@ -820,9 +668,7 @@ class TSRSManager:
                 "tsrs_reports",
             ]
             for t in tables:
-                cursor.execute(f"DELETE FROM {t} WHERE company_id = ?", (company_id,))
-
-            conn.commit()
+                self.delete(t, company_id=company_id)
 
             if delete_exports:
                 if exports_dir is None:
@@ -843,72 +689,42 @@ class TSRSManager:
             return True
         except Exception as e:
             logging.error(f"TSRS şirket verileri temizlenirken hata: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
     def get_tsrs_report_templates(self) -> List[Dict]:
         """TSRS rapor şablonlarını getir"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            query = """
                 SELECT id, name, description, template_type, sectors, 
                        mandatory_standards, optional_standards, is_active
                 FROM tsrs_report_templates
                 WHERE is_active = 1
                 ORDER BY name
-            """)
-
-            columns = [description[0] for description in cursor.description]
-            templates = []
-
-            for row in cursor.fetchall():
-                template = dict(zip(columns, row))
-                templates.append(template)
-
-            return templates
+            """
+            return self.execute_query(query, skip_tenant_filter=True)
 
         except Exception as e:
             logging.error(f"TSRS rapor şablonları getirilirken hata: {e}")
             return []
-        finally:
-            conn.close()
 
     def create_tsrs_report(self, company_id: int, template_id: int,
                           reporting_period: str, report_data: Dict) -> Optional[int]:
         """TSRS raporu oluştur"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
-                INSERT INTO tsrs_reports 
-                (company_id, template_id, reporting_period, report_title, 
-                 report_status, cover_period_start, cover_period_end, 
-                 assurance_type, assurance_provider, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                company_id, template_id, reporting_period,
-                report_data.get('report_title', f'TSRS Raporu {reporting_period}'),
-                report_data.get('report_status', 'Draft'),
-                report_data.get('cover_period_start'),
-                report_data.get('cover_period_end'),
-                report_data.get('assurance_type'),
-                report_data.get('assurance_provider'),
-                datetime.now().isoformat(),
-                datetime.now().isoformat()
-            ))
-
-            report_id = cursor.lastrowid
-            conn.commit()
-            return report_id
+            data = {
+                'template_id': template_id,
+                'reporting_period': reporting_period,
+                'report_title': report_data.get('report_title', f'TSRS Raporu {reporting_period}'),
+                'report_status': report_data.get('report_status', 'Draft'),
+                'cover_period_start': report_data.get('cover_period_start'),
+                'cover_period_end': report_data.get('cover_period_end'),
+                'assurance_type': report_data.get('assurance_type'),
+                'assurance_provider': report_data.get('assurance_provider'),
+                'created_at': datetime.now().isoformat(),
+                'updated_at': datetime.now().isoformat()
+            }
+            return self.insert("tsrs_reports", data, company_id=company_id)
 
         except Exception as e:
             logging.error(f"TSRS raporu oluşturulurken hata: {e}")
-            conn.rollback()
             return -1
-        finally:
-            conn.close()

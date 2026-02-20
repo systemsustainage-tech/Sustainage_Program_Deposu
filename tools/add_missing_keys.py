@@ -37,21 +37,25 @@ def update_locales():
     if not os.path.exists(REPORT_FILE):
         # Fallback to current dir if not found in tools/
         if os.path.exists('missing_keys_report.json'):
-             report_path = 'missing_keys_report.json'
+             report_path = os.path.abspath('missing_keys_report.json')
         else:
              print(f"Report file {REPORT_FILE} not found. Run audit_translations.py first.")
              return
     else:
         report_path = REPORT_FILE
 
+    print(f"Reading report from: {report_path}")
     with open(report_path, 'r', encoding='utf-8') as f:
         missing_keys = json.load(f)
+    
+    print(f"RAW keys loaded: {missing_keys}")
     
     if not missing_keys:
         print("No missing keys to add.")
         return
 
     print(f"Found {len(missing_keys)} missing keys.")
+    print(f"First 5 keys: {missing_keys[:5]}")
     
     # Update ALL languages in locales/ and backend/locales/
     dirs_to_update = [LOCALES_DIR, BACKEND_LOCALES_DIR]
@@ -68,13 +72,19 @@ def update_locales():
                 
                 added_count = 0
                 for key in missing_keys:
+                    if not key or key == "...":
+                        continue
                     # Check if key exists (simple check)
+                    if key == "audit_logs":
+                        print(f"DEBUG: Checking audit_logs in {filename}. Exists? {key in data}")
                     if key not in data:
                         # For non-Turkish languages, we might want to add [MISSING] prefix or just English
                         # For now, use the same generated title as placeholder
                         data[key] = generate_default_value(key)
+                        print(f"Adding key: {key} to {filename}")
                         added_count += 1
                 
+                print(f"Total added for {filename}: {added_count}")
                 if added_count > 0:
                     save_json(file_path, data)
                     print(f"Added {added_count} keys to {filename}")

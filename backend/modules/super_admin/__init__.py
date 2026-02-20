@@ -4,7 +4,7 @@
 SUSTAINAGE SDG - Süper Admin Modülü
 """
 
-from .super_admin_gui import SuperAdminGUI
-
-__all__ = ['SuperAdminGUI']
-
+# Web environment adaptation: Removing GUI dependency
+# from .super_admin_gui import SuperAdminGUI
+# __all__ = ['SuperAdminGUI']
+__all__ = []

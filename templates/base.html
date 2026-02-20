@@ -14,7 +14,8 @@
       .navbar { margin-bottom: 20px; }
     </style>
   </head>
-  <body>
+  <body class="d-flex flex-column min-vh-100">
+    <main class="flex-grow-1">
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
       <div class="container">
         <a class="navbar-brand" href="/">Sustainage</a>
@@ -23,9 +24,34 @@
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
           <ul class="navbar-nav ms-auto">
+            <!-- Notification Bell -->
+            {% if session.get('user') %}
+            <li class="nav-item dropdown me-3">
+              <a class="nav-link dropdown-toggle position-relative" href="#" id="notificationDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-bell-fill"></i>
+                <span id="notification-count" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display: none;">
+                  0
+                  <span class="visually-hidden">{{ lang('unread_messages', 'okunmamış mesajlar') }}</span>
+                </span>
+              </a>
+              <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="notificationDropdown" style="width: 320px; max-height: 400px; overflow-y: auto;">
+                <li><h6 class="dropdown-header d-flex justify-content-between align-items-center">
+                  {{ lang('notifications', 'Bildirimler') }}
+                  <small><a href="#" onclick="markAllRead()" class="text-decoration-none">{{ lang('mark_all_read', 'Tümünü Okundu İşaretle') }}</a></small>
+                </h6></li>
+                <li><hr class="dropdown-divider"></li>
+                <div id="notification-list">
+                  <!-- Notifications will be loaded here -->
+                </div>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item text-center small text-primary" href="/notifications">{{ lang('view_all', 'Tümünü Gör') }}</a></li>
+              </ul>
+            </li>
+            {% endif %}
+
             <!-- Dark Mode Toggle -->
             <li class="nav-item">
-              <a class="nav-link" href="#" id="darkModeToggle" title="Dark/Light Mode">
+              <a class="nav-link" href="#" id="darkModeToggle" title="{{ lang('dark_light_mode', 'Karanlık/Aydınlık Mod') }}">
                 <i class="bi bi-moon-fill"></i>
               </a>
             </li>
@@ -36,10 +62,10 @@
                 <i class="bi bi-globe"></i> {{ session.get('lang', 'tr')|upper }}
               </a>
               <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="langDropdown">
-                <li><a class="dropdown-item" href="{{ url_for('set_language', lang='tr') }}">Türkçe</a></li>
-                <li><a class="dropdown-item" href="{{ url_for('set_language', lang='en') }}">English</a></li>
-                <li><a class="dropdown-item" href="{{ url_for('set_language', lang='de') }}">Deutsch</a></li>
-                <li><a class="dropdown-item" href="{{ url_for('set_language', lang='fr') }}">Français</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('set_language', lang='tr') }}" onclick="localStorage.setItem('lang', 'tr')">Türkçe</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('set_language', lang='en') }}" onclick="localStorage.setItem('lang', 'en')">English</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('set_language', lang='de') }}" onclick="localStorage.setItem('lang', 'de')">Deutsch</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('set_language', lang='fr') }}" onclick="localStorage.setItem('lang', 'fr')">Français</a></li>
               </ul>
             </li>
 
@@ -72,6 +98,7 @@
                 <li><a class="dropdown-item" href="{{ url_for('users') }}">{{ lang('users', 'Kullanıcılar') }}</a></li>
                 <li><a class="dropdown-item" href="{{ url_for('companies') }}">{{ lang('companies', 'Şirketler') }}</a></li>
                 <li><a class="dropdown-item" href="{{ url_for('company_info_edit', company_id=g.company_id) }}">{{ lang('company_info', 'Firma Bilgileri') }}</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('audit_bp.view_audit_logs') }}">{{ lang('audit_logs', 'Denetim Kayıtları') }}</a></li>
                 {# <li><a class="dropdown-item" href="{{ url_for('supplier_portal.login') }}" target="_blank"><i class="bi bi-box-arrow-in-right"></i> {{ lang('supplier_login', 'Tedarikçi Girişi') }}</a></li> #}
                 <li><hr class="dropdown-divider"></li>
                 <li><a class="dropdown-item" href="{{ url_for('user_add') }}">{{ lang('new_user', 'Yeni Kullanıcı') }}</a></li>
@@ -111,37 +138,39 @@
 
       {% block content %}{% endblock %}
     </div>
+    </main>
 
     <!-- Footer -->
-    <footer class="bg-light text-center text-lg-start mt-auto border-top">
-      <div class="container p-4">
-        <div class="row">
+    <footer class="bg-light text-lg-start mt-auto border-top">
+      <div class="container py-4">
+        <div class="row align-items-start mb-3">
           <div class="col-lg-6 col-md-12 mb-4 mb-md-0">
-            <h5 class="text-uppercase">Sustainage</h5>
-            <p>
-              Kurumsal sürdürülebilirlik raporlama ve yönetim platformu.
-              Geleceği bugünden tasarlayın.
+            <h5 class="text-uppercase mb-2">Sustainage</h5>
+            <p class="mb-0">
+              {{ lang('footer_slogan', 'Kurumsal sürdürülebilirlik raporlama ve yönetim platformu. Geleceği bugünden tasarlayın.') }}
             </p>
           </div>
           <div class="col-lg-3 col-md-6 mb-4 mb-md-0">
-            <h5 class="text-uppercase">Yasal</h5>
+            <h5 class="text-uppercase mb-2">{{ lang('footer_legal', 'Yasal') }}</h5>
             <ul class="list-unstyled mb-0">
-              <li><a href="{{ url_for('legal_privacy') }}" class="text-dark text-decoration-none">Gizlilik Politikası</a></li>
-              <li><a href="{{ url_for('legal_sla') }}" class="text-dark text-decoration-none">Hizmet Seviyesi (SLA)</a></li>
-              <li><a href="{{ url_for('legal_dpa') }}" class="text-dark text-decoration-none">Veri İşleme (DPA)</a></li>
+              <li><a href="{{ url_for('legal_privacy') }}" class="text-dark text-decoration-none">{{ lang('footer_privacy', 'Gizlilik Politikası') }}</a></li>
+              <li><a href="{{ url_for('legal_sla') }}" class="text-dark text-decoration-none">{{ lang('footer_sla', 'Hizmet Seviyesi (SLA)') }}</a></li>
+              <li><a href="{{ url_for('legal_dpa') }}" class="text-dark text-decoration-none">{{ lang('footer_dpa', 'Veri İşleme (DPA)') }}</a></li>
             </ul>
           </div>
           <div class="col-lg-3 col-md-6 mb-4 mb-md-0">
-            <h5 class="text-uppercase">Destek</h5>
+            <h5 class="text-uppercase mb-2">{{ lang('footer_support', 'Destek') }}</h5>
             <ul class="list-unstyled mb-0">
-              <li><a href="{{ url_for('help_module') }}" class="text-dark text-decoration-none">Yardım Merkezi</a></li>
-              <li><a href="mailto:support@sustainage.com" class="text-dark text-decoration-none">Bize Ulaşın</a></li>
+              <li><a href="{{ url_for('help_module') }}" class="text-dark text-decoration-none">{{ lang('footer_help_center', 'Yardım Merkezi') }}</a></li>
+              <li><a href="mailto:support@sustainage.com" class="text-dark text-decoration-none">{{ lang('footer_contact_us', 'Bize Ulaşın') }}</a></li>
             </ul>
           </div>
         </div>
-      </div>
-      <div class="text-center p-3 bg-white border-top">
-        © 2026 Sustainage. Tüm Hakları Saklıdır.
+        <div class="row border-top pt-2 mt-1">
+          <div class="col-12 text-center small text-muted">
+            {{ lang('footer_copyright', '© 2026 Sustainage. Tüm Hakları Saklıdır.') }}
+          </div>
+        </div>
       </div>
     </footer>
 
@@ -151,10 +180,10 @@
         <div class="d-flex flex-column flex-md-row justify-content-between align-items-center">
           <div class="mb-2 mb-md-0">
             <i class="bi bi-cookie me-2"></i>
-            Bu platformda kullanıcı deneyimini iyileştirmek ve güvenliği sağlamak amacıyla çerezler (cookies) kullanılmaktadır.
-            <a href="{{ url_for('legal_privacy') }}" class="text-info text-decoration-underline ms-1">Gizlilik Politikası</a>
+            {{ lang('cookie_msg', 'Bu platformda kullanıcı deneyimini iyileştirmek ve güvenliği sağlamak amacıyla çerezler (cookies) kullanılmaktadır.') }}
+            <a href="{{ url_for('legal_privacy') }}" class="text-info text-decoration-underline ms-1">{{ lang('footer_privacy', 'Gizlilik Politikası') }}</a>
           </div>
-          <button id="acceptCookies" class="btn btn-primary btn-sm px-4">Anladım ve Kabul Ediyorum</button>
+          <button id="acceptCookies" class="btn btn-primary btn-sm px-4">{{ lang('cookie_accept', 'Anladım ve Kabul Ediyorum') }}</button>
         </div>
       </div>
     </div>
@@ -264,6 +293,88 @@
         }
       });
 
+      // Auto-dismiss Bootstrap alerts after 3 seconds
+      document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(function() {
+          var alerts = document.querySelectorAll('.alert');
+          alerts.forEach(function(alert) {
+            var bsAlert = new bootstrap.Alert(alert);
+            bsAlert.close();
+          });
+        }, 3000);
+      });
+
+      // Notification Logic
+      {% if session.get('user') %}
+      function updateNotifications() {
+        fetch('/api/notifications/unread')
+          .then(response => response.json())
+          .then(data => {
+            const countBadge = document.getElementById('notification-count');
+            const listContainer = document.getElementById('notification-list');
+            
+            if (data.count > 0) {
+              countBadge.innerText = data.count;
+              countBadge.style.display = 'inline-block';
+            } else {
+              countBadge.style.display = 'none';
+            }
+            
+            if (data.notifications && data.notifications.length > 0) {
+              let html = '';
+              data.notifications.forEach(notif => {
+                const date = new Date(notif.created_at).toLocaleString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+                const icon = notif.type === 'error' ? 'bi-x-circle text-danger' : 
+                             notif.type === 'success' ? 'bi-check-circle text-success' : 
+                             notif.type === 'warning' ? 'bi-exclamation-triangle text-warning' : 'bi-info-circle text-primary';
+                
+                html += `
+                  <li>
+                    <a class="dropdown-item" href="#" onclick="markAsRead(${notif.id}, '${notif.link || '#'}')">
+                      <div class="d-flex align-items-start">
+                        <i class="bi ${icon} me-2 mt-1"></i>
+                        <div class="w-100">
+                          <div class="d-flex w-100 justify-content-between">
+                            <strong class="mb-1 small text-truncate" style="max-width: 180px;">${notif.title}</strong>
+                            <small class="text-muted" style="font-size: 0.7rem;">${date}</small>
+                          </div>
+                          <p class="mb-1 small text-wrap text-muted" style="line-height: 1.2;">${notif.message}</p>
+                        </div>
+                      </div>
+                    </a>
+                  </li>
+                `;
+              });
+              listContainer.innerHTML = html;
+            } else {
+              listContainer.innerHTML = '<li class="dropdown-item text-muted small text-center py-3">{{ lang("no_notifications", "Yeni bildirim yok") }}</li>';
+            }
+          })
+          .catch(err => console.error('Notification error:', err));
+      }
+
+      function markAsRead(id, link) {
+        fetch(`/api/notifications/${id}/read`, { method: 'POST' })
+          .then(() => {
+            if (link && link !== '#') window.location.href = link;
+            updateNotifications();
+          });
+      }
+      
+      function markAllRead() {
+        fetch('/api/notifications/mark-all-read', { method: 'POST' })
+          .then(() => {
+            updateNotifications();
+          });
+      }
+
+      // Initial call and interval
+      document.addEventListener('DOMContentLoaded', () => {
+        updateNotifications();
+        setInterval(updateNotifications, 60000); // Check every minute
+      });
+      {% endif %}
+
       // Global Notification System
       function showNotification(message, type = 'info') {
           const existing = document.querySelector('.custom-notification');
@@ -310,7 +421,7 @@
               notification.style.opacity = '0';
               notification.style.transform = 'translateX(100%)';
               setTimeout(() => notification.remove(), 300);
-          }, 4000);
+          }, 3000);
       }
     </script>
     {% block scripts %}{% endblock %}

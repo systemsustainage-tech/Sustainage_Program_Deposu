@@ -3,33 +3,35 @@
 """
 İş Sağlığı ve Güvenliği Yönetimi Modülü
 İSG olayları, eğitimleri ve güvenlik metrikleri
+Refactored for Multi-tenancy using BaseTenantManager
 """
 
 import logging
 import os
-import sqlite3
-from typing import Dict, List
+from typing import Dict, List, Optional
 from config.database import DB_PATH
+try:
+    from backend.core.base_manager import BaseTenantManager
+except ImportError:
+    from core.base_manager import BaseTenantManager
 
 
-class SafetyManager:
+class SafetyManager(BaseTenantManager):
     """İş Sağlığı ve Güvenliği yönetimi"""
 
-    def __init__(self, db_path: str = DB_PATH) -> None:
+    def __init__(self, db_path: str = DB_PATH, company_id: Optional[int] = None) -> None:
         if not os.path.isabs(db_path):
             base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
             db_path = os.path.join(base_dir, db_path)
-        self.db_path = db_path
+        
+        super().__init__(db_path, company_id)
         self._init_db_tables()
 
     def _init_db_tables(self) -> None:
         """İSG yönetimi tablolarını oluştur"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
             # İSG olayları
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS safety_incidents (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -52,7 +54,7 @@ class SafetyManager:
             """)
 
             # İSG eğitimleri
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS safety_trainings (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -71,7 +73,7 @@ class SafetyManager:
             """)
 
             # Risk değerlendirmeleri
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS risk_assessments (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -93,7 +95,7 @@ class SafetyManager:
             """)
 
             # İSG denetimleri
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS safety_audits (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -113,7 +115,7 @@ class SafetyManager:
             """)
 
             # İSG hedefleri
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS safety_targets (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -130,7 +132,7 @@ class SafetyManager:
             """)
 
             # İSG KPI'ları
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS safety_kpis (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -146,14 +148,10 @@ class SafetyManager:
                 )
             """)
 
-            conn.commit()
             logging.info("[OK] ISG yonetimi modulu tablolari basariyla olusturuldu")
 
         except Exception as e:
             logging.error(f"[HATA] ISG yonetimi modulu tablo olusturma: {e}")
-            conn.rollback()
-        finally:
-            conn.close()
 
     def add_safety_incident(self, company_id: int, incident_date: str, incident_type: str,
                           severity_level: str, location: str = None, department: str = None,
@@ -162,56 +160,54 @@ class SafetyManager:
                           lost_work_days: int = None, medical_treatment: str = None,
                           investigation_status: str = None) -> bool:
         """İSG olayı ekle"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
-                INSERT INTO safety_incidents 
-                (company_id, incident_date, incident_type, severity_level, location,
-                 department, employee_id, description, root_cause, corrective_actions,
-                 prevention_measures, lost_work_days, medical_treatment, investigation_status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (company_id, incident_date, incident_type, severity_level, location,
-                  department, employee_id, description, root_cause, corrective_actions,
-                  prevention_measures, lost_work_days, medical_treatment, investigation_status))
-
-            conn.commit()
+            data = {
+                'incident_date': incident_date,
+                'incident_type': incident_type,
+                'severity_level': severity_level,
+                'location': location,
+                'department': department,
+                'employee_id': employee_id,
+                'description': description,
+                'root_cause': root_cause,
+                'corrective_actions': corrective_actions,
+                'prevention_measures': prevention_measures,
+                'lost_work_days': lost_work_days,
+                'medical_treatment': medical_treatment,
+                'investigation_status': investigation_status
+            }
+            
+            self.insert('safety_incidents', data, company_id=company_id)
             return True
 
         except Exception as e:
             logging.error(f"İSG olayı ekleme hatası: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
     def add_safety_training(self, company_id: int, training_date: str, training_type: str,
                           training_topic: str, trainer_name: str, participant_count: int,
                           duration_hours: float = None, training_method: str = None,
                           assessment_score: float = None, certification_validity: str = None) -> bool:
         """İSG eğitimi ekle"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
-                INSERT INTO safety_trainings 
-                (company_id, training_date, training_type, training_topic, trainer_name,
-                 participant_count, duration_hours, training_method, assessment_score, certification_validity)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (company_id, training_date, training_type, training_topic, trainer_name,
-                  participant_count, duration_hours, training_method, assessment_score, certification_validity))
-
-            conn.commit()
+            data = {
+                'training_date': training_date,
+                'training_type': training_type,
+                'training_topic': training_topic,
+                'trainer_name': trainer_name,
+                'participant_count': participant_count,
+                'duration_hours': duration_hours,
+                'training_method': training_method,
+                'assessment_score': assessment_score,
+                'certification_validity': certification_validity
+            }
+            
+            self.insert('safety_trainings', data, company_id=company_id)
             return True
 
         except Exception as e:
             logging.error(f"İSG eğitimi ekleme hatası: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
     def add_risk_assessment(self, company_id: int, assessment_date: str, risk_area: str,
                           hazard_type: str, risk_level: str, probability_score: int,
@@ -219,93 +215,82 @@ class SafetyManager:
                           additional_controls: str = None, responsible_person: str = None,
                           review_date: str = None) -> bool:
         """Risk değerlendirmesi ekle"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
             risk_score = probability_score * severity_score
-
-            cursor.execute("""
-                INSERT INTO risk_assessments 
-                (company_id, assessment_date, risk_area, hazard_type, risk_level,
-                 probability_score, severity_score, risk_score, existing_controls,
-                 additional_controls, responsible_person, review_date)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (company_id, assessment_date, risk_area, hazard_type, risk_level,
-                  probability_score, severity_score, risk_score, existing_controls,
-                  additional_controls, responsible_person, review_date))
-
-            conn.commit()
+            
+            data = {
+                'assessment_date': assessment_date,
+                'risk_area': risk_area,
+                'hazard_type': hazard_type,
+                'risk_level': risk_level,
+                'probability_score': probability_score,
+                'severity_score': severity_score,
+                'risk_score': risk_score,
+                'existing_controls': existing_controls,
+                'additional_controls': additional_controls,
+                'responsible_person': responsible_person,
+                'review_date': review_date
+            }
+            
+            self.insert('risk_assessments', data, company_id=company_id)
             return True
 
         except Exception as e:
             logging.error(f"Risk değerlendirmesi ekleme hatası: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
     def add_safety_audit(self, company_id: int, audit_date: str, audit_type: str,
                         auditor_name: str, audit_scope: str, compliance_score: float,
                         non_conformities: int, observations: int, recommendations: int,
                         follow_up_date: str = None) -> bool:
         """İSG denetimi ekle"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
-                INSERT INTO safety_audits 
-                (company_id, audit_date, audit_type, auditor_name, audit_scope,
-                 compliance_score, non_conformities, observations, recommendations, follow_up_date)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (company_id, audit_date, audit_type, auditor_name, audit_scope,
-                  compliance_score, non_conformities, observations, recommendations, follow_up_date))
-
-            conn.commit()
+            data = {
+                'audit_date': audit_date,
+                'audit_type': audit_type,
+                'auditor_name': auditor_name,
+                'audit_scope': audit_scope,
+                'compliance_score': compliance_score,
+                'non_conformities': non_conformities,
+                'observations': observations,
+                'recommendations': recommendations,
+                'follow_up_date': follow_up_date
+            }
+            
+            self.insert('safety_audits', data, company_id=company_id)
             return True
 
         except Exception as e:
             logging.error(f"İSG denetimi ekleme hatası: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
     def set_safety_target(self, company_id: int, target_year: int, target_type: str,
                          baseline_value: float, target_value: float, target_unit: str,
                          target_description: str = None) -> bool:
         """İSG hedefi belirle"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            # Note: insert() doesn't support REPLACE, so we use execute_update for this specific query if we want REPLACE logic.
+            # However, standard insert is often fine unless uniqueness constraint exists.
+            # Given the original code used INSERT OR REPLACE, let's stick to execute_update to match logic.
+            
+            self.execute_update("""
                 INSERT OR REPLACE INTO safety_targets 
                 (company_id, target_year, target_type, baseline_value, target_value,
                  target_unit, target_description)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
             """, (company_id, target_year, target_type, baseline_value, target_value,
                   target_unit, target_description))
-
-            conn.commit()
             return True
 
         except Exception as e:
             logging.error(f"İSG hedefi belirleme hatası: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
     def get_safety_summary(self, company_id: int, year: int) -> Dict:
         """İSG özeti getir"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
             # İSG olayları
-            cursor.execute("""
+            rows = self.execute_query("""
                 SELECT incident_type, severity_level, COUNT(*), SUM(lost_work_days)
                 FROM safety_incidents 
                 WHERE company_id = ? AND strftime('%Y', incident_date) = ?
@@ -315,7 +300,7 @@ class SafetyManager:
             incident_summary = {}
             total_incidents = 0
             total_lost_days = 0
-            for row in cursor.fetchall():
+            for row in rows:
                 incident_type, severity, count, lost_days = row
                 if incident_type not in incident_summary:
                     incident_summary[incident_type] = {}
@@ -324,7 +309,7 @@ class SafetyManager:
                 total_lost_days += lost_days or 0
 
             # İSG eğitimleri
-            cursor.execute("""
+            rows = self.execute_query("""
                 SELECT training_type, COUNT(*), SUM(participant_count), SUM(duration_hours), AVG(assessment_score)
                 FROM safety_trainings 
                 WHERE company_id = ? AND strftime('%Y', training_date) = ?
@@ -334,7 +319,7 @@ class SafetyManager:
             training_summary = {}
             total_participants = 0
             total_hours = 0
-            for row in cursor.fetchall():
+            for row in rows:
                 training_type, count, participants, hours, avg_score = row
                 training_summary[training_type] = {
                     'sessions': count,
@@ -346,7 +331,7 @@ class SafetyManager:
                 total_hours += hours or 0
 
             # Risk değerlendirmeleri
-            cursor.execute("""
+            rows = self.execute_query("""
                 SELECT risk_level, COUNT(*), AVG(risk_score)
                 FROM risk_assessments 
                 WHERE company_id = ? AND strftime('%Y', assessment_date) = ? AND status = 'active'
@@ -355,7 +340,7 @@ class SafetyManager:
 
             risk_summary = {}
             total_risks = 0
-            for row in cursor.fetchall():
+            for row in rows:
                 risk_level, count, avg_score = row
                 risk_summary[risk_level] = {
                     'count': count,
@@ -364,17 +349,27 @@ class SafetyManager:
                 total_risks += count
 
             # İSG denetimleri
-            cursor.execute("""
+            rows = self.execute_query("""
                 SELECT AVG(compliance_score), SUM(non_conformities), SUM(observations), COUNT(*)
                 FROM safety_audits 
                 WHERE company_id = ? AND strftime('%Y', audit_date) = ?
             """, (company_id, str(year)))
 
-            audit_result = cursor.fetchone()
-            avg_compliance = audit_result[0] or 0
-            total_non_conformities = audit_result[1] or 0
-            total_observations = audit_result[2] or 0
-            total_audits = audit_result[3] or 0
+            if rows:
+                audit_result = rows[0]
+                # Check if result is dict or tuple (BaseTenantManager returns dict usually, but execute_query returns list of tuples/rows from sqlite3 unless row_factory set)
+                # DatabaseManager uses row_factory=sqlite3.Row, so it behaves like dict/tuple
+                
+                # If using index access:
+                avg_compliance = audit_result[0] or 0
+                total_non_conformities = audit_result[1] or 0
+                total_observations = audit_result[2] or 0
+                total_audits = audit_result[3] or 0
+            else:
+                avg_compliance = 0
+                total_non_conformities = 0
+                total_observations = 0
+                total_audits = 0
 
             return {
                 'incident_summary': incident_summary,
@@ -396,42 +391,14 @@ class SafetyManager:
         except Exception as e:
             logging.error(f"İSG özeti getirme hatası: {e}")
             return {}
-        finally:
-            conn.close()
 
     def get_safety_targets(self, company_id: int) -> List[Dict]:
         """İSG hedeflerini getir"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
-                SELECT target_year, target_type, baseline_value, target_value,
-                       target_unit, target_description, status
-                FROM safety_targets 
-                WHERE company_id = ? AND status = 'active'
-                ORDER BY target_year
-            """, (company_id,))
-
-            targets = []
-            for row in cursor.fetchall():
-                targets.append({
-                    'target_year': row[0],
-                    'target_type': row[1],
-                    'baseline_value': row[2],
-                    'target_value': row[3],
-                    'target_unit': row[4],
-                    'target_description': row[5],
-                    'status': row[6]
-                })
-
-            return targets
-
+            return self.select('safety_targets', company_id=company_id, where="status = 'active'", order_by='target_year')
         except Exception as e:
             logging.error(f"İSG hedefleri getirme hatası: {e}")
             return []
-        finally:
-            conn.close()
 
     def calculate_safety_kpis(self, company_id: int, year: int, total_employees: int = 100) -> Dict:
         """İSG KPI'larını hesapla"""

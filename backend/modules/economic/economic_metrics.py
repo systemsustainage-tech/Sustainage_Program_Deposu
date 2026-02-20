@@ -7,27 +7,26 @@ GRI 201 - Ekonomik değer üretimi ve dağıtımı
 
 import logging
 import os
-import sqlite3
-from typing import Dict
-
-
+from typing import Dict, Optional
+from backend.core.base_manager import BaseTenantManager
+from backend.config.database import DB_PATH
 from utils.language_manager import LanguageManager
 
 
-class EconomicMetrics:
+class EconomicMetrics(BaseTenantManager):
     """Ekonomik performans metrikleri"""
 
-    def __init__(self, db_path: str = None) -> None:
-        self.db_path = db_path or os.path.join(os.getcwd(), 'data', 'sdg_desktop.sqlite')
+    def __init__(self, db_path: Optional[str] = None, company_id: Optional[int] = None) -> None:
+        if db_path is None:
+            db_path = DB_PATH
+        super().__init__(db_path, company_id)
         self.lm = LanguageManager()
         self._ensure_tables()
 
     def _ensure_tables(self) -> None:
         """Ekonomik tablolar"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
         try:
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS economic_value (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -42,28 +41,15 @@ class EconomicMetrics:
                     UNIQUE(company_id, year)
                 )
             """)
-            conn.commit()
         except Exception as e:
             logging.error(f"{self.lm.tr('economic_table_error', '[HATA] Ekonomik tablo')}: {e}")
-        finally:
-            conn.close()
 
     def set_economic_value(self, company_id: int, year: int, **kwargs) -> bool:
         """
         Ekonomik değer kaydet
-        
-        Args:
-            revenue: Gelir
-            operating_costs: İşletme maliyetleri
-            employee_wages: Çalışan ücretleri
-            payments_capital: Sermaye ödemeleri
-            payments_government: Devlete ödemeler (vergi)
-            community_investments: Toplum yatırımları
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
         try:
-            cursor.execute("""
+            self.execute_update("""
                 INSERT INTO economic_value 
                 (company_id, year, revenue, operating_costs, employee_wages,
                  payments_capital, payments_government, community_investments)
@@ -82,35 +68,31 @@ class EconomicMetrics:
                   kwargs.get('payments_capital', 0),
                   kwargs.get('payments_government', 0),
                   kwargs.get('community_investments', 0)))
-            conn.commit()
             return True
         except Exception as e:
             logging.error(f"[HATA] Ekonomik veri: {e}")
             return False
-        finally:
-            conn.close()
 
     def get_summary(self, company_id: int, year: int) -> Dict:
         """GRI 201-1: Ekonomik değer özeti"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
         try:
-            cursor.execute("""
+            rows = self.execute_query("""
                 SELECT revenue, operating_costs, employee_wages,
                        payments_capital, payments_government, community_investments
                 FROM economic_value
                 WHERE company_id=? AND year=?
             """, (company_id, year))
 
-            row = cursor.fetchone()
-            if not row:
+            if not rows:
                 return {}
+            
+            row = rows[0]
 
             # Üretilen ekonomik değer
-            generated = row[0]
+            generated = row['revenue']
 
             # Dağıtılan ekonomik değer
-            distributed = row[1] + row[2] + row[3] + row[4] + row[5]
+            distributed = row['operating_costs'] + row['employee_wages'] + row['payments_capital'] + row['payments_government'] + row['community_investments']
 
             # Elde tutulan
             retained = generated - distributed
@@ -119,13 +101,14 @@ class EconomicMetrics:
                 'generated_value': round(generated, 2),
                 'distributed_value': round(distributed, 2),
                 'retained_value': round(retained, 2),
-                'operating_costs': round(row[1], 2),
-                'employee_wages': round(row[2], 2),
-                'payments_capital': round(row[3], 2),
-                'payments_government': round(row[4], 2),
-                'community_investments': round(row[5], 2),
+                'operating_costs': round(row['operating_costs'], 2),
+                'employee_wages': round(row['employee_wages'], 2),
+                'payments_capital': round(row['payments_capital'], 2),
+                'payments_government': round(row['payments_government'], 2),
+                'community_investments': round(row['community_investments'], 2),
                 'year': year
             }
-        finally:
-            conn.close()
+        except Exception as e:
+            logging.error(f"[HATA] Ekonomik özet: {e}")
+            return {}
 

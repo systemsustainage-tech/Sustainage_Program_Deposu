@@ -9,13 +9,13 @@ JWT-based license key generation and validation
 import hashlib
 import json
 import platform
-import sqlite3
 import uuid
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
 import jwt
 from config.database import DB_PATH
+from backend.core.database_manager import DatabaseManager
 
 # Secret key for JWT signing (in production, use environment variable)
 JWT_SECRET = "SUSTAINAGE_SDG_LICENSE_SECRET_KEY_2025"
@@ -26,16 +26,7 @@ class LicenseGenerator:
 
     def __init__(self, db_path: str = DB_PATH):
         self.db_path = db_path
-
-    def _connect(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(self.db_path, timeout=5.0)
-        try:
-            conn.execute("PRAGMA journal_mode=WAL")
-            conn.execute("PRAGMA busy_timeout=5000")
-            conn.execute("PRAGMA synchronous=NORMAL")
-        except Exception as e:
-            logging.error(f"Silent error caught: {str(e)}")
-        return conn
+        self.db = DatabaseManager(self.db_path)
 
     def generate_license_key(
         self,
@@ -46,7 +37,9 @@ class LicenseGenerator:
         enabled_modules: List[str],
         hardware_id: Optional[str] = None,
         contact_email: Optional[str] = None,
-        contact_phone: Optional[str] = None
+        contact_phone: Optional[str] = None,
+        allowed_ips: Optional[List[str]] = None,
+        allowed_domains: Optional[List[str]] = None
     ) -> Dict[str, Any]:
         """
         Generate a new license key
@@ -77,6 +70,11 @@ class LicenseGenerator:
                 'iat': int(issued_date.timestamp()),
             }
 
+            if allowed_ips:
+                payload['allowed_ips'] = allowed_ips
+            if allowed_domains:
+                payload['allowed_domains'] = allowed_domains
+
             if expiry_date:
                 payload['exp'] = int(expiry_date.timestamp())
 
@@ -90,16 +88,15 @@ class LicenseGenerator:
             signature = self._create_signature(license_key, company_name)
 
             # Save to database
-            conn = self._connect()
-            try:
+            with self.db.get_connection() as conn:
                 cursor = conn.cursor()
 
                 cursor.execute("""
                 INSERT INTO licenses (
                     license_key, license_type, company_name, contact_email, contact_phone,
                     issued_date, expiry_date, max_users, enabled_modules,
-                    hardware_id, signature, is_active
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+                    hardware_id, signature, is_active, allowed_ips, allowed_domains
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
                 """, (
                     license_key,
                     license_type,
@@ -111,7 +108,9 @@ class LicenseGenerator:
                     max_users,
                     json.dumps(enabled_modules),
                     hardware_id,
-                    signature
+                    signature,
+                    json.dumps(allowed_ips) if allowed_ips else None,
+                    json.dumps(allowed_domains) if allowed_domains else None
                 ))
 
                 license_id = cursor.lastrowid
@@ -122,11 +121,6 @@ class LicenseGenerator:
                     VALUES (?, 'created', ?, 'system')
                 """, (license_id, f"License created for {company_name}"))
                 conn.commit()
-            finally:
-                try:
-                    conn.close()
-                except Exception as e:
-                    logging.error(f"Silent error caught: {str(e)}")
 
             return {
                 'success': True,
@@ -223,6 +217,8 @@ class LicenseGenerator:
                 'expires_at': expires_at.isoformat() if expires_at else 'Unlimited',
                 'max_users': payload.get('max_users', 0),
                 'enabled_modules': payload.get('modules', []),
+                'allowed_domains': payload.get('allowed_domains', []),
+                'allowed_ips': payload.get('allowed_ips', []),
                 'days_remaining': days_remaining if days_remaining >= 0 else -1,
                 'message': 'License is valid'
             }

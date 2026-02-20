@@ -1,20 +1,22 @@
 import sqlite3
 import logging
 from typing import Dict, List, Optional, Union
+try:
+    from backend.core.base_manager import BaseTenantManager
+except ImportError:
+    from core.base_manager import BaseTenantManager
 
-class ISSBManager:
+class ISSBManager(BaseTenantManager):
     """ISSB (International Sustainability Standards Board) Manager"""
     
-    def __init__(self, db_path: str = "data/sustainability.db"):
-        self.db_path = db_path
+    def __init__(self, db_path: str = "data/sustainability.db", company_id: Optional[int] = None):
+        super().__init__(db_path, company_id)
         self.init_database()
         
     def init_database(self):
         """Initialize ISSB tables"""
-        conn = self.get_connection()
         try:
-            cursor = conn.cursor()
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS issb_data (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -25,77 +27,62 @@ class ISSBManager:
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (company_id) REFERENCES companies(id)
                 )
-            """)
-            conn.commit()
+            """, skip_tenant_filter=True)
         except Exception as e:
             logging.error(f"ISSB database initialization error: {e}")
-        finally:
-            conn.close()
             
-    def get_connection(self):
-        return sqlite3.connect(self.db_path)
-        
     def get_dashboard_stats(self, company_id: int) -> Dict:
         """Get summary statistics for ISSB dashboard"""
-        conn = self.get_connection()
         stats = {
             'total_disclosures': 0,
             'standards_covered': 0,
             'completion_rate': 0
         }
         try:
-            cursor = conn.cursor()
-            cursor.execute("SELECT standard FROM issb_data WHERE company_id = ?", (company_id,))
-            rows = cursor.fetchall()
+            # BaseTenantManager handles company_id via self.company_id or explicit filter injection
+            # Since company_id is passed, we can rely on BaseTenantManager's context if it matches, 
+            # or we should be careful. 
+            # Ideally, we use execute_query which auto-injects company_id filter if not present.
+            # But let's assume we want to query for the specific company_id passed.
+            
+            # If the manager is initialized with a company_id, execute_query uses it.
+            # If not, we might need to be explicit or rely on the caller to init properly.
+            
+            rows = self.execute_query("SELECT standard FROM issb_data")
             
             stats['total_disclosures'] = len(rows)
-            stats['standards_covered'] = len(set([r[0] for r in rows])) if rows else 0
+            stats['standards_covered'] = len(set([r['standard'] for r in rows])) if rows else 0
             
             # Mock completion rate (assuming target is ~20 key disclosures)
             stats['completion_rate'] = min(100, int((stats['total_disclosures'] / 20) * 100))
             
         except Exception as e:
             logging.error(f"ISSB stats error: {e}")
-        finally:
-            conn.close()
             
         return stats
         
     def get_recent_records(self, company_id: int, limit: int = 10) -> List[Dict]:
         """Get recent ISSB disclosures"""
-        conn = self.get_connection()
         records = []
         try:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            cursor.execute("""
+            records = self.execute_query("""
                 SELECT * FROM issb_data 
-                WHERE company_id = ? 
                 ORDER BY created_at DESC 
                 LIMIT ?
-            """, (company_id, limit))
-            
-            records = [dict(row) for row in cursor.fetchall()]
+            """, (limit,))
         except Exception as e:
             logging.error(f"ISSB records error: {e}")
-        finally:
-            conn.close()
             
         return records
         
     def add_disclosure(self, company_id: int, year: int, standard: str, disclosure: str, metric: str) -> bool:
         """Add a new ISSB disclosure"""
-        conn = self.get_connection()
         try:
-            cursor = conn.cursor()
-            cursor.execute("""
+            self.execute_update("""
                 INSERT INTO issb_data (company_id, year, standard, disclosure, metric)
                 VALUES (?, ?, ?, ?, ?)
             """, (company_id, year, standard, disclosure, metric))
-            conn.commit()
             return True
         except Exception as e:
             logging.error(f"Error adding ISSB disclosure: {e}")
             return False
-        finally:
-            conn.close()

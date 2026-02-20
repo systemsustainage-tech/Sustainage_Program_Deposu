@@ -61,4 +61,4 @@ def test_login(username, password):
         traceback.print_exc()
 
 if __name__ == "__main__":
-    test_login("admin", "Admin123!")
+    test_login("super.admin", "SuperPassword123!")

@@ -14,6 +14,10 @@ from typing import List
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from config.database import DB_PATH
+try:
+    from backend.utils.language_manager import language_manager
+except ImportError:
+    from utils.language_manager import language_manager
 
 
 class RESTAPIServer:
@@ -46,11 +50,11 @@ class RESTAPIServer:
             api_key = request.headers.get('X-API-Key')
 
             if not api_key:
-                return jsonify({"error": "API key gerekli"}), 401
+                return jsonify({"error": language_manager.tr('api_key_required', 'API key gerekli')}), 401
 
             # API key doğrula
             if not self._validate_api_key(api_key):
-                return jsonify({"error": "Geçersiz API key"}), 403
+                return jsonify({"error": language_manager.tr('invalid_api_key', 'Geçersiz API key')}), 403
 
             return f(*args, **kwargs)
 
@@ -130,10 +134,10 @@ class RESTAPIServer:
                         "created_at": row[3]
                     })
 
-                return jsonify({"error": "Şirket bulunamadı"}), 404
+                return jsonify({"error": language_manager.tr('company_not_found', 'Şirket bulunamadı')}), 404
 
             except Exception:
-                return jsonify({"error": "İç sunucu hatası"}), 500
+                return jsonify({"error": language_manager.tr('internal_server_error', 'İç sunucu hatası')}), 500
 
         # =====================================================
         # KARBON VERİLERİ ENDPOİNTS
@@ -173,10 +177,10 @@ class RESTAPIServer:
                         "total": row[3]
                     })
 
-                return jsonify({"error": "Veri bulunamadı"}), 404
+                return jsonify({"error": language_manager.tr('data_not_found', 'Veri bulunamadı')}), 404
 
             except Exception:
-                return jsonify({"error": "İç sunucu hatası"}), 500
+                return jsonify({"error": language_manager.tr('internal_server_error', 'İç sunucu hatası')}), 500
 
         @self.app.route('/api/v1/carbon/emissions/<int:company_id>', methods=['POST'])
         @self._require_api_key
@@ -205,10 +209,10 @@ class RESTAPIServer:
                 conn.commit()
                 conn.close()
 
-                return jsonify({"message": "Veri kaydedildi", "company_id": company_id}), 201
+                return jsonify({"message": language_manager.tr('data_saved', 'Veri kaydedildi'), "company_id": company_id}), 201
 
             except Exception:
-                return jsonify({"error": "İç sunucu hatası"}), 500
+                return jsonify({"error": language_manager.tr('internal_server_error', 'İç sunucu hatası')}), 500
 
         # =====================================================
         # SDG ENDPOİNTS
@@ -238,7 +242,7 @@ class RESTAPIServer:
                 })
 
             except Exception:
-                return jsonify({"error": "İç sunucu hatası"}), 500
+                return jsonify({"error": language_manager.tr('internal_server_error', 'İç sunucu hatası')}), 500
 
         # =====================================================
         # RAPOR ENDPOİNTS
@@ -258,9 +262,9 @@ class RESTAPIServer:
                 if module:
                     safe_module = ''.join([c for c in str(module) if c.isalnum() or c == '_' ])
                     if safe_module.upper() not in self._allowed_modules:
-                        return jsonify({"error": "Geçersiz modül"}), 400
+                        return jsonify({"error": language_manager.tr('invalid_module', 'Geçersiz modül')}), 400
                     if not self._rate_limit(rl_key, 120):
-                        return jsonify({"error": "Rate limit"}), 429
+                        return jsonify({"error": language_manager.tr('rate_limit_exceeded', 'Rate limit')}), 429
                     cursor.execute("""
                         SELECT id, report_name, module_code, report_type,
                                reporting_period, created_at
@@ -270,7 +274,7 @@ class RESTAPIServer:
                     """, (company_id, safe_module))
                 else:
                     if not self._rate_limit(rl_key, 120):
-                        return jsonify({"error": "Rate limit"}), 429
+                        return jsonify({"error": language_manager.tr('rate_limit_exceeded', 'Rate limit')}), 429
                     cursor.execute("""
                         SELECT id, report_name, module_code, report_type,
                                reporting_period, created_at
@@ -299,18 +303,20 @@ class RESTAPIServer:
                 })
 
             except Exception as e:
-                return jsonify({"error": str(e)}), 500
+                # Hata detayını loglayabiliriz, ancak kullanıcıya genel bir hata mesajı dönmeliyiz
+                print(f"Report API Error: {e}")
+                return jsonify({"error": language_manager.tr('internal_server_error', 'İç sunucu hatası')}), 500
 
     def _get_endpoint_list(self) -> List[str]:
         """Tüm endpoint'leri listele"""
         return [
-            "GET /api/v1/health - Sistem sağlık kontrolü",
-            "GET /api/v1/info - API bilgileri",
-            "GET /api/v1/company/{id} - Şirket bilgileri",
-            "GET /api/v1/carbon/emissions/{id} - Karbon verileri",
-            "POST /api/v1/carbon/emissions/{id} - Karbon verisi ekle",
-            "GET /api/v1/sdg/goals/{id} - SDG hedefleri",
-            "GET /api/v1/reports/{id} - Raporlar listesi"
+            f"GET /api/v1/health - {language_manager.tr('api_endpoint_health', 'Sistem sağlık kontrolü')}",
+            f"GET /api/v1/info - {language_manager.tr('api_endpoint_info', 'API bilgileri')}",
+            f"GET /api/v1/company/{{id}} - {language_manager.tr('api_endpoint_company', 'Şirket bilgileri')}",
+            f"GET /api/v1/carbon/emissions/{{id}} - {language_manager.tr('api_endpoint_carbon', 'Karbon verileri')}",
+            f"POST /api/v1/carbon/emissions/{{id}} - {language_manager.tr('api_endpoint_carbon_add', 'Karbon verisi ekle')}",
+            f"GET /api/v1/sdg/goals/{{id}} - {language_manager.tr('api_endpoint_sdg', 'SDG hedefleri')}",
+            f"GET /api/v1/reports/{{id}} - {language_manager.tr('api_endpoint_reports', 'Raporlar listesi')}"
         ]
 
     def run(self, host: str = '0.0.0.0', port: int = 5000, debug: bool = False) -> None:

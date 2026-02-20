@@ -7,7 +7,6 @@ GRI Content Index ve özet raporları DOCX/PDF formatında
 
 import logging
 import os
-import sqlite3
 from datetime import datetime
 from typing import Dict, List
 
@@ -24,6 +23,7 @@ from reportlab.platypus import (Paragraph, SimpleDocTemplate, Spacer, Table,
 
 from utils.language_manager import LanguageManager
 from config.database import DB_PATH
+from backend.core.database_manager import DatabaseManager
 
 
 def _add_turkish_paragraph(doc, text, style=None, font_name='Calibri', font_size=11):
@@ -68,44 +68,41 @@ class GRIDocxPDFReports:
             db_path = os.path.join(base_dir, db_path)
         self.db_path = db_path
         self.lm = LanguageManager()
-
-    def get_connection(self) -> None:
-        """Veritabanı bağlantısı"""
-        return sqlite3.connect(self.db_path)
+        self.db = DatabaseManager(db_path)
 
     def generate_gri_content_index_data(self, company_id: int = 1) -> Dict:
         """GRI Content Index verilerini oluştur"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
             logging.info("GRI Content Index verileri oluşturuluyor...")
 
-            # Tüm GRI göstergelerini al
-            cursor.execute("""
-                SELECT 
-                    gs.code as standard_code,
-                    gs.title as standard_title,
-                    gs.category,
-                    gi.code as disclosure_code,
-                    gi.title as disclosure_title,
-                    gi.description,
-                    gi.unit,
-                    gi.methodology,
-                    gi.reporting_requirement,
-                    gr.response_value,
-                    gr.numerical_value,
-                    gr.reporting_status,
-                    gr.period,
-                    gr.evidence_url,
-                    gr.notes
-                FROM gri_standards gs
-                JOIN gri_indicators gi ON gs.id = gi.standard_id
-                LEFT JOIN gri_responses gr ON gi.id = gr.indicator_id AND gr.company_id = ?
-                ORDER BY gs.category, gs.code, gi.code
-            """, (company_id,))
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
 
-            indicators = cursor.fetchall()
+                # Tüm GRI göstergelerini al
+                cursor.execute("""
+                    SELECT 
+                        gs.code as standard_code,
+                        gs.title as standard_title,
+                        gs.category,
+                        gi.code as disclosure_code,
+                        gi.title as disclosure_title,
+                        gi.description,
+                        gi.unit,
+                        gi.methodology,
+                        gi.reporting_requirement,
+                        gr.response_value,
+                        gr.numerical_value,
+                        gr.reporting_status,
+                        gr.period,
+                        gr.evidence_url,
+                        gr.notes
+                    FROM gri_standards gs
+                    JOIN gri_indicators gi ON gs.id = gi.standard_id
+                    LEFT JOIN gri_responses gr ON gi.id = gr.indicator_id AND gr.company_id = ?
+                    ORDER BY gs.category, gs.code, gi.code
+                """, (company_id,))
+
+                indicators = cursor.fetchall()
 
             # Kategorilere göre organize et
             content_index = {
@@ -186,8 +183,6 @@ class GRIDocxPDFReports:
         except Exception as e:
             logging.error(f"GRI Content Index veri oluşturma hatası: {e}")
             return {}
-        finally:
-            conn.close()
 
     def generate_docx_content_index(self, output_path: str, company_id: int = 1) -> bool:
         """GRI Content Index DOCX raporu oluştur"""

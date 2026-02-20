@@ -1,27 +1,25 @@
-import sqlite3
 import logging
 from datetime import datetime, timedelta
 import os
 from typing import List, Dict, Optional, Tuple
+from backend.core.base_manager import BaseTenantManager
 
-class RegulationManager:
+class RegulationManager(BaseTenantManager):
     """
     Regülasyon Takip Modülü Yöneticisi
     Ulusal ve uluslararası mevzuatı takip eder, uyum tarihlerini hatırlatır.
     """
     
-    def __init__(self, db_path: str):
-        self.db_path = db_path
+    def __init__(self, db_path: str, company_id: Optional[int] = None):
+        super().__init__(db_path, company_id)
         self._init_tables()
+        self.populate_initial_data()
         
     def _init_tables(self):
         """Veritabanı tablolarını oluşturur"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
         try:
             # Regülasyonlar tablosu
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS regulations (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     code TEXT NOT NULL UNIQUE,
@@ -41,7 +39,7 @@ class RegulationManager:
             """)
             
             # Şirket uyum durumu tablosu (Hangi şirket hangi regülasyona ne kadar uyumlu)
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS regulation_compliance (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -59,17 +57,11 @@ class RegulationManager:
                 )
             """)
             
-            conn.commit()
         except Exception as e:
             logging.error(f"RegulationManager init_tables error: {e}")
-        finally:
-            conn.close()
 
     def add_regulation(self, code: str, title: str, scope: str, authority: str, **kwargs) -> int:
         """Yeni bir regülasyon ekler"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
         try:
             fields = ["code", "title", "scope", "authority"]
             values = [code, title, scope, authority]
@@ -82,21 +74,20 @@ class RegulationManager:
                     placeholders.append("?")
             
             query = f"INSERT INTO regulations ({', '.join(fields)}) VALUES ({', '.join(placeholders)})"
-            cursor.execute(query, values)
-            conn.commit()
-            return cursor.lastrowid
+            self.execute_update(query, tuple(values))
+            
+            # Get last inserted id (sqlite specific trick or separate query)
+            # execute_update returns affected rows count, not id.
+            # We need to query it back.
+            rows = self.execute_query("SELECT id FROM regulations WHERE code = ?", (code,))
+            return rows[0]['id'] if rows else 0
+            
         except Exception as e:
             logging.error(f"add_regulation error: {e}")
             return 0
-        finally:
-            conn.close()
 
     def get_regulations(self, scope: Optional[str] = None, status: str = 'active') -> List[Dict]:
         """Regülasyonları listeler"""
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        
         try:
             query = "SELECT * FROM regulations WHERE status = ?"
             params = [status]
@@ -107,92 +98,70 @@ class RegulationManager:
                 
             query += " ORDER BY compliance_deadline ASC"
             
-            cursor.execute(query, params)
-            rows = cursor.fetchall()
+            rows = self.execute_query(query, tuple(params))
             return [dict(row) for row in rows]
         except Exception as e:
             logging.error(f"get_regulations error: {e}")
             return []
-        finally:
-            conn.close()
 
     def get_upcoming_deadlines(self, days: int = 90) -> List[Dict]:
         """Yaklaşan uyum tarihlerini getirir"""
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        
         try:
             target_date = (datetime.now() + timedelta(days=days)).strftime('%Y-%m-%d')
             today = datetime.now().strftime('%Y-%m-%d')
             
-            cursor.execute("""
+            rows = self.execute_query("""
                 SELECT * FROM regulations 
                 WHERE compliance_deadline BETWEEN ? AND ? 
                 AND status = 'active'
                 ORDER BY compliance_deadline ASC
             """, (today, target_date))
             
-            rows = cursor.fetchall()
             return [dict(row) for row in rows]
         except Exception as e:
             logging.error(f"get_upcoming_deadlines error: {e}")
             return []
-        finally:
-            conn.close()
             
     def update_compliance_status(self, company_id: int, regulation_id: int, status: str, notes: str = None) -> bool:
         """Şirketin uyum durumunu günceller"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
+        cid = self._ensure_context(company_id)
         try:
-            cursor.execute("""
+            self.execute_update("""
                 INSERT OR REPLACE INTO regulation_compliance 
                 (company_id, regulation_id, compliance_status, notes, updated_at)
                 VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
-            """, (company_id, regulation_id, status, notes))
-            conn.commit()
+            """, (cid, regulation_id, status, notes))
             return True
         except Exception as e:
             logging.error(f"update_compliance_status error: {e}")
             return False
-        finally:
-            conn.close()
 
     def get_company_compliance(self, company_id: int) -> List[Dict]:
         """Şirketin regülasyon uyum raporunu getirir"""
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        
+        cid = self._ensure_context(company_id)
         try:
             # LEFT JOIN ile tüm aktif regülasyonları ve varsa şirketin durumunu getir
-            cursor.execute("""
+            rows = self.execute_query("""
                 SELECT r.*, 
                        rc.compliance_status, rc.notes, rc.last_audit_date, rc.next_audit_date
                 FROM regulations r
                 LEFT JOIN regulation_compliance rc ON r.id = rc.regulation_id AND rc.company_id = ?
                 WHERE r.status = 'active'
                 ORDER BY r.compliance_deadline ASC
-            """, (company_id,))
+            """, (cid,))
             
-            rows = cursor.fetchall()
             return [dict(row) for row in rows]
         except Exception as e:
             logging.error(f"get_company_compliance error: {e}")
             return []
-        finally:
-            conn.close()
 
     def populate_initial_data(self):
         """Başlangıç verilerini yükle (Eğer tablo boşsa)"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
         try:
-            cursor.execute("SELECT COUNT(*) FROM regulations")
-            if cursor.fetchone()[0] == 0:
+            count_rows = self.execute_query("SELECT COUNT(*) as count FROM regulations")
+            count = count_rows[0]['count'] if count_rows else 0
+            
+            if count == 0:
                 # Örnek veriler
                 regulations = [
                     ("EU-CBAM", "Carbon Border Adjustment Mechanism", "uluslararasi", "AB", "AB Sınırda Karbon Düzenleme Mekanizması", "2023-05-16", "2023-10-01", "2026-01-01", "Demir-Çelik,Çimento,Gübre,Alüminyum,Elektrik,Hidrojen"),
@@ -217,5 +186,3 @@ class RegulationManager:
                 logging.info("RegulationManager: Initial data populated.")
         except Exception as e:
             logging.error(f"populate_initial_data error: {e}")
-        finally:
-            conn.close()

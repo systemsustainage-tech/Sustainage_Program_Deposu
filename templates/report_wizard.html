@@ -1,0 +1,311 @@
+{% extends "base.html" %}
+
+{% block title %}Rapor Sihirbazı - Sustainage{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="h2"><i class="bi bi-magic"></i> Rapor Oluşturma Sihirbazı</h1>
+            <p class="text-muted">Adım adım özelleştirilmiş raporlarınızı oluşturun.</p>
+        </div>
+        <div class="col-auto">
+            <a href="{{ url_for('reports') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Geri Dön</a>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-4">
+            <!-- Progress Bar -->
+            <div class="position-relative m-4">
+                <div class="progress" style="height: 1px;">
+                    <div class="progress-bar" role="progressbar" style="width: 0%;" id="progressBar"></div>
+                </div>
+                <button type="button" class="position-absolute top-0 start-0 translate-middle btn btn-sm btn-primary rounded-pill" style="width: 2rem; height:2rem;">1</button>
+                <button type="button" class="position-absolute top-0 start-50 translate-middle btn btn-sm btn-secondary rounded-pill" style="width: 2rem; height:2rem;" id="step2-indicator">2</button>
+                <button type="button" class="position-absolute top-0 start-100 translate-middle btn btn-sm btn-secondary rounded-pill" style="width: 2rem; height:2rem;" id="step3-indicator">3</button>
+            </div>
+            <div class="d-flex justify-content-between mb-4">
+                <span class="ms-n2 small fw-bold">Modül Seçimi</span>
+                <span class="small text-muted">Detaylar</span>
+                <span class="me-n2 small text-muted">Önizleme & Oluştur</span>
+            </div>
+
+            <form id="wizardForm" action="{{ url_for('report_wizard_generate') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <!-- Step 1: Module Selection -->
+                <div id="step1" class="step-content">
+                    <h4 class="mb-3">Hangi modül için rapor oluşturmak istiyorsunuz?</h4>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="card h-100 btn btn-outline-light text-start p-3 border item-selector">
+                                <div class="d-flex align-items-center mb-2">
+                                    <input type="radio" name="module" value="carbon" class="form-check-input me-2" checked>
+                                    <i class="bi bi-cloud-fog2 fs-4 text-success me-2"></i>
+                                    <span class="fw-bold text-dark">Karbon Ayak İzi</span>
+                                </div>
+                                <small class="text-muted">Kapsam 1, 2 ve 3 emisyon raporları.</small>
+                            </label>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="card h-100 btn btn-outline-light text-start p-3 border item-selector">
+                                <div class="d-flex align-items-center mb-2">
+                                    <input type="radio" name="module" value="energy" class="form-check-input me-2">
+                                    <i class="bi bi-lightning-charge fs-4 text-warning me-2"></i>
+                                    <span class="fw-bold text-dark">Enerji Yönetimi</span>
+                                </div>
+                                <small class="text-muted">Enerji tüketimi ve verimlilik analizleri.</small>
+                            </label>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="card h-100 btn btn-outline-light text-start p-3 border item-selector">
+                                <div class="d-flex align-items-center mb-2">
+                                    <input type="radio" name="module" value="water" class="form-check-input me-2">
+                                    <i class="bi bi-droplet fs-4 text-info me-2"></i>
+                                    <span class="fw-bold text-dark">Su Yönetimi</span>
+                                </div>
+                                <small class="text-muted">Su tüketimi ve geri kazanım raporları.</small>
+                            </label>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="card h-100 btn btn-outline-light text-start p-3 border item-selector">
+                                <div class="d-flex align-items-center mb-2">
+                                    <input type="radio" name="module" value="waste" class="form-check-input me-2">
+                                    <i class="bi bi-recycle fs-4 text-secondary me-2"></i>
+                                    <span class="fw-bold text-dark">Atık Yönetimi</span>
+                                </div>
+                                <small class="text-muted">Atık türleri ve bertaraf yöntemleri.</small>
+                            </label>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="card h-100 btn btn-outline-light text-start p-3 border item-selector">
+                                <div class="d-flex align-items-center mb-2">
+                                    <input type="radio" name="module" value="social" class="form-check-input me-2">
+                                    <i class="bi bi-people fs-4 text-primary me-2"></i>
+                                    <span class="fw-bold text-dark">Sosyal Etki</span>
+                                </div>
+                                <small class="text-muted">Çalışanlar, İSG ve toplumsal katkı.</small>
+                            </label>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="card h-100 btn btn-outline-light text-start p-3 border item-selector">
+                                <div class="d-flex align-items-center mb-2">
+                                    <input type="radio" name="module" value="unified" class="form-check-input me-2">
+                                    <i class="bi bi-layers fs-4 text-dark me-2"></i>
+                                    <span class="fw-bold text-dark">Birleşik Rapor</span>
+                                </div>
+                                <small class="text-muted">Tüm modüllerin özeti (Genel Görünüm).</small>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 2: Details -->
+                <div id="step2" class="step-content d-none">
+                    <h4 class="mb-3">Rapor Detayları</h4>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Rapor Başlığı</label>
+                            <input type="text" name="report_name" class="form-control" placeholder="Örn: 2024 Yıllık Karbon Raporu" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Raporlama Dönemi</label>
+                            <select name="period" class="form-select">
+                                <option value="2026">2026</option>
+                                <option value="2025">2025</option>
+                                <option value="2024">2024</option>
+                                <option value="2023">2023</option>
+                            </select>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">Format Seçimi</label>
+                            <div class="d-flex gap-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="format" value="pdf" id="formatPdf" checked>
+                                    <label class="form-check-label" for="formatPdf"><i class="bi bi-file-pdf text-danger"></i> PDF</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="format" value="docx" id="formatDocx">
+                                    <label class="form-check-label" for="formatDocx"><i class="bi bi-file-word text-primary"></i> Word (DOCX)</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="format" value="xlsx" id="formatXlsx">
+                                    <label class="form-check-label" for="formatXlsx"><i class="bi bi-file-excel text-success"></i> Excel (XLSX)</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">Ek Seçenekler</label>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" name="include_ai" id="includeAi" checked>
+                                <label class="form-check-label" for="includeAi">Yapay Zeka (AI) Yorumu Ekle</label>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" name="include_charts" id="includeCharts" checked>
+                                <label class="form-check-label" for="includeCharts">Grafikleri Dahil Et</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 3: Review -->
+                <div id="step3" class="step-content d-none">
+                    <h4 class="mb-3">Önizleme ve Onay</h4>
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> Seçimlerinizi gözden geçirin ve raporu oluşturmak için butona tıklayın.
+                    </div>
+                    <ul class="list-group mb-3">
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Seçilen Modül:</span>
+                            <strong id="summary-module"></strong>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Rapor Adı:</span>
+                            <strong id="summary-name"></strong>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Dönem:</span>
+                            <strong id="summary-period"></strong>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Format:</span>
+                            <strong id="summary-format"></strong>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Navigation Buttons -->
+                <div class="d-flex justify-content-between mt-4">
+                    <button type="button" class="btn btn-outline-secondary" id="prevBtn" style="display:none;" onclick="nextPrev(-1)">Geri</button>
+                    <button type="button" class="btn btn-primary" id="nextBtn" onclick="nextPrev(1)">İleri <i class="bi bi-arrow-right"></i></button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentTab = 0;
+showTab(currentTab);
+
+function showTab(n) {
+    let x = document.getElementsByClassName("step-content");
+    for (let i = 0; i < x.length; i++) {
+        x[i].classList.add("d-none");
+    }
+    x[n].classList.remove("d-none");
+
+    // Buttons
+    if (n == 0) {
+        document.getElementById("prevBtn").style.display = "none";
+    } else {
+        document.getElementById("prevBtn").style.display = "inline";
+    }
+    if (n == (x.length - 1)) {
+        document.getElementById("nextBtn").innerHTML = '<i class="bi bi-check-lg"></i> Raporu Oluştur';
+        document.getElementById("nextBtn").className = "btn btn-success";
+        updateSummary();
+    } else {
+        document.getElementById("nextBtn").innerHTML = 'İleri <i class="bi bi-arrow-right"></i>';
+        document.getElementById("nextBtn").className = "btn btn-primary";
+    }
+    
+    // Steps
+    updateSteps(n);
+}
+
+function updateSteps(n) {
+    const steps = [0, 50, 100];
+    document.getElementById("progressBar").style.width = steps[n] + "%";
+    
+    // Update step indicators colors
+    const step2 = document.getElementById("step2-indicator");
+    const step3 = document.getElementById("step3-indicator");
+    
+    if (n >= 1) {
+        step2.classList.remove("btn-secondary");
+        step2.classList.add("btn-primary");
+    } else {
+        step2.classList.remove("btn-primary");
+        step2.classList.add("btn-secondary");
+    }
+    
+    if (n >= 2) {
+        step3.classList.remove("btn-secondary");
+        step3.classList.add("btn-primary");
+    } else {
+        step3.classList.remove("btn-primary");
+        step3.classList.add("btn-secondary");
+    }
+}
+
+function nextPrev(n) {
+    let x = document.getElementsByClassName("step-content");
+    
+    // Validation if going forward
+    if (n == 1) {
+        if (!validateForm()) return false;
+    }
+    
+    // If submit
+    if (currentTab + n >= x.length) {
+        document.getElementById("wizardForm").submit();
+        return false;
+    }
+    
+    currentTab = currentTab + n;
+    showTab(currentTab);
+}
+
+function validateForm() {
+    let valid = true;
+    let x = document.getElementsByClassName("step-content");
+    let inputs = x[currentTab].getElementsByTagName("input");
+    
+    // Basic validation for text inputs if required
+    for (let i = 0; i < inputs.length; i++) {
+        if (inputs[i].hasAttribute("required") && inputs[i].value == "") {
+            inputs[i].className += " is-invalid";
+            valid = false;
+        }
+    }
+    return valid;
+}
+
+function updateSummary() {
+    // Module
+    const module = document.querySelector('input[name="module"]:checked').value;
+    const moduleMap = {
+        'carbon': 'Karbon Ayak İzi',
+        'energy': 'Enerji Yönetimi',
+        'water': 'Su Yönetimi',
+        'waste': 'Atık Yönetimi',
+        'social': 'Sosyal Etki',
+        'unified': 'Birleşik Rapor'
+    };
+    document.getElementById("summary-module").innerText = moduleMap[module] || module;
+    
+    // Name
+    document.getElementById("summary-name").innerText = document.querySelector('input[name="report_name"]').value;
+    
+    // Period
+    document.getElementById("summary-period").innerText = document.querySelector('select[name="period"]').value;
+    
+    // Format
+    document.getElementById("summary-format").innerText = document.querySelector('input[name="format"]:checked').value.toUpperCase();
+}
+
+// Highlight selected radio card
+document.querySelectorAll('input[name="module"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        document.querySelectorAll('.item-selector').forEach(el => {
+            el.classList.remove('bg-light', 'border-primary');
+        });
+        if(this.checked) {
+            this.closest('label').classList.add('bg-light', 'border-primary');
+        }
+    });
+});
+</script>
+{% endblock %}

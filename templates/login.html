@@ -21,14 +21,21 @@
 
                     {% if captcha_required %}
                     <div class="mb-3">
-                        <label class="form-label">Güvenlik Kodu</label>
-                        <div class="d-flex align-items-center mb-2">
-                            <img src="{{ url_for('captcha_image', t=range(1, 10000) | random) }}" alt="CAPTCHA" class="img-fluid border rounded me-2" style="height: 50px;">
-                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="this.previousElementSibling.src='{{ url_for('captcha_image') }}?t=' + Math.random()">
-                                <i class="bi bi-arrow-clockwise"></i> Yenile
-                            </button>
-                        </div>
-                        <input type="text" class="form-control" name="captcha" placeholder="Resimdeki kodu girin" required>
+                        <label class="form-label">{{ lang('security_check') }}</label>
+                        {% if recaptcha_site_key %}
+                            <!-- Google reCAPTCHA -->
+                            <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+                            <div class="g-recaptcha" data-sitekey="{{ recaptcha_site_key }}"></div>
+                        {% else %}
+                            <!-- Custom CAPTCHA Fallback -->
+                            <div class="d-flex align-items-center mb-2">
+                                <img src="{{ url_for('captcha_image', t=range(1, 10000) | random) }}" alt="CAPTCHA" class="img-fluid border rounded me-2" style="height: 50px;">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="this.previousElementSibling.src='{{ url_for('captcha_image') }}?t=' + Math.random()">
+                                    <i class="bi bi-arrow-clockwise"></i> {{ lang('refresh') }}
+                                </button>
+                            </div>
+                            <input type="text" class="form-control" name="captcha" placeholder="{{ lang('enter_captcha_code') }}" required>
+                        {% endif %}
                     </div>
                     {% endif %}
                     

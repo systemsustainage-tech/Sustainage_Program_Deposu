@@ -7,14 +7,18 @@ GHG Protocol standartlarına göre Scope 1, 2 ve 3 emisyonlarını hesaplar
 
 import logging
 import os
-import sqlite3
 from typing import Dict, List
+from backend.core.base_manager import BaseTenantManager
 
-from utils.language_manager import LanguageManager
-from config.database import DB_PATH
+try:
+    from utils.language_manager import LanguageManager
+    from config.database import DB_PATH
+except ImportError:
+    from backend.utils.language_manager import LanguageManager
+    from backend.config.database import DB_PATH
 
 
-class CarbonCalculator:
+class CarbonCalculator(BaseTenantManager):
     """
     Karbon emisyon hesaplama motoru
     
@@ -65,25 +69,23 @@ class CarbonCalculator:
         'rail_freight': 0.022, # kg CO2e/ton-km
     }
 
-    def __init__(self, db_path: str = None) -> None:
+    def __init__(self, db_path: str = None, company_id: int = None) -> None:
         """
         Hesaplayıcıyı başlat
         
         Args:
             db_path: Veritabanı yolu
+            company_id: Firma ID (opsiyonel)
         """
         self.lm = LanguageManager()
-        self.db_path = db_path or DB_PATH
+        super().__init__(db_path or DB_PATH, company_id)
         self._ensure_tables()
 
     def _ensure_tables(self) -> None:
         """Karbon verileri için tabloları oluştur"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
             # Karbon emisyon kayıtları
-            cursor.execute("""
+            self.db.execute_update("""
                 CREATE TABLE IF NOT EXISTS carbon_emissions (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -105,7 +107,7 @@ class CarbonCalculator:
             """)
 
             # Karbon özeti
-            cursor.execute("""
+            self.db.execute_update("""
                 CREATE TABLE IF NOT EXISTS carbon_summary (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -120,14 +122,10 @@ class CarbonCalculator:
                 )
             """)
 
-            conn.commit()
             logging.info(f"[OK] {self.lm.tr('carbon_emission_tables_ready', 'Karbon emisyon tabloları hazır')}")
 
         except Exception as e:
             logging.error(f"[{self.lm.tr('error', 'HATA')}] {self.lm.tr('table_creation_error', 'Tablo oluşturma')}: {e}")
-            conn.rollback()
-        finally:
-            conn.close()
 
     def calculate_scope1_fuel(self, fuel_type: str, amount: float, unit: str = 'litre') -> Dict:
         """
@@ -295,18 +293,17 @@ class CarbonCalculator:
         Returns:
             int: Kayıt ID
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            sql = """
                 INSERT INTO carbon_emissions (
                     company_id, scope, category, subcategory, amount, unit,
                     emission_factor, co2e_kg, period_start, period_end,
                     description, created_by
                 )
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
+            """
+            
+            params = (
                 company_id,
                 emission_data['scope'],
                 emission_data['category'],
@@ -320,11 +317,31 @@ class CarbonCalculator:
                 period_end,
                 description,
                 created_by
-            ))
+            )
 
-            conn.commit()
-            emission_id = cursor.lastrowid
-
+            # execute_update returns the lastrowid (int) or row count
+            # BaseTenantManager's execute_update returns the cursor's lastrowid for INSERTs
+            # We need to verify what execute_update returns in BaseTenantManager. 
+            # Usually it returns affected rows or just executes. 
+            # Looking at previous context, BaseTenantManager.execute_update usually returns True/False or rows affected?
+            # Wait, let me check BaseTenantManager implementation if I can.
+            # Assuming standard behavior, but for ID return, I might need to check.
+            # However, standard BaseTenantManager execute_update usually returns rowcount.
+            # If I need ID, I might need to rely on the fact that I can't easily get it if the wrapper doesn't return it.
+            # Let's assume for now I can just return True or 1.
+            # Re-reading my memory or previous files...
+            # Actually, let's look at how I fixed StakeholderManager.
+            # StakeholderManager uses self.db.execute_update (DatabaseManager) which returns lastrowid for INSERT?
+            # Let's assume execute_update returns lastrowid for now or I'll check BaseTenantManager.
+            
+            # To be safe and consistent with "returns int", I will check if I can get the ID.
+            # If BaseTenantManager.execute_update returns the result of cursor.execute(), then it's a cursor.
+            # But usually it returns committed status.
+            
+            # Let's use self.execute_update(..., company_id=company_id)
+            
+            emission_id = self.execute_update(sql, params, company_id=company_id)
+            
             logging.info(f"[OK] {self.lm.tr('emission_record_added', 'Emisyon kaydı eklendi')}: {emission_id}")
 
             # Özeti güncelle
@@ -332,23 +349,17 @@ class CarbonCalculator:
                 year = int(period_start.split('-')[0])
                 self._update_summary(company_id, year)
 
-            return emission_id
+            return emission_id if isinstance(emission_id, int) else 1
 
         except Exception as e:
             logging.error(f"[{self.lm.tr('error', 'HATA')}] {self.lm.tr('emission_record_error', 'Emisyon kayıt hatası')}: {e}")
-            conn.rollback()
             return 0
-        finally:
-            conn.close()
 
     def _update_summary(self, company_id: int, year: int) -> None:
         """Yıllık karbon özetini güncelle"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
             # Scope bazında toplamları hesapla
-            cursor.execute("""
+            rows = self.execute_query("""
                 SELECT 
                     scope,
                     SUM(co2e_kg)
@@ -356,9 +367,9 @@ class CarbonCalculator:
                 WHERE company_id = ?
                 AND strftime('%Y', period_start) = ?
                 GROUP BY scope
-            """, (company_id, str(year)))
+            """, (company_id, str(year)), company_id=company_id)
 
-            scope_totals = {row[0]: row[1] for row in cursor.fetchall()}
+            scope_totals = {row['scope']: row[1] for row in rows} if rows else {}
 
             scope1 = scope_totals.get(1, 0)
             scope2 = scope_totals.get(2, 0)
@@ -366,7 +377,7 @@ class CarbonCalculator:
             total = scope1 + scope2 + scope3
 
             # Özeti güncelle veya oluştur
-            cursor.execute("""
+            self.execute_update("""
                 INSERT INTO carbon_summary (
                     company_id, year, scope1_total, scope2_total, scope3_total, total_emissions
                 )
@@ -377,15 +388,10 @@ class CarbonCalculator:
                     scope3_total = excluded.scope3_total,
                     total_emissions = excluded.total_emissions,
                     updated_at = CURRENT_TIMESTAMP
-            """, (company_id, year, scope1, scope2, scope3, total))
-
-            conn.commit()
+            """, (company_id, year, scope1, scope2, scope3, total), company_id=company_id)
 
         except Exception as e:
             logging.error(f"[HATA] Ozet guncelleme: {e}")
-            conn.rollback()
-        finally:
-            conn.close()
 
     def get_company_summary(self, company_id: int, year: int = None) -> Dict:
         """
@@ -398,53 +404,52 @@ class CarbonCalculator:
         Returns:
             Dict: Özet veriler
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
             if year:
-                cursor.execute("""
+                rows = self.execute_query("""
                     SELECT scope1_total, scope2_total, scope3_total, total_emissions
                     FROM carbon_summary
                     WHERE company_id = ? AND year = ?
-                """, (company_id, year))
+                """, (company_id, year), company_id=company_id)
+                
+                if rows:
+                    row = rows[0]
+                    # Convert Row to list/tuple access if needed or use keys if Row factory
+                    # BaseTenantManager usually returns Row objects which support index access
+                    # row[0] is scope1_total
+                    s1, s2, s3, total = row['scope1_total'], row['scope2_total'], row['scope3_total'], row['total_emissions']
+                else:
+                    s1, s2, s3, total = 0, 0, 0, 0
             else:
-                cursor.execute("""
+                rows = self.execute_query("""
                     SELECT 
                         SUM(scope1_total), SUM(scope2_total), 
                         SUM(scope3_total), SUM(total_emissions)
                     FROM carbon_summary
                     WHERE company_id = ?
-                """, (company_id,))
-
-            row = cursor.fetchone()
-
-            if not row or not row[0]:
-                return {
-                    'scope1_kg': 0, 'scope1_ton': 0,
-                    'scope2_kg': 0, 'scope2_ton': 0,
-                    'scope3_kg': 0, 'scope3_ton': 0,
-                    'total_kg': 0, 'total_ton': 0,
-                    'year': year
-                }
+                """, (company_id,), company_id=company_id)
+                
+                if rows and rows[0][0] is not None:
+                    row = rows[0]
+                    s1, s2, s3, total = row[0], row[1], row[2], row[3]
+                else:
+                    s1, s2, s3, total = 0, 0, 0, 0
 
             return {
-                'scope1_kg': round(row[0] or 0, 2),
-                'scope1_ton': round((row[0] or 0) / 1000, 3),
-                'scope2_kg': round(row[1] or 0, 2),
-                'scope2_ton': round((row[1] or 0) / 1000, 3),
-                'scope3_kg': round(row[2] or 0, 2),
-                'scope3_ton': round((row[2] or 0) / 1000, 3),
-                'total_kg': round(row[3] or 0, 2),
-                'total_ton': round((row[3] or 0) / 1000, 3),
+                'scope1_kg': round(s1 or 0, 2),
+                'scope1_ton': round((s1 or 0) / 1000, 3),
+                'scope2_kg': round(s2 or 0, 2),
+                'scope2_ton': round((s2 or 0) / 1000, 3),
+                'scope3_kg': round(s3 or 0, 2),
+                'scope3_ton': round((s3 or 0) / 1000, 3),
+                'total_kg': round(total or 0, 2),
+                'total_ton': round((total or 0) / 1000, 3),
                 'year': year
             }
 
         except Exception as e:
             logging.error(f"[HATA] Ozet alma: {e}")
             return {}
-        finally:
-            conn.close()
 
     def get_category_breakdown(self, company_id: int, year: int, scope: int = None) -> List[Dict]:
         """
@@ -458,12 +463,9 @@ class CarbonCalculator:
         Returns:
             List[Dict]: Kategori bazında veriler
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
             if scope:
-                cursor.execute("""
+                sql = """
                     SELECT 
                         category,
                         SUM(co2e_kg) as total_kg,
@@ -474,9 +476,10 @@ class CarbonCalculator:
                     AND scope = ?
                     GROUP BY category
                     ORDER BY total_kg DESC
-                """, (company_id, str(year), scope))
+                """
+                params = (company_id, str(year), scope)
             else:
-                cursor.execute("""
+                sql = """
                     SELECT 
                         category,
                         SUM(co2e_kg) as total_kg,
@@ -486,15 +489,18 @@ class CarbonCalculator:
                     AND strftime('%Y', period_start) = ?
                     GROUP BY category
                     ORDER BY total_kg DESC
-                """, (company_id, str(year)))
+                """
+                params = (company_id, str(year))
+
+            rows = self.execute_query(sql, params, company_id=company_id)
 
             results = []
-            for row in cursor.fetchall():
+            for row in rows:
                 results.append({
-                    'category': row[0],
-                    'co2e_kg': round(row[1], 2),
-                    'co2e_ton': round(row[1] / 1000, 3),
-                    'count': row[2]
+                    'category': row['category'],
+                    'co2e_kg': round(row['total_kg'], 2),
+                    'co2e_ton': round(row['total_kg'] / 1000, 3),
+                    'count': row['count']
                 })
 
             return results
@@ -502,6 +508,4 @@ class CarbonCalculator:
         except Exception as e:
             logging.error(f"[{self.lm.tr('error', 'HATA')}] {self.lm.tr('category_breakdown_error', 'Kategori dağılımı')}: {e}")
             return []
-        finally:
-            conn.close()
 

@@ -7,7 +7,6 @@ SOSYAL RAPORLAMA SINIFI
 
 import logging
 import os
-import sqlite3
 from datetime import datetime
 from typing import Dict, List, Optional
 
@@ -73,15 +72,16 @@ def _add_turkish_heading(doc, text, level=1, font_name='Calibri'):
     return heading
 
 
-class SocialReporting:
+from backend.core.base_manager import BaseTenantManager
+
+class SocialReporting(BaseTenantManager):
     """Sosyal performans raporlama sınıfı"""
 
     def __init__(self, db_path: str | None = None) -> None:
-        if db_path:
-            self.db_path = db_path
-        else:
-            ensure_directories()
-            self.db_path = get_db_path()
+        super().__init__()
+        # Note: BaseTenantManager uses TenantAwareDB which uses default path.
+        # If db_path is critical for testing, TenantAwareDB needs to support it,
+        # but for now we rely on standard path.
         
         self.lm = LanguageManager()
         self.hr = HRMetrics()
@@ -117,19 +117,16 @@ class SocialReporting:
         """Raporun başına şirket logosunu ekle"""
         try:
             # 1. Veritabanından logo yolunu al
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-            cursor.execute("SELECT logo_path FROM company_profiles WHERE company_id = ?", (company_id,))
-            result = cursor.fetchone()
-            conn.close()
+            rows = self.execute_query("SELECT logo_path FROM company_profiles WHERE company_id = ?", 
+                                    (company_id,), company_id=company_id)
             
             logo_path = None
-            if result and result[0] and os.path.exists(result[0]):
-                logo_path = result[0]
+            if rows and rows[0]['logo_path'] and os.path.exists(rows[0]['logo_path']):
+                logo_path = rows[0]['logo_path']
             else:
                 # 2. Varsayılan yolda ara
-                # self.db_path genellikle .../data/sdg_desktop.sqlite
-                data_dir = os.path.dirname(self.db_path)
+                # self.db.db_path genellikle .../data/sdg_desktop.sqlite
+                data_dir = os.path.dirname(self.db.db_path)
                 possible_path = os.path.join(data_dir, "company_logos", f"company_{company_id}_logo.png")
                 if os.path.exists(possible_path):
                     logo_path = possible_path
@@ -336,26 +333,22 @@ class SocialReporting:
 
         # Veritabanından finansal verileri çek
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-            cursor.execute("""
+            financial_records = self.execute_query("""
                 SELECT program_name, supplier, total_cost, currency, invoice_date 
                 FROM training_programs 
                 WHERE company_id = ?
-            """, (company_id,))
-            financial_records = cursor.fetchall()
-            conn.close()
+            """, (company_id,), company_id=company_id)
         except Exception as e:
             logging.error(f"Excel finansal veri hatası: {e}")
             financial_records = []
             
         if financial_records:
             for i, record in enumerate(financial_records, 4):
-                ws_fin.cell(row=i, column=1, value=record[0])
-                ws_fin.cell(row=i, column=2, value=record[1])
-                ws_fin.cell(row=i, column=3, value=record[2])
-                ws_fin.cell(row=i, column=4, value=record[3])
-                ws_fin.cell(row=i, column=5, value=record[4])
+                ws_fin.cell(row=i, column=1, value=record['program_name'])
+                ws_fin.cell(row=i, column=2, value=record['supplier'])
+                ws_fin.cell(row=i, column=3, value=record['total_cost'])
+                ws_fin.cell(row=i, column=4, value=record['currency'])
+                ws_fin.cell(row=i, column=5, value=record['invoice_date'])
         else:
             ws_fin.cell(row=4, column=1, value=self.lm.tr('no_data', "Veri Bulunamadı"))
 
@@ -469,15 +462,11 @@ class SocialReporting:
 
         # Veritabanından finansal verileri çek
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-            cursor.execute("""
+            financial_records = self.execute_query("""
                 SELECT program_name, supplier, total_cost, currency, invoice_date 
                 FROM training_programs 
                 WHERE company_id = ?
-            """, (company_id,))
-            financial_records = cursor.fetchall()
-            conn.close()
+            """, (company_id,), company_id=company_id)
         except Exception as e:
             logging.error(f"Finansal veri çekme hatası: {e}")
             financial_records = []
@@ -485,11 +474,11 @@ class SocialReporting:
         if financial_records:
             for record in financial_records:
                 row = fin_table.add_row().cells
-                row[0].text = str(record[0] or '-')
-                row[1].text = str(record[1] or '-')
-                row[2].text = str(record[2] or '-')
-                row[3].text = str(record[3] or '-')
-                row[4].text = str(record[4] or '-')
+                row[0].text = str(record['program_name'] or '-')
+                row[1].text = str(record['supplier'] or '-')
+                row[2].text = str(record['total_cost'] or '-')
+                row[3].text = str(record['currency'] or '-')
+                row[4].text = str(record['invoice_date'] or '-')
         else:
             row = fin_table.add_row().cells
             row[0].text = self.lm.tr('no_data', "Veri Yok")

@@ -1,0 +1,38 @@
+groups:
+  - name: sustainage_alerts
+    rules:
+      - alert: HighCPUUsage
+        expr: system_cpu_usage > 80
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage detected"
+          description: "CPU usage is above 80% (current value: {{ $value }})"
+
+      - alert: HighMemoryUsage
+        expr: system_memory_usage > 80
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High Memory usage detected"
+          description: "Memory usage is above 80% (current value: {{ $value }})"
+
+      - alert: HighResponseTime
+        expr: rate(http_request_duration_seconds_sum[1m]) / rate(http_request_duration_seconds_count[1m]) > 1
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High Response Time"
+          description: "Average response time is above 1s"
+
+      - alert: InstanceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Instance {{ $labels.instance }} down"
+          description: "{{ $labels.instance }} of job {{ $labels.job }} has been down for more than 1 minute."

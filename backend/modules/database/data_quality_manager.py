@@ -7,28 +7,25 @@ Veri kalite skorlama ve iyileştirme
 
 import logging
 import os
-import sqlite3
-from typing import Dict
+from typing import Dict, Optional
+try:
+    from backend.core.base_manager import BaseTenantManager
+except ImportError:
+    from core.base_manager import BaseTenantManager
 from config.database import DB_PATH
 
 
-class DataQualityManager:
+class DataQualityManager(BaseTenantManager):
     """Veri kalite yönetimi ve skorlama"""
 
-    def __init__(self, db_path: str = DB_PATH) -> None:
-        if not os.path.isabs(db_path):
-            base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
-            db_path = os.path.join(base_dir, db_path)
-        self.db_path = db_path
+    def __init__(self, db_path: str = DB_PATH, company_id: Optional[int] = None) -> None:
+        super().__init__(db_path, company_id)
         self._init_db_tables()
 
     def _init_db_tables(self) -> None:
         """Veri kalite tablolarını oluştur"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS data_quality_scores (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -44,9 +41,9 @@ class DataQualityManager:
                     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (company_id) REFERENCES companies(id)
                 )
-            """)
+            """, skip_tenant_filter=True)
 
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS data_validation_rules (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -59,16 +56,12 @@ class DataQualityManager:
                     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (company_id) REFERENCES companies(id)
                 )
-            """)
+            """, skip_tenant_filter=True)
 
-            conn.commit()
             logging.info("[OK] Veri kalite yonetimi modulu tablolari basariyla olusturuldu")
 
         except Exception as e:
             logging.error(f"[HATA] Veri kalite yonetimi modulu tablo olusturma: {e}")
-            conn.rollback()
-        finally:
-            conn.close()
 
     def calculate_data_quality_score(self, company_id: int, data_category: str) -> Dict:
         """Veri kalite skoru hesapla"""

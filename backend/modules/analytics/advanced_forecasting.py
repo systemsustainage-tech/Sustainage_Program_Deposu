@@ -8,104 +8,94 @@ Linear Regression, Time Series, Hedef Tahmini, What-If Analizi
 import logging
 import json
 import os
-import sqlite3
 import statistics
 from datetime import datetime
 from typing import Dict, List
 from config.database import DB_PATH
 
 
-class AdvancedForecasting:
+from backend.core.base_manager import BaseTenantManager
+
+class AdvancedForecasting(BaseTenantManager):
     """Gelişmiş tahmin ve trend analizi sistemi"""
 
-    def __init__(self, db_path: str = DB_PATH) -> None:
-        if not os.path.isabs(db_path):
-            base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
-            db_path = os.path.join(base_dir, db_path)
-        self.db_path = db_path
+    def __init__(self, db_path: str = None, company_id: int = None) -> None:
+        super().__init__(db_path or DB_PATH, company_id)
         self._init_forecast_tables()
 
     def _init_forecast_tables(self) -> None:
         """Tahmin tablolarını oluştur"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        # BaseTenantManager allows DDL without company_id
+        
+        # Trend verileri (5-10 yıl)
+        self.execute_update("""
+            CREATE TABLE IF NOT EXISTS trend_data (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                company_id INTEGER NOT NULL,
+                metric_code TEXT NOT NULL,
+                year INTEGER NOT NULL,
+                actual_value REAL NOT NULL,
+                predicted_value REAL,
+                prediction_accuracy REAL,
+                data_source TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(company_id, metric_code, year)
+            )
+        """)
 
-        try:
-            # Trend verileri (5-10 yıl)
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS trend_data (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    company_id INTEGER NOT NULL,
-                    metric_code TEXT NOT NULL,
-                    year INTEGER NOT NULL,
-                    actual_value REAL NOT NULL,
-                    predicted_value REAL,
-                    prediction_accuracy REAL,
-                    data_source TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    UNIQUE(company_id, metric_code, year)
-                )
-            """)
+        # Tahmin sonuçları
+        self.execute_update("""
+            CREATE TABLE IF NOT EXISTS forecast_results (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                company_id INTEGER NOT NULL,
+                metric_code TEXT NOT NULL,
+                forecast_year INTEGER NOT NULL,
+                forecast_value REAL NOT NULL,
+                forecast_method TEXT NOT NULL,
+                confidence_interval_lower REAL,
+                confidence_interval_upper REAL,
+                confidence_level REAL DEFAULT 95.0,
+                assumptions TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(company_id, metric_code, forecast_year, forecast_method)
+            )
+        """)
 
-            # Tahmin sonuçları
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS forecast_results (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    company_id INTEGER NOT NULL,
-                    metric_code TEXT NOT NULL,
-                    forecast_year INTEGER NOT NULL,
-                    forecast_value REAL NOT NULL,
-                    forecast_method TEXT NOT NULL,
-                    confidence_interval_lower REAL,
-                    confidence_interval_upper REAL,
-                    confidence_level REAL DEFAULT 95.0,
-                    assumptions TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    UNIQUE(company_id, metric_code, forecast_year, forecast_method)
-                )
-            """)
+        # Hedef erişim tahminleri
+        self.execute_update("""
+            CREATE TABLE IF NOT EXISTS target_forecasts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                company_id INTEGER NOT NULL,
+                metric_code TEXT NOT NULL,
+                current_value REAL NOT NULL,
+                target_value REAL NOT NULL,
+                target_year INTEGER NOT NULL,
+                estimated_achievement_year INTEGER,
+                probability_of_achievement REAL,
+                required_annual_change REAL,
+                risk_level TEXT,
+                recommendations TEXT,
+                calculated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
 
-            # Hedef erişim tahminleri
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS target_forecasts (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    company_id INTEGER NOT NULL,
-                    metric_code TEXT NOT NULL,
-                    current_value REAL NOT NULL,
-                    target_value REAL NOT NULL,
-                    target_year INTEGER NOT NULL,
-                    estimated_achievement_year INTEGER,
-                    probability_of_achievement REAL,
-                    required_annual_change REAL,
-                    risk_level TEXT,
-                    recommendations TEXT,
-                    calculated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
+        # What-if senaryoları
+        self.execute_update("""
+            CREATE TABLE IF NOT EXISTS whatif_scenarios (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                company_id INTEGER NOT NULL,
+                scenario_name TEXT NOT NULL,
+                scenario_description TEXT,
+                metric_code TEXT NOT NULL,
+                baseline_value REAL NOT NULL,
+                change_percentage REAL NOT NULL,
+                projected_value REAL NOT NULL,
+                impact_analysis TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
 
-            # What-if senaryoları
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS whatif_scenarios (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    company_id INTEGER NOT NULL,
-                    scenario_name TEXT NOT NULL,
-                    scenario_description TEXT,
-                    metric_code TEXT NOT NULL,
-                    baseline_value REAL NOT NULL,
-                    change_percentage REAL NOT NULL,
-                    projected_value REAL NOT NULL,
-                    impact_analysis TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
-
-            conn.commit()
-            logging.info("[OK] Tahmin tablolari olusturuldu")
-
-        except Exception as e:
-            logging.error(f"[ERROR] Tahmin tablolari olusturulurken hata: {e}")
-        finally:
-            conn.close()
+        logging.info("[OK] Tahmin tablolari olusturuldu")
 
     # =====================================================
     # 1. LINEAR REGRESSION TAHMİNİ
@@ -398,11 +388,8 @@ class AdvancedForecasting:
     def _save_target_forecast(self, company_id: int, metric_code: str,
                              forecast_data: Dict) -> None:
         """Hedef tahminini kaydet"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            self.execute_update("""
                 INSERT OR REPLACE INTO target_forecasts
                 (company_id, metric_code, current_value, target_value, target_year,
                  estimated_achievement_year, probability_of_achievement, 
@@ -416,14 +403,10 @@ class AdvancedForecasting:
                 forecast_data['required_annual_change'],
                 forecast_data['risk_level'],
                 json.dumps(forecast_data['recommendations'])
-            ))
-
-            conn.commit()
+            ), company_id=company_id)
 
         except Exception as e:
             logging.error(f"Hedef tahmini kaydetme hatasi: {e}")
-        finally:
-            conn.close()
 
     # =====================================================
     # 5. WHAT-IF ANALİZİ
@@ -441,8 +424,6 @@ class AdvancedForecasting:
         Returns:
             Senaryo sonuçları
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
         results = []
 
         try:
@@ -470,7 +451,7 @@ class AdvancedForecasting:
                 results.append(result)
 
                 # Senaryoyu kaydet
-                cursor.execute("""
+                self.execute_update("""
                     INSERT INTO whatif_scenarios
                     (company_id, scenario_name, scenario_description, metric_code,
                      baseline_value, change_percentage, projected_value, impact_analysis)
@@ -480,16 +461,13 @@ class AdvancedForecasting:
                     scenario.get('description', ''),
                     metric_code, baseline_value, change_pct,
                     projected_value, impact
-                ))
+                ), company_id=company_id)
 
-            conn.commit()
             return results
 
         except Exception as e:
             logging.error(f"What-if analizi hatasi: {e}")
             return []
-        finally:
-            conn.close()
 
     def _analyze_scenario_impact(self, baseline: float, projected: float,
                                 change_pct: float) -> str:
@@ -527,22 +505,19 @@ class AdvancedForecasting:
                 "statistics": {...}
             }
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            rows = self.execute_query("""
                 SELECT year, actual_value FROM trend_data
                 WHERE company_id = ? AND metric_code = ?
                 AND year BETWEEN ? AND ?
                 ORDER BY year
-            """, (company_id, metric_code, start_year, end_year))
+            """, (company_id, metric_code, start_year, end_year), company_id=company_id)
 
             historical = []
-            for row in cursor.fetchall():
+            for row in rows:
                 historical.append({
-                    "year": row[0],
-                    "value": row[1]
+                    "year": row['year'],
+                    "value": row['actual_value']
                 })
 
             if not historical:
@@ -572,8 +547,6 @@ class AdvancedForecasting:
         except Exception as e:
             logging.error(f"Cok yilli trend hatasi: {e}")
             return {"historical": [], "statistics": {}}
-        finally:
-            conn.close()
 
     # =====================================================
     # 7. ENSEMBLE TAHMİN (BİRLEŞİK)
@@ -633,12 +606,9 @@ class AdvancedForecasting:
     def save_forecast(self, company_id: int, metric_code: str,
                      forecasts: List[Dict]) -> None:
         """Tahmin sonuçlarını kaydet"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
             for forecast in forecasts:
-                cursor.execute("""
+                self.execute_update("""
                     INSERT OR REPLACE INTO forecast_results
                     (company_id, metric_code, forecast_year, forecast_value,
                      forecast_method, confidence_interval_lower, confidence_interval_upper)
@@ -650,44 +620,36 @@ class AdvancedForecasting:
                     forecast.get('confidence_lower'),
                     forecast.get('confidence_upper')
                 ))
-
-            conn.commit()
-
         except Exception as e:
             logging.error(f"Tahmin kaydetme hatasi: {e}")
-        finally:
-            conn.close()
 
     def get_forecast_accuracy(self, company_id: int, metric_code: str,
                              actual_year: int) -> Dict:
         """Tahmin doğruluğunu hesapla"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
             # Geçmiş tahminleri al
-            cursor.execute("""
+            forecasts = self.execute_query("""
                 SELECT forecast_value, forecast_method FROM forecast_results
                 WHERE company_id = ? AND metric_code = ? AND forecast_year = ?
             """, (company_id, metric_code, actual_year))
 
-            forecasts = cursor.fetchall()
-
             # Gerçek değeri al
-            cursor.execute("""
+            actual_result = self.execute_query("""
                 SELECT actual_value FROM trend_data
                 WHERE company_id = ? AND metric_code = ? AND year = ?
             """, (company_id, metric_code, actual_year))
 
-            actual_result = cursor.fetchone()
             if not actual_result or not forecasts:
                 return {}
 
-            actual_value = actual_result[0]
+            actual_value = actual_result[0]['actual_value']
 
             # Her yöntem için doğruluk hesapla
             accuracies = []
-            for forecast_val, method in forecasts:
+            for row in forecasts:
+                forecast_val = row['forecast_value']
+                method = row['forecast_method']
+                
                 error = abs(actual_value - forecast_val)
                 error_pct = (error / actual_value * 100) if actual_value != 0 else 100
                 accuracy = max(0, 100 - error_pct)
@@ -710,5 +672,3 @@ class AdvancedForecasting:
         except Exception as e:
             logging.error(f"Tahmin dogrulugu hesaplama hatasi: {e}")
             return {}
-        finally:
-            conn.close()

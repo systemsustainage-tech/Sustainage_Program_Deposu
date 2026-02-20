@@ -9,36 +9,55 @@ import logging
 import hashlib
 import os
 import shutil
-import sqlite3
 from datetime import datetime
 from typing import Dict, List, Optional
 from config.database import DB_PATH
+from backend.core.base_manager import BaseTenantManager
 
 
-class FileManager:
+class FileManager(BaseTenantManager):
     """
     Dosya yönetim sınıfı
     
     Görevlere ait dosyaların yüklenmesi, saklanması ve yönetiminden sorumludur.
     """
 
-    def __init__(self, db_path: str = DB_PATH, upload_dir: str = "data/uploads") -> None:
+    def __init__(self, db_path: str = DB_PATH, upload_dir: str = "data/uploads", company_id: Optional[int] = None) -> None:
         """
         FileManager başlat
         
         Args:
             db_path: Veritabanı yolu
             upload_dir: Dosya yükleme dizini
+            company_id: Şirket ID (opsiyonel)
         """
-        self.db_path = db_path
+        super().__init__(db_path, company_id)
         self.upload_dir = upload_dir
 
         # Upload dizinini oluştur
         os.makedirs(upload_dir, exist_ok=True)
         os.makedirs(os.path.join(upload_dir, 'tasks'), exist_ok=True)
+        self._create_tables()
+
+    def _create_tables(self) -> None:
+        """Gerekli tabloları oluştur"""
+        self.execute_update("""
+            CREATE TABLE IF NOT EXISTS task_attachments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                company_id INTEGER NOT NULL,
+                task_id INTEGER NOT NULL,
+                file_name TEXT NOT NULL,
+                file_path TEXT NOT NULL,
+                file_size INTEGER,
+                uploaded_by INTEGER,
+                uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (company_id) REFERENCES companies(id)
+            )
+        """, skip_tenant_filter=True)
 
     def upload_file(
         self,
+        company_id: int,
         source_path: str,
         task_id: int,
         uploaded_by: int,
@@ -48,6 +67,7 @@ class FileManager:
         Dosya yükle
         
         Args:
+            company_id: Şirket ID
             source_path: Kaynak dosya yolu
             task_id: İlgili görev ID
             uploaded_by: Yükleyen kullanıcı ID
@@ -55,15 +75,6 @@ class FileManager:
         
         Returns:
             Optional[int]: Yüklenen dosyanın ID'si veya None
-        
-        Example:
-            >>> fm = FileManager()
-            >>> file_id = fm.upload_file(
-            ...     source_path="C:\\Users\\user\\fatura.pdf",
-            ...     task_id=10,
-            ...     uploaded_by=5,
-            ...     description="Elektrik faturası - Ocak 2024"
-            ... )
         """
         try:
             # Dosya var mı kontrol et
@@ -106,42 +117,30 @@ class FileManager:
             shutil.copy2(source_path, dest_path)
 
             # Veritabanına kaydet
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-
-            cursor.execute("""
+            return self.execute_update("""
                 INSERT INTO task_attachments (
-                    task_id, file_name, file_path, file_size, uploaded_by
+                    company_id, task_id, file_name, file_path, file_size, uploaded_by
                 )
-                VALUES (?, ?, ?, ?, ?)
-            """, (task_id, file_name, dest_path, file_size, uploaded_by))
-
-            file_id = cursor.lastrowid
-            conn.commit()
-            conn.close()
-
-            logging.info(f"[OK] Dosya yüklendi: #{file_id} - {file_name} ({file_size / 1024:.2f} KB)")
-            return file_id
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (company_id, task_id, file_name, dest_path, file_size, uploaded_by), company_id=company_id)
 
         except Exception as e:
             logging.error(f"[HATA] Dosya yükleme hatası: {e}")
             return None
 
-    def get_task_files(self, task_id: int) -> List[Dict]:
+    def get_task_files(self, company_id: int, task_id: int) -> List[Dict]:
         """
         Görevin dosyalarını getir
         
         Args:
+            company_id: Şirket ID
             task_id: Görev ID
         
         Returns:
             List[Dict]: Dosya listesi
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            return self.execute_query("""
                 SELECT 
                     ta.*,
                     u.username as uploaded_by_name
@@ -149,91 +148,65 @@ class FileManager:
                 LEFT JOIN users u ON ta.uploaded_by = u.id
                 WHERE ta.task_id = ?
                 ORDER BY ta.uploaded_at DESC
-            """, (task_id,))
-
-            columns = [desc[0] for desc in cursor.description]
-            files = []
-
-            for row in cursor.fetchall():
-                file_dict = dict(zip(columns, row))
-                files.append(file_dict)
-
-            return files
+            """, (task_id,), company_id=company_id)
 
         except Exception as e:
             logging.error(f"[HATA] Dosya listeleme hatası: {e}")
             return []
 
-        finally:
-            conn.close()
-
-    def delete_file(self, file_id: int) -> bool:
+    def delete_file(self, company_id: int, file_id: int) -> bool:
         """
         Dosyayı sil
         
         Args:
+            company_id: Şirket ID
             file_id: Dosya ID
         
         Returns:
             bool: Başarılı mı?
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
             # Dosya bilgisini al
-            cursor.execute("SELECT file_path FROM task_attachments WHERE id = ?", (file_id,))
-            result = cursor.fetchone()
+            result = self.execute_query("SELECT file_path FROM task_attachments WHERE id = ?", (file_id,), company_id=company_id)
 
             if not result:
                 return False
 
-            file_path = result[0]
+            file_path = result[0]['file_path']
 
             # Fiziksel dosyayı sil
             if os.path.exists(file_path):
                 os.remove(file_path)
 
             # Veritabanından sil
-            cursor.execute("DELETE FROM task_attachments WHERE id = ?", (file_id,))
-            conn.commit()
+            self.execute_update("DELETE FROM task_attachments WHERE id = ?", (file_id,), company_id=company_id)
 
             logging.info(f"[OK] Dosya silindi: #{file_id}")
             return True
 
         except Exception as e:
             logging.error(f"[HATA] Dosya silme hatası: {e}")
-            conn.rollback()
             return False
 
-        finally:
-            conn.close()
-
-    def get_file_path(self, file_id: int) -> Optional[str]:
+    def get_file_path(self, company_id: int, file_id: int) -> Optional[str]:
         """
         Dosya yolunu getir
         
         Args:
+            company_id: Şirket ID
             file_id: Dosya ID
         
         Returns:
             Optional[str]: Dosya yolu veya None
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("SELECT file_path FROM task_attachments WHERE id = ?", (file_id,))
-            result = cursor.fetchone()
+            result = self.execute_query("SELECT file_path FROM task_attachments WHERE id = ?", (file_id,), company_id=company_id)
 
             if result:
-                return result[0]
+                return result[0]['file_path']
             return None
 
         except Exception as e:
             logging.error(f"[HATA] Dosya yolu getirme hatası: {e}")
             return None
-
-        finally:
-            conn.close()
 

@@ -6,7 +6,7 @@ Dosya yükleme, saklama ve yönetim işlemlerini yönetir.
 """
 
 from .file_manager import FileManager
-from .file_upload_gui import FileUploadGUI
+from .advanced_file_manager import AdvancedFileManager
 
-__all__ = ['FileManager', 'FileUploadGUI']
+__all__ = ['FileManager', 'AdvancedFileManager']
 

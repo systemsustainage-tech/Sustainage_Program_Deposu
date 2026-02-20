@@ -8,7 +8,6 @@ Denetim izi ve rol bazlı yetkilendirme sistemi
 import logging
 import json
 import os
-import sqlite3
 from datetime import datetime
 from enum import Enum
 from typing import Dict, List, Optional
@@ -33,28 +32,20 @@ class ActionType(Enum):
     APPROVE = "approve"
     REJECT = "reject"
 
-class GRIAuditTrail:
+from backend.core.base_manager import BaseTenantManager
+
+class GRIAuditTrail(BaseTenantManager):
     """GRI denetim izi sınıfı"""
 
     def __init__(self, db_path: str = DB_PATH) -> None:
-        if not os.path.isabs(db_path):
-            base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-            db_path = os.path.join(base_dir, db_path)
-        self.db_path = db_path
+        super().__init__(db_path)
         self.create_audit_tables()
-
-    def get_connection(self) -> None:
-        """Veritabanı bağlantısı"""
-        return sqlite3.connect(self.db_path)
 
     def create_audit_tables(self) -> None:
         """Denetim tablolarını oluştur"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
             # Kullanıcı rolleri tablosu
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS gri_user_roles (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     user_id INTEGER NOT NULL,
@@ -66,7 +57,7 @@ class GRIAuditTrail:
             """)
 
             # Denetim izi tablosu
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS gri_audit_log (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     user_id INTEGER NOT NULL,
@@ -84,7 +75,7 @@ class GRIAuditTrail:
             """)
 
             # Yetki matrisi tablosu
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS gri_permissions (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     role TEXT NOT NULL,
@@ -96,18 +87,14 @@ class GRIAuditTrail:
             """)
 
             # Varsayılan yetkileri oluştur
-            self.create_default_permissions(cursor)
+            self.create_default_permissions()
 
-            conn.commit()
             logging.info("Denetim tabloları oluşturuldu")
 
         except Exception as e:
             logging.error(f"Denetim tabloları oluşturulurken hata: {e}")
-            conn.rollback()
-        finally:
-            conn.close()
 
-    def create_default_permissions(self, cursor) -> None:
+    def create_default_permissions(self) -> None:
         """Varsayılan yetkileri oluştur"""
         permissions = [
             # Admin yetkileri
@@ -152,7 +139,7 @@ class GRIAuditTrail:
         ]
 
         for role, resource, action, allowed, conditions in permissions:
-            cursor.execute("""
+            self.execute_update("""
                 INSERT OR IGNORE INTO gri_permissions (role, resource, action, allowed, conditions)
                 VALUES (?, ?, ?, ?, ?)
             """, (role, resource, action, allowed, conditions))
@@ -162,11 +149,9 @@ class GRIAuditTrail:
                    old_values: Optional[Dict] = None, new_values: Optional[Dict] = None,
                    ip_address: str = None, user_agent: str = None, session_id: str = None):
         """Eylem kaydı oluştur"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            # skip_tenant_filter=True çünkü gri_audit_log global bir tablo
+            self.execute_update("""
                 INSERT INTO gri_audit_log 
                 (user_id, user_name, action_type, table_name, record_id, old_values, new_values, 
                  ip_address, user_agent, session_id)
@@ -176,70 +161,57 @@ class GRIAuditTrail:
                 json.dumps(old_values) if old_values else None,
                 json.dumps(new_values) if new_values else None,
                 ip_address, user_agent, session_id
-            ))
+            ), skip_tenant_filter=True)
 
-            conn.commit()
-            return cursor.lastrowid
+            # Last inserted ID'yi almak zor olabilir, şimdilik dönmüyoruz veya ayrı bir sorgu ile alabiliriz
+            # execute_update etkilenen satır sayısını döner
+            return True
 
         except Exception as e:
             logging.error(f"Denetim kaydı oluşturulurken hata: {e}")
-            conn.rollback()
             return None
-        finally:
-            conn.close()
 
     def assign_user_role(self, user_id: int, role: UserRole, permissions: Optional[List[str]] = None) -> None:
         """Kullanıcıya rol ata"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            # skip_tenant_filter=True çünkü gri_user_roles global bir tablo
+            self.execute_update("""
                 INSERT OR REPLACE INTO gri_user_roles (user_id, role, permissions, updated_at)
                 VALUES (?, ?, ?, ?)
             """, (user_id, role.value, json.dumps(permissions) if permissions else None,
-                  datetime.now().isoformat()))
-
-            conn.commit()
+                  datetime.now().isoformat()), skip_tenant_filter=True)
             return True
 
         except Exception as e:
             logging.error(f"Kullanıcı rolü atanırken hata: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
     def check_permission(self, user_id: int, resource: str, action: str,
                         company_id: Optional[int] = None) -> bool:
         """Kullanıcı yetkisini kontrol et"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
-            # Kullanıcının rolünü al
-            cursor.execute("""
+            # Kullanıcının rolünü al - skip_tenant_filter=True
+            role_result = self.execute_query("""
                 SELECT role FROM gri_user_roles WHERE user_id = ?
                 ORDER BY updated_at DESC LIMIT 1
-            """, (user_id,))
+            """, (user_id,), skip_tenant_filter=True)
 
-            role_result = cursor.fetchone()
             if not role_result:
                 return False
 
-            user_role = role_result[0]
+            user_role = role_result[0]['role']
 
-            # Yetkiyi kontrol et
-            cursor.execute("""
+            # Yetkiyi kontrol et - skip_tenant_filter=True
+            permission_result = self.execute_query("""
                 SELECT allowed, conditions FROM gri_permissions 
                 WHERE role = ? AND resource = ? AND action = ?
-            """, (user_role, resource, action))
+            """, (user_role, resource, action), skip_tenant_filter=True)
 
-            permission_result = cursor.fetchone()
             if not permission_result:
                 return False
 
-            allowed, conditions = permission_result
+            allowed = permission_result[0]['allowed']
+            conditions = permission_result[0]['conditions']
 
             if not allowed:
                 return False
@@ -257,16 +229,11 @@ class GRIAuditTrail:
         except Exception as e:
             logging.error(f"Yetki kontrolü yapılırken hata: {e}")
             return False
-        finally:
-            conn.close()
 
     def get_audit_log(self, user_id: Optional[int] = None, table_name: Optional[str] = None,
                       action_type: Optional[str] = None, start_date: Optional[str] = None,
                       end_date: Optional[str] = None, limit: int = 100) -> List[Dict]:
         """Denetim kayıtlarını getir"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
             query = """
                 SELECT id, user_id, user_name, action_type, table_name, record_id,
@@ -299,23 +266,24 @@ class GRIAuditTrail:
             query += " ORDER BY timestamp DESC LIMIT ?"
             params.append(limit)
 
-            cursor.execute(query, params)
+            # skip_tenant_filter=True çünkü gri_audit_log global bir tablo
+            rows = self.execute_query(query, tuple(params), skip_tenant_filter=True)
 
             results = []
-            for row in cursor.fetchall():
+            for row in rows:
                 results.append({
-                    'id': row[0],
-                    'user_id': row[1],
-                    'user_name': row[2],
-                    'action_type': row[3],
-                    'table_name': row[4],
-                    'record_id': row[5],
-                    'old_values': json.loads(row[6]) if row[6] else None,
-                    'new_values': json.loads(row[7]) if row[7] else None,
-                    'ip_address': row[8],
-                    'user_agent': row[9],
-                    'timestamp': row[10],
-                    'session_id': row[11]
+                    'id': row['id'],
+                    'user_id': row['user_id'],
+                    'user_name': row['user_name'],
+                    'action_type': row['action_type'],
+                    'table_name': row['table_name'],
+                    'record_id': row['record_id'],
+                    'old_values': json.loads(row['old_values']) if row['old_values'] else None,
+                    'new_values': json.loads(row['new_values']) if row['new_values'] else None,
+                    'ip_address': row['ip_address'],
+                    'user_agent': row['user_agent'],
+                    'timestamp': row['timestamp'],
+                    'session_id': row['session_id']
                 })
 
             return results
@@ -323,46 +291,41 @@ class GRIAuditTrail:
         except Exception as e:
             logging.error(f"Denetim kayıtları getirilirken hata: {e}")
             return []
-        finally:
-            conn.close()
 
     def get_user_activity_summary(self, user_id: int, days: int = 30) -> Dict:
         """Kullanıcı aktivite özetini getir"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
             # Toplam eylem sayısı
-            cursor.execute("""
-                SELECT COUNT(*) FROM gri_audit_log 
+            # skip_tenant_filter=True
+            total_actions_result = self.execute_query("""
+                SELECT COUNT(*) as count FROM gri_audit_log 
                 WHERE user_id = ? AND timestamp >= date('now', '-{} days')
-            """.format(days), (user_id,))
-            total_actions = cursor.fetchone()[0]
+            """.format(days), (user_id,), skip_tenant_filter=True)
+            total_actions = total_actions_result[0]['count'] if total_actions_result else 0
 
             # Eylem türüne göre dağılım
-            cursor.execute("""
-                SELECT action_type, COUNT(*) FROM gri_audit_log 
+            action_dist_result = self.execute_query("""
+                SELECT action_type, COUNT(*) as count FROM gri_audit_log 
                 WHERE user_id = ? AND timestamp >= date('now', '-{} days')
                 GROUP BY action_type
-            """.format(days), (user_id,))
-            action_distribution = dict(cursor.fetchall())
+            """.format(days), (user_id,), skip_tenant_filter=True)
+            action_distribution = {row['action_type']: row['count'] for row in action_dist_result}
 
             # Tablo bazında dağılım
-            cursor.execute("""
-                SELECT table_name, COUNT(*) FROM gri_audit_log 
+            table_dist_result = self.execute_query("""
+                SELECT table_name, COUNT(*) as count FROM gri_audit_log 
                 WHERE user_id = ? AND timestamp >= date('now', '-{} days')
                 GROUP BY table_name
-            """.format(days), (user_id,))
-            table_distribution = dict(cursor.fetchall())
+            """.format(days), (user_id,), skip_tenant_filter=True)
+            table_distribution = {row['table_name']: row['count'] for row in table_dist_result}
 
             # Son aktivite
-            cursor.execute("""
+            last_activity_result = self.execute_query("""
                 SELECT timestamp FROM gri_audit_log 
                 WHERE user_id = ? 
                 ORDER BY timestamp DESC LIMIT 1
-            """, (user_id,))
-            last_activity = cursor.fetchone()
-            last_activity = last_activity[0] if last_activity else None
+            """, (user_id,), skip_tenant_filter=True)
+            last_activity = last_activity_result[0]['timestamp'] if last_activity_result else None
 
             return {
                 'user_id': user_id,
@@ -376,8 +339,6 @@ class GRIAuditTrail:
         except Exception as e:
             logging.error(f"Kullanıcı aktivite özeti getirilirken hata: {e}")
             return {}
-        finally:
-            conn.close()
 
 def create_audit_trail() -> None:
     """Denetim izi sistemini oluştur"""

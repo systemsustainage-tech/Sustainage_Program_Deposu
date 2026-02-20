@@ -6,14 +6,16 @@ HOST = "72.62.150.207"
 USER = "root"
 REMOTE_PATH = "/var/www/sustainage"
 KEY_FILE = os.path.expanduser("~/.ssh/id_rsa")
+if not os.path.exists(KEY_FILE):
+    KEY_FILE = os.path.expanduser("~/.ssh/id_ed25519")
 
 # Directories to sync (recursive)
-DIRS_TO_SYNC = ["templates", "anket", "tools", "locales", "static", "backend", "TESTLER", "tests"]
+DIRS_TO_SYNC = ["templates", "anket", "tools", "static", "backend", "TESTLER", "tests", "locales", "prometheus", "config"]
 # Files to sync (in root)
-FILES_TO_SYNC = ["web_app.py", "requirements.txt", "wsgi.py", "gunicorn_config.py", "mocks_for_missing_deps.py", "target_schema.sql"]
+FILES_TO_SYNC = ["web_app.py", "remote_web_app.py", "web_app_remote.py", "requirements.txt", "wsgi.py", "gunicorn_config.py", "mocks_for_missing_deps.py", "target_schema.sql", "docker-compose.yml"]
 
 # Exclude patterns
-EXCLUDE_EXT = ['.pyc', '.pyo', '.git', '.DS_Store', '.sqlite', '.db']
+EXCLUDE_EXT = ['.pyc', '.pyo', '.git', '.DS_Store', '.sqlite', '.db', '.bak']
 EXCLUDE_DIRS = ['__pycache__', 'node_modules', 'venv', '.git', '.idea', '.vscode', 'data']
 
 def should_skip(name):
@@ -99,11 +101,20 @@ def deploy():
                         # Simple check: timestamp or size? 
                         # For now, just overwrite to ensure latest version
                         sftp.put(local_file_path, remote_file_path)
-                        # print(f"Uploaded {file}") 
+                        print(f"Uploaded {file}") 
                     except Exception as e:
                         print(f"Failed to upload {file}: {e}")
 
         print("Files uploaded.")
+
+        # 2.5 Run Schema Migration (Optional/On-demand)
+        # print("Running schema migration...")
+        # stdin, stdout, stderr = ssh.exec_command("cd /var/www/sustainage && python3 tools/migrate_license_schema.py")
+        # out = stdout.read().decode()
+        # err = stderr.read().decode()
+        # print(out)
+        # if err:
+        #     print(f"Migration Stderr: {err}")
         
         # 3. Restart Service
         print("Restarting service...")

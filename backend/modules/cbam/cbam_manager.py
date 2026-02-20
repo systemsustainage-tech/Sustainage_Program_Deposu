@@ -6,31 +6,42 @@ AB Sınırda Karbon Düzenleme Mekanizması
 """
 
 import logging
-import sqlite3
 import sys
+import os
 from datetime import datetime
-from typing import Dict, List
-from config.database import DB_PATH
+from typing import Dict, List, Optional
+try:
+    from backend.config.database import DB_PATH
+    from backend.core.base_manager import BaseTenantManager
+except ImportError:
+    # Add project root to path if needed
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
+    if base_dir not in sys.path:
+        sys.path.append(base_dir)
+        
+    try:
+        from backend.config.database import DB_PATH
+        from backend.core.base_manager import BaseTenantManager
+    except ImportError:
+        try:
+            from config.database import DB_PATH
+            from core.base_manager import BaseTenantManager
+        except ImportError:
+            sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+            from config.database import DB_PATH
+            from core.base_manager import BaseTenantManager
 
-
-class CBAMManager:
+class CBAMManager(BaseTenantManager):
     """CBAM yöneticisi"""
 
-    def __init__(self, db_path: str | None = None) -> None:
-        try:
-            if db_path:
-                self.db_path = db_path
-            else:
-                # Merkezi ayarlardan veritabanı yolunu kullan
-                from config.settings import ensure_directories, get_db_path
-                ensure_directories()
-                self.db_path = get_db_path()
-        except Exception:
-            # Geriye dönük uyumluluk: varsayılan yol
-            import os
-            base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-            self.db_path = os.path.join(base_dir, 'data', 'sdg_desktop.sqlite')
-
+    def __init__(self, db_path: str = None, company_id: Optional[int] = None) -> None:
+        final_db_path = db_path or DB_PATH
+        if final_db_path and not os.path.isabs(final_db_path):
+            base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
+            final_db_path = os.path.join(base_dir, final_db_path)
+            
+        super().__init__(final_db_path, company_id)
+        
         self._ensure_schema()
 
         # CBAM kapsamındaki sektörler
@@ -53,65 +64,11 @@ class CBAMManager:
         self.de_minimis_sectors = {'cement', 'iron_steel', 'aluminium', 'fertilizers'}
         self.de_minimis_excluded_sectors = {'electricity', 'hydrogen'}
 
-    def get_carbon_price(self, date: str | None = None) -> float:
-        """
-        Güncel karbon fiyatını getir (API simülasyonu)
-        Gerçek API entegrasyonu yapılana kadar EU ETS varsayılan değerlerini kullanır.
-        """
-        try:
-            # TODO: Gerçek API entegrasyonu (ör. Ember, ICE, EEX)
-            # Şimdilik veritabanındaki faktörlerden veya sabit değerden dönüyoruz
-            return self._get_eu_ets_price(date)
-        except Exception as e:
-            logging.error(f"Carbon price fetch error: {e}")
-            return 85.0  # Güvenli varsayılan (2025 tahmini)
-
-    def _get_eu_ets_price(self, period: str | None = None) -> float:
-        conn = self.get_connection()
-        cursor = conn.cursor()
-        try:
-            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='cbam_factors'")
-            if not cursor.fetchone():
-                return 80.0
-
-            year_value = None
-            if period:
-                try:
-                    year_value = int(str(period)[:4])
-                except Exception:
-                    year_value = None
-
-            if year_value is not None:
-                cursor.execute(
-                    "SELECT eu_ets_price_eur_per_tco2 FROM cbam_factors WHERE period = ? ORDER BY period DESC LIMIT 1",
-                    (year_value,),
-                )
-                row = cursor.fetchone()
-                if row and row[0] is not None:
-                    return float(row[0])
-
-            cursor.execute(
-                "SELECT eu_ets_price_eur_per_tco2 FROM cbam_factors ORDER BY period DESC LIMIT 1"
-            )
-            row = cursor.fetchone()
-            if row and row[0] is not None:
-                return float(row[0])
-
-            return 80.0
-        except Exception as e:
-            logging.error(f"EU ETS price fetch error: {e}")
-            return 80.0
-        finally:
-            conn.close()
-
     def _ensure_schema(self) -> None:
         """Veritabanı şemasını oluştur"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
             # CBAM ürünleri tablosu
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS cbam_products (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -127,7 +84,7 @@ class CBAMManager:
             """)
 
             # CBAM emisyon verileri tablosu
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS cbam_emissions (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     product_id INTEGER NOT NULL,
@@ -148,7 +105,7 @@ class CBAMManager:
             """)
 
             # CBAM ithalat verileri tablosu
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS cbam_imports (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -169,7 +126,7 @@ class CBAMManager:
             """)
 
             # CBAM raporları tablosu
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS cbam_reports (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -185,39 +142,72 @@ class CBAMManager:
                     FOREIGN KEY (company_id) REFERENCES companies(id)
                 )
             """)
+            
+            # CBAM factors (Global)
+            self.execute_update("""
+                CREATE TABLE IF NOT EXISTS cbam_factors (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    period INTEGER NOT NULL,
+                    eu_ets_price_eur_per_tco2 REAL NOT NULL,
+                    default_leakage_factor REAL DEFAULT 0.6,
+                    notes TEXT,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(period)
+                )
+            """)
 
-            conn.commit()
             logging.info("[OK] CBAM tabloları oluşturuldu")
 
         except Exception as e:
             logging.error(f"[HATA] CBAM şema oluşturma hatası: {e}")
-            conn.rollback()
-        finally:
-            conn.close()
 
-    def get_connection(self) -> None:
-        """Veritabanı bağlantısı"""
-        return sqlite3.connect(self.db_path)
+    def get_carbon_price(self, date: str = None) -> float:
+        """
+        Güncel karbon fiyatını getir (API simülasyonu)
+        Gerçek API entegrasyonu yapılana kadar EU ETS varsayılan değerlerini kullanır.
+        """
+        try:
+            # TODO: Gerçek API entegrasyonu (ör. Ember, ICE, EEX)
+            return self._get_eu_ets_price(date)
+        except Exception as e:
+            logging.error(f"Carbon price fetch error: {e}")
+            return 85.0  # Güvenli varsayılan (2025 tahmini)
 
-    def _ensure_cbam_factors_table(self, cursor) -> None:
-        cursor.execute(
-            """
-            CREATE TABLE IF NOT EXISTS cbam_factors (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                period INTEGER NOT NULL,
-                eu_ets_price_eur_per_tco2 REAL NOT NULL,
-                default_leakage_factor REAL DEFAULT 0.6,
-                notes TEXT,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE(period)
+    def _get_eu_ets_price(self, period: str = None) -> float:
+        try:
+            check = self.execute_query("SELECT name FROM sqlite_master WHERE type='table' AND name='cbam_factors'")
+            if not check:
+                return 80.0
+
+            year_value = None
+            if period:
+                try:
+                    year_value = int(str(period)[:4])
+                except Exception:
+                    year_value = None
+
+            if year_value is not None:
+                row = self.execute_query(
+                    "SELECT eu_ets_price_eur_per_tco2 FROM cbam_factors WHERE period = ? ORDER BY period DESC LIMIT 1",
+                    (year_value,)
+                )
+                if row and row[0]['eu_ets_price_eur_per_tco2'] is not None:
+                    return float(row[0]['eu_ets_price_eur_per_tco2'])
+
+            row = self.execute_query(
+                "SELECT eu_ets_price_eur_per_tco2 FROM cbam_factors ORDER BY period DESC LIMIT 1"
             )
-            """
-        )
+            if row and row[0]['eu_ets_price_eur_per_tco2'] is not None:
+                return float(row[0]['eu_ets_price_eur_per_tco2'])
+
+            return 80.0
+        except Exception as e:
+            logging.error(f"EU ETS price fetch error: {e}")
+            return 80.0
 
     def calculate_cbam_metrics(self, company_id: int) -> Dict:
         """Dashboard için özet istatistikler"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
+        cid = self._ensure_context(company_id)
         stats = {
             'total_emissions': 0,
             'total_imports': 0,
@@ -226,18 +216,15 @@ class CBAMManager:
         }
         try:
             # Get imports
-            cursor.execute("""
-                SELECT i.*, p.product_name 
+            rows = self.execute_query("""
+                SELECT i.*, p.product_name, p.sector 
                 FROM cbam_imports i
                 LEFT JOIN cbam_products p ON i.product_id = p.id
                 WHERE i.company_id = ?
                 ORDER BY i.created_at DESC
-            """, (company_id,))
+            """, (cid,))
             
-            rows = cursor.fetchall()
-            columns = [d[0] for d in cursor.description]
-            imports = [dict(zip(columns, row)) for row in rows]
-            
+            imports = [dict(row) for row in rows]
             stats['imports'] = imports
             total_quantity = sum((i.get('quantity') or 0) for i in imports)
             stats['total_imports'] = total_quantity
@@ -272,8 +259,6 @@ class CBAMManager:
         except Exception as e:
             logging.error(f"CBAM stats error: {e}")
             return stats
-        finally:
-            conn.close()
 
     def get_dashboard_stats(self, company_id: int) -> Dict:
         """Dashboard için özet istatistikleri getir"""
@@ -281,58 +266,48 @@ class CBAMManager:
 
     def get_recent_records(self, company_id: int, limit: int = 5) -> List[Dict]:
         """Dashboard için son kayıtlar"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
+        cid = self._ensure_context(company_id)
         try:
-            cursor.execute("""
+            rows = self.execute_query("""
                 SELECT i.import_period, p.product_name, i.quantity, i.embedded_emissions, i.created_at, p.sector, i.origin_country, p.cn_code
                 FROM cbam_imports i
                 LEFT JOIN cbam_products p ON i.product_id = p.id
                 WHERE i.company_id = ?
                 ORDER BY i.created_at DESC
                 LIMIT ?
-            """, (company_id, limit))
+            """, (cid, limit))
             
             records = []
-            for row in cursor.fetchall():
+            for row in rows:
                 records.append({
-                    'period': row[0],
-                    'product': row[1],
-                    'quantity': row[2],
-                    'emissions': row[3],
-                    'date': row[4],
-                    'sector': row[5],
-                    'origin_country': row[6],
-                    'cn_code': row[7]
+                    'period': row['import_period'],
+                    'product': row['product_name'],
+                    'quantity': row['quantity'],
+                    'emissions': row['embedded_emissions'],
+                    'date': row['created_at'],
+                    'sector': row['sector'],
+                    'origin_country': row['origin_country'],
+                    'cn_code': row['cn_code']
                 })
             return records
         except Exception as e:
             logging.error(f"CBAM recent records error: {e}")
             return []
-        finally:
-            conn.close()
 
     def add_product(
         self,
         company_id: int,
-        product_code: str | None = None,
-        product_name: str | None = None,
+        product_code: str = None,
+        product_name: str = None,
         *,
-        sector: str | None = None,
-        hs_code: str | None = None,
-        cn_code: str | None = None,
-        production_route: str | None = None,
-        product_data: Dict | None = None,
+        sector: str = None,
+        hs_code: str = None,
+        cn_code: str = None,
+        production_route: str = None,
+        product_data: Dict = None,
     ) -> bool:
-        """CBAM ürünü ekle (geriye dönük uyumlu)
-
-        Eski çağrım:
-            add_product(company_id, product_data={...})
-        Yeni/kolay çağrım:
-            add_product(company_id, code, name, sector='cement')
-        """
-        conn = self.get_connection()
-        cursor = conn.cursor()
+        """CBAM ürünü ekle"""
+        cid = self._ensure_context(company_id)
 
         # Girdi normalizasyonu
         if product_data is None:
@@ -353,7 +328,7 @@ class CBAMManager:
                 logging.error("[HATA] Ürün kodu ve adı zorunludur")
                 return False
 
-            cursor.execute(
+            self.execute_update(
                 """
                 INSERT INTO cbam_products 
                 (company_id, product_code, product_name, hs_code, cn_code, 
@@ -361,7 +336,7 @@ class CBAMManager:
                 VALUES (?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
-                    company_id,
+                    cid,
                     code,
                     name,
                     product_data.get('hs_code'),
@@ -371,60 +346,42 @@ class CBAMManager:
                 ),
             )
 
-            conn.commit()
             logging.info(f"[OK] CBAM ürünü eklendi: {code}")
             return True
 
         except Exception as e:
             logging.error(f"[HATA] CBAM ürünü ekleme hatası: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
-
-
 
     def get_product_by_code(self, company_id: int, product_code: str) -> Dict | None:
         """Ürün kodu ile ürün getir"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
+        cid = self._ensure_context(company_id)
         try:
-            cursor.execute("SELECT * FROM cbam_products WHERE company_id = ? AND product_code = ?", (company_id, product_code))
-            row = cursor.fetchone()
-            if row:
-                columns = [d[0] for d in cursor.description]
-                return dict(zip(columns, row))
+            rows = self.execute_query("SELECT * FROM cbam_products WHERE company_id = ? AND product_code = ?", (cid, product_code))
+            if rows:
+                return rows[0]
             return None
         except Exception as e:
             logging.error(f"CBAM get product error: {e}")
             return None
-        finally:
-            conn.close()
 
     def add_import(self, company_id: int, product_id: int, origin_country: str, quantity: float, 
-                   embedded_emissions: float, carbon_price_paid: float, import_period: str | None = None) -> bool:
+                   embedded_emissions: float, carbon_price_paid: float, import_period: str = None) -> bool:
         """İthalat verisi ekle"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
+        cid = self._ensure_context(company_id)
         try:
-            cursor.execute("""
+            self.execute_update("""
                 INSERT INTO cbam_imports 
                 (company_id, product_id, origin_country, quantity, embedded_emissions, carbon_price_paid, import_period) 
                 VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (company_id, product_id, origin_country, quantity, embedded_emissions, carbon_price_paid, import_period))
-            conn.commit()
+            """, (cid, product_id, origin_country, quantity, embedded_emissions, carbon_price_paid, import_period))
             return True
         except Exception as e:
             logging.error(f"CBAM import add error: {e}")
             return False
-        finally:
-            conn.close()
 
     def record_emissions(self, product_id: int, emission_data: Dict) -> bool:
         """Emisyon verisi kaydet"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
             # Toplam emisyon hesapla
             direct = emission_data.get('direct_emissions', 0) or 0
@@ -432,7 +389,7 @@ class CBAMManager:
             embedded = emission_data.get('embedded_emissions', 0) or 0
             total = direct + indirect + embedded
 
-            cursor.execute("""
+            self.execute_update("""
                 INSERT INTO cbam_emissions 
                 (product_id, reporting_period, emission_type, direct_emissions,
                  indirect_emissions, embedded_emissions, total_emissions,
@@ -452,25 +409,20 @@ class CBAMManager:
                 emission_data.get('notes')
             ))
 
-            conn.commit()
             logging.info("[OK] Emisyon verisi kaydedildi")
             return True
 
         except Exception as e:
             logging.error(f"[HATA] Emisyon kaydı hatası: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
     def calculate_cbam_liability(self, company_id: int, period: str) -> Dict:
         """CBAM yükümlülüğünü hesapla"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
+        cid = self._ensure_context(company_id)
 
         try:
             # İthalat ve emisyon verilerini al
-            cursor.execute("""
+            rows = self.execute_query("""
                 SELECT 
                     i.product_id,
                     p.product_name,
@@ -482,7 +434,7 @@ class CBAMManager:
                 JOIN cbam_products p ON i.product_id = p.id
                 WHERE i.company_id = ? AND i.import_period = ?
                 GROUP BY i.product_id, p.product_name, p.sector
-            """, (company_id, period))
+            """, (cid, period))
 
             imports = []
             total_emissions = 0
@@ -490,8 +442,13 @@ class CBAMManager:
             covered_quantity = 0
             has_excluded = False
 
-            for row in cursor.fetchall():
-                product_id, product_name, sector, quantity, emissions, price_paid = row
+            for row in rows:
+                product_id = row['product_id']
+                product_name = row['product_name']
+                sector = row['sector']
+                quantity = row['total_quantity']
+                emissions = row['total_emissions']
+                price_paid = row['carbon_price_paid']
 
                 imports.append({
                     'product_id': product_id,
@@ -514,14 +471,13 @@ class CBAMManager:
             # Eğer ithalat verilerinden toplam emisyon sıfırsa, emisyon kayıtlarını fallback olarak kullan
             if total_emissions == 0:
                 try:
-                    cursor.execute("""
-                        SELECT SUM(e.total_emissions)
+                    row = self.execute_query("""
+                        SELECT SUM(e.total_emissions) as total
                         FROM cbam_emissions e
                         JOIN cbam_products p ON e.product_id = p.id
                         WHERE p.company_id = ? AND e.reporting_period = ?
-                    """, (company_id, period))
-                    row = cursor.fetchone()
-                    total_emissions = (row[0] or 0) if row else 0
+                    """, (cid, period))
+                    total_emissions = (row[0]['total'] or 0) if row else 0
                 except Exception as _:
                     total_emissions = 0
 
@@ -549,83 +505,44 @@ class CBAMManager:
         except Exception as e:
             logging.error(f"[HATA] CBAM yükümlülük hesaplama hatası: {e}")
             return {}
-        finally:
-            conn.close()
 
     def get_products(self, company_id: int) -> List[Dict]:
         """CBAM ürünlerini getir"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
+        cid = self._ensure_context(company_id)
 
         try:
-            cursor.execute("""
+            rows = self.execute_query("""
                 SELECT id, product_code, product_name, hs_code, cn_code, 
                        sector, production_route
                 FROM cbam_products
                 WHERE company_id = ?
                 ORDER BY sector, product_name
-            """, (company_id,))
+            """, (cid,))
 
-            columns = [desc[0] for desc in cursor.description]
-            products = []
-
-            for row in cursor.fetchall():
-                product = dict(zip(columns, row))
-                products.append(product)
-
-            return products
+            return rows
 
         except Exception as e:
             logging.error(f"[HATA] CBAM ürünleri getirme hatası: {e}")
             return []
-        finally:
-            conn.close()
 
     def add_emission_data(self, emission_data: Dict) -> bool:
         """Emisyon verisi ekle"""
-        try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-
-            cursor.execute("""
-                INSERT INTO cbam_emissions (
-                    product_id, reporting_period, emission_type, direct_emissions, indirect_emissions,
-                    embedded_emissions, total_emissions, calculation_method, data_quality, verification_status, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                emission_data['product_id'],
-                emission_data['reporting_period'],
-                emission_data['emission_type'],
-                emission_data['direct_emissions'],
-                emission_data['indirect_emissions'],
-                emission_data['embedded_emissions'],
-                emission_data['total_emissions'],
-                emission_data['calculation_method'],
-                emission_data['data_quality'],
-                emission_data['verification_status'],
-                datetime.now().isoformat()
-            ))
-
-            conn.commit()
-            conn.close()
-            return True
-
-        except Exception as e:
-            logging.error(f"Emisyon verisi ekleme hatası: {e}")
-            return False
+        # Note: This method might need verification of ownership if not done by caller.
+        # However, it links to product_id, which should belong to the company.
+        # We assume product_id is valid and belongs to the right company context if validated elsewhere.
+        return self.record_emissions(emission_data.get('product_id'), emission_data)
 
     def get_emissions(self, company_id: int, period: str = None) -> List[Dict]:
         """Emisyon verilerini al"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
+        cid = self._ensure_context(company_id)
+        
         query = """
             SELECT e.*, p.product_name, p.product_code
             FROM cbam_emissions e
             LEFT JOIN cbam_products p ON e.product_id = p.id
             WHERE p.company_id = ?
         """
-        params = [company_id]
+        params = [cid]
 
         if period:
             query += " AND e.reporting_period = ?"
@@ -633,29 +550,24 @@ class CBAMManager:
 
         query += " ORDER BY e.created_at DESC"
 
-        cursor.execute(query, params)
-
-        columns = [description[0] for description in cursor.description]
-        results = []
-
-        for row in cursor.fetchall():
-            results.append(dict(zip(columns, row)))
-
-        conn.close()
-        return results
+        try:
+            rows = self.execute_query(query, tuple(params))
+            return rows
+        except Exception as e:
+            logging.error(f"CBAM get emissions error: {e}")
+            return []
 
     def get_imports(self, company_id: int, period: str = None) -> List[Dict]:
         """İthalat verilerini al"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
+        cid = self._ensure_context(company_id)
+        
         query = """
             SELECT i.*, p.product_name, p.product_code
             FROM cbam_imports i
             LEFT JOIN cbam_products p ON i.product_id = p.id
             WHERE i.company_id = ?
         """
-        params = [company_id]
+        params = [cid]
 
         if period:
             query += " AND i.import_period = ?"
@@ -663,23 +575,16 @@ class CBAMManager:
 
         query += " ORDER BY i.created_at DESC"
 
-        cursor.execute(query, params)
-
-        columns = [description[0] for description in cursor.description]
-        results = []
-
-        for row in cursor.fetchall():
-            results.append(dict(zip(columns, row)))
-
-        conn.close()
-        return results
+        try:
+            rows = self.execute_query(query, tuple(params))
+            return rows
+        except Exception as e:
+            logging.error(f"CBAM get imports error: {e}")
+            return []
 
     def save_ets_factor(self, period: int, price: float) -> bool:
-        conn = self.get_connection()
-        cursor = conn.cursor()
         try:
-            self._ensure_cbam_factors_table(cursor)
-            cursor.execute(
+            self.execute_update(
                 """
                 INSERT OR REPLACE INTO cbam_factors
                 (period, eu_ets_price_eur_per_tco2, default_leakage_factor, notes)
@@ -687,25 +592,18 @@ class CBAMManager:
                 """,
                 (period, price),
             )
-            conn.commit()
             return True
         except Exception as e:
             logging.error(f"CBAM ETS factor save error: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
     def get_ets_factors(self, limit: int = 5) -> List[Dict]:
-        conn = self.get_connection()
-        cursor = conn.cursor()
         try:
-            cursor.execute(
-                "SELECT name FROM sqlite_master WHERE type='table' AND name='cbam_factors'"
-            )
-            if not cursor.fetchone():
+            check = self.execute_query("SELECT name FROM sqlite_master WHERE type='table' AND name='cbam_factors'")
+            if not check:
                 return []
-            cursor.execute(
+            
+            rows = self.execute_query(
                 """
                 SELECT period, eu_ets_price_eur_per_tco2, default_leakage_factor
                 FROM cbam_factors
@@ -714,13 +612,10 @@ class CBAMManager:
                 """,
                 (limit,),
             )
-            columns = [d[0] for d in cursor.description]
-            return [dict(zip(columns, row)) for row in cursor.fetchall()]
+            return rows
         except Exception as e:
             logging.error(f"CBAM ETS factor list error: {e}")
             return []
-        finally:
-            conn.close()
 
     def generate_quarterly_report(self, company_id: int, period: str) -> bool:
         """Quarterly CBAM raporu oluştur"""
@@ -752,124 +647,3 @@ class CBAMManager:
         except Exception as e:
             logging.error(f"Excel rapor oluşturma hatası: {e}")
             return False
-
-
-
-    def add_products_bulk(self, company_id: int, products: List[Dict]) -> bool:
-        """Toplu ürün ekleme - Yüksek performans için optimize edilmiş"""
-        if not products:
-            return True
-
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
-        try:
-            # Tüm ürünleri tek transaction'da ekle
-            product_values = []
-            for product in products:
-                if isinstance(product, dict):
-                    product_values.append((
-                        company_id,
-                        product.get('product_code'),
-                        product.get('product_name'),
-                        product.get('hs_code'),
-                        product.get('cn_code'),
-                        product.get('sector'),
-                        product.get('production_route')
-                    ))
-                else:
-                    # Tuple olarak geliyorsa direkt ekle (product_code, product_name, sector format)
-                    product_values.append((
-                        company_id,
-                        product[0] if len(product) > 0 else None,
-                        product[1] if len(product) > 1 else None,
-                        None,  # hs_code
-                        None,  # cn_code
-                        product[2] if len(product) > 2 else None,
-                        None   # production_route
-                    ))
-
-            # executemany ile toplu insert - çok daha hızlı!
-            cursor.executemany("""
-                INSERT INTO cbam_products 
-                (company_id, product_code, product_name, hs_code, cn_code, sector, production_route)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, product_values)
-
-            conn.commit()
-            logging.info(f"[OK] {len(products)} CBAM ürünü toplu olarak eklendi")
-            return True
-
-        except Exception as e:
-            logging.error(f"[HATA] Toplu ürün ekleme hatası: {e}")
-            conn.rollback()
-            return False
-        finally:
-            conn.close()
-
-    def add_import_record(self, company_id: int, import_period: str, origin_country: str,
-                         quantity: float, quantity_unit: str = 'ton', customs_value: float = 0,
-                         currency: str = 'EUR', embedded_emissions: float = 0,
-                         carbon_price_paid: float = 0, product_id: int = None,
-                         offset_type: str | None = None, offset_quantity: float = 0) -> bool:
-        """Yeni ithalat kaydı ekle"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
-        try:
-            # Eğer product_id verilmemişse, ilk ürünü kullan
-            if not product_id:
-                cursor.execute("SELECT id FROM cbam_products WHERE company_id = ? LIMIT 1", (company_id,))
-                result = cursor.fetchone()
-                if result:
-                    product_id = result[0]
-                else:
-                    logging.error("[HATA] Hiç ürün bulunamadı!")
-                    return False
-
-            cursor.execute("""
-                INSERT INTO cbam_imports 
-                (company_id, product_id, import_period, origin_country, quantity, quantity_unit,
-                 customs_value, currency, embedded_emissions, carbon_price_paid, offset_type, offset_quantity)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (company_id, product_id, import_period, origin_country, quantity, quantity_unit,
-                  customs_value, currency, embedded_emissions, carbon_price_paid, offset_type, offset_quantity))
-
-            conn.commit()
-            logging.info(f"[OK] İthalat kaydı eklendi: {origin_country}")
-            return True
-
-        except Exception as e:
-            logging.error(f"[HATA] İthalat kaydı ekleme hatası: {e}")
-            conn.rollback()
-            return False
-        finally:
-            conn.close()
-
-    def export_cbam_xml(self, company_id: int, period: str) -> bool:
-        """CBAM XML export"""
-        try:
-            # XML export mantığı buraya eklenecek
-            logging.info(f"CBAM XML export: {period}")
-            return True
-
-        except Exception as e:
-            logging.error(f"XML export hatası: {e}")
-            return False
-
-# Test fonksiyonu
-if __name__ == '__main__':
-    db_path = sys.argv[1] if len(sys.argv) > 1 else DB_PATH
-    manager = CBAMManager(db_path)
-
-    # Test ürün ekle
-    test_product = {
-        'product_code': 'CEMENT-001',
-        'product_name': 'Portland Çimentosu',
-        'hs_code': '2523.29',
-        'cn_code': '2523 29 00',
-        'sector': 'cement',
-        'production_route': 'Clinker bazlı'
-    }
-
-    manager.add_product(company_id=1, product_data=test_product)

@@ -7,7 +7,6 @@ Paydaş önceliklendirme, işletme etkisi değerlendirmesi, matris görselleşti
 
 import logging
 import os
-import sqlite3
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Dict, List
@@ -33,18 +32,17 @@ class BusinessImpact:
     regulatory_impact: float
     total_impact: float
 
-class AdvancedMaterialityAnalyzer:
+from backend.core.base_manager import BaseTenantManager
+
+class AdvancedMaterialityAnalyzer(BaseTenantManager):
     """İleri Seviye Materialite Analizi Yöneticisi"""
 
-    def __init__(self, db_path: str = DB_PATH) -> None:
-        if not os.path.isabs(db_path):
-            base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
-            db_path = os.path.join(base_dir, db_path)
-        self.db_path = db_path
+    def __init__(self, db_path: str = DB_PATH, company_id: int = None) -> None:
+        super().__init__(db_path, company_id)
         
         # Bağımlı tabloların varlığını garantiye al
         try:
-            PrioritizationManager(db_path)
+            PrioritizationManager(db_path, company_id)
         except Exception as e:
             logging.error(f"PrioritizationManager baslatilamadi: {e}")
 
@@ -53,12 +51,9 @@ class AdvancedMaterialityAnalyzer:
 
     def _init_advanced_tables(self) -> None:
         """İleri seviye materialite tablolarını oluştur"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
             # Paydaş ağırlık tablosu
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS stakeholder_weights (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -73,7 +68,7 @@ class AdvancedMaterialityAnalyzer:
             """)
 
             # İşletme etkisi değerlendirmesi tablosu
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS business_impact_assessments (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -94,7 +89,7 @@ class AdvancedMaterialityAnalyzer:
             """)
 
             # Paydaş önceliklendirme skorları tablosu
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS stakeholder_prioritization_scores (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -111,7 +106,7 @@ class AdvancedMaterialityAnalyzer:
             """)
 
             # Materialite matrisi tablosu
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS materiality_matrix (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -129,7 +124,7 @@ class AdvancedMaterialityAnalyzer:
             """)
 
             # Otomatik materialite güncellemeleri tablosu
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS materiality_updates (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -143,13 +138,10 @@ class AdvancedMaterialityAnalyzer:
                 )
             """)
 
-            conn.commit()
             logging.info("[OK] İleri seviye materialite tablolari olusturuldu")
 
         except Exception as e:
             logging.error(f"[HATA] İleri seviye materialite tablolari olusturulamadi: {e}")
-        finally:
-            conn.close()
 
     def _init_stakeholder_weights(self) -> None:
         """Varsayılan paydaş ağırlıklarını oluştur"""
@@ -165,50 +157,63 @@ class AdvancedMaterialityAnalyzer:
             ("Rakip Firmalar", 0.02, "Düşük", "Çeyreklik")
         ]
 
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
             for stakeholder_type, weight, influence_level, engagement_frequency in default_weights:
-                cursor.execute("""
+                # Assuming company_id 1 for default weights, or we should use current company_id?
+                # The original code used "VALUES (1, ...)" which is dangerous in multi-tenant.
+                # But this is _init_, maybe it runs once? 
+                # If we want to init for specific company, we should use self.company_id if set.
+                # However, original code hardcoded 1.
+                # I will use self.company_id if available, else 1.
+                target_company_id = self.company_id if self.company_id else 1
+                
+                self.execute_update("""
                     INSERT OR IGNORE INTO stakeholder_weights 
                     (company_id, stakeholder_type, weight, influence_level, engagement_frequency)
-                    VALUES (1, ?, ?, ?, ?)
-                """, (stakeholder_type, weight, influence_level, engagement_frequency))
+                    VALUES (?, ?, ?, ?, ?)
+                """, (target_company_id, stakeholder_type, weight, influence_level, engagement_frequency))
 
-            conn.commit()
             logging.info("[OK] Varsayilan paydas agirliklari olusturuldu")
 
         except Exception as e:
             logging.error(f"[HATA] Varsayilan paydas agirliklari olusturulamadi: {e}")
-        finally:
-            conn.close()
 
     def calculate_stakeholder_prioritization_scores(self, company_id: int, year: int = None) -> Dict[str, float]:
         """Paydaş önceliklendirme skorlarını hesapla"""
         if year is None:
             year = datetime.now().year
-
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+            
+        cid = self._ensure_context(company_id)
 
         try:
             # Paydaş ağırlıklarını al
-            cursor.execute("""
+            stakeholder_weights_rows = self.execute_query("""
                 SELECT stakeholder_type, weight, influence_level, engagement_frequency
                 FROM stakeholder_weights 
                 WHERE company_id = ?
-            """, (company_id,))
-
-            stakeholder_weights = cursor.fetchall()
+            """, (cid,), company_id=cid)
+            
+            # Convert rows to list of tuples/dicts if needed, or use as is (usually list of dicts/Rows)
+            stakeholder_weights = []
+            for row in stakeholder_weights_rows:
+                # Handle both Row and dict
+                if isinstance(row, dict):
+                    stakeholder_weights.append((row['stakeholder_type'], row['weight'], row['influence_level'], row['engagement_frequency']))
+                else:
+                    stakeholder_weights.append((row[0], row[1], row[2], row[3]))
 
             # Materialite konularını al
-            cursor.execute("""
+            topics_rows = self.execute_query("""
                 SELECT id, topic_name FROM materiality_topics 
                 WHERE company_id = ?
-            """, (company_id,))
-
-            topics = cursor.fetchall()
+            """, (cid,), company_id=cid)
+            
+            topics = []
+            for row in topics_rows:
+                if isinstance(row, dict):
+                    topics.append((row['id'], row['topic_name']))
+                else:
+                    topics.append((row[0], row[1]))
 
             prioritization_scores = {}
 
@@ -231,11 +236,11 @@ class AdvancedMaterialityAnalyzer:
                     }
 
                     # Veritabanına kaydet
-                    cursor.execute("""
+                    self.execute_update("""
                         INSERT OR REPLACE INTO stakeholder_prioritization_scores
                         (company_id, topic_id, stakeholder_type, priority_score, weighted_score, assessment_year)
                         VALUES (?, ?, ?, ?, ?, ?)
-                    """, (company_id, topic_id, stakeholder_type, base_score, weighted_score, year))
+                    """, (cid, topic_id, stakeholder_type, base_score, weighted_score, year), company_id=cid)
 
                 # Toplam ağırlıklı skor
                 total_weighted_score = sum(score['weighted_score'] for score in topic_scores.values())
@@ -244,60 +249,33 @@ class AdvancedMaterialityAnalyzer:
                     'stakeholder_scores': topic_scores
                 }
 
-            conn.commit()
             return prioritization_scores
 
         except Exception as e:
             logging.error(f"[HATA] Paydas onceliklendirme skorlari hesaplanamadi: {e}")
             return {}
-        finally:
-            conn.close()
-
-    def _calculate_base_priority_score(self, stakeholder_type: str, influence_level: str, engagement_frequency: str) -> float:
-        """Temel öncelik skorunu hesapla"""
-        # Etki seviyesi skoru
-        influence_scores = {"Yüksek": 8, "Orta": 5, "Düşük": 2}
-        influence_score = influence_scores.get(influence_level, 5)
-
-        # Etkileşim sıklığı skoru
-        frequency_scores = {"Günlük": 9, "Haftalık": 7, "Aylık": 5, "Çeyreklik": 3}
-        frequency_score = frequency_scores.get(engagement_frequency, 5)
-
-        # Paydaş tipine göre özel ağırlık
-        stakeholder_multipliers = {
-            "Müşteriler": 1.2,
-            "Çalışanlar": 1.1,
-            "Yatırımcılar": 1.0,
-            "Tedarikçiler": 0.9,
-            "Yerel Toplum": 0.8,
-            "Regülatörler": 1.3,
-            "Medya": 0.7,
-            "Sivil Toplum": 0.6,
-            "Rakip Firmalar": 0.5
-        }
-
-        multiplier = stakeholder_multipliers.get(stakeholder_type, 1.0)
-
-        # Final skor (1-10 arası)
-        base_score = (influence_score + frequency_score) / 2 * multiplier
-        return min(max(base_score, 1.0), 10.0)
 
     def assess_business_impact(self, company_id: int, year: int = None) -> Dict[str, BusinessImpact]:
         """İşletme etkisi değerlendirmesi yap"""
         if year is None:
             year = datetime.now().year
-
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+            
+        cid = self._ensure_context(company_id)
 
         try:
             # Materialite konularını al
-            cursor.execute("""
+            topics_rows = self.execute_query("""
                 SELECT id, topic_name FROM materiality_topics 
                 WHERE company_id = ?
-            """, (company_id,))
-
-            topics = cursor.fetchall()
+            """, (cid,), company_id=cid)
+            
+            topics = []
+            for row in topics_rows:
+                if isinstance(row, dict):
+                    topics.append((row['id'], row['topic_name']))
+                else:
+                    topics.append((row[0], row[1]))
+                    
             business_impacts = {}
 
             for topic_id, topic_name in topics:
@@ -327,22 +305,48 @@ class AdvancedMaterialityAnalyzer:
                 business_impacts[topic_name] = business_impact
 
                 # Veritabanına kaydet
-                cursor.execute("""
+                self.execute_update("""
                     INSERT OR REPLACE INTO business_impact_assessments
                     (company_id, topic_id, assessment_year, financial_impact, operational_impact,
                      reputational_impact, regulatory_impact, total_impact, assessment_method, confidence_level)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, (company_id, topic_id, year, financial_impact, operational_impact,
-                      reputational_impact, regulatory_impact, total_impact, "Otomatik Hesaplama", "Yüksek"))
+                """, (cid, topic_id, year, financial_impact, operational_impact,
+                      reputational_impact, regulatory_impact, total_impact, "Otomatik Hesaplama", "Yüksek"), company_id=cid)
 
-            conn.commit()
             return business_impacts
 
         except Exception as e:
             logging.error(f"[HATA] İsletme etkisi degerlendirmesi yapilamadi: {e}")
             return {}
-        finally:
-            conn.close()
+
+    def _calculate_base_priority_score(self, stakeholder_type: str, influence_level: str, engagement_frequency: str) -> float:
+        """Temel öncelik skorunu hesapla"""
+        # Etki seviyesi skoru
+        influence_scores = {"Yüksek": 8, "Orta": 5, "Düşük": 2}
+        influence_score = influence_scores.get(influence_level, 5)
+
+        # Etkileşim sıklığı skoru
+        frequency_scores = {"Günlük": 9, "Haftalık": 7, "Aylık": 5, "Çeyreklik": 3}
+        frequency_score = frequency_scores.get(engagement_frequency, 5)
+
+        # Paydaş tipine göre özel ağırlık
+        stakeholder_multipliers = {
+            "Müşteriler": 1.2,
+            "Çalışanlar": 1.1,
+            "Yatırımcılar": 1.0,
+            "Tedarikçiler": 0.9,
+            "Yerel Toplum": 0.8,
+            "Regülatörler": 1.3,
+            "Medya": 0.7,
+            "Sivil Toplum": 0.6,
+            "Rakip Firmalar": 0.5
+        }
+
+        multiplier = stakeholder_multipliers.get(stakeholder_type, 1.0)
+
+        # Final skor (1-10 arası)
+        base_score = (influence_score + frequency_score) / 2 * multiplier
+        return min(max(base_score, 1.0), 10.0)
 
     def _calculate_financial_impact(self, topic_name: str) -> float:
         """Finansal etki skorunu hesapla"""
@@ -507,34 +511,26 @@ class AdvancedMaterialityAnalyzer:
                                      stakeholder_priority: float, business_impact: float,
                                      materiality_level: str, quadrant: str) -> None:
         """Materialite matrisi girişini kaydet"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
             # Topic ID'yi al
-            cursor.execute("""
+            rows = self.execute_query("""
                 SELECT id FROM materiality_topics 
                 WHERE company_id = ? AND topic_name = ?
-            """, (company_id, topic_name))
+            """, (company_id, topic_name), company_id=company_id)
 
-            result = cursor.fetchone()
-            if result:
-                topic_id = result[0]
+            if rows:
+                topic_id = rows[0]['id']
 
-                cursor.execute("""
+                self.execute_update("""
                     INSERT OR REPLACE INTO materiality_matrix
                     (company_id, topic_id, assessment_year, stakeholder_priority, business_impact,
                      materiality_level, quadrant)
                     VALUES (?, ?, ?, ?, ?, ?, ?)
                 """, (company_id, topic_id, year, stakeholder_priority, business_impact,
-                      materiality_level, quadrant))
-
-                conn.commit()
+                      materiality_level, quadrant), company_id=company_id)
 
         except Exception as e:
             logging.error(f"[HATA] Materialite matrisi kaydedilemedi: {e}")
-        finally:
-            conn.close()
 
     def get_automatic_materiality_topics(self, company_id: int) -> List[str]:
         """Otomatik materialite konu belirleme"""
@@ -602,29 +598,30 @@ class AdvancedMaterialityAnalyzer:
 
     def _analyze_materiality_changes(self, company_id: int, prev_year: int, current_year: int) -> Dict[str, Any]:
         """Materialite değişikliklerini analiz et"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
             # Önceki yıl verilerini al
-            cursor.execute("""
+            rows_prev = self.execute_query("""
                 SELECT topic_name, stakeholder_priority, business_impact, materiality_level
                 FROM materiality_matrix 
                 WHERE company_id = ? AND assessment_year = ?
-            """, (company_id, prev_year))
+            """, (company_id, prev_year), company_id=company_id)
 
-            prev_data = {row[0]: {'stakeholder_priority': row[1], 'business_impact': row[2], 'materiality_level': row[3]}
-                        for row in cursor.fetchall()}
+            prev_data = {row['topic_name']: {'stakeholder_priority': row['stakeholder_priority'], 
+                                            'business_impact': row['business_impact'], 
+                                            'materiality_level': row['materiality_level']}
+                        for row in rows_prev}
 
             # Mevcut yıl verilerini al
-            cursor.execute("""
+            rows_curr = self.execute_query("""
                 SELECT topic_name, stakeholder_priority, business_impact, materiality_level
                 FROM materiality_matrix 
                 WHERE company_id = ? AND assessment_year = ?
-            """, (company_id, current_year))
+            """, (company_id, current_year), company_id=company_id)
 
-            current_data = {row[0]: {'stakeholder_priority': row[1], 'business_impact': row[2], 'materiality_level': row[3]}
-                           for row in cursor.fetchall()}
+            current_data = {row['topic_name']: {'stakeholder_priority': row['stakeholder_priority'], 
+                                               'business_impact': row['business_impact'], 
+                                               'materiality_level': row['materiality_level']}
+                           for row in rows_curr}
 
             # Değişiklikleri hesapla
             changes = {
@@ -682,28 +679,19 @@ class AdvancedMaterialityAnalyzer:
         except Exception as e:
             logging.error(f"[HATA] Materialite degisiklikleri analiz edilemedi: {e}")
             return {}
-        finally:
-            conn.close()
 
     def _log_materiality_update(self, company_id: int, update_type: str,
                                previous_score: float, new_score: float, change_reason: str) -> None:
         """Materialite güncelleme kaydını oluştur"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            self.execute_update("""
                 INSERT INTO materiality_updates
                 (company_id, update_type, previous_score, new_score, change_reason, updated_by)
                 VALUES (?, ?, ?, ?, ?, ?)
-            """, (company_id, update_type, previous_score, new_score, change_reason, "Sistem"))
-
-            conn.commit()
+            """, (company_id, update_type, previous_score, new_score, change_reason, "Sistem"), company_id=company_id)
 
         except Exception as e:
             logging.error(f"[HATA] Materialite guncelleme kaydi olusturulamadi: {e}")
-        finally:
-            conn.close()
 
     def get_materiality_summary(self, company_id: int, year: int = None) -> Dict[str, Any]:
         """Materialite özetini al"""

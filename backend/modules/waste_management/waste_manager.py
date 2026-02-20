@@ -7,37 +7,30 @@ Atık verilerini yönetir, hedefleri takip eder ve raporlar oluşturur
 
 import logging
 import os
-import sqlite3
-from typing import Dict, List
+from typing import Dict, List, Optional
 from config.database import DB_PATH
+from backend.core.base_manager import BaseTenantManager
 
-
-class WasteManager:
+class WasteManager(BaseTenantManager):
     """Atık Yönetimi Modülü Yöneticisi"""
 
-    def __init__(self, db_path: str = DB_PATH) -> None:
+    def __init__(self, db_path: str = None, company_id: Optional[int] = None) -> None:
+        final_db_path = db_path or DB_PATH
         # db_path göreli ise proje köküne göre mutlak hale getir
-        if not os.path.isabs(db_path):
+        if final_db_path and not os.path.isabs(final_db_path):
             base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
-            db_path = os.path.join(base_dir, db_path)
-        self.db_path = db_path
-        self.company_id = 1  # Varsayılan company_id
+            final_db_path = os.path.join(base_dir, final_db_path)
+            
+        super().__init__(final_db_path, company_id)
 
         # Tabloları oluştur
         self.create_waste_tables()
 
-    def get_connection(self) -> None:
-        """Veritabanı bağlantısı"""
-        return sqlite3.connect(self.db_path)
-
     def create_waste_tables(self) -> None:
         """Atık yönetimi tablolarını oluştur"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
             # Atık türleri tablosu
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS waste_types (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     waste_code TEXT UNIQUE NOT NULL,
@@ -53,7 +46,7 @@ class WasteManager:
             """)
 
             # Atık kayıtları tablosu
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS waste_records (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -82,17 +75,22 @@ class WasteManager:
             """)
 
             # Migration: eksik sütunları ekle
-            cursor.execute("PRAGMA table_info(waste_records)")
-            cols = [c[1] for c in cursor.fetchall()]
-            if 'invoice_date' not in cols:
-                cursor.execute("ALTER TABLE waste_records ADD COLUMN invoice_date TEXT")
-            if 'due_date' not in cols:
-                cursor.execute("ALTER TABLE waste_records ADD COLUMN due_date TEXT")
-            if 'supplier' not in cols:
-                cursor.execute("ALTER TABLE waste_records ADD COLUMN supplier TEXT")
+            try:
+                # execute_query ile sütunları kontrol et
+                rows = self.execute_query("PRAGMA table_info(waste_records)")
+                cols = [row['name'] for row in rows]
+                
+                if 'invoice_date' not in cols:
+                    self.execute_update("ALTER TABLE waste_records ADD COLUMN invoice_date TEXT")
+                if 'due_date' not in cols:
+                    self.execute_update("ALTER TABLE waste_records ADD COLUMN due_date TEXT")
+                if 'supplier' not in cols:
+                    self.execute_update("ALTER TABLE waste_records ADD COLUMN supplier TEXT")
+            except Exception as e:
+                logging.warning(f"Migration uyarisi: {e}")
 
             # Atık azaltma hedefleri tablosu
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS waste_reduction_targets (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -116,7 +114,7 @@ class WasteManager:
             """)
 
             # Geri dönüşüm projeleri tablosu
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS recycling_projects (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -142,7 +140,7 @@ class WasteManager:
             """)
 
             # Atık yönetimi metrikleri tablosu
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS waste_metrics (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -166,7 +164,7 @@ class WasteManager:
             """)
 
             # Atık yönetimi raporları tablosu
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS waste_reports (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -181,25 +179,18 @@ class WasteManager:
             """)
 
             # İndeksler
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_waste_records_company_period ON waste_records(company_id, period)")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_waste_targets_company ON waste_reduction_targets(company_id)")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_recycling_projects_company ON recycling_projects(company_id)")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_waste_metrics_company_period ON waste_metrics(company_id, period)")
+            self.execute_update("CREATE INDEX IF NOT EXISTS idx_waste_records_company_period ON waste_records(company_id, period)")
+            self.execute_update("CREATE INDEX IF NOT EXISTS idx_waste_targets_company ON waste_reduction_targets(company_id)")
+            self.execute_update("CREATE INDEX IF NOT EXISTS idx_recycling_projects_company ON recycling_projects(company_id)")
+            self.execute_update("CREATE INDEX IF NOT EXISTS idx_waste_metrics_company_period ON waste_metrics(company_id, period)")
 
-            conn.commit()
             logging.info("[OK] Atik yonetimi tablolari olusturuldu")
 
         except Exception as e:
             logging.error(f"[HATA] Atik yonetimi tablolari olusturulamadi: {e}")
-            conn.rollback()
-        finally:
-            conn.close()
 
     def populate_waste_types(self) -> None:
         """Atık türlerini doldur"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
             waste_types_data = [
                 # Organik Atıklar
@@ -239,7 +230,7 @@ class WasteManager:
             ]
 
             for waste_code, waste_name, waste_category, hazard_level, recycling_potential, disposal_method, environmental_impact, description in waste_types_data:
-                cursor.execute("""
+                self.execute_update("""
                     INSERT OR IGNORE INTO waste_types 
                     (waste_code, waste_name, waste_category, hazard_level, recycling_potential, 
                      disposal_method, environmental_impact, description)
@@ -247,20 +238,13 @@ class WasteManager:
                 """, (waste_code, waste_name, waste_category, hazard_level, recycling_potential,
                       disposal_method, environmental_impact, description))
 
-            conn.commit()
             logging.info("[OK] Atik turleri dolduruldu")
 
         except Exception as e:
             logging.error(f"[HATA] Atik turleri doldurulurken hata: {e}")
-            conn.rollback()
-        finally:
-            conn.close()
 
     def add_waste_record(self, company_id: int, form_data: dict) -> bool:
         """Yeni atık kaydı ekle"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
             # Form verilerini al
             waste_code = form_data.get('waste_code', '')
@@ -284,22 +268,20 @@ class WasteManager:
             period = record_date[:4] if record_date else '2024'
 
             # Atık türü ID'sini bul veya oluştur
-            cursor.execute("SELECT id FROM waste_types WHERE waste_code = ?", (waste_code,))
-            result = cursor.fetchone()
-
+            result = self.execute_query("SELECT id FROM waste_types WHERE waste_code = ?", (waste_code,))
+            
             if not result:
                 # Yeni atık türü oluştur
-                cursor.execute("""
+                waste_type_id = self.execute_update("""
                     INSERT INTO waste_types 
                     (waste_code, waste_name, waste_category, hazard_level, recycling_potential, disposal_method)
                     VALUES (?, ?, ?, ?, ?, ?)
                 """, (waste_code, waste_name, waste_category, hazard_level, 'Medium', disposal_method))
-                waste_type_id = cursor.lastrowid
             else:
-                waste_type_id = result[0]
+                waste_type_id = result[0]['id']
 
             # Atık kaydını ekle
-            cursor.execute("""
+            self.execute_update("""
                 INSERT INTO waste_records 
                 (company_id, period, waste_type_id, waste_code, waste_name, quantity, unit,
                  disposal_method, recycling_rate, disposal_cost, carbon_footprint,
@@ -311,25 +293,18 @@ class WasteManager:
                   invoice_date, due_date, supplier,
                   'Estimated', notes, record_date))
 
-            conn.commit()
             logging.info(f"[OK] Atik kaydi eklendi: {waste_name} - {quantity} {unit}")
             return True
 
         except Exception as e:
             logging.error(f"[HATA] Atik kaydi eklenirken hata: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
     def get_waste_records(self, company_id: int, period: str = None) -> List[Dict]:
         """Atık kayıtlarını getir"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
             if period:
-                cursor.execute("""
+                rows = self.execute_query("""
                     SELECT wr.*, wt.waste_category, wt.hazard_level, wt.recycling_potential
                     FROM waste_records wr
                     JOIN waste_types wt ON wr.waste_type_id = wt.id
@@ -337,7 +312,7 @@ class WasteManager:
                     ORDER BY wr.created_at DESC
                 """, (company_id, period))
             else:
-                cursor.execute("""
+                rows = self.execute_query("""
                     SELECT wr.*, wt.waste_category, wt.hazard_level, wt.recycling_potential
                     FROM waste_records wr
                     JOIN waste_types wt ON wr.waste_type_id = wt.id
@@ -345,19 +320,17 @@ class WasteManager:
                     ORDER BY wr.created_at DESC
                 """, (company_id,))
 
-            columns = [description[0] for description in cursor.description]
-            results = []
-
-            for row in cursor.fetchall():
-                results.append(dict(zip(columns, row)))
-
-            return results
+            # execute_query returns list of dict-like objects (sqlite3.Row or dict)
+            # BaseTenantManager returns list of dicts or sqlite3.Row depending on DBManager implementation.
+            # DBManager.execute_query uses cursor.fetchall() and row_factory=sqlite3.Row
+            # So rows are sqlite3.Row objects which behave like dicts.
+            
+            # Convert to plain dicts just to be safe if caller expects it
+            return [dict(row) for row in rows]
 
         except Exception as e:
             logging.error(f"[HATA] Atik kayitlari getirilirken hata: {e}")
             return []
-        finally:
-            conn.close()
 
     def add_waste_target(self, company_id: int, target_name: str, target_type: str,
                         waste_category: str = None, waste_type_id: int = None,
@@ -366,15 +339,12 @@ class WasteManager:
                         reduction_percentage: float = None, target_unit: str = "kg",
                         description: str = None) -> bool:
         """Atık azaltma hedefi ekle"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
             # Azaltma yüzdesini hesapla
             if reduction_percentage is None and base_quantity > 0:
                 reduction_percentage = ((base_quantity - target_quantity) / base_quantity) * 100
 
-            cursor.execute("""
+            self.execute_update("""
                 INSERT INTO waste_reduction_targets 
                 (company_id, target_name, target_type, waste_category, waste_type_id,
                  base_year, target_year, base_quantity, target_quantity, reduction_percentage,
@@ -384,42 +354,27 @@ class WasteManager:
                   base_year, target_year, base_quantity, target_quantity, reduction_percentage,
                   target_unit, description))
 
-            conn.commit()
             logging.info(f"[OK] Atik azaltma hedefi eklendi: {target_name}")
             return True
 
         except Exception as e:
             logging.error(f"[HATA] Atik azaltma hedefi eklenirken hata: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
     def get_waste_targets(self, company_id: int) -> List[Dict]:
         """Atık azaltma hedeflerini getir"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            rows = self.execute_query("""
                 SELECT * FROM waste_reduction_targets 
                 WHERE company_id = ?
                 ORDER BY target_year DESC, created_at DESC
             """, (company_id,))
 
-            columns = [description[0] for description in cursor.description]
-            results = []
-
-            for row in cursor.fetchall():
-                results.append(dict(zip(columns, row)))
-
-            return results
+            return [dict(row) for row in rows]
 
         except Exception as e:
             logging.error(f"[HATA] Atik azaltma hedefleri getirilirken hata: {e}")
             return []
-        finally:
-            conn.close()
 
     def add_recycling_project(self, company_id: int, project_name: str, project_type: str,
                             waste_types: str = None, start_date: str = None, end_date: str = None,
@@ -429,11 +384,8 @@ class WasteManager:
                             challenges: str = None, lessons_learned: str = None,
                             next_steps: str = None) -> bool:
         """Geri dönüşüm projesi ekle"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            self.execute_update("""
                 INSERT INTO recycling_projects 
                 (company_id, project_name, project_type, waste_types, start_date, end_date,
                  investment_amount, expected_savings, recycling_rate_before, recycling_rate_target,
@@ -443,42 +395,27 @@ class WasteManager:
                   investment_amount, expected_savings, recycling_rate_before, recycling_rate_target,
                   environmental_impact, economic_benefits, challenges, lessons_learned, next_steps))
 
-            conn.commit()
             logging.info(f"[OK] Geri donusum projesi eklendi: {project_name}")
             return True
 
         except Exception as e:
             logging.error(f"[HATA] Geri donusum projesi eklenirken hata: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
     def get_recycling_projects(self, company_id: int) -> List[Dict]:
         """Geri dönüşüm projelerini getir"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            rows = self.execute_query("""
                 SELECT * FROM recycling_projects 
                 WHERE company_id = ?
                 ORDER BY created_at DESC
             """, (company_id,))
 
-            columns = [description[0] for description in cursor.description]
-            results = []
-
-            for row in cursor.fetchall():
-                results.append(dict(zip(columns, row)))
-
-            return results
+            return [dict(row) for row in rows]
 
         except Exception as e:
             logging.error(f"[HATA] Geri donusum projeleri getirilirken hata: {e}")
             return []
-        finally:
-            conn.close()
 
     def calculate_waste_metrics(self, company_id: int, period: str) -> Dict:
         """Atık yönetimi metriklerini hesapla"""

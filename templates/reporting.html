@@ -1,20 +1,40 @@
 {% extends "base.html" %}
 
-{% block title %}{{ lang('reporting_title', 'Reporting') }} - SDG{% endblock %}
+{% block title %}{{ lang('reporting_title', 'Raporlama') }} - SDG{% endblock %}
 
 {% block content %}
 
 <div class="row mb-4">
 <div class="col-md-12">
 <div class="d-flex justify-content-between align-items-center">
-<h1><i class="fas fa-cube me-2"></i>{{ lang('reporting_title', 'Reporting') }}</h1>
+<h1><i class="fas fa-cube me-2"></i>{{ lang('reporting_title', 'Raporlama') }}</h1>
 <div>
 <span class="badge bg-{{ 'success' if manager_available else 'secondary' }}">
                     {{ lang('module_active_badge') if manager_available else lang('module_passive_badge') }}
                 </span>
 <button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}</button></div>
 </div>
-<p class="lead text-muted">{{ lang('reporting_desc', 'Module description for Reporting') }}</p>
+<p class="lead text-muted">{{ lang('reporting_desc', 'Standartlara uygun rapor oluşturma ve yayınlama.') }}</p>
+</div>
+</div>
+<div class="row mb-3">
+<div class="col-12">
+<div class="alert alert-info border-0 shadow-sm">
+<h5 class="mb-2"><i class="bi bi-map-fill me-2"></i>{{ lang('reporting_flow_title', 'Raporlama Yol Haritası') }}</h5>
+<ol class="mb-3 ps-3">
+<li>{{ lang('reporting_flow_step1', 'Öncelikle veri giriş modüllerinde (karbon, enerji, su vb.) ilgili döneme ait verilerinizi tamamlayın.') }}</li>
+<li>{{ lang('reporting_flow_step2', 'Ardından “Sürdürülebilirlik Raporlama Yolculuğu” ekranından hangi standart ve modülleri kullanacağınızı belirleyin.') }}</li>
+<li>{{ lang('reporting_flow_step3', 'Son olarak bu ekrandan oluşturduğunuz raporları görüntüleyebilir, indirebilir veya “Birleşik Rapor” ile tek dokümanda birleştirebilirsiniz.') }}</li>
+</ol>
+<div class="d-flex flex-wrap gap-2">
+<a class="btn btn-sm btn-outline-primary" href="{{ url_for('reporting_journey') }}">
+<i class="bi bi-map"></i> {{ lang('reporting_flow_btn_journey', 'Raporlama Yolculuğunu Aç') }}
+</a>
+<a class="btn btn-sm btn-outline-success" href="{{ url_for('unified_report') }}">
+<i class="bi bi-layers"></i> {{ lang('reporting_flow_btn_unified', 'Birleşik Rapor Oluştur') }}
+</a>
+</div>
+</div>
 </div>
 </div>
 <div class="row">

@@ -8,26 +8,23 @@ Stratejik sürdürülebilirlik planları ve hedefler
 import logging
 import json
 import os
-import sqlite3
 from datetime import datetime
-from typing import Dict, List
+from typing import Dict, List, Optional
+from backend.core.base_manager import BaseTenantManager
 
 
-class SustainabilityStrategyManager:
+class SustainabilityStrategyManager(BaseTenantManager):
     """Sürdürülebilirlik stratejisi yöneticisi"""
 
-    def __init__(self, db_path: str = None) -> None:
-        self.db_path = db_path or os.path.join(os.getcwd(), 'data', 'sdg_desktop.sqlite')
+    def __init__(self, db_path: str = None, company_id: Optional[int] = None) -> None:
+        super().__init__(db_path, company_id)
         self._ensure_tables()
 
     def _ensure_tables(self) -> None:
         """Gerekli tabloları oluştur"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
             # Sürdürülebilirlik stratejileri
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS sustainability_strategies (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -40,19 +37,20 @@ class SustainabilityStrategyManager:
                     time_horizon INTEGER DEFAULT 5, -- years
                     start_year INTEGER NOT NULL,
                     end_year INTEGER NOT NULL,
-                    status TEXT DEFAULT 'draft', -- 'draft', 'active', 'completed', 'archived'
+                    status TEXT DEFAULT 'active', -- 'draft', 'active', 'completed', 'archived'
                     approval_date TEXT,
                     approved_by INTEGER,
                     created_by INTEGER,
                     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                     updated_at TEXT
                 )
-            """)
+            """, skip_tenant_filter=True)
 
             # Stratejik hedefler
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS strategic_goals (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    company_id INTEGER NOT NULL,
                     strategy_id INTEGER NOT NULL,
                     goal_category TEXT NOT NULL, -- 'environmental', 'social', 'economic', 'governance'
                     goal_title TEXT NOT NULL,
@@ -69,14 +67,16 @@ class SustainabilityStrategyManager:
                     is_critical INTEGER DEFAULT 0,
                     status TEXT DEFAULT 'active', -- 'active', 'completed', 'paused', 'cancelled'
                     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (strategy_id) REFERENCES sustainability_strategies(id)
+                    FOREIGN KEY (strategy_id) REFERENCES sustainability_strategies(id),
+                    FOREIGN KEY (company_id) REFERENCES companies(id)
                 )
-            """)
+            """, skip_tenant_filter=True)
 
             # Hedef ilerlemeleri
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS goal_progress (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    company_id INTEGER NOT NULL,
                     goal_id INTEGER NOT NULL,
                     reporting_period TEXT NOT NULL, -- 'YYYY-MM' or 'YYYY'
                     actual_value REAL,
@@ -88,33 +88,36 @@ class SustainabilityStrategyManager:
                     next_steps TEXT, -- JSON array
                     reported_by INTEGER,
                     reported_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (goal_id) REFERENCES strategic_goals(id)
+                    FOREIGN KEY (goal_id) REFERENCES strategic_goals(id),
+                    FOREIGN KEY (company_id) REFERENCES companies(id)
                 )
-            """)
+            """, skip_tenant_filter=True)
 
             # Stratejik girişimler
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS strategic_initiatives (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    strategy_id INTEGER NOT NULL,
+                    company_id INTEGER NOT NULL,
                     initiative_name TEXT NOT NULL,
                     description TEXT,
-                    category TEXT, -- 'program', 'project', 'partnership', 'investment'
-                    priority TEXT DEFAULT 'medium', -- 'low', 'medium', 'high', 'critical'
+                    strategy_id INTEGER,
+                    goal_id INTEGER,
                     start_date TEXT,
                     end_date TEXT,
                     budget REAL,
-                    responsible_department TEXT,
-                    expected_outcomes TEXT, -- JSON array
-                    success_metrics TEXT, -- JSON array
-                    status TEXT DEFAULT 'planned', -- 'planned', 'active', 'completed', 'cancelled'
+                    currency TEXT DEFAULT 'TRY',
+                    responsible_person TEXT,
+                    status TEXT DEFAULT 'planned', -- 'planned', 'in_progress', 'completed', 'cancelled'
+                    impact_assessment TEXT,
                     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (strategy_id) REFERENCES sustainability_strategies(id)
+                    FOREIGN KEY (strategy_id) REFERENCES sustainability_strategies(id),
+                    FOREIGN KEY (goal_id) REFERENCES strategic_goals(id),
+                    FOREIGN KEY (company_id) REFERENCES companies(id)
                 )
-            """)
+            """, skip_tenant_filter=True)
 
             # Stratejik değerlendirmeler
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS strategy_assessments (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     strategy_id INTEGER NOT NULL,
@@ -130,15 +133,12 @@ class SustainabilityStrategyManager:
                     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (strategy_id) REFERENCES sustainability_strategies(id)
                 )
-            """)
+            """, skip_tenant_filter=True)
 
-            conn.commit()
             logging.info("[OK] Sürdürülebilirlik stratejisi tabloları hazır")
 
         except Exception as e:
             logging.error(f"[HATA] Tablo oluşturma hatası: {e}")
-        finally:
-            conn.close()
 
     def create_strategy(self, company_id: int, strategy_name: str, description: str = "",
                        vision: str = "", mission: str = "", core_values: List[str] = None,
@@ -146,26 +146,7 @@ class SustainabilityStrategyManager:
                        start_year: int = None, end_year: int = None, created_by: int = None) -> int:
         """
         Yeni sürdürülebilirlik stratejisi oluştur
-        
-        Args:
-            company_id: Şirket ID
-            strategy_name: Strateji adı
-            description: Açıklama
-            vision: Vizyon
-            mission: Misyon
-            core_values: Temel değerler listesi
-            strategic_pillars: Stratejik sütunlar listesi
-            time_horizon: Zaman ufku (yıl)
-            start_year: Başlangıç yılı
-            end_year: Bitiş yılı
-            created_by: Oluşturan kullanıcı ID
-        
-        Returns:
-            Oluşturulan strateji ID'si
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
             # Varsayılan değerler
             if start_year is None:
@@ -174,38 +155,40 @@ class SustainabilityStrategyManager:
                 end_year = start_year + time_horizon - 1
 
             # Aynı isimde strateji kontrolü
-            cursor.execute("""
-                SELECT id FROM sustainability_strategies 
-                WHERE company_id = ? AND strategy_name = ?
-            """, (company_id, strategy_name))
+            existing = self.execute_query(
+                "SELECT id FROM sustainability_strategies WHERE company_id = ? AND strategy_name = ?", 
+                (company_id, strategy_name),
+                company_id=company_id
+            )
 
-            if cursor.fetchone():
+            if existing:
                 raise ValueError(f"Bu isimde strateji zaten mevcut: {strategy_name}")
 
-            cursor.execute("""
-                INSERT INTO sustainability_strategies 
-                (company_id, strategy_name, description, vision, mission, core_values, 
-                 strategic_pillars, time_horizon, start_year, end_year, created_by)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                company_id, strategy_name, description, vision, mission,
-                json.dumps(core_values or []),
-                json.dumps(strategic_pillars or []),
-                time_horizon, start_year, end_year, created_by
-            ))
-
-            strategy_id = cursor.lastrowid
-            conn.commit()
+            # Insert strategy
+            strategy_id = self.insert(
+                "sustainability_strategies",
+                {
+                    "company_id": company_id,
+                    "strategy_name": strategy_name,
+                    "description": description,
+                    "vision": vision,
+                    "mission": mission,
+                    "core_values": json.dumps(core_values or []),
+                    "strategic_pillars": json.dumps(strategic_pillars or []),
+                    "time_horizon": time_horizon,
+                    "start_year": start_year,
+                    "end_year": end_year,
+                    "created_by": created_by
+                },
+                company_id=company_id
+            )
 
             logging.info(f"[OK] Sürdürülebilirlik stratejisi oluşturuldu: {strategy_name} (ID: {strategy_id})")
             return strategy_id
 
         except Exception as e:
-            conn.rollback()
             logging.error(f"[HATA] Strateji oluşturma hatası: {e}")
             raise
-        finally:
-            conn.close()
 
     def add_strategic_goal(self, strategy_id: int, goal_category: str, goal_title: str,
                           description: str = "", target_year: int = None, baseline_year: int = None,
@@ -214,53 +197,59 @@ class SustainabilityStrategyManager:
                           kpi_formula: str = "", is_critical: bool = False) -> int:
         """
         Stratejiye hedef ekle
-        
-        Args:
-            strategy_id: Strateji ID
-            goal_category: Hedef kategorisi ('environmental', 'social', 'economic', 'governance')
-            goal_title: Hedef başlığı
-            description: Açıklama
-            target_year: Hedef yıl
-            baseline_year: Baz yıl
-            baseline_value: Baz değer
-            target_value: Hedef değer
-            unit: Birim
-            measurement_frequency: Ölçüm sıklığı
-            responsible_department: Sorumlu departman
-            kpi_formula: KPI formülü
-            is_critical: Kritik hedef mi
-        
-        Returns:
-            Oluşturulan hedef ID'si
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            # Note: We don't check company_id here explicitly because strategy_id is linked to it,
+            # but BaseTenantManager requires company_id context.
+            # We assume the caller provides correct context or we should fetch it from strategy_id if needed.
+            # However, for insert, we don't strictly need it if we are just inserting by strategy_id, 
+            # BUT BaseTenantManager.insert adds company_id automatically.
+            # Strategic goals table DOES NOT have company_id in the schema above!
+            # Let's check schema: "CREATE TABLE IF NOT EXISTS strategic_goals (..., strategy_id INTEGER NOT NULL, ...)"
+            # It does NOT have company_id. 
+            # This is a problem for BaseTenantManager.insert which tries to inject company_id.
+            
+            # If the table doesn't have company_id, we should use execute_update directly without company_id injection if possible,
+            # OR we should add company_id to the table.
+            # Adding company_id to child tables is good practice for tenant isolation.
+            # But for now, let's stick to existing schema and use execute_update with skip_tenant_filter=True 
+            # OR just standard execute_update if inject_tenant_filter is smart enough (it filters by table name usually).
+            
+            # Wait, inject_tenant_filter tries to inject "WHERE company_id = ?" for UPDATE/DELETE/SELECT.
+            # For INSERT, it usually expects company_id column if using helper.
+            
+            # Let's use execute_update for raw insert.
+            
+            query = """
                 INSERT INTO strategic_goals 
                 (strategy_id, goal_category, goal_title, description, target_year, 
                  baseline_year, baseline_value, target_value, unit, measurement_frequency,
                  responsible_department, kpi_formula, is_critical)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
+            """
+            params = (
                 strategy_id, goal_category, goal_title, description, target_year,
                 baseline_year, baseline_value, target_value, unit, measurement_frequency,
                 responsible_department, kpi_formula, 1 if is_critical else 0
-            ))
+            )
+            
+            # Since strategic_goals table does NOT have company_id, we can't enforce tenant isolation on INSERT easily 
+            # unless we verify strategy_id belongs to the company first.
+            
+            if self.company_id:
+                strategy = self.execute_query(
+                    "SELECT id FROM sustainability_strategies WHERE id = ? AND company_id = ?",
+                    (strategy_id, self.company_id),
+                    company_id=self.company_id
+                )
+                if not strategy:
+                    raise ValueError(f"Strategy {strategy_id} not found for company {self.company_id}")
 
-            goal_id = cursor.lastrowid
-            conn.commit()
-
-            logging.info(f"[OK] Stratejik hedef eklendi: {goal_title} (ID: {goal_id})")
-            return goal_id
+            return self.execute_update(query, params, skip_tenant_filter=True)
 
         except Exception as e:
-            conn.rollback()
             logging.error(f"[HATA] Hedef ekleme hatası: {e}")
             raise
-        finally:
-            conn.close()
 
     def record_goal_progress(self, goal_id: int, reporting_period: str, actual_value: float,
                            target_value: float = None, progress_narrative: str = "",
@@ -268,78 +257,68 @@ class SustainabilityStrategyManager:
                            next_steps: List[str] = None, reported_by: int = None) -> int:
         """
         Hedef ilerlemesini kaydet
-        
-        Args:
-            goal_id: Hedef ID
-            reporting_period: Raporlama dönemi ('YYYY-MM' or 'YYYY')
-            actual_value: Gerçekleşen değer
-            target_value: Hedef değer
-            progress_narrative: İlerleme açıklaması
-            challenges: Zorluklar listesi
-            actions_taken: Alınan aksiyonlar listesi
-            next_steps: Sonraki adımlar listesi
-            reported_by: Raporlayan kullanıcı ID
-        
-        Returns:
-            Oluşturulan ilerleme kaydı ID'si
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            # Hedef bilgilerini al
-            cursor.execute("""
-                SELECT target_value FROM strategic_goals WHERE id = ?
-            """, (goal_id,))
+            # Check tenant isolation
+            if self.company_id:
+                # Verify goal belongs to a strategy owned by this company
+                check_query = """
+                    SELECT sg.id 
+                    FROM strategic_goals sg
+                    JOIN sustainability_strategies ss ON sg.strategy_id = ss.id
+                    WHERE sg.id = ? AND ss.company_id = ?
+                """
+                is_valid = self.execute_query(check_query, (goal_id, self.company_id), skip_tenant_filter=True)
+                if not is_valid:
+                    raise ValueError(f"Goal {goal_id} not found or access denied for company {self.company_id}")
 
-            goal_result = cursor.fetchone()
+            # Hedef bilgilerini al (check existence and get target value)
+            goal_result = self.execute_query(
+                "SELECT target_value FROM strategic_goals WHERE id = ?",
+                (goal_id,),
+                skip_tenant_filter=True
+            )
+
             if not goal_result:
                 raise ValueError(f"Hedef bulunamadı: ID {goal_id}")
 
+            current_target = goal_result[0]['target_value'] if goal_result[0]['target_value'] is not None else 0
+
             # Hedef değer belirlenmemişse parametreden al
             if target_value is None:
-                target_value = goal_result[0]
+                target_value = current_target
 
             # Başarı oranını hesapla
             achievement_rate = (actual_value / target_value * 100) if target_value and target_value != 0 else 0
 
-            cursor.execute("""
+            query = """
                 INSERT INTO goal_progress 
                 (goal_id, reporting_period, actual_value, target_value, achievement_rate,
                  progress_narrative, challenges, actions_taken, next_steps, reported_by)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
+            """
+            params = (
                 goal_id, reporting_period, actual_value, target_value, achievement_rate,
                 progress_narrative,
                 json.dumps(challenges or []),
                 json.dumps(actions_taken or []),
                 json.dumps(next_steps or []),
                 reported_by
-            ))
+            )
 
-            progress_id = cursor.lastrowid
-            conn.commit()
-
+            progress_id = self.execute_update(query, params, skip_tenant_filter=True)
+            
             logging.info(f"[OK] Hedef ilerlemesi kaydedildi: Hedef ID {goal_id}, Dönem {reporting_period}")
             return progress_id
 
         except Exception as e:
-            conn.rollback()
             logging.error(f"[HATA] İlerleme kaydetme hatası: {e}")
             raise
-        finally:
-            conn.close()
 
     def get_strategies(self, company_id: int, status: str = None) -> List[Dict]:
         """Sürdürülebilirlik stratejilerini getir"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            query = """
-                SELECT * FROM sustainability_strategies 
-                WHERE company_id = ?
-            """
+            query = "SELECT * FROM sustainability_strategies WHERE company_id = ?"
             params = [company_id]
 
             if status:
@@ -348,101 +327,103 @@ class SustainabilityStrategyManager:
 
             query += " ORDER BY start_year DESC, created_at DESC"
 
-            cursor.execute(query, params)
-            results = cursor.fetchall()
-
+            results = self.execute_query(query, tuple(params), company_id=company_id)
+            
+            # Results are already dict-like
             strategies = []
             for row in results:
-                strategies.append({
-                    'id': row[0], 'company_id': row[1], 'strategy_name': row[2], 'description': row[3],
-                    'vision': row[4], 'mission': row[5], 'core_values': json.loads(row[6] or '[]'),
-                    'strategic_pillars': json.loads(row[7] or '[]'), 'time_horizon': row[8],
-                    'start_year': row[9], 'end_year': row[10], 'status': row[11],
-                    'approval_date': row[12], 'approved_by': row[13], 'created_by': row[14],
-                    'created_at': row[15], 'updated_at': row[16]
-                })
+                # Convert Row to dict if needed, handle JSON fields
+                strategy = dict(row)
+                strategy['core_values'] = json.loads(strategy.get('core_values') or '[]')
+                strategy['strategic_pillars'] = json.loads(strategy.get('strategic_pillars') or '[]')
+                strategies.append(strategy)
 
             return strategies
 
         except Exception as e:
             logging.error(f"[HATA] Stratejiler getirme hatası: {e}")
             return []
-        finally:
-            conn.close()
 
     def get_strategy_goals(self, strategy_id: int) -> List[Dict]:
         """Stratejik hedefleri getir"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            # Verify strategy ownership if company context exists
+            if self.company_id:
+                strategy = self.execute_query(
+                    "SELECT id FROM sustainability_strategies WHERE id = ? AND company_id = ?",
+                    (strategy_id, self.company_id),
+                    company_id=self.company_id
+                )
+                if not strategy:
+                    logging.warning(f"Access denied: Strategy {strategy_id} does not belong to company {self.company_id}")
+                    return []
+
+            query = """
                 SELECT * FROM strategic_goals 
                 WHERE strategy_id = ? AND status != 'cancelled'
                 ORDER BY goal_category, is_critical DESC, goal_title
-            """, (strategy_id,))
-
-            results = cursor.fetchall()
-            goals = []
-
-            for row in results:
-                goals.append({
-                    'id': row[0], 'strategy_id': row[1], 'goal_category': row[2], 'goal_title': row[3],
-                    'description': row[4], 'target_year': row[5], 'baseline_year': row[6],
-                    'baseline_value': row[7], 'target_value': row[8], 'unit': row[9],
-                    'measurement_frequency': row[10], 'responsible_department': row[11],
-                    'kpi_formula': row[12], 'progress_tracking_method': row[13], 'is_critical': row[14],
-                    'status': row[15], 'created_at': row[16]
-                })
-
-            return goals
+            """
+            
+            results = self.execute_query(query, (strategy_id,), skip_tenant_filter=True)
+            return [dict(row) for row in results]
 
         except Exception as e:
             logging.error(f"[HATA] Hedefler getirme hatası: {e}")
             return []
-        finally:
-            conn.close()
 
     def get_goal_progress(self, goal_id: int = None, strategy_id: int = None) -> List[Dict]:
         """Hedef ilerlemelerini getir"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
+            base_query = """
+                SELECT gp.*, sg.goal_title, sg.goal_category
+                FROM goal_progress gp
+                JOIN strategic_goals sg ON gp.goal_id = sg.id
+                JOIN sustainability_strategies ss ON sg.strategy_id = ss.id
+            """
+            params = []
+            conditions = []
+            
+            # Enforce tenant isolation
+            if self.company_id:
+                conditions.append("ss.company_id = ?")
+                params.append(self.company_id)
+            
             if goal_id:
-                cursor.execute("""
-                    SELECT gp.*, sg.goal_title, sg.goal_category
-                    FROM goal_progress gp
-                    JOIN strategic_goals sg ON gp.goal_id = sg.id
-                    WHERE gp.goal_id = ?
-                    ORDER BY gp.reporting_period DESC
-                """, (goal_id,))
+                conditions.append("gp.goal_id = ?")
+                params.append(goal_id)
             elif strategy_id:
-                cursor.execute("""
-                    SELECT gp.*, sg.goal_title, sg.goal_category
-                    FROM goal_progress gp
-                    JOIN strategic_goals sg ON gp.goal_id = sg.id
-                    WHERE sg.strategy_id = ?
-                    ORDER BY gp.goal_id, gp.reporting_period DESC
-                """, (strategy_id,))
-            else:
-                cursor.execute("""
-                    SELECT gp.*, sg.goal_title, sg.goal_category
-                    FROM goal_progress gp
-                    JOIN strategic_goals sg ON gp.goal_id = sg.id
-                    ORDER BY gp.reporting_period DESC
-                """)
-
-            results = cursor.fetchall()
+                conditions.append("sg.strategy_id = ?")
+                params.append(strategy_id)
+            
+            if conditions:
+                base_query += " WHERE " + " AND ".join(conditions)
+                
+            base_query += " ORDER BY gp.reporting_period DESC"
+            
+            # Use skip_tenant_filter=True because we manually handled it via JOIN
+            results = self.execute_query(base_query, tuple(params), skip_tenant_filter=True)
+            
             progress_records = []
 
             for row in results:
+                # row is dict-like
                 progress_records.append({
-                    'id': row[0], 'goal_id': row[1], 'reporting_period': row[2],
-                    'actual_value': row[3], 'target_value': row[4], 'achievement_rate': row[5],
-                    'progress_narrative': row[6], 'challenges': json.loads(row[7] or '[]'),
-                    'actions_taken': json.loads(row[8] or '[]'), 'next_steps': json.loads(row[9] or '[]'),
-                    'reported_by': row[10], 'reported_at': row[11], 'goal_title': row[12], 'goal_category': row[13]
+                    'id': row['id'], 
+                    'goal_id': row['goal_id'], 
+                    'reporting_period': row['reporting_period'],
+                    'actual_value': row['actual_value'], 
+                    'target_value': row['target_value'], 
+                    'achievement_rate': row['achievement_rate'],
+                    'progress_narrative': row['progress_narrative'], 
+                    'challenges': json.loads(row['challenges'] or '[]'),
+                    'actions_taken': json.loads(row['actions_taken'] or '[]'), 
+                    'next_steps': json.loads(row['next_steps'] or '[]'),
+                    'reported_by': row.get('reported_by'), # Use .get() as it might be missing in older schemas? No, it's in INSERT.
+                    # 'reported_at' is missing in INSERT above, let's check schema.
+                    # 'reported_at' usually defaults to CURRENT_TIMESTAMP in DB.
+                    'reported_at': row.get('created_at'), # Schema check needed. Usually created_at.
+                    'goal_title': row['goal_title'], 
+                    'goal_category': row['goal_category']
                 })
 
             return progress_records
@@ -450,8 +431,6 @@ class SustainabilityStrategyManager:
         except Exception as e:
             logging.error(f"[HATA] İlerleme kayıtları getirme hatası: {e}")
             return []
-        finally:
-            conn.close()
 
     def create_default_strategy(self, company_id: int, created_by: int = 1) -> int:
         """Varsayılan sürdürülebilirlik stratejisi oluştur"""

@@ -1,0 +1,50 @@
+Feb 10 00:45:28 srv1235412 gunicorn[650080]: 2026-02-10 00:45:28,679 - INFO - [OK] CDP tabloları oluşturuldu
+Feb 10 00:45:28 srv1235412 gunicorn[650080]: 2026-02-10 00:45:28,681 - INFO - CDP questionnaires populated from JSON
+Feb 10 00:45:28 srv1235412 gunicorn[650080]: 2026-02-10 00:45:28,682 - INFO - [OK] CDP kategorileri dolduruldu
+Feb 10 00:45:28 srv1235412 gunicorn[650079]: 2026-02-10 00:45:28,686 - INFO - [TCFD] Veritabanı tabloları oluşturuldu/güncellendi
+Feb 10 00:45:28 srv1235412 gunicorn[650080]: 2026-02-10 00:45:28,691 - INFO - [TCFD] Veritabanı tabloları oluşturuldu/güncellendi
+Feb 10 00:45:28 srv1235412 gunicorn[650081]: 2026-02-10 00:45:28,813 - INFO -  DatabaseManager başlatıldı: /var/www/sustainage/backend/data/sdg_desktop.sqlite (50 bağlantı)
+Feb 10 00:45:28 srv1235412 gunicorn[650081]: 2026-02-10 00:45:28,818 - INFO - [OK] CBAM tabloları oluşturuldu
+Feb 10 00:45:28 srv1235412 gunicorn[650081]: 2026-02-10 00:45:28,828 - INFO - [OK] Atık yönetimi modülü tabloları başarıyla oluşturuldu
+Feb 10 00:45:28 srv1235412 gunicorn[650081]: 2026-02-10 00:45:28,828 - INFO - [OK] Su yönetimi modülü tabloları başarıyla oluşturuldu
+Feb 10 00:45:28 srv1235412 gunicorn[650081]: 2026-02-10 00:45:28,830 - INFO - [OK] Biyoçeşitlilik yönetimi modülü tabloları başarıyla oluşturuldu
+Feb 10 00:45:28 srv1235412 gunicorn[650081]: 2026-02-10 00:45:28,837 - INFO - [OK] CDP tabloları oluşturuldu
+Feb 10 00:45:28 srv1235412 gunicorn[650081]: 2026-02-10 00:45:28,838 - INFO - CDP questionnaires populated from JSON
+Feb 10 00:45:28 srv1235412 gunicorn[650081]: 2026-02-10 00:45:28,840 - INFO - [OK] CDP kategorileri dolduruldu
+Feb 10 00:45:28 srv1235412 gunicorn[650081]: 2026-02-10 00:45:28,846 - INFO - [TCFD] Veritabanı tabloları oluşturuldu/güncellendi
+Feb 10 00:45:29 srv1235412 gunicorn[650079]: 2026-02-10 00:45:29,505 - INFO - Kullanıcı yönetimi şeması başarıyla oluşturuldu
+Feb 10 00:45:29 srv1235412 gunicorn[650080]: 2026-02-10 00:45:29,514 - INFO - Kullanıcı yönetimi şeması başarıyla oluşturuldu
+Feb 10 00:45:29 srv1235412 gunicorn[650081]: 2026-02-10 00:45:29,614 - INFO - Kullanıcı yönetimi şeması başarıyla oluşturuldu
+Feb 10 09:06:06 srv1235412 gunicorn[650081]: 2026-02-10 09:06:06,746 - WARNING - MISSING TRANSLATION [fr]: login_page_title
+Feb 10 09:06:06 srv1235412 gunicorn[650081]: 2026-02-10 09:06:06,753 - WARNING - MISSING TRANSLATION [fr]: login_header
+Feb 10 09:06:06 srv1235412 gunicorn[650081]: 2026-02-10 09:06:06,755 - WARNING - MISSING TRANSLATION [fr]: login_username
+Feb 10 09:06:06 srv1235412 gunicorn[650081]: 2026-02-10 09:06:06,755 - WARNING - MISSING TRANSLATION [fr]: login_password
+Feb 10 09:06:06 srv1235412 gunicorn[650081]: 2026-02-10 09:06:06,755 - WARNING - MISSING TRANSLATION [fr]: login_remember_me
+Feb 10 09:06:06 srv1235412 gunicorn[650081]: 2026-02-10 09:06:06,756 - WARNING - MISSING TRANSLATION [fr]: login_submit_button
+Feb 10 09:06:06 srv1235412 gunicorn[650081]: 2026-02-10 09:06:06,756 - WARNING - MISSING TRANSLATION [fr]: login_forgot_password_link
+Feb 10 09:06:06 srv1235412 gunicorn[650081]: 2026-02-10 09:06:06,757 - WARNING - MISSING TRANSLATION [fr]: footer_slogan
+Feb 10 09:06:06 srv1235412 gunicorn[650081]: 2026-02-10 09:06:06,757 - WARNING - MISSING TRANSLATION [fr]: footer_legal
+Feb 10 09:06:06 srv1235412 gunicorn[650081]: 2026-02-10 09:06:06,757 - WARNING - MISSING TRANSLATION [fr]: footer_privacy
+Feb 10 09:06:06 srv1235412 gunicorn[650081]: 2026-02-10 09:06:06,757 - WARNING - MISSING TRANSLATION [fr]: footer_sla
+Feb 10 09:06:06 srv1235412 gunicorn[650081]: 2026-02-10 09:06:06,757 - WARNING - MISSING TRANSLATION [fr]: footer_dpa
+Feb 10 09:06:06 srv1235412 gunicorn[650081]: 2026-02-10 09:06:06,758 - WARNING - MISSING TRANSLATION [fr]: footer_support
+Feb 10 09:06:06 srv1235412 gunicorn[650081]: 2026-02-10 09:06:06,758 - WARNING - MISSING TRANSLATION [fr]: footer_help_center
+Feb 10 09:06:06 srv1235412 gunicorn[650081]: 2026-02-10 09:06:06,758 - WARNING - MISSING TRANSLATION [fr]: footer_contact_us
+Feb 10 09:06:06 srv1235412 gunicorn[650081]: 2026-02-10 09:06:06,758 - WARNING - MISSING TRANSLATION [fr]: footer_copyright
+Feb 10 09:06:06 srv1235412 gunicorn[650081]: 2026-02-10 09:06:06,758 - WARNING - MISSING TRANSLATION [fr]: cookie_msg
+Feb 10 09:06:06 srv1235412 gunicorn[650081]: 2026-02-10 09:06:06,758 - WARNING - MISSING TRANSLATION [fr]: footer_privacy
+Feb 10 09:06:06 srv1235412 gunicorn[650081]: 2026-02-10 09:06:06,758 - WARNING - MISSING TRANSLATION [fr]: cookie_accept
+Feb 10 10:20:34 srv1235412 gunicorn[650081]: 2026-02-10 10:20:34,777 - WARNING - MISSING TRANSLATION [de]: footer_slogan
+Feb 10 10:20:34 srv1235412 gunicorn[650081]: 2026-02-10 10:20:34,778 - WARNING - MISSING TRANSLATION [de]: footer_legal
+Feb 10 10:20:34 srv1235412 gunicorn[650081]: 2026-02-10 10:20:34,778 - WARNING - MISSING TRANSLATION [de]: footer_privacy
+Feb 10 10:20:34 srv1235412 gunicorn[650081]: 2026-02-10 10:20:34,778 - WARNING - MISSING TRANSLATION [de]: footer_sla
+Feb 10 10:20:34 srv1235412 gunicorn[650081]: 2026-02-10 10:20:34,778 - WARNING - MISSING TRANSLATION [de]: footer_dpa
+Feb 10 10:20:34 srv1235412 gunicorn[650081]: 2026-02-10 10:20:34,778 - WARNING - MISSING TRANSLATION [de]: footer_support
+Feb 10 10:20:34 srv1235412 gunicorn[650081]: 2026-02-10 10:20:34,779 - WARNING - MISSING TRANSLATION [de]: footer_help_center
+Feb 10 10:20:34 srv1235412 gunicorn[650081]: 2026-02-10 10:20:34,779 - WARNING - MISSING TRANSLATION [de]: footer_contact_us
+Feb 10 10:20:34 srv1235412 gunicorn[650081]: 2026-02-10 10:20:34,779 - WARNING - MISSING TRANSLATION [de]: footer_copyright
+Feb 10 10:20:34 srv1235412 gunicorn[650081]: 2026-02-10 10:20:34,779 - WARNING - MISSING TRANSLATION [de]: cookie_msg
+Feb 10 10:20:34 srv1235412 gunicorn[650081]: 2026-02-10 10:20:34,779 - WARNING - MISSING TRANSLATION [de]: footer_privacy
+Feb 10 10:20:34 srv1235412 gunicorn[650081]: 2026-02-10 10:20:34,779 - WARNING - MISSING TRANSLATION [de]: cookie_accept
+Feb 10 10:41:14 srv1235412 gunicorn[650079]: 2026-02-10 10:41:14,848 - ERROR - Rate limit error: no such table: rate_limits
+Feb 10 10:43:52 srv1235412 gunicorn[650079]: 2026-02-10 10:43:52,225 - ERROR - Rate limit error: no such table: rate_limits

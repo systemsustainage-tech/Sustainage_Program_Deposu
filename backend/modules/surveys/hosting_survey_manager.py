@@ -11,36 +11,38 @@ Hosting'deki anket sistemine bağlanır ve veri alışverişi yapar.
 - Materyalite analizine entegrasyon
 
 Tarih: 2025-10-23
+Refactored for Multi-tenancy: 2026-02-04
 """
 
 import hashlib
 import json
 import os
 import re
-import sqlite3
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, Optional
 
 import requests
 from config.database import DB_PATH
+from backend.core.base_manager import BaseTenantManager
 
-
-class HostingSurveyManager:
+class HostingSurveyManager(BaseTenantManager):
     """Hosting tabanlı anket sistemi yöneticisi"""
 
-    def __init__(self, db_path: str = None):
+    def __init__(self, db_path: str = None, company_id: Optional[int] = None):
         """
         Args:
             db_path: Lokal veritabanı yolu
+            company_id: Şirket ID
         """
-        if db_path is None:
+        final_db_path = db_path
+        if final_db_path is None:
             try:
                 from config.settings import get_db_path
-                self.db_path = get_db_path()
+                final_db_path = get_db_path()
             except Exception:
-                self.db_path = DB_PATH
-        else:
-            self.db_path = db_path
+                final_db_path = DB_PATH
+        
+        super().__init__(final_db_path, company_id)
 
         # Hosting config yükle (BASE_URL ve ADMIN_API_KEY)
         hosting_cfg = self._load_hosting_config()
@@ -106,13 +108,11 @@ class HostingSurveyManager:
     def _init_local_database(self) -> None:
         """Lokal veritabanında anket takip tablosu oluştur"""
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-
             # Anket takip tablosu
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS hosting_surveys (
                     local_survey_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    company_id INTEGER DEFAULT 1,
                     hosting_survey_id INTEGER,
                     survey_name TEXT,
                     company_name TEXT,
@@ -126,13 +126,16 @@ class HostingSurveyManager:
                     response_count INTEGER DEFAULT 0
                 )
             """)
+            
+            self.execute_update("CREATE INDEX IF NOT EXISTS idx_hosting_surveys_company_id ON hosting_surveys(company_id)")
 
             # Paydaş listesi tablosu
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS survey_stakeholders (
                     stakeholder_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    company_id INTEGER DEFAULT 1,
                     name TEXT NOT NULL,
-                    email TEXT NOT NULL UNIQUE,
+                    email TEXT NOT NULL,
                     organization TEXT,
                     role TEXT,
                     phone TEXT,
@@ -142,9 +145,8 @@ class HostingSurveyManager:
                     is_active INTEGER DEFAULT 1
                 )
             """)
-
-            conn.commit()
-            conn.close()
+            
+            self.execute_update("CREATE INDEX IF NOT EXISTS idx_survey_stakeholders_company_id ON survey_stakeholders(company_id)")
 
         except Exception as e:
             logging.error(f"[HATA] Lokal veritabanı init hatası: {e}")
@@ -160,23 +162,6 @@ class HostingSurveyManager:
     ) -> Dict[str, Any]:
         """
         Hosting'de yeni anket oluştur
-        
-        Args:
-            survey_name: Anket adı
-            company_name: Şirket adı
-            topics: Konular listesi [{'code': '...', 'name': '...', 'category': '...', 'description': '...'}]
-            description: Anket açıklaması
-            deadline_days: Kaç gün sonra kapanacak
-            survey_type: Anket tipi (materiality, stakeholder, etc.)
-        
-        Returns:
-            {
-                'success': True/False,
-                'survey_id': ...,
-                'survey_url': '...',
-                'token': '...',
-                'error': '...' (hata varsa)
-            }
         """
         try:
             deadline_date = (datetime.now() + timedelta(days=deadline_days)).strftime('%Y-%m-%d')
@@ -223,11 +208,12 @@ class HostingSurveyManager:
                 )
 
             # Debug: Response detaylarını logla
-            logging.debug(f"[DEBUG] HTTP Status: {response.status_code}")
-            logging.debug(f"[DEBUG] Response Headers: {dict(response.headers)}")
-            logging.debug(f"[DEBUG] Response Text (ilk 500 char): {response.text[:500]}")
+            if response:
+                logging.debug(f"[DEBUG] HTTP Status: {response.status_code}")
+                logging.debug(f"[DEBUG] Response Headers: {dict(response.headers)}")
+                logging.debug(f"[DEBUG] Response Text (ilk 500 char): {response.text[:500]}")
 
-            if response.status_code == 200:
+            if response and response.status_code == 200:
                 result = response.json()
 
                 if result.get('success'):
@@ -243,85 +229,39 @@ class HostingSurveyManager:
                 else:
                     error_msg = result.get('error', 'Bilinmeyen hata')
                     logging.error(f"[HATA] API hatası: {error_msg}")
-                    if 'missing_fields' in result:
-                        logging.error(f"[HATA] Eksik alanlar: {result['missing_fields']}")
-                    if 'received_fields' in result:
-                        logging.error(f"[HATA] Alınan alanlar: {result['received_fields']}")
                     return {'success': False, 'error': error_msg}
             else:
-                # 400 hatası için JSON response'u parse et
-                try:
-                    error_data = response.json()
-                    error_msg = error_data.get('error', response.text)
-                    logging.error(f"[HATA] HTTP {response.status_code}: {error_msg}")
-                    if 'missing_fields' in error_data:
-                        logging.error(f"[HATA] Eksik alanlar: {error_data['missing_fields']}")
-                    if 'received_fields' in error_data:
-                        logging.error(f"[HATA] Alınan alanlar: {error_data['received_fields']}")
-                    return {'success': False, 'error': f"HTTP {response.status_code}: {error_msg}"}
-                except Exception:
-                    logging.error(f"[HATA] HTTP {response.status_code}: {response.text}")
-                    return {'success': False, 'error': f"HTTP {response.status_code}"}
+                status = response.status_code if response else "No Response"
+                logging.error(f"[HATA] HTTP {status}")
+                return {'success': False, 'error': f"HTTP {status}"}
 
-        except requests.exceptions.Timeout as e:
-            logging.error(f"[HATA] Timeout: {e}")
-            return {'success': False, 'error': 'Bağlantı zaman aşımı (30 saniye)'}
-        except requests.exceptions.ConnectionError as e:
-            logging.error(f"[HATA] Connection Error: {e}")
-            return {'success': False, 'error': f'Hosting\'e bağlanılamadı: {e}'}
-        except requests.exceptions.RequestException as e:
-            logging.error(f"[HATA] Request Exception: {e}")
-            return {'success': False, 'error': f'İstek hatası: {e}'}
         except Exception as e:
             logging.error(f"[HATA] Genel Hata: {type(e).__name__}: {e}")
-            import traceback
-            traceback.print_exc()
             return {'success': False, 'error': f'{type(e).__name__}: {str(e)}'}
 
     def _save_survey_locally(self, survey_data: Dict) -> None:
         """Anketi lokal veritabanına kaydet"""
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-
-            cursor.execute("""
-                INSERT INTO hosting_surveys 
-                (hosting_survey_id, survey_name, company_name, survey_type, survey_url, 
-                 survey_token, created_date, deadline_date, status, last_sync_date)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                survey_data['survey_id'],
-                survey_data.get('survey_name', ''),
-                survey_data.get('company_name', ''),
-                survey_data.get('survey_type', 'materiality'),
-                survey_data['survey_url'],
-                survey_data['token'],
-                datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                survey_data.get('deadline_date', ''),
-                'active',
-                datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            ))
-
-            conn.commit()
-            conn.close()
+            cid = self._ensure_context(None)
+            
+            self.insert('hosting_surveys', {
+                'hosting_survey_id': survey_data['survey_id'],
+                'survey_name': survey_data.get('survey_name', ''),
+                'company_name': survey_data.get('company_name', ''),
+                'survey_type': survey_data.get('survey_type', 'materiality'),
+                'survey_url': survey_data['survey_url'],
+                'survey_token': survey_data['token'],
+                'created_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                'deadline_date': survey_data.get('deadline_date', ''),
+                'status': 'active',
+                'last_sync_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            }, company_id=cid)
 
         except Exception as e:
             logging.error(f"[HATA] Lokal kayıt hatası: {e}")
 
     def get_responses(self, survey_id: int) -> Dict[str, Any]:
-        """
-        Anket yanıtlarını çek
-        
-        Args:
-            survey_id: Hosting'deki anket ID
-        
-        Returns:
-            {
-                'success': True/False,
-                'responses': [...],
-                'total_responses': ...
-            }
-        """
+        """Anket yanıtlarını çek"""
         try:
             response = requests.get(
                 f"{self.api_url}?action=get_responses&survey_id={survey_id}",
@@ -347,27 +287,7 @@ class HostingSurveyManager:
             return {'success': False, 'error': str(e)}
 
     def get_summary(self, survey_id: int) -> Dict[str, Any]:
-        """
-        Özet istatistikleri çek
-        
-        Args:
-            survey_id: Hosting'deki anket ID
-        
-        Returns:
-            {
-                'success': True/False,
-                'summary': [
-                    {
-                        'topic_code': '...',
-                        'topic_name': '...',
-                        'avg_importance': 4.2,
-                        'avg_impact': 3.8,
-                        'materiality_score': 15.96,
-                        ...
-                    }
-                ]
-            }
-        """
+        """Özet istatistikleri çek"""
         try:
             response = requests.get(
                 f"{self.api_url}?action=get_summary&survey_id={survey_id}",
@@ -390,18 +310,7 @@ class HostingSurveyManager:
             return {'success': False, 'error': str(e)}
 
     def get_comments(self, survey_id: int) -> Dict[str, Any]:
-        """
-        Paydaş yorumlarını çek
-        
-        Args:
-            survey_id: Hosting'deki anket ID
-        
-        Returns:
-            {
-                'success': True/False,
-                'comments': [...]
-            }
-        """
+        """Paydaş yorumlarını çek"""
         try:
             response = requests.get(
                 f"{self.api_url}?action=get_comments&survey_id={survey_id}",
@@ -417,46 +326,68 @@ class HostingSurveyManager:
         except Exception as e:
             return {'success': False, 'error': str(e)}
 
-    def list_surveys(self, status: str = 'all') -> Dict[str, Any]:
+    def list_local_surveys(self, company_id: Optional[int] = None) -> List[Dict]:
         """
-        Anketleri listele
-        
-        Args:
-            status: 'all', 'active', 'closed', 'draft'
-        
-        Returns:
-            {
-                'success': True/False,
-                'surveys': [...]
-            }
+        Lokal veritabanındaki anketleri listele (Multi-tenant)
         """
         try:
-            response = requests.get(
-                f"{self.api_url}?action=list_surveys&status={status}",
-                headers=self.headers,
-                timeout=self.timeout
+            cid = self._ensure_context(company_id)
+            return self.select(
+                'hosting_surveys',
+                company_id=cid,
+                order_by='created_date DESC'
             )
+        except Exception as e:
+            logging.error(f"[HATA] Lokal anket listeleme hatası: {e}")
+            return []
 
-            if response.status_code == 200:
-                return response.json()
-            else:
-                return {'success': False, 'error': f"HTTP {response.status_code}"}
+    def get_local_survey(self, hosting_survey_id: int, company_id: Optional[int] = None) -> Optional[Dict]:
+        """
+        Belirli bir anketi getir (Multi-tenant kontrolü ile)
+        """
+        try:
+            cid = self._ensure_context(company_id)
+            return self.select_one(
+                'hosting_surveys',
+                where='hosting_survey_id = ?',
+                params=(hosting_survey_id,),
+                company_id=cid
+            )
+        except Exception as e:
+            logging.error(f"[HATA] Lokal anket getirme hatası: {e}")
+            return None
+
+    def list_surveys(self, status: str = 'all') -> Dict[str, Any]:
+        """
+        Anketleri listele.
+        Önce lokal veritabanını kullanır, eğer boşsa veya senkronizasyon gerekirse API'ye (fallback) gider.
+        Ancak multi-tenant yapıda API tüm anketleri döneceği için lokal tercih edilir.
+        """
+        try:
+            # Multi-tenant: Sadece kendi şirketinin anketlerini gör
+            local_surveys = self.list_local_surveys()
+            
+            # Eğer status filtresi varsa uygula
+            if status != 'all':
+                local_surveys = [s for s in local_surveys if s.get('status') == status]
+            
+            # API formatına uygun dönüş yap
+            return {
+                'success': True,
+                'surveys': local_surveys,
+                'source': 'local_db'
+            }
 
         except Exception as e:
             return {'success': False, 'error': str(e)}
 
     def update_status(self, survey_id: int, status: str) -> Dict[str, Any]:
-        """
-        Anket durumunu güncelle
-        
-        Args:
-            survey_id: Anket ID
-            status: 'active', 'closed', 'draft'
-        
-        Returns:
-            {'success': True/False}
-        """
+        """Anket durumunu güncelle"""
         try:
+            # Önce yetki kontrolü
+            if not self.get_local_survey(survey_id):
+                return {'success': False, 'error': 'Survey not found or access denied'}
+
             response = requests.get(
                 f"{self.api_url}?action=update_status&survey_id={survey_id}&status={status}",
                 headers=self.headers,
@@ -478,6 +409,10 @@ class HostingSurveyManager:
     def delete_survey(self, survey_id: int) -> Dict[str, Any]:
         """Anketi sil"""
         try:
+            # Önce yetki kontrolü
+            if not self.get_local_survey(survey_id):
+                return {'success': False, 'error': 'Survey not found or access denied'}
+
             response = requests.get(
                 f"{self.api_url}?action=delete_survey&survey_id={survey_id}",
                 headers=self.headers,
@@ -499,281 +434,30 @@ class HostingSurveyManager:
     def _update_response_count(self, survey_id: int, count: int) -> None:
         """Yanıt sayısını lokal veritabanında güncelle"""
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-            cursor.execute("""
+            # Hosting survey ID'ye göre güncelliyoruz, company_id kontrolü opsiyonel ama iyi olur
+            # Ancak hosting_survey_id zaten unique olmalı.
+            self.execute_update("""
                 UPDATE hosting_surveys 
                 SET response_count = ?, last_sync_date = ?
                 WHERE hosting_survey_id = ?
             """, (count, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), survey_id))
-            conn.commit()
-            conn.close()
         except Exception as e:
             logging.error(f"[HATA] Yanıt sayısı güncelleme hatası: {e}")
 
     def _update_local_status(self, survey_id: int, status: str) -> None:
         """Lokal anket durumunu güncelle"""
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-            cursor.execute("""
+            self.execute_update("""
                 UPDATE hosting_surveys 
                 SET status = ?, last_sync_date = ?
                 WHERE hosting_survey_id = ?
             """, (status, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), survey_id))
-            conn.commit()
-            conn.close()
         except Exception as e:
             logging.error(f"[HATA] Durum güncelleme hatası: {e}")
 
     def _delete_local_survey(self, survey_id: int) -> None:
         """Lokal anket kaydını sil"""
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-            cursor.execute("DELETE FROM hosting_surveys WHERE hosting_survey_id = ?", (survey_id,))
-            conn.commit()
-            conn.close()
+            self.execute_update("DELETE FROM hosting_surveys WHERE hosting_survey_id = ?", (survey_id,))
         except Exception as e:
-            logging.error(f"[HATA] Silme hatası: {e}")
-
-    def send_survey_emails(
-        self,
-        survey_url: str,
-        stakeholder_emails: List[str],
-        survey_name: str = "Sürdürülebilirlik Anketi",
-        survey_description: str = "",
-        company_name: str = "Sustainage",
-        deadline_date: str = ""
-    ) -> Tuple[int, int, str]:
-        """
-        Paydaşlara anket email'i gönder
-        
-        Args:
-            survey_url: Anket URL'i
-            stakeholder_emails: Email listesi
-            survey_name: Anket adı
-            survey_description: Anket açıklaması
-            company_name: Şirket adı
-            deadline_date: Son tarih
-        
-        Returns:
-            (başarılı_sayısı, başarısız_sayısı)
-        """
-        try:
-            from datetime import datetime, timedelta
-
-            from services.email_service import EmailService
-            email_service = EmailService()
-
-            # Eğer deadline_date verilmemişse 30 gün sonrasını al
-            if not deadline_date:
-                deadline_date = (datetime.now() + timedelta(days=30)).strftime('%d.%m.%Y')
-
-            success_count = 0
-            fail_count = 0
-            last_error = ""
-
-            for email in stakeholder_emails:
-                try:
-                    # Email adresinden isim çıkar (basit bir yaklaşım)
-                    stakeholder_name = email.split('@')[0].replace('.', ' ').title()
-
-                    # Email gönder (doğru parametrelerle)
-                    result = email_service.send_template_email_with_result(
-                        to_email=email,
-                        template_key='survey_invitation',
-                        variables={
-                            'stakeholder_name': stakeholder_name,
-                            'company_name': company_name,
-                            'survey_name': survey_name,
-                            'survey_description': survey_description or 'Sürdürülebilirlik konularının değerlendirilmesi',
-                            'survey_url': survey_url,
-                            'deadline_date': deadline_date
-                        }
-                    )
-                    if result.get('success'):
-                        success_count += 1
-                        logging.info(f"[OK] Email gönderildi: {email}")
-                    else:
-                        fail_count += 1
-                        last_error = result.get('error', 'Bilinmeyen hata')
-                        logging.error(f"[HATA] Email hatası ({email}): {last_error}")
-
-                except Exception as e:
-                    fail_count += 1
-                    logging.error(f"[HATA] Email döngü hatası ({email}): {e}")
-
-            return success_count, fail_count, last_error
-        except Exception as e:
-            logging.error(f"[HATA] Email servisi başlatılamadı: {e}")
-            return 0, len(stakeholder_emails), str(e)
-
-    def export_to_training(self, survey_id: int, training_manager: Any, company_id: int, threshold: float = 12.0) -> Dict[str, Any]:
-        """
-        Anket sonuçlarına göre otomatik eğitim önerileri oluştur
-        
-        Args:
-            survey_id: Anket ID
-            training_manager: TrainingManager instance
-            company_id: Şirket ID
-            threshold: Materiality skoru eşiği (varsayılan 12.0)
-            
-        Returns:
-            {'success': True, 'created_count': X, 'details': [...]}
-        """
-        summary_result = self.get_summary(survey_id)
-        if not summary_result.get('success'):
-            return {'success': False, 'error': summary_result.get('error')}
-            
-        summary = summary_result.get('summary', [])
-        created_count = 0
-        details = []
-        current_year = datetime.now().year
-        
-        for item in summary:
-            # Materiality Score (Önem x Etki) kontrolü
-            try:
-                score = float(item.get('materiality_score', 0))
-            except (ValueError, TypeError):
-                score = 0.0
-
-            topic_name = item.get('topic_name', 'Bilinmeyen Konu')
-            
-            if score >= threshold:
-                program_name = f"{topic_name} Eğitimi"
-                
-                # Check if exists
-                if hasattr(training_manager, 'check_program_exists') and \
-                   training_manager.check_program_exists(company_id, program_name, current_year):
-                    details.append(f"Mevcut: {program_name}")
-                    continue
-
-                # Create training
-                # add_training_program imzası:
-                # company_id, program_name, program_type, target_audience, ...
-                success = training_manager.add_training_program(
-                    company_id=company_id,
-                    program_name=program_name,
-                    program_type="Technical", # Varsayılan kategori
-                    target_audience="İlgili Departmanlar",
-                    duration_hours=0, # Planlanacak
-                    cost_per_participant=0,
-                    period_year=current_year,
-                    supplier="Otomatik (Anket)",
-                    total_cost=0
-                )
-                
-                if success:
-                    created_count += 1
-                    details.append(f"Oluşturuldu: {program_name} (Skor: {score:.2f})")
-                else:
-                    details.append(f"Hata: {program_name} oluşturulamadı")
-                    
-        return {
-            'success': True,
-            'created_count': created_count,
-            'details': details
-        }
-
-
-    def get_local_surveys(self) -> List[Dict[str, Any]]:
-        """Lokal veritabanındaki anketleri getir"""
-        try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-            cursor.execute("""
-                SELECT * FROM hosting_surveys 
-                ORDER BY created_date DESC
-            """)
-
-            columns = [desc[0] for desc in cursor.description]
-            surveys = []
-
-            for row in cursor.fetchall():
-                survey = dict(zip(columns, row))
-                surveys.append(survey)
-
-            conn.close()
-            return surveys
-
-        except Exception as e:
-            logging.error(f"[HATA] Lokal anket listesi hatası: {e}")
-            return []
-
-    def get_stakeholders(self, active_only: bool = True) -> List[Dict[str, Any]]:
-        """Paydaş listesini getir"""
-        try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-
-            if active_only:
-                cursor.execute("SELECT * FROM survey_stakeholders WHERE is_active = 1 ORDER BY name")
-            else:
-                cursor.execute("SELECT * FROM survey_stakeholders ORDER BY name")
-
-            columns = [desc[0] for desc in cursor.description]
-            stakeholders = []
-
-            for row in cursor.fetchall():
-                stakeholder = dict(zip(columns, row))
-                stakeholders.append(stakeholder)
-
-            conn.close()
-            return stakeholders
-
-        except Exception as e:
-            logging.error(f"[HATA] Paydaş listesi hatası: {e}")
-            return []
-
-    def add_stakeholder(self, name: str, email: str, organization: str = "", role: str = "", category: str = "") -> bool:
-        """Yeni paydaş ekle"""
-        try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-            cursor.execute("""
-                INSERT INTO survey_stakeholders (name, email, organization, role, category)
-                VALUES (?, ?, ?, ?, ?)
-            """, (name, email, organization, role, category))
-            conn.commit()
-            conn.close()
-            return True
-        except sqlite3.IntegrityError:
-            logging.info(f"[UYARI] Paydaş zaten kayıtlı: {email}")
-            return False
-        except Exception as e:
-            logging.error(f"[HATA] Paydaş ekleme hatası: {e}")
-            return False
-
-    def export_to_materiality(self, survey_id: int, target_db: str) -> bool:
-        """
-        Anket sonuçlarını materyalite analizine aktar
-        
-        Args:
-            survey_id: Anket ID
-            target_db: Hedef veritabanı (GRI, ESRS, vs.)
-        
-        Returns:
-            Başarılı ise True
-        """
-        try:
-            # Özet istatistikleri al
-            summary_result = self.get_summary(survey_id)
-
-            if not summary_result.get('success'):
-                logging.error("[HATA] Özet istatistikler alınamadı")
-                return False
-
-            summary = summary_result['summary']
-
-            # Materyalite modülüne aktar
-            # Gelecek geliştirme: İlgili materyalite modülüne entegre edilecek
-            logging.info(f"[TODO] Materyalite entegrasyonu henüz aktif değil. (Survey ID: {survey_id})")
-            logging.info(f"[OK] {len(summary)} konu materyalite analizine aktarıldı (Simülasyon)")
-
-            return True
-
-        except Exception as e:
-            logging.error(f"[HATA] Materyalite aktarma hatası: {e}")
-            return False
-
+            logging.error(f"[HATA] Lokal silme hatası: {e}")

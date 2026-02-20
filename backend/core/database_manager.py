@@ -33,24 +33,28 @@ class DatabaseManager:
     - WAL modu (Write-Ahead Logging)
     """
 
-    _instance = None
+    _instances = {}
     _lock = threading.Lock()
 
-    def __new__(cls, *args, **kwargs):
-        """Singleton pattern - tek instance"""
-        if not cls._instance:
-            with cls._lock:
-                if not cls._instance:
-                    cls._instance = super().__new__(cls)
-        return cls._instance
+    def __new__(cls, db_path: str = DB_PATH, *args, **kwargs):
+        """Multiton pattern - her db_path için tek instance"""
+        # Mutlak yol
+        if not os.path.isabs(db_path):
+            base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+            db_path = os.path.join(base_dir, db_path)
 
-    def __init__(self, db_path: str = DB_PATH, pool_size: int = 10):
+        with cls._lock:
+            if db_path not in cls._instances:
+                cls._instances[db_path] = super().__new__(cls)
+        return cls._instances[db_path]
+
+    def __init__(self, db_path: str = DB_PATH, pool_size: int = 50):
         """
         Args:
             db_path: Veritabanı yolu
-            pool_size: Connection pool boyutu (varsayılan: 10)
+            pool_size: Connection pool boyutu (varsayılan: 50)
         """
-        # İlk init kontrolü (singleton için)
+        # İlk init kontrolü (singleton/multiton için)
         if hasattr(self, '_initialized'):
             return
 
@@ -68,7 +72,7 @@ class DatabaseManager:
         # Pool'u başlat
         self._init_pool()
 
-        logging.info(f" DatabaseManager başlatıldı: {pool_size} bağlantı pool")
+        logging.info(f" DatabaseManager başlatıldı: {db_path} ({pool_size} bağlantı)")
 
     def _init_pool(self) -> None:
         """Connection pool'u başlat"""
@@ -93,11 +97,31 @@ class DatabaseManager:
         conn.execute("PRAGMA foreign_keys=ON")  # Foreign key kontrolü
         conn.execute("PRAGMA temp_store=MEMORY")  # Geçici veriler RAM'de
         conn.execute("PRAGMA cache_size=-64000")  # 64MB cache
-
-        # Row factory - dict benzeri erişim
+        
+        # Row factory
         conn.row_factory = sqlite3.Row
-
+        
         return conn
+
+    def close(self):
+        """Tüm bağlantıları kapat ve instance'ı temizle"""
+        try:
+            # Pool'daki boşta olan bağlantıları kapat
+            while not self._pool.empty():
+                try:
+                    conn = self._pool.get_nowait()
+                    conn.close()
+                except:
+                    pass
+            
+            # Instance listesinden çıkar
+            with self._lock:
+                if self.db_path in self._instances:
+                    del self._instances[self.db_path]
+            
+            logging.info(f"DatabaseManager kapatıldı: {self.db_path}")
+        except Exception as e:
+            logging.error(f"DatabaseManager kapatılırken hata: {e}")
 
     @contextmanager
     def get_connection(self) -> Generator[sqlite3.Connection, None, None]:
@@ -183,6 +207,16 @@ class DatabaseManager:
             cursor.executemany(query, params_list)
             conn.commit()
             return cursor.rowcount
+
+    def execute_script(self, script: str) -> None:
+        """
+        SQL scripti çalıştır (executescript)
+        
+        Args:
+            script: SQL script içeriği
+        """
+        with self.get_connection() as conn:
+            conn.executescript(script)
 
     def transaction(self, func: callable, *args, **kwargs) -> Any:
         """

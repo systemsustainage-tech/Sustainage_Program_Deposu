@@ -181,27 +181,27 @@
 <textarea class="form-control" name="sustainability_strategy" rows="3">{{ info.sustainability_strategy }}</textarea>
 </div>
 <div class="col-12">
-<label class="form-label">Materyal Konular</label>
+<label class="form-label">{{ lang('material_topics', 'Materyal Konular') }}</label>
 <textarea class="form-control" name="material_topics" rows="3">{{ info.material_topics }}</textarea>
 </div>
 <div class="col-12">
-<label class="form-label">Paydaş Grupları</label>
+<label class="form-label">{{ lang('stakeholder_groups_label', 'Paydaş Grupları') }}</label>
 <textarea class="form-control" name="stakeholder_groups" rows="3">{{ info.stakeholder_groups }}</textarea>
 </div>
 <div class="col-md-6">
-<label class="form-label">ESG Değerlendirme Kuruluşu</label>
+<label class="form-label">{{ lang('esg_rating_agency', 'ESG Değerlendirme Kuruluşu') }}</label>
 <input class="form-control" name="esg_rating_agency" type="text" value="{{ info.esg_rating_agency }}"/>
 </div>
 <div class="col-md-6">
-<label class="form-label">ESG Puanı</label>
+<label class="form-label">{{ lang('esg_rating', 'ESG Puanı') }}</label>
 <input class="form-control" name="esg_rating" type="text" value="{{ info.esg_rating }}"/>
 </div>
 <div class="col-12">
-<label class="form-label">Sertifikalar</label>
+<label class="form-label">{{ lang('certifications', 'Sertifikalar') }}</label>
 <textarea class="form-control" name="certifications" rows="3">{{ info.certifications }}</textarea>
 </div>
 <div class="col-12">
-<label class="form-label">Üyelikler</label>
+<label class="form-label">{{ lang('memberships', 'Üyelikler') }}</label>
 <textarea class="form-control" name="memberships" rows="3">{{ info.memberships }}</textarea>
 </div>
 </div>
@@ -209,11 +209,11 @@
 <div aria-labelledby="contact-tab" class="tab-pane fade" id="contact" role="tabpanel">
 <div class="row g-3">
 <div class="col-12">
-<label class="form-label">Merkez Adresi</label>
+<label class="form-label">{{ lang('headquarters_address', 'Merkez Adresi') }}</label>
 <textarea class="form-control" name="headquarters_address" rows="2">{{ info.headquarters_address }}</textarea>
 </div>
 <div class="col-md-4">
-<label class="form-label">Şehir</label>
+<label class="form-label">{{ lang('city', 'Şehir') }}</label>
 <input class="form-control" name="city" type="text" value="{{ info.city }}"/>
 </div>
 <div class="col-md-4">

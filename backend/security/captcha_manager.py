@@ -82,3 +82,30 @@ class CaptchaManager:
         if not session_code or not user_input:
             return False
         return session_code.upper() == user_input.upper()
+
+    def verify_google_recaptcha(self, token, secret_key, remote_ip=None):
+        """
+        Verifies Google reCAPTCHA v2 token.
+        Returns True if valid, False otherwise.
+        """
+        if not token or not secret_key:
+            return False
+            
+        try:
+            import requests
+            url = "https://www.google.com/recaptcha/api/siteverify"
+            data = {
+                'secret': secret_key,
+                'response': token
+            }
+            if remote_ip:
+                data['remoteip'] = remote_ip
+                
+            response = requests.post(url, data=data, timeout=5)
+            result = response.json()
+            
+            return result.get('success', False)
+        except Exception as e:
+            # Log error but fail safe (or open depending on policy) - fail safe for security
+            print(f"reCAPTCHA verification error: {e}")
+            return False

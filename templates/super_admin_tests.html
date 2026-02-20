@@ -62,7 +62,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
 function runTest(testId, testName) {
     const output = document.getElementById('testOutput');
     const loading = document.getElementById('loadingOverlay');
@@ -73,10 +73,13 @@ function runTest(testId, testName) {
     output.textContent = 'Test başlatılıyor...';
     loading.classList.remove('d-none');
     
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
     fetch(`/super_admin/run_test/${testId}`, {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
         }
     })
     .then(response => response.json())

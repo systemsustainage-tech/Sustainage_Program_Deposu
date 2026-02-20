@@ -9,9 +9,12 @@ import logging
 import json
 import os
 from typing import Any, Dict, List, Optional
+try:
+    from backend.core.base_manager import BaseTenantManager
+except ImportError:
+    from core.base_manager import BaseTenantManager
 
-
-class TranslationManager:
+class TranslationManager(BaseTenantManager):
     """Çeviri yönetim sistemi"""
 
     SUPPORTED_LANGUAGES = {
@@ -19,7 +22,11 @@ class TranslationManager:
         'en': 'English'
     }
 
-    def __init__(self, default_language: str = 'tr') -> None:
+    def __init__(self, default_language: str = 'tr', db_path: str = None, company_id: Optional[int] = None) -> None:
+        # BaseTenantManager init (requires db_path, but this manager is file-based mostly)
+        # We pass db_path if provided, or let BaseTenantManager handle default
+        super().__init__(db_path, company_id)
+        
         self.default_language = default_language
         self.current_language = default_language
         self.translations: Dict[str, Dict[str, Any]] = {}

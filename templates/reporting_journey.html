@@ -151,8 +151,8 @@
         cards.forEach((card, index) => {
             if(card.querySelector('.border-primary')) {
                 // If active card is near the end, adjust view
-                if(index > totalCards - cardsPerView) {
-                    currentIndex = totalCards - cardsPerView;
+                if(index > totalCards - 1) {
+                    currentIndex = totalCards - 1;
                 } else {
                     currentIndex = index;
                 }
@@ -172,7 +172,7 @@
         });
         
         nextBtn.addEventListener('click', () => {
-            if(currentIndex < totalCards - cardsPerView) {
+            if(currentIndex < totalCards - 1) {
                 currentIndex++;
                 updateCarousel();
             }
@@ -184,10 +184,10 @@
             
             // Button states
             prevBtn.disabled = currentIndex === 0;
-            nextBtn.disabled = currentIndex >= totalCards - cardsPerView;
+            nextBtn.disabled = currentIndex >= totalCards - 1;
             
             prevBtn.style.opacity = currentIndex === 0 ? '0.5' : '1';
-            nextBtn.style.opacity = currentIndex >= totalCards - cardsPerView ? '0.5' : '1';
+            nextBtn.style.opacity = currentIndex >= totalCards - 1 ? '0.5' : '1';
         }
     });
 

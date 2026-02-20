@@ -6,30 +6,27 @@ SKDM Manager - Sürdürülebilir Kalkınma Modülü Yöneticisi
 
 import logging
 import os
-import sqlite3
 from datetime import datetime
-from typing import Dict, List
-from config.database import DB_PATH
+from typing import Dict, List, Any, Optional
+from backend.core.base_manager import BaseTenantManager
+try:
+    from config.database import DB_PATH
+except ImportError:
+    from backend.config.database import DB_PATH
 
 
-class SKDMManager:
+class SKDMManager(BaseTenantManager):
     """SKDM Modülü Yönetim Sınıfı"""
 
-    def __init__(self, db_path: str = DB_PATH) -> None:
-        if not os.path.isabs(db_path):
-            base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
-            db_path = os.path.join(base_dir, db_path)
-        self.db_path = db_path
+    def __init__(self, db_path: str = DB_PATH, company_id: Optional[int] = None) -> None:
+        super().__init__(db_path, company_id)
         self._init_tables()
 
     def _init_tables(self) -> None:
         """SKDM tablolarını oluştur"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
             # Karbon yönetimi tablosu
-            cursor.execute("""
+            self.db.execute_update("""
                 CREATE TABLE IF NOT EXISTS skdm_carbon_management (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -50,7 +47,7 @@ class SKDMManager:
             """)
 
             # Su yönetimi tablosu
-            cursor.execute("""
+            self.db.execute_update("""
                 CREATE TABLE IF NOT EXISTS skdm_water_management (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -68,7 +65,7 @@ class SKDMManager:
             """)
 
             # Atık yönetimi tablosu
-            cursor.execute("""
+            self.db.execute_update("""
                 CREATE TABLE IF NOT EXISTS skdm_waste_management (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -86,7 +83,7 @@ class SKDMManager:
             """)
 
             # Tedarik zinciri tablosu
-            cursor.execute("""
+            self.db.execute_update("""
                 CREATE TABLE IF NOT EXISTS skdm_supply_chain (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -104,7 +101,7 @@ class SKDMManager:
             """)
 
             # Scope 3 kategorileri tablosu
-            cursor.execute("""
+            self.db.execute_update("""
                 CREATE TABLE IF NOT EXISTS skdm_scope3_categories (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -122,7 +119,7 @@ class SKDMManager:
             """)
 
             # Emisyon azaltma projeleri tablosu
-            cursor.execute("""
+            self.db.execute_update("""
                 CREATE TABLE IF NOT EXISTS skdm_emission_projects (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -142,7 +139,7 @@ class SKDMManager:
             """)
 
             # Paydaş yönetimi tablosu
-            cursor.execute("""
+            self.db.execute_update("""
                 CREATE TABLE IF NOT EXISTS skdm_stakeholder_management (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -159,381 +156,320 @@ class SKDMManager:
                 )
             """)
 
-            conn.commit()
             logging.info("[OK] SKDM tablolari olusturuldu")
 
         except Exception as e:
             logging.error(f"[HATA] SKDM tablolari olusturulamadi: {e}")
-        finally:
-            conn.close()
+
 
     def get_carbon_summary(self, company_id: int, year: int = None) -> Dict:
         """Karbon yönetimi özeti"""
         if year is None:
             year = datetime.now().year
 
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            sql = """
                 SELECT * FROM skdm_carbon_management 
                 WHERE company_id = ? AND year = ?
                 ORDER BY updated_at DESC LIMIT 1
-            """, (company_id, year))
+            """
+            rows = self.execute_query(sql, (company_id, year), company_id=company_id)
 
-            result = cursor.fetchone()
-            if result:
+            if rows:
+                result = rows[0]
                 return {
-                    'total_emissions': result[3],
-                    'scope1': result[4],
-                    'scope2': result[5],
-                    'scope3': result[6],
-                    'reduction_target': result[7],
-                    'reduction_achieved': result[8],
-                    'carbon_price': result[9],
-                    'offset_purchased': result[10],
-                    'renewable_energy': result[11]
+                    'total_emissions': result['total_emissions'],
+                    'scope1': result['scope1_emissions'],
+                    'scope2': result['scope2_emissions'],
+                    'scope3': result['scope3_emissions'],
+                    'reduction_target': result['reduction_target'],
+                    'reduction_achieved': result['reduction_achieved'],
+                    'carbon_price': result['carbon_price'],
+                    'offset_purchased': result['offset_purchased'],
+                    'renewable_energy': result['renewable_energy_percentage']
                 }
             return {}
 
         except Exception as e:
             logging.error(f"[HATA] Karbon ozeti alinamadi: {e}")
             return {}
-        finally:
-            conn.close()
 
     def get_water_summary(self, company_id: int, year: int = None) -> Dict:
         """Su yönetimi özeti"""
         if year is None:
             year = datetime.now().year
 
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            sql = """
                 SELECT * FROM skdm_water_management 
                 WHERE company_id = ? AND year = ?
                 ORDER BY updated_at DESC LIMIT 1
-            """, (company_id, year))
+            """
+            rows = self.execute_query(sql, (company_id, year), company_id=company_id)
 
-            result = cursor.fetchone()
-            if result:
+            if rows:
+                result = rows[0]
                 return {
-                    'total_consumption': result[3],
-                    'reuse_percentage': result[4],
-                    'efficiency_score': result[5],
-                    'risk_level': result[6],
-                    'conservation_projects': result[7],
-                    'treatment_percentage': result[8]
+                    'total_consumption': result['total_water_consumption'],
+                    'reuse_percentage': result['water_reuse_percentage'],
+                    'efficiency_score': result['water_efficiency_score'],
+                    'risk_level': result['water_risk_level'],
+                    'conservation_projects': result['water_conservation_projects'],
+                    'treatment_percentage': result['wastewater_treatment_percentage']
                 }
             return {}
 
         except Exception as e:
             logging.error(f"[HATA] Su ozeti alinamadi: {e}")
             return {}
-        finally:
-            conn.close()
 
     def get_waste_summary(self, company_id: int, year: int = None) -> Dict:
         """Atık yönetimi özeti"""
         if year is None:
             year = datetime.now().year
 
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            sql = """
                 SELECT * FROM skdm_waste_management 
                 WHERE company_id = ? AND year = ?
                 ORDER BY updated_at DESC LIMIT 1
-            """, (company_id, year))
+            """
+            rows = self.execute_query(sql, (company_id, year), company_id=company_id)
 
-            result = cursor.fetchone()
-            if result:
+            if rows:
+                result = rows[0]
                 return {
-                    'total_waste': result[3],
-                    'recycled_percentage': result[4],
-                    'reduced_percentage': result[5],
-                    'hazardous_percentage': result[6],
-                    'circular_score': result[7],
-                    'waste_to_energy': result[8]
+                    'total_waste': result['total_waste_generated'],
+                    'recycled_percentage': result['waste_recycled_percentage'],
+                    'reduced_percentage': result['waste_reduced_percentage'],
+                    'hazardous_percentage': result['hazardous_waste_percentage'],
+                    'circular_score': result['circular_economy_score'],
+                    'waste_to_energy': result['waste_to_energy_percentage']
                 }
             return {}
 
         except Exception as e:
             logging.error(f"[HATA] Atik ozeti alinamadi: {e}")
             return {}
-        finally:
-            conn.close()
 
     def get_supply_chain_summary(self, company_id: int, year: int = None) -> Dict:
         """Tedarik zinciri özeti"""
         if year is None:
             year = datetime.now().year
 
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            sql = """
                 SELECT * FROM skdm_supply_chain 
                 WHERE company_id = ? AND year = ?
                 ORDER BY updated_at DESC LIMIT 1
-            """, (company_id, year))
+            """
+            rows = self.execute_query(sql, (company_id, year), company_id=company_id)
 
-            result = cursor.fetchone()
-            if result:
+            if rows:
+                result = rows[0]
                 return {
-                    'suppliers_assessed': result[3],
-                    'sustainable_percentage': result[4],
-                    'supply_chain_emissions': result[5],
-                    'audits': result[6],
-                    'ethical_score': result[7],
-                    'local_sourcing': result[8]
+                    'suppliers_assessed': result['suppliers_assessed'],
+                    'sustainable_percentage': result['suppliers_sustainable_percentage'],
+                    'supply_chain_emissions': result['supply_chain_emissions'],
+                    'audits': result['supplier_audits'],
+                    'ethical_score': result['ethical_sourcing_score'],
+                    'local_sourcing': result['local_sourcing_percentage']
                 }
             return {}
 
         except Exception as e:
             logging.error(f"[HATA] Tedarik zinciri ozeti alinamadi: {e}")
             return {}
-        finally:
-            conn.close()
 
     def get_scope3_categories(self, company_id: int, year: int = None) -> List[Dict]:
         """Scope 3 kategorileri"""
         if year is None:
             year = datetime.now().year
 
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            sql = """
                 SELECT * FROM skdm_scope3_categories 
                 WHERE company_id = ? AND year = ?
                 ORDER BY emissions DESC
-            """, (company_id, year))
-
-            results = cursor.fetchall()
+            """
+            rows = self.execute_query(sql, (company_id, year), company_id=company_id)
+            
             categories = []
-            for result in results:
+            for result in rows:
                 categories.append({
-                    'category_code': result[3],
-                    'category_name': result[4],
-                    'emissions': result[5],
-                    'data_quality': result[6],
-                    'calculation_method': result[7],
-                    'verification_status': result[8]
+                    'category_code': result['category_code'],
+                    'category_name': result['category_name'],
+                    'emissions': result['emissions'],
+                    'data_quality': result['data_quality'],
+                    'calculation_method': result['calculation_method'],
+                    'verification_status': result['verification_status']
                 })
             return categories
 
         except Exception as e:
             logging.error(f"[HATA] Scope 3 kategorileri alinamadi: {e}")
             return []
-        finally:
-            conn.close()
+
 
     def get_emission_projects(self, company_id: int) -> List[Dict]:
         """Emisyon azaltma projeleri"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            sql = """
                 SELECT * FROM skdm_emission_projects 
                 WHERE company_id = ?
                 ORDER BY start_date DESC
-            """, (company_id,))
+            """
+            rows = self.execute_query(sql, (company_id,), company_id=company_id)
 
-            results = cursor.fetchall()
             projects = []
-            for result in results:
+            for result in rows:
                 projects.append({
-                    'project_name': result[2],
-                    'project_type': result[3],
-                    'start_date': result[4],
-                    'end_date': result[5],
-                    'expected_reduction': result[6],
-                    'actual_reduction': result[7],
-                    'investment_amount': result[8],
-                    'status': result[9],
-                    'description': result[10]
+                    'project_name': result['project_name'],
+                    'project_type': result['project_type'],
+                    'start_date': result['start_date'],
+                    'end_date': result['end_date'],
+                    'expected_reduction': result['expected_reduction'],
+                    'actual_reduction': result['actual_reduction'],
+                    'investment_amount': result['investment_amount'],
+                    'status': result['status'],
+                    'description': result['description']
                 })
             return projects
 
         except Exception as e:
             logging.error(f"[HATA] Emisyon projeleri alinamadi: {e}")
             return []
-        finally:
-            conn.close()
 
     def get_stakeholders(self, company_id: int) -> List[Dict]:
         """Paydaş listesi"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            sql = """
                 SELECT * FROM skdm_stakeholder_management 
                 WHERE company_id = ?
                 ORDER BY stakeholder_name
-            """, (company_id,))
+            """
+            rows = self.execute_query(sql, (company_id,), company_id=company_id)
 
-            results = cursor.fetchall()
             stakeholders = []
-            for result in results:
+            for result in rows:
                 stakeholders.append({
-                    'stakeholder_name': result[2],
-                    'stakeholder_type': result[3],
-                    'engagement_level': result[4],
-                    'satisfaction_score': result[5],
-                    'last_contact_date': result[6],
-                    'next_contact_date': result[7],
-                    'key_concerns': result[8]
+                    'stakeholder_name': result['stakeholder_name'],
+                    'stakeholder_type': result['stakeholder_type'],
+                    'engagement_level': result['engagement_level'],
+                    'satisfaction_score': result['satisfaction_score'],
+                    'last_contact_date': result['last_contact_date'],
+                    'next_contact_date': result['next_contact_date'],
+                    'key_concerns': result['key_concerns']
                 })
             return stakeholders
 
         except Exception as e:
             logging.error(f"[HATA] Paydaslar alinamadi: {e}")
             return []
-        finally:
-            conn.close()
 
     def add_carbon_data(self, company_id: int, year: int, data: Dict) -> bool:
         """Karbon verisi ekle"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            sql = """
                 INSERT OR REPLACE INTO skdm_carbon_management 
                 (company_id, year, total_emissions, scope1_emissions, scope2_emissions, 
                  scope3_emissions, reduction_target, reduction_achieved, carbon_price, 
                  offset_purchased, renewable_energy_percentage, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (company_id, year, data.get('total_emissions', 0),
+            """
+            self.execute_update(sql, (company_id, year, data.get('total_emissions', 0),
                   data.get('scope1_emissions', 0), data.get('scope2_emissions', 0),
                   data.get('scope3_emissions', 0), data.get('reduction_target', 0),
                   data.get('reduction_achieved', 0), data.get('carbon_price', 0),
                   data.get('offset_purchased', 0), data.get('renewable_energy_percentage', 0),
-                  datetime.now()))
-
-            conn.commit()
+                  datetime.now()), company_id=company_id)
             return True
 
         except Exception as e:
             logging.error(f"[HATA] Karbon verisi eklenemedi: {e}")
             return False
-        finally:
-            conn.close()
 
     def add_emission_project(self, company_id: int, project_data: Dict) -> bool:
         """Emisyon azaltma projesi ekle"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            sql = """
                 INSERT INTO skdm_emission_projects 
                 (company_id, project_name, project_type, start_date, end_date,
                  expected_reduction, actual_reduction, investment_amount, status, description)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (company_id, project_data.get('project_name', ''),
+            """
+            self.execute_update(sql, (company_id, project_data.get('project_name', ''),
                   project_data.get('project_type', ''), project_data.get('start_date', ''),
                   project_data.get('end_date', ''), project_data.get('expected_reduction', 0),
                   project_data.get('actual_reduction', 0), project_data.get('investment_amount', 0),
-                  project_data.get('status', 'Planning'), project_data.get('description', '')))
-
-            conn.commit()
+                  project_data.get('status', 'Planning'), project_data.get('description', '')), company_id=company_id)
             return True
 
         except Exception as e:
             logging.error(f"[HATA] Emisyon projesi eklenemedi: {e}")
             return False
-        finally:
-            conn.close()
 
     def add_stakeholder(self, company_id: int, stakeholder_data: Dict) -> bool:
         """Paydaş ekle"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            sql = """
                 INSERT INTO skdm_stakeholder_management 
                 (company_id, stakeholder_name, stakeholder_type, engagement_level,
                  satisfaction_score, last_contact_date, next_contact_date, key_concerns)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """, (company_id,
+            """
+            self.execute_update(sql, (company_id,
                   stakeholder_data.get('stakeholder_name', ''),
                   stakeholder_data.get('stakeholder_type', ''),
                   stakeholder_data.get('engagement_level', 'Low'),
                   stakeholder_data.get('satisfaction_score', 0),
                   stakeholder_data.get('last_contact_date'),
                   stakeholder_data.get('next_contact_date'),
-                  stakeholder_data.get('key_concerns', '')))
-
-            conn.commit()
+                  stakeholder_data.get('key_concerns', '')), company_id=company_id)
+            
             logging.info(f"[OK] Paydaş eklendi: {stakeholder_data.get('stakeholder_name')}")
             return True
 
         except Exception as e:
             logging.error(f"[HATA] Paydaş eklenemedi: {e}")
             return False
-        finally:
-            conn.close()
 
-    def update_stakeholder(self, stakeholder_id: int, stakeholder_data: Dict) -> bool:
+    def update_stakeholder(self, stakeholder_id: int, stakeholder_data: Dict, company_id: int) -> bool:
         """Paydaş güncelle"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            sql = """
                 UPDATE skdm_stakeholder_management 
-                SET stakeholder_name = ?,
-                    stakeholder_type = ?,
-                    engagement_level = ?,
-                    satisfaction_score = ?,
-                    last_contact_date = ?,
-                    next_contact_date = ?,
-                    key_concerns = ?,
-                    updated_at = ?
-                WHERE id = ?
-            """, (stakeholder_data.get('stakeholder_name', ''),
-                  stakeholder_data.get('stakeholder_type', ''),
-                  stakeholder_data.get('engagement_level', 'Low'),
-                  stakeholder_data.get('satisfaction_score', 0),
-                  stakeholder_data.get('last_contact_date'),
-                  stakeholder_data.get('next_contact_date'),
-                  stakeholder_data.get('key_concerns', ''),
-                  datetime.now(),
-                  stakeholder_id))
-
-            conn.commit()
+                SET stakeholder_name = ?, stakeholder_type = ?, engagement_level = ?,
+                    satisfaction_score = ?, last_contact_date = ?, next_contact_date = ?,
+                    key_concerns = ?, updated_at = ?
+                WHERE id = ? AND company_id = ?
+            """
+            self.execute_update(sql, (
+                stakeholder_data.get('stakeholder_name', ''),
+                stakeholder_data.get('stakeholder_type', ''),
+                stakeholder_data.get('engagement_level', 'Low'),
+                stakeholder_data.get('satisfaction_score', 0),
+                stakeholder_data.get('last_contact_date'),
+                stakeholder_data.get('next_contact_date'),
+                stakeholder_data.get('key_concerns', ''),
+                datetime.now(),
+                stakeholder_id,
+                company_id
+            ), company_id=company_id)
+            
             return True
 
         except Exception as e:
             logging.error(f"[HATA] Paydaş güncellenemedi: {e}")
             return False
-        finally:
-            conn.close()
 
-    def delete_stakeholder(self, stakeholder_id: int) -> bool:
+    def delete_stakeholder(self, stakeholder_id: int, company_id: int) -> bool:
         """Paydaş sil"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("DELETE FROM skdm_stakeholder_management WHERE id = ?", (stakeholder_id,))
-            conn.commit()
+            sql = "DELETE FROM skdm_stakeholder_management WHERE id = ? AND company_id = ?"
+            self.execute_update(sql, (stakeholder_id, company_id), company_id=company_id)
             return True
 
         except Exception as e:
             logging.error(f"[HATA] Paydaş silinemedi: {e}")
             return False
-        finally:
-            conn.close()

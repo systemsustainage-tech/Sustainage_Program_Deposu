@@ -9,7 +9,6 @@ GRI Raporlama Modülü
 """
 
 import os
-import sqlite3
 from datetime import datetime
 from typing import Dict, Optional, Tuple
 
@@ -28,6 +27,7 @@ from reportlab.platypus import (Paragraph, SimpleDocTemplate, Spacer, Table,
                                 TableStyle)
 
 from utils.language_manager import LanguageManager
+from backend.core.base_manager import BaseTenantManager
 from config.database import DB_PATH
 
 
@@ -61,15 +61,15 @@ def _add_turkish_heading(doc, text, level=1, font_name='Calibri'):
     return heading
 
 
-class GRIReporting:
+class GRIReporting(BaseTenantManager):
     """GRI raporlama ve içerik indeksi üreticisi"""
 
     def __init__(self, db_path: str = DB_PATH) -> None:
         if not os.path.isabs(db_path):
             base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-            self.db_path = os.path.join(base_dir, db_path)
-        else:
-            self.db_path = db_path
+            db_path = os.path.join(base_dir, db_path)
+        
+        super().__init__(db_path)
 
         # Türkçe font desteği için font kaydetme
         self._setup_turkish_fonts()
@@ -120,38 +120,32 @@ class GRIReporting:
         except Exception as e:
             logging.error(f"Font kurulumu hatası: {e}")
 
-    def get_connection(self) -> sqlite3.Connection:
-        return sqlite3.connect(self.db_path)
-
-    def _get_company(self, conn: sqlite3.Connection, company_id: int) -> Optional[Tuple]:
-        cur = conn.cursor()
+    def _get_company(self, company_id: int) -> Optional[Tuple]:
         # Öncelik: company_info
-        row = cur.execute(
-            "SELECT company_id, COALESCE(ticari_unvan, sirket_adi) FROM company_info WHERE company_id = ?",
-            (company_id,),
-        ).fetchone()
+        row = self.execute_query(
+            "SELECT company_id, COALESCE(ticari_unvan, sirket_adi) as name FROM company_info WHERE company_id = ?",
+            (company_id,), company_id=company_id
+        )
         if row:
-            return row
+            return (row[0]['company_id'], row[0]['name'])
         # Yedek: companies tablosu
-        fallback = cur.execute(
+        fallback = self.execute_query(
             "SELECT id, name FROM companies WHERE id = ?",
-            (company_id,),
-        ).fetchone()
+            (company_id,), company_id=company_id
+        )
         if fallback:
-            return (fallback[0], fallback[1])
+            return (fallback[0]['id'], fallback[0]['name'])
         return None
 
     def get_gri_data(self, company_id: int, period: Optional[str] = None) -> Dict:
         """Şirket için GRI veri görünümü"""
-        conn = self.get_connection()
-        cur = conn.cursor()
         try:
-            company = self._get_company(conn, company_id)
+            company = self._get_company(company_id)
             if not company:
                 return { 'error': f"Şirket bulunamadı: {company_id}" }
 
             # Seçilen göstergeler
-            selections = cur.execute(
+            selections = self.execute_query(
                 """
                 SELECT gi.id, gi.code, gi.title, gs.code as standard_code, gs.title as standard_title
                 FROM gri_selections sel
@@ -160,12 +154,12 @@ class GRIReporting:
                 WHERE sel.company_id=? AND sel.selected=1
                 ORDER BY gs.code, gi.code
                 """,
-                (company_id,)
-            ).fetchall()
+                (company_id,), company_id=company_id
+            )
 
             # Cevaplanan göstergeler
             if period:
-                responses = cur.execute(
+                responses = self.execute_query(
                     """
                     SELECT gi.id, gi.code, gi.title, gs.code as standard_code, gs.title as standard_title,
                            r.response_value, r.numerical_value, r.unit, r.methodology, r.reporting_status
@@ -175,10 +169,10 @@ class GRIReporting:
                     WHERE r.company_id=? AND r.period=?
                     ORDER BY gs.code, gi.code
                     """,
-                    (company_id, period)
-                ).fetchall()
+                    (company_id, period), company_id=company_id
+                )
             else:
-                responses = cur.execute(
+                responses = self.execute_query(
                     """
                     SELECT gi.id, gi.code, gi.title, gs.code as standard_code, gs.title as standard_title,
                            r.response_value, r.numerical_value, r.unit, r.methodology, r.reporting_status
@@ -188,30 +182,35 @@ class GRIReporting:
                     WHERE r.company_id=?
                     ORDER BY gs.code, gi.code
                     """,
-                    (company_id,)
-                ).fetchall()
+                    (company_id,), company_id=company_id
+                )
 
             # İçerik indeksi satırları (gösterge → TSRS eşleştirmeleri)
             content_rows = []
-            indicators = cur.execute(
+            indicators = self.execute_query(
                 """
                 SELECT gi.id, gi.code, gi.title, gs.code as standard_code, gs.title as standard_title
                 FROM gri_indicators gi
                 JOIN gri_standards gs ON gs.id = gi.standard_id
                 ORDER BY gs.code, gi.code
-                """
-            ).fetchall()
-            for iid, icode, ititle, scode, stitle in indicators:
-                tsrs = cur.execute(
+                """, company_id=company_id
+            )
+            for row in indicators:
+                iid = row['id']
+                icode = row['code']
+                ititle = row['title']
+                scode = row['standard_code']
+                
+                tsrs = self.execute_query(
                     """
                     SELECT tsrs_section, tsrs_metric
                     FROM map_gri_tsrs
                     WHERE gri_disclosure = ?
                     ORDER BY tsrs_section, tsrs_metric
                     """,
-                    (icode,)
-                ).fetchall()
-                tsrs_summary = ", ".join([f"{sec}: {met}" for sec, met in tsrs]) if tsrs else "—"
+                    (icode,), company_id=company_id
+                )
+                tsrs_summary = ", ".join([f"{r['tsrs_section']}: {r['tsrs_metric']}" for r in tsrs]) if tsrs else "—"
                 content_rows.append((scode, icode, ititle, tsrs_summary))
 
             return {
@@ -222,8 +221,9 @@ class GRIReporting:
                 'report_date': datetime.now().strftime('%Y-%m-%d'),
                 'report_time': datetime.now().strftime('%H:%M')
             }
-        finally:
-            conn.close()
+        except Exception as e:
+            logging.error(f"GRI Data error: {e}")
+            return { 'error': str(e) }
 
     # --- GRI 303 Su Metrikleri Yardımcıları ---
     def _get_gri303_water_metrics(self, company_id: int, period: Optional[str] = None) -> Optional[Dict]:

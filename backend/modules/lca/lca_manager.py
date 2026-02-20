@@ -1,130 +1,88 @@
-import sqlite3
 import logging
 from typing import List, Dict, Optional, Any
-from config.database import DB_PATH
+from backend.core.base_manager import BaseTenantManager
+try:
+    from config.database import DB_PATH
+except ImportError:
+    from backend.config.database import DB_PATH
 
-class LCAManager:
-    def __init__(self, db_path: str = DB_PATH):
-        self.db_path = db_path
+class LCAManager(BaseTenantManager):
+    def __init__(self, db_path: str = DB_PATH, company_id: Optional[int] = None):
+        super().__init__(db_path, company_id)
         self.logger = logging.getLogger(__name__)
-
-    def get_connection(self):
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        return conn
 
     def get_products(self, company_id: int) -> List[Dict]:
         """Şirkete ait ürünleri listeler."""
-        conn = self.get_connection()
-        try:
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM lca_products WHERE company_id = ? ORDER BY created_at DESC", (company_id,))
-            return [dict(row) for row in cursor.fetchall()]
-        finally:
-            conn.close()
+        sql = "SELECT * FROM lca_products WHERE company_id = ? ORDER BY created_at DESC"
+        rows = self.execute_query(sql, (company_id,), company_id=company_id)
+        return [dict(row) for row in rows]
 
     def add_product(self, company_id: int, name: str, description: str, unit: str) -> int:
         """Yeni ürün ekler."""
-        conn = self.get_connection()
-        try:
-            cursor = conn.cursor()
-            cursor.execute("""
-                INSERT INTO lca_products (company_id, name, description, unit)
-                VALUES (?, ?, ?, ?)
-            """, (company_id, name, description, unit))
-            conn.commit()
-            return cursor.lastrowid
-        finally:
-            conn.close()
+        sql = """
+            INSERT INTO lca_products (company_id, name, description, unit)
+            VALUES (?, ?, ?, ?)
+        """
+        return self.execute_update(sql, (company_id, name, description, unit), company_id=company_id)
 
     def get_assessments(self, product_id: int, company_id: int) -> List[Dict]:
         """Bir ürüne ait analizleri listeler."""
-        conn = self.get_connection()
-        try:
-            cursor = conn.cursor()
-            cursor.execute("""
-                SELECT * FROM lca_assessments 
-                WHERE product_id = ? AND company_id = ? 
-                ORDER BY created_at DESC
-            """, (product_id, company_id))
-            return [dict(row) for row in cursor.fetchall()]
-        finally:
-            conn.close()
+        sql = """
+            SELECT * FROM lca_assessments 
+            WHERE product_id = ? AND company_id = ? 
+            ORDER BY created_at DESC
+        """
+        rows = self.execute_query(sql, (product_id, company_id), company_id=company_id)
+        return [dict(row) for row in rows]
 
     def add_assessment(self, product_id: int, company_id: int, name: str, assessment_date: str) -> int:
         """Yeni analiz (senaryo) ekler."""
-        conn = self.get_connection()
-        try:
-            cursor = conn.cursor()
-            cursor.execute("""
-                INSERT INTO lca_assessments (product_id, company_id, name, assessment_date)
-                VALUES (?, ?, ?, ?)
-            """, (product_id, company_id, name, assessment_date))
-            conn.commit()
-            return cursor.lastrowid
-        finally:
-            conn.close()
+        sql = """
+            INSERT INTO lca_assessments (product_id, company_id, name, assessment_date)
+            VALUES (?, ?, ?, ?)
+        """
+        return self.execute_update(sql, (product_id, company_id, name, assessment_date), company_id=company_id)
             
     def get_assessment_details(self, assessment_id: int, company_id: int) -> Optional[Dict]:
         """Analiz detayını getirir."""
-        conn = self.get_connection()
-        try:
-            cursor = conn.cursor()
-            cursor.execute("""
-                SELECT a.*, p.name as product_name, p.unit as product_unit 
-                FROM lca_assessments a
-                JOIN lca_products p ON a.product_id = p.id
-                WHERE a.id = ? AND a.company_id = ?
-            """, (assessment_id, company_id))
-            row = cursor.fetchone()
-            return dict(row) if row else None
-        finally:
-            conn.close()
+        sql = """
+            SELECT a.*, p.name as product_name, p.unit as product_unit 
+            FROM lca_assessments a
+            JOIN lca_products p ON a.product_id = p.id
+            WHERE a.id = ? AND a.company_id = ?
+        """
+        rows = self.execute_query(sql, (assessment_id, company_id), company_id=company_id)
+        return dict(rows[0]) if rows else None
 
     def get_entries(self, assessment_id: int, company_id: int) -> List[Dict]:
         """Analiz verilerini listeler."""
-        conn = self.get_connection()
-        try:
-            cursor = conn.cursor()
-            cursor.execute("""
-                SELECT * FROM lca_entries 
-                WHERE assessment_id = ? AND company_id = ?
-                ORDER BY stage, id
-            """, (assessment_id, company_id))
-            return [dict(row) for row in cursor.fetchall()]
-        finally:
-            conn.close()
+        sql = """
+            SELECT * FROM lca_entries 
+            WHERE assessment_id = ? AND company_id = ?
+            ORDER BY stage, id
+        """
+        rows = self.execute_query(sql, (assessment_id, company_id), company_id=company_id)
+        return [dict(row) for row in rows]
 
     def add_entry(self, assessment_id: int, company_id: int, data: Dict) -> int:
         """Analize veri ekler."""
-        conn = self.get_connection()
-        try:
-            cursor = conn.cursor()
-            cursor.execute("""
-                INSERT INTO lca_entries (
-                    assessment_id, company_id, stage, item_name, quantity, unit, 
-                    co2e_factor, energy_consumption, water_consumption, notes
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                assessment_id, company_id, data['stage'], data['item_name'], 
-                data.get('quantity', 0), data.get('unit', ''), 
-                data.get('co2e_factor', 0), data.get('energy_consumption', 0), 
-                data.get('water_consumption', 0), data.get('notes', '')
-            ))
-            conn.commit()
-            return cursor.lastrowid
-        finally:
-            conn.close()
+        sql = """
+            INSERT INTO lca_entries (
+                assessment_id, company_id, stage, item_name, quantity, unit, 
+                co2e_factor, energy_consumption, water_consumption, notes
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """
+        return self.execute_update(sql, (
+            assessment_id, company_id, data['stage'], data['item_name'], 
+            data.get('quantity', 0), data.get('unit', ''), 
+            data.get('co2e_factor', 0), data.get('energy_consumption', 0), 
+            data.get('water_consumption', 0), data.get('notes', '')
+        ), company_id=company_id)
             
     def delete_entry(self, entry_id: int, company_id: int):
         """Veri siler."""
-        conn = self.get_connection()
-        try:
-            cursor = conn.cursor()
-            cursor.execute("DELETE FROM lca_entries WHERE id = ? AND company_id = ?", (entry_id, company_id))
-            conn.commit()
-        finally:
-            conn.close()
+        self.execute_update("DELETE FROM lca_entries WHERE id = ? AND company_id = ?", (entry_id, company_id), company_id=company_id)
+
 
     def calculate_results(self, assessment_id: int, company_id: int) -> Dict:
         """Analiz sonuçlarını hesaplar."""

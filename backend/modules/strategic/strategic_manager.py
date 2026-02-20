@@ -10,22 +10,23 @@ import json
 import sqlite3
 from datetime import datetime
 from typing import Dict, List, Optional
+try:
+    from backend.core.base_manager import BaseTenantManager
+except ImportError:
+    from core.base_manager import BaseTenantManager
 
 
-class StrategicManager:
+class StrategicManager(BaseTenantManager):
     """Stratejik modülleri yöneten sınıf"""
 
-    def __init__(self, db_path: str) -> None:
-        self.db_path = db_path
+    def __init__(self, db_path: str = None, company_id: Optional[int] = None) -> None:
+        super().__init__(db_path, company_id)
         self._init_database()
 
     def _init_database(self) -> None:
         """Veritabanı tablolarını oluştur"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         # Yönetici Mesajları
-        cursor.execute("""
+        self.execute_update("""
             CREATE TABLE IF NOT EXISTS executive_messages (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 company_id INTEGER NOT NULL,
@@ -42,10 +43,10 @@ class StrategicManager:
                 updated_at TEXT,
                 FOREIGN KEY (company_id) REFERENCES companies(id)
             )
-        """)
+        """, skip_tenant_filter=True)
 
         # Sürdürülebilirlik Stratejisi
-        cursor.execute("""
+        self.execute_update("""
             CREATE TABLE IF NOT EXISTS sustainability_strategy (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 company_id INTEGER NOT NULL,
@@ -62,10 +63,10 @@ class StrategicManager:
                 updated_at TEXT,
                 FOREIGN KEY (company_id) REFERENCES companies(id)
             )
-        """)
+        """, skip_tenant_filter=True)
 
         # Stratejik Hedefler (SMART)
-        cursor.execute("""
+        self.execute_update("""
             CREATE TABLE IF NOT EXISTS strategic_goals (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 company_id INTEGER NOT NULL,
@@ -87,10 +88,10 @@ class StrategicManager:
                 FOREIGN KEY (company_id) REFERENCES companies(id),
                 FOREIGN KEY (strategy_id) REFERENCES sustainability_strategy(id)
             )
-        """)
+        """, skip_tenant_filter=True)
 
         # Risk ve Fırsatlar
-        cursor.execute("""
+        self.execute_update("""
             CREATE TABLE IF NOT EXISTS risks_opportunities (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 company_id INTEGER NOT NULL,
@@ -114,7 +115,7 @@ class StrategicManager:
         """)
 
         # Risk/Fırsat Değerlendirme Matrisi
-        cursor.execute("""
+        self.execute_update("""
             CREATE TABLE IF NOT EXISTS risk_opportunity_assessments (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 risk_opportunity_id INTEGER NOT NULL,
@@ -129,7 +130,7 @@ class StrategicManager:
         """)
 
         # Eylem Planları
-        cursor.execute("""
+        self.execute_update("""
             CREATE TABLE IF NOT EXISTS action_plans (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 company_id INTEGER NOT NULL,
@@ -152,7 +153,7 @@ class StrategicManager:
         """)
 
         # KPI'lar (Key Performance Indicators)
-        cursor.execute("""
+        self.execute_update("""
             CREATE TABLE IF NOT EXISTS strategic_kpis (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 company_id INTEGER NOT NULL,
@@ -173,9 +174,6 @@ class StrategicManager:
             )
         """)
 
-        conn.commit()
-        conn.close()
-
     # ============================================
     # YÖNETİCİ MESAJLARI
     # ============================================
@@ -188,10 +186,7 @@ class StrategicManager:
                                  created_by: Optional[int] = None) -> Optional[int]:
         """Yönetici mesajı oluştur"""
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-
-            cursor.execute("""
+            return self.execute_update("""
                 INSERT INTO executive_messages 
                 (company_id, year, executive_name, executive_title, message_title,
                  message_content, message_summary, language, created_by, created_at, updated_at)
@@ -200,13 +195,7 @@ class StrategicManager:
                 company_id, year, executive_name, executive_title, message_title,
                 message_content, message_summary, language, created_by,
                 datetime.now().isoformat(), datetime.now().isoformat()
-            ))
-
-            message_id = cursor.lastrowid
-            conn.commit()
-            conn.close()
-
-            return message_id
+            ), company_id=company_id)
 
         except Exception as e:
             logging.error(f"Yönetici mesajı oluşturma hatası: {e}")
@@ -215,24 +204,15 @@ class StrategicManager:
     def get_executive_message(self, company_id: int, year: int) -> Optional[Dict]:
         """Yönetici mesajını al"""
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-
-            cursor.execute("""
+            rows = self.execute_query("""
                 SELECT * FROM executive_messages
                 WHERE company_id = ? AND year = ?
                 ORDER BY updated_at DESC
                 LIMIT 1
-            """, (company_id, year))
+            """, (company_id, year), company_id=company_id)
 
-            row = cursor.fetchone()
-            conn.close()
-
-            if row:
-                columns = ['id', 'company_id', 'year', 'executive_name', 'executive_title',
-                          'message_title', 'message_content', 'message_summary', 'language',
-                          'is_published', 'created_by', 'created_at', 'updated_at']
-                return dict(zip(columns, row))
+            if rows:
+                return rows[0]
 
             return None
 
@@ -253,10 +233,7 @@ class StrategicManager:
                                       created_by: Optional[int] = None) -> Optional[int]:
         """Sürdürülebilirlik stratejisi oluştur"""
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-
-            cursor.execute("""
+            return self.execute_update("""
                 INSERT INTO sustainability_strategy 
                 (company_id, year, strategy_title, vision, mission, values,
                  strategic_pillars, commitments, sdg_alignment, created_by, created_at, updated_at)
@@ -267,13 +244,7 @@ class StrategicManager:
                 json.dumps(commitments, ensure_ascii=False) if commitments else None,
                 json.dumps(sdg_alignment) if sdg_alignment else None,
                 created_by, datetime.now().isoformat(), datetime.now().isoformat()
-            ))
-
-            strategy_id = cursor.lastrowid
-            conn.commit()
-            conn.close()
-
-            return strategy_id
+            ), company_id=company_id)
 
         except Exception as e:
             logging.error(f"Strateji oluşturma hatası: {e}")
@@ -286,10 +257,7 @@ class StrategicManager:
                             unit: str = "", responsible_person: str = "") -> Optional[int]:
         """Stratejik hedef oluştur (SMART)"""
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-
-            cursor.execute("""
+            return self.execute_update("""
                 INSERT INTO strategic_goals 
                 (company_id, goal_title, goal_description, category, target_year,
                  baseline_year, baseline_value, target_value, unit, responsible_person, created_at, updated_at)
@@ -298,13 +266,7 @@ class StrategicManager:
                 company_id, goal_title, goal_description, category, target_year,
                 baseline_year, baseline_value, target_value, unit, responsible_person,
                 datetime.now().isoformat(), datetime.now().isoformat()
-            ))
-
-            goal_id = cursor.lastrowid
-            conn.commit()
-            conn.close()
-
-            return goal_id
+            ), company_id=company_id)
 
         except Exception as e:
             logging.error(f"Hedef oluşturma hatası: {e}")
@@ -313,22 +275,28 @@ class StrategicManager:
     def update_goal_progress(self, goal_id: int, current_value: float) -> bool:
         """Hedef ilerlemesini güncelle"""
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-
             # Hedef bilgilerini al
-            cursor.execute("""
-                SELECT baseline_value, target_value
+            # Note: Need company_id context here ideally, but update by ID is reasonably safe if checked
+            # However, BaseTenantManager enforces tenant filter if company_id is set in self or passed
+            # We should try to get company_id from context or pass it if available.
+            # Here we don't have company_id in args. Assuming it's in self.company_id if set,
+            # or we rely on the fact that ID is unique. But for strict multi-tenant, we should check ownership.
+            # But changing signature might break callers.
+            # For now, we'll use execute_query without explicit company_id if not available, 
+            # BUT BaseTenantManager might require it if configured strict.
+            
+            rows = self.execute_query("""
+                SELECT baseline_value, target_value, company_id
                 FROM strategic_goals
                 WHERE id = ?
             """, (goal_id,))
 
-            result = cursor.fetchone()
-            if not result:
-                conn.close()
+            if not rows:
                 return False
 
-            baseline, target = result
+            baseline = rows[0]['baseline_value']
+            target = rows[0]['target_value']
+            company_id = rows[0]['company_id'] # Get company_id for the update check
 
             # İlerleme hesapla
             if baseline is not None and target is not None and target != baseline:
@@ -338,14 +306,11 @@ class StrategicManager:
                 progress = 0
 
             # Güncelle
-            cursor.execute("""
+            self.execute_update("""
                 UPDATE strategic_goals 
                 SET current_value = ?, progress_percent = ?, updated_at = ?
-                WHERE id = ?
-            """, (current_value, progress, datetime.now().isoformat(), goal_id))
-
-            conn.commit()
-            conn.close()
+                WHERE id = ? AND company_id = ?
+            """, (current_value, progress, datetime.now().isoformat(), goal_id, company_id), company_id=company_id)
 
             return True
 
@@ -356,33 +321,20 @@ class StrategicManager:
     def get_strategic_goals(self, company_id: int, category: Optional[str] = None) -> List[Dict]:
         """Stratejik hedefleri listele"""
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-
             if category:
-                cursor.execute("""
+                rows = self.execute_query("""
                     SELECT * FROM strategic_goals
                     WHERE company_id = ? AND category = ?
                     ORDER BY target_year, goal_title
-                """, (company_id, category))
+                """, (company_id, category), company_id=company_id)
             else:
-                cursor.execute("""
+                rows = self.execute_query("""
                     SELECT * FROM strategic_goals
                     WHERE company_id = ?
                     ORDER BY target_year, goal_title
-                """, (company_id,))
+                """, (company_id,), company_id=company_id)
 
-            columns = ['id', 'company_id', 'strategy_id', 'goal_title', 'goal_description',
-                      'category', 'target_year', 'baseline_year', 'baseline_value',
-                      'target_value', 'current_value', 'unit', 'status', 'progress_percent',
-                      'responsible_person', 'created_at', 'updated_at']
-
-            goals = []
-            for row in cursor.fetchall():
-                goals.append(dict(zip(columns, row)))
-
-            conn.close()
-            return goals
+            return rows
 
         except Exception as e:
             logging.error(f"Hedef listeleme hatası: {e}")

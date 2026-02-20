@@ -4,20 +4,20 @@ import os
 # Gunicorn Configuration for Sustainage
 # Path: /var/www/sustainage/gunicorn_config.py
 
-# Bind to localhost on a specific port (handled by Nginx reverse proxy)
-bind = "127.0.0.1:8000"
+# Bind to local upstream expected by Nginx
+bind = "127.0.0.1:5000"
 
 # Worker Options
 # Use (2 x num_cores) + 1 workers
 workers = multiprocessing.cpu_count() * 2 + 1
-worker_class = "gthread"  # Use threads for handling concurrent requests
-threads = 4              # Threads per worker
-timeout = 120            # Timeout in seconds (increased for long reports)
+worker_class = "gthread"  # Use gthread for blocking I/O (SQLite)
+threads = 4               # 4 threads per worker
+timeout = 120             # Timeout in seconds
 keepalive = 5            # Keep connections alive for 5 seconds
 
 # Logging
-accesslog = "/var/log/sustainage/access.log"
-errorlog = "/var/log/sustainage/error.log"
+accesslog = "/var/www/sustainage/logs/access.log"
+errorlog = "/var/www/sustainage/logs/error.log"
 loglevel = "info"
 
 # Process Naming

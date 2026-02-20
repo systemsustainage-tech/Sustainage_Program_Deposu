@@ -1,13 +1,14 @@
-import sqlite3
 import logging
 from datetime import datetime
 from typing import Optional
 from config.database import DB_PATH
+from backend.core.database_manager import DatabaseManager
 
 class AuditManager:
     def __init__(self, db_path: str = DB_PATH):
         self.db_path = db_path
         self.logger = logging.getLogger(__name__)
+        self.db = DatabaseManager(db_path)
 
     def log_action(self, user_id: Optional[int], action: str, resource: str, details: str = "", ip_address: str = "", company_id: Optional[int] = None, resource_id: Optional[int] = None):
         """
@@ -22,12 +23,10 @@ class AuditManager:
             company_id: Şirket ID (varsa) - Multi-tenant izolasyon için
             resource_id: Etkilenen kaynağın ID'si (varsa)
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
         try:
             # Check schema columns
-            cursor.execute("PRAGMA table_info(audit_logs)")
-            cols = [c[1] for c in cursor.fetchall()]
+            rows = self.db.execute_query("PRAGMA table_info(audit_logs)")
+            cols = [row['name'] for row in rows]
             
             has_company_id = 'company_id' in cols
             has_resource_type = 'resource_type' in cols
@@ -55,22 +54,16 @@ class AuditManager:
             placeholders = ', '.join(['?'] * len(columns))
             sql = f"INSERT INTO audit_logs ({', '.join(columns)}) VALUES ({placeholders})"
             
-            cursor.execute(sql, values)
-                
-            conn.commit()
+            self.db.execute_update(sql, tuple(values))
             self.logger.info(f"Audit Log: User={user_id} Action={action} Resource={resource} ID={resource_id} Company={company_id}")
         except Exception as e:
             self.logger.error(f"Audit log error: {e}")
-        finally:
-            conn.close()
 
     def get_logs(self, limit: int = 50, offset: int = 0, company_id: Optional[int] = None):
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
         try:
             # Check available columns for selection
-            cursor.execute("PRAGMA table_info(audit_logs)")
-            cols = [c[1] for c in cursor.fetchall()]
+            rows = self.db.execute_query("PRAGMA table_info(audit_logs)")
+            cols = [row['name'] for row in rows]
             
             select_cols = ['id', 'user_id', 'action', 'details', 'ip_address', 'created_at']
             if 'resource_type' in cols:
@@ -98,15 +91,12 @@ class AuditManager:
             query += " ORDER BY created_at DESC LIMIT ? OFFSET ?"
             params.extend([limit, offset])
             
-            cursor.execute(query, params)
-            columns = [description[0] for description in cursor.description]
-            return [dict(zip(columns, row)) for row in cursor.fetchall()]
-        finally:
-            conn.close()
+            return self.db.execute_query(query, tuple(params))
+        except Exception as e:
+            self.logger.error(f"Get logs error: {e}")
+            return []
 
     def get_logs_count(self, company_id: Optional[int] = None) -> int:
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
         try:
             query = "SELECT COUNT(*) FROM audit_logs WHERE 1=1"
             params = []
@@ -115,10 +105,10 @@ class AuditManager:
                 query += " AND company_id = ?"
                 params.append(company_id)
                 
-            cursor.execute(query, params)
-            return cursor.fetchone()[0]
+            rows = self.db.execute_query(query, tuple(params))
+            if rows:
+                return rows[0][0]
+            return 0
         except Exception as e:
             self.logger.error(f"Get logs count error: {e}")
             return 0
-        finally:
-            conn.close()

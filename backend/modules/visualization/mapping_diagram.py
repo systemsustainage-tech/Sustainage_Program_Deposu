@@ -16,8 +16,8 @@ except ImportError:
 
 import logging
 import os
-import sqlite3
 from typing import Dict
+from backend.core.database_manager import DatabaseManager
 
 
 class MappingDiagram:
@@ -25,6 +25,7 @@ class MappingDiagram:
 
     def __init__(self, db_path: str = None) -> None:
         self.db_path = db_path or os.path.join(os.getcwd(), 'data', 'sdg_desktop.sqlite')
+        self.db = DatabaseManager(self.db_path)
 
     def create_sdg_flow_diagram(self, sdg_number: int, output_path: str = None) -> str:
         """
@@ -123,32 +124,27 @@ class MappingDiagram:
 
     def _get_connections(self, sdg_number: int) -> Dict:
         """SDG bağlantılarını al"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         connections = {'gri': [], 'tsrs': []}
 
         try:
             # GRI bağlantıları
-            cursor.execute("""
+            rows_gri = self.db.execute_query("""
                 SELECT DISTINCT gri_code FROM map_sdg_gri 
                 WHERE sdg_no = ?
                 LIMIT 10
             """, (sdg_number,))
-            connections['gri'] = [row[0] for row in cursor.fetchall()]
+            connections['gri'] = [row['gri_code'] for row in rows_gri]
 
             # TSRS bağlantıları
-            cursor.execute("""
+            rows_tsrs = self.db.execute_query("""
                 SELECT DISTINCT tsrs_code FROM map_sdg_tsrs 
                 WHERE sdg_no = ?
                 LIMIT 10
             """, (sdg_number,))
-            connections['tsrs'] = [row[0] for row in cursor.fetchall()]
+            connections['tsrs'] = [row['tsrs_code'] for row in rows_tsrs]
 
         except Exception as e:
             logging.info(f"[UYARI] Baglanti sorgusu: {e}")
-        finally:
-            conn.close()
-
+        
         return connections
 

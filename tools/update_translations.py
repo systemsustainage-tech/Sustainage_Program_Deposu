@@ -1,82 +1,103 @@
 import json
 import os
-import sys
+import glob
+
+# Paths
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+TOOLS_DIR = os.path.join(BASE_DIR, 'tools')
+LOCALES_DIR = os.path.join(BASE_DIR, 'locales')
+FRONTEND_LOCALES_DIR = os.path.join(BASE_DIR, 'frontend', 'src', 'locales')
+DICT_PATH = os.path.join(TOOLS_DIR, 'translation_dictionary.json')
+
+def load_json(path):
+    if not os.path.exists(path):
+        return {}
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"Error loading {path}: {e}")
+        return {}
+
+def save_json(path, data):
+    try:
+        with open(path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
+        print(f"Saved: {path}")
+    except Exception as e:
+        print(f"Error saving {path}: {e}")
 
 def update_translations():
-    """
-    Updates en.json and de.json using the professional translations 
-    defined in translation_dictionary.json.
-    """
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    # Define directories to update
-    directories_to_update = [
-        os.path.join(base_dir, "backend", "locales"),
-        os.path.join(base_dir, "locales")
-    ]
+    print("Loading translation dictionary...")
+    dictionary = load_json(DICT_PATH)
     
-    dict_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "translation_dictionary.json")
-    
-    # Load translation dictionary
-    try:
-        with open(dict_path, 'r', encoding='utf-8') as f:
-            translation_dict = json.load(f)
-        print(f"Loaded translation dictionary from {dict_path}")
-    except Exception as e:
-        print(f"Error loading translation dictionary: {e}")
-        sys.exit(1)
+    if not dictionary:
+        print("Dictionary is empty or could not be loaded!")
+        return
 
-    # Process each directory
-    for locales_dir in directories_to_update:
-        if not os.path.exists(locales_dir):
-            print(f"Warning: Directory {locales_dir} not found. Skipping.")
+    # Initialize language maps
+    translations = {
+        "tr": {},
+        "en": {},
+        "de": {}
+    }
+
+    # Load existing translations to preserve any keys not in dictionary (optional)
+    for lang in translations.keys():
+        file_path = os.path.join(LOCALES_DIR, f"{lang}.json")
+        translations[lang] = load_json(file_path)
+
+    # Update with dictionary values
+    for key, values in dictionary.items():
+        if not isinstance(values, dict):
             continue
             
-        print(f"Processing directory: {locales_dir}")
-        
-        # Process each language
-        for lang in ['en', 'de']:
-            file_path = os.path.join(locales_dir, f"{lang}.json")
-            print(f"Checking {file_path}...")
-        
-            if not os.path.exists(file_path):
-                print(f"Warning: {file_path} not found. Skipping.")
-                continue
-            
-            try:
-                # Read existing file
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    current_data = json.load(f)
-                
-                # Update with new translations
-                updates_count = 0
-                if lang in translation_dict:
-                    print(f"Dictionary has entries for {lang}")
-                    for key, value in translation_dict[lang].items():
-                        # Update if key exists (to replace lazy translation) 
-                        # OR if we want to enforce this key's presence
-                        if key in current_data:
-                            if current_data[key] != value:
-                                print(f"Updating {key}: {current_data[key]} -> {value}")
-                                current_data[key] = value
-                                updates_count += 1
-                        else:
-                            # Optionally add new keys if they don't exist
-                            print(f"Adding new key {key}: {value}")
-                            current_data[key] = value
-                            updates_count += 1
-                else:
-                    print(f"No dictionary entries for {lang}")
-            
-                # Write back to file
-                if updates_count > 0:
-                    with open(file_path, 'w', encoding='utf-8') as f:
-                        json.dump(current_data, f, ensure_ascii=False, indent=4)
-                    print(f"Updated {lang}.json with {updates_count} changes.")
-                else:
-                    print(f"No changes for {lang}.json")
+        # Handle "tr": { "key": "val" } structure
+        if key in ["tr", "en", "de", "fr", "es", "it", "ja", "ko", "pt", "ru", "zh", "nl", "ar"]:
+            lang = key
+            if lang in translations:
+                for k, v in values.items():
+                    translations[lang][k] = v
+            continue
 
-            except Exception as e:
-                print(f"Error processing {file_path}: {e}")
+        # Handle "key": { "tr": "val" } structure
+        if "tr" in values:
+            translations["tr"][key] = values["tr"]
+        if "en" in values:
+            translations["en"][key] = values["en"]
+        if "de" in values:
+            translations["de"][key] = values["de"]
+            
+    # Save files
+    for lang, data in translations.items():
+        # Save to backend locales
+        file_path = os.path.join(LOCALES_DIR, f"{lang}.json")
+        save_json(file_path, data)
+        
+        # Save to frontend locales
+        if os.path.exists(os.path.dirname(FRONTEND_LOCALES_DIR)):
+            if not os.path.exists(FRONTEND_LOCALES_DIR):
+                os.makedirs(FRONTEND_LOCALES_DIR)
+            fe_path = os.path.join(FRONTEND_LOCALES_DIR, f"{lang}.json")
+            save_json(fe_path, data)
+
+    print("All translations updated successfully.")
+
+def cleanup_mess():
+    # Remove files that are named after keys (not tr.json or en.json)
+    # Be careful not to delete legitimate language files if there were any others
+    # But for now assuming only tr and en are valid
+    print("Cleaning up incorrect locale files...")
+    files = glob.glob(os.path.join(LOCALES_DIR, "*.json"))
+    for f in files:
+        filename = os.path.basename(f)
+        if filename not in ["tr.json", "en.json", "de.json"]:
+            print(f"Deleting incorrect file: {filename}")
+            os.remove(f)
 
 if __name__ == "__main__":
+    if not os.path.exists(LOCALES_DIR):
+        os.makedirs(LOCALES_DIR)
+        
     update_translations()
+    cleanup_mess()

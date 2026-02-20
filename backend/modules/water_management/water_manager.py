@@ -7,49 +7,75 @@ Su ayak izi hesaplama, tüketim takibi ve verimlilik analizi
 
 import logging
 import os
-import sqlite3
 from datetime import date, datetime
 from typing import Dict, List, Optional
 
-from config.settings import get_db_path
-from core.db_manager import DatabaseManager
+try:
+    from backend.config.database import get_db_path
+    from backend.core.base_manager import BaseTenantManager
+except ImportError as e:
+    import logging
+    logging.error(f"Failed to import from backend: {e}")
+    # Fallback removed for debugging/enforcement
+    raise e
 
-from .water_calculator import WaterCalculator
-from .water_factors import WaterFactors
+try:
+    from .water_calculator import WaterCalculator
+except ImportError:
+    try:
+        from modules.water_management.water_calculator import WaterCalculator
+    except ImportError:
+        try:
+            # Last resort for direct execution
+            from water_calculator import WaterCalculator
+        except ImportError:
+             import sys
+             sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+             from water_calculator import WaterCalculator
+try:
+    from .water_factors import WaterFactors
+except ImportError:
+    try:
+        from modules.water_management.water_factors import WaterFactors
+    except ImportError:
+        try:
+            from water_factors import WaterFactors
+        except ImportError:
+            import sys
+            sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+            from water_factors import WaterFactors
 
 
-class WaterManager:
+class WaterManager(BaseTenantManager):
     """Su yönetimi ana sınıfı - SDG 6 uyumlu"""
 
-    def __init__(self, db_path: str = None) -> None:
-        if db_path is None:
+    def __init__(self, db_path: str = None, company_id: Optional[int] = None) -> None:
+        final_db_path = db_path
+        if final_db_path is None:
             try:
-                self.db_path = get_db_path()
+                final_db_path = get_db_path()
             except Exception:
                 base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-                self.db_path = os.path.join(base_dir, "data", "sdg_desktop.sqlite")
-        else:
-            self.db_path = db_path
-            if not os.path.isabs(self.db_path):
-                base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-                self.db_path = os.path.join(base_dir, self.db_path)
-        self.db_manager = DatabaseManager(self.db_path)
+                final_db_path = os.path.join(base_dir, "data", "sdg_desktop.sqlite")
+        
+        if final_db_path and not os.path.isabs(final_db_path):
+            base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+            final_db_path = os.path.join(base_dir, final_db_path)
+            
+        super().__init__(final_db_path, company_id)
+        
+        # Legacy support attributes
+        self.db_path = final_db_path
+        
         self.calculator = WaterCalculator(self.db_path)
         self.water_factors = WaterFactors(self.db_path)
         self.create_tables()
 
-    def get_connection(self) -> sqlite3.Connection:
-        """Veritabanı bağlantısı"""
-        return sqlite3.connect(self.db_path)
-
     def create_tables(self) -> None:
         """Su yönetimi tablolarını oluştur"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
             # 1. Su tüketimi kayıtları
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS water_consumption (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -82,25 +108,26 @@ class WaterManager:
             """)
 
             # Migration: eksik sütunları ekle
-            cursor.execute("PRAGMA table_info(water_consumption)")
-            cols = [c[1] for c in cursor.fetchall()]
+            rows = self.execute_query("PRAGMA table_info(water_consumption)")
+            cols = [row['name'] for row in rows]
+            
             if 'period' not in cols:
-                cursor.execute("ALTER TABLE water_consumption ADD COLUMN period TEXT")
+                self.execute_update("ALTER TABLE water_consumption ADD COLUMN period TEXT")
                 # Eski şemadan (year/month) türet
                 try:
                     if 'year' in cols:
-                        cursor.execute("UPDATE water_consumption SET period = CAST(year AS TEXT)")
-                except Exception as _:
+                        self.execute_update("UPDATE water_consumption SET period = CAST(year AS TEXT)")
+                except Exception:
                     pass
             if 'invoice_date' not in cols:
-                cursor.execute("ALTER TABLE water_consumption ADD COLUMN invoice_date TEXT")
+                self.execute_update("ALTER TABLE water_consumption ADD COLUMN invoice_date TEXT")
             if 'due_date' not in cols:
-                cursor.execute("ALTER TABLE water_consumption ADD COLUMN due_date TEXT")
+                self.execute_update("ALTER TABLE water_consumption ADD COLUMN due_date TEXT")
             if 'supplier' not in cols:
-                cursor.execute("ALTER TABLE water_consumption ADD COLUMN supplier TEXT")
+                self.execute_update("ALTER TABLE water_consumption ADD COLUMN supplier TEXT")
 
             # 2. Su hedefleri
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS water_targets (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -129,7 +156,7 @@ class WaterManager:
             """)
 
             # 3. Su verimliliği projeleri
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS water_efficiency_projects (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -159,7 +186,7 @@ class WaterManager:
             """)
 
             # 4. Su kalitesi izleme
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS water_quality_monitoring (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -181,7 +208,7 @@ class WaterManager:
             """)
 
             # 5. Su raporları
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS water_reports (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -208,29 +235,25 @@ class WaterManager:
             """)
 
             # İndeksler
-            cursor.execute("""
+            self.execute_update("""
                 CREATE INDEX IF NOT EXISTS idx_water_consumption_company_period 
                 ON water_consumption(company_id, period)
             """)
 
-            cursor.execute("""
+            self.execute_update("""
                 CREATE INDEX IF NOT EXISTS idx_water_targets_company_status 
                 ON water_targets(company_id, status)
             """)
 
-            cursor.execute("""
+            self.execute_update("""
                 CREATE INDEX IF NOT EXISTS idx_water_quality_company_date 
                 ON water_quality_monitoring(company_id, monitoring_date)
             """)
 
-            conn.commit()
             logging.info("[OK] Su yonetimi tablolari olusturuldu")
 
         except Exception as e:
             logging.error(f"[HATA] Su yonetimi tablolari olusturulamadi: {e}")
-            conn.rollback()
-        finally:
-            conn.close()
 
     # ==================== SU TÜKETİMİ KAYITLARI (CRUD) ====================
 
@@ -261,15 +284,12 @@ class WaterManager:
         supplier: Optional[str] = None,
     ) -> Optional[int]:
         """Yeni su tüketimi kaydı ekle"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
             # Toplam su hesapla (eğer verilmemişse)
             if total_water == 0:
                 total_water = blue_water + green_water + grey_water
 
-            cursor.execute("""
+            self.execute_update("""
                 INSERT INTO water_consumption 
                 (company_id, period, consumption_type, water_source, blue_water, green_water, 
                  grey_water, total_water, unit, water_quality_parameters, efficiency_ratio,
@@ -284,24 +304,19 @@ class WaterManager:
                 measurement_method, data_quality, source, evidence_file, notes or '',
                 invoice_date, due_date, supplier
             ))
-
-            consumption_id = cursor.lastrowid
-            conn.commit()
-            return consumption_id
+            
+            rows = self.execute_query("SELECT seq FROM sqlite_sequence WHERE name='water_consumption'")
+            if rows:
+                return rows[0]['seq']
+            return 1
 
         except Exception as e:
             logging.error(f"Su tüketimi kaydetme hatası: {e}")
-            conn.rollback()
             return None
-        finally:
-            conn.close()
 
     def get_water_consumption(self, company_id: int, period: Optional[str] = None,
                              consumption_type: Optional[str] = None) -> List[Dict]:
         """Su tüketimi kayıtlarını getir"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         query = """
             SELECT id, period, consumption_type, water_source, blue_water, green_water,
                    grey_water, total_water, unit, water_quality_parameters, efficiency_ratio,
@@ -322,44 +337,43 @@ class WaterManager:
 
         query += " ORDER BY created_at DESC"
 
-        cursor.execute(query, params)
-
-        records = []
-        for row in cursor.fetchall():
-            records.append({
-                'id': row[0],
-                'period': row[1],
-                'consumption_type': row[2],
-                'water_source': row[3],
-                'blue_water': row[4] or 0,
-                'green_water': row[5] or 0,
-                'grey_water': row[6] or 0,
-                'total_water': row[7 or 0] if isinstance(row[7], (int, float)) else (row[7] or 0),
-                'unit': row[8],
-                'water_quality_parameters': row[9],
-                'efficiency_ratio': row[10] or 0,
-                'recycling_rate': row[11] or 0,
-                'location': row[12],
-                'process_description': row[13],
-                'responsible_person': row[14],
-                'measurement_method': row[15],
-                'data_quality': row[16],
-                'source': row[17],
-                'notes': row[18],
-                'invoice_date': row[19],
-                'due_date': row[20],
-                'supplier': row[21],
-                'created_at': row[22]
-            })
-
-        conn.close()
-        return records
+        try:
+            rows = self.execute_query(query, params)
+            
+            records = []
+            for row in rows:
+                records.append({
+                    'id': row['id'],
+                    'period': row['period'],
+                    'consumption_type': row['consumption_type'],
+                    'water_source': row['water_source'],
+                    'blue_water': row['blue_water'] or 0,
+                    'green_water': row['green_water'] or 0,
+                    'grey_water': row['grey_water'] or 0,
+                    'total_water': row['total_water'] if row['total_water'] is not None else 0,
+                    'unit': row['unit'],
+                    'water_quality_parameters': row['water_quality_parameters'],
+                    'efficiency_ratio': row['efficiency_ratio'] or 0,
+                    'recycling_rate': row['recycling_rate'] or 0,
+                    'location': row['location'],
+                    'process_description': row['process_description'],
+                    'responsible_person': row['responsible_person'],
+                    'measurement_method': row['measurement_method'],
+                    'data_quality': row['data_quality'],
+                    'source': row['source'],
+                    'notes': row['notes'],
+                    'invoice_date': row['invoice_date'],
+                    'due_date': row['due_date'],
+                    'supplier': row['supplier'],
+                    'created_at': row['created_at']
+                })
+            return records
+        except Exception as e:
+            logging.error(f"Su tüketimi getirme hatası: {e}")
+            return []
 
     def update_water_consumption(self, consumption_id: int, **updates) -> bool:
         """Su tüketimi kaydını güncelle"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
             # Güncellenebilir alanlar
             allowed_fields = ['period', 'consumption_type', 'water_source', 'blue_water',
@@ -388,32 +402,21 @@ class WaterManager:
                 WHERE id = ?
             """
 
-            cursor.execute(query, values)
-            conn.commit()
-            return cursor.rowcount > 0
+            self.execute_update(query, values)
+            return True
 
         except Exception as e:
             logging.error(f"Su tüketimi güncelleme hatası: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
     def delete_water_consumption(self, consumption_id: int) -> bool:
         """Su tüketimi kaydını sil"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("DELETE FROM water_consumption WHERE id = ?", (consumption_id,))
-            conn.commit()
-            return cursor.rowcount > 0
+            self.execute_update("DELETE FROM water_consumption WHERE id = ?", (consumption_id,))
+            return True
         except Exception as e:
             logging.error(f"Su tüketimi silme hatası: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
     # ==================== SU HEDEFLERİ ====================
 
@@ -424,11 +427,8 @@ class WaterManager:
                         description: Optional[str] = None, responsible_person: Optional[str] = None,
                         verification_method: Optional[str] = None, notes: Optional[str] = None) -> Optional[int]:
         """Yeni su hedefi ekle"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            self.execute_update("""
                 INSERT INTO water_targets 
                 (company_id, target_type, target_name, base_year, target_year, base_value,
                  target_value, target_unit, water_type, target_scope, sdg_alignment,
@@ -439,64 +439,59 @@ class WaterManager:
                 target_value, target_unit, water_type, target_scope, sdg_alignment,
                 description, responsible_person, verification_method, notes or ''
             ))
-
-            target_id = cursor.lastrowid
-            conn.commit()
-            return target_id
+            
+            rows = self.execute_query("SELECT seq FROM sqlite_sequence WHERE name='water_targets'")
+            if rows:
+                return rows[0]['seq']
+            return 1
 
         except Exception as e:
             logging.error(f"Su hedefi kaydetme hatası: {e}")
-            conn.rollback()
             return None
-        finally:
-            conn.close()
 
     def get_water_targets(self, company_id: int, status: str = 'active') -> List[Dict]:
         """Su hedeflerini getir"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
+        try:
+            rows = self.execute_query("""
+                SELECT id, target_type, target_name, base_year, target_year, base_value,
+                       target_value, target_unit, water_type, target_scope, sdg_alignment,
+                       description, responsible_person, status, progress_percentage,
+                       achievement_date, verification_method, notes, created_at
+                FROM water_targets 
+                WHERE company_id = ? AND status = ?
+                ORDER BY target_year, created_at DESC
+            """, (company_id, status))
 
-        cursor.execute("""
-            SELECT id, target_type, target_name, base_year, target_year, base_value,
-                   target_value, target_unit, water_type, target_scope, sdg_alignment,
-                   description, responsible_person, status, progress_percentage,
-                   achievement_date, verification_method, notes, created_at
-            FROM water_targets 
-            WHERE company_id = ? AND status = ?
-            ORDER BY target_year, created_at DESC
-        """, (company_id, status))
-
-        targets = []
-        for row in cursor.fetchall():
-            targets.append({
-                'id': row[0],
-                'target_type': row[1],
-                'target_name': row[2],
-                'base_year': row[3],
-                'target_year': row[4],
-                'base_value': row[5],
-                'target_value': row[6],
-                'target_unit': row[7],
-                'water_type': row[8],
-                'target_scope': row[9],
-                'sdg_alignment': row[10],
-                'description': row[11],
-                'responsible_person': row[12],
-                'status': row[13],
-                'progress_percentage': row[14] or 0,
-                'achievement_date': row[15],
-                'verification_method': row[16],
-                'notes': row[17],
-                'created_at': row[18]
-            })
-
-        conn.close()
-        return targets
+            targets = []
+            for row in rows:
+                targets.append({
+                    'id': row['id'],
+                    'target_type': row['target_type'],
+                    'target_name': row['target_name'],
+                    'base_year': row['base_year'],
+                    'target_year': row['target_year'],
+                    'base_value': row['base_value'],
+                    'target_value': row['target_value'],
+                    'target_unit': row['target_unit'],
+                    'water_type': row['water_type'],
+                    'target_scope': row['target_scope'],
+                    'sdg_alignment': row['sdg_alignment'],
+                    'description': row['description'],
+                    'responsible_person': row['responsible_person'],
+                    'status': row['status'],
+                    'progress_percentage': row['progress_percentage'] or 0,
+                    'achievement_date': row['achievement_date'],
+                    'verification_method': row['verification_method'],
+                    'notes': row['notes'],
+                    'created_at': row['created_at']
+                })
+            return targets
+        except Exception as e:
+            logging.error(f"Su hedefleri getirme hatası: {e}")
+            return []
 
     def update_water_target(self, target_id: int, **updates) -> bool:
         """Su hedefini güncelle"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
         try:
             allowed = [
                 'target_type', 'target_name', 'base_year', 'target_year', 'base_value',
@@ -514,30 +509,20 @@ class WaterManager:
                 return False
             values.append(target_id)
             q = f"UPDATE water_targets SET {', '.join(fields)}, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
-            cursor.execute(q, values)
-            conn.commit()
-            return cursor.rowcount > 0
+            self.execute_update(q, values)
+            return True
         except Exception as e:
             logging.error(f"Su hedefi güncelleme hatası: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
     def delete_water_target(self, target_id: int) -> bool:
         """Su hedefini sil"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
         try:
-            cursor.execute("DELETE FROM water_targets WHERE id = ?", (target_id,))
-            conn.commit()
-            return cursor.rowcount > 0
+            self.execute_update("DELETE FROM water_targets WHERE id = ?", (target_id,))
+            return True
         except Exception as e:
             logging.error(f"Su hedefi silme hatası: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
     # ==================== SU VERİMLİLİĞİ PROJELERİ ====================
 
@@ -564,11 +549,8 @@ class WaterManager:
         notes: Optional[str] = None,
     ) -> Optional[int]:
         """Yeni su verimliliği projesi ekle"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            self.execute_update("""
                 INSERT INTO water_efficiency_projects 
                 (company_id, project_name, project_type, project_description, implementation_date,
                  completion_date, investment_amount, currency, expected_savings_m3, actual_savings_m3,
@@ -583,23 +565,18 @@ class WaterManager:
                 roi_period, responsible_person, sdg_contribution, environmental_impact,
                 social_impact, notes or ''
             ))
-
-            project_id = cursor.lastrowid
-            conn.commit()
-            return project_id
+            
+            rows = self.execute_query("SELECT seq FROM sqlite_sequence WHERE name='water_efficiency_projects'")
+            if rows:
+                return rows[0]['seq']
+            return 1
 
         except Exception as e:
             logging.error(f"Su verimliliği projesi kaydetme hatası: {e}")
-            conn.rollback()
             return None
-        finally:
-            conn.close()
 
     def get_efficiency_projects(self, company_id: int, status: Optional[str] = None) -> List[Dict]:
         """Su verimliliği projelerini getir"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         query = """
             SELECT id, project_name, project_type, project_description, implementation_date,
                    completion_date, investment_amount, currency, expected_savings_m3, actual_savings_m3,
@@ -617,41 +594,41 @@ class WaterManager:
 
         query += " ORDER BY created_at DESC"
 
-        cursor.execute(query, params)
+        try:
+            rows = self.execute_query(query, params)
 
-        projects = []
-        for row in cursor.fetchall():
-            projects.append({
-                'id': row[0],
-                'project_name': row[1],
-                'project_type': row[2],
-                'project_description': row[3],
-                'implementation_date': row[4],
-                'completion_date': row[5],
-                'investment_amount': row[6],
-                'currency': row[7],
-                'expected_savings_m3': row[8],
-                'actual_savings_m3': row[9],
-                'expected_efficiency_gain': row[10],
-                'actual_efficiency_gain': row[11],
-                'water_quality_improvement': row[12],
-                'roi_period': row[13],
-                'status': row[14],
-                'responsible_person': row[15],
-                'sdg_contribution': row[16],
-                'environmental_impact': row[17],
-                'social_impact': row[18],
-                'notes': row[19],
-                'created_at': row[20]
-            })
-
-        conn.close()
-        return projects
+            projects = []
+            for row in rows:
+                projects.append({
+                    'id': row['id'],
+                    'project_name': row['project_name'],
+                    'project_type': row['project_type'],
+                    'project_description': row['project_description'],
+                    'implementation_date': row['implementation_date'],
+                    'completion_date': row['completion_date'],
+                    'investment_amount': row['investment_amount'],
+                    'currency': row['currency'],
+                    'expected_savings_m3': row['expected_savings_m3'],
+                    'actual_savings_m3': row['actual_savings_m3'],
+                    'expected_efficiency_gain': row['expected_efficiency_gain'],
+                    'actual_efficiency_gain': row['actual_efficiency_gain'],
+                    'water_quality_improvement': row['water_quality_improvement'],
+                    'roi_period': row['roi_period'],
+                    'status': row['status'],
+                    'responsible_person': row['responsible_person'],
+                    'sdg_contribution': row['sdg_contribution'],
+                    'environmental_impact': row['environmental_impact'],
+                    'social_impact': row['social_impact'],
+                    'notes': row['notes'],
+                    'created_at': row['created_at']
+                })
+            return projects
+        except Exception as e:
+            logging.error(f"Su verimliliği projeleri getirme hatası: {e}")
+            return []
 
     def update_efficiency_project(self, project_id: int, **updates) -> bool:
         """Su verimliliği projesini güncelle"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
         try:
             allowed = [
                 'project_name', 'project_type', 'project_description', 'implementation_date',
@@ -670,30 +647,20 @@ class WaterManager:
                 return False
             values.append(project_id)
             q = f"UPDATE water_efficiency_projects SET {', '.join(fields)} WHERE id = ?"
-            cursor.execute(q, values)
-            conn.commit()
-            return cursor.rowcount > 0
+            self.execute_update(q, values)
+            return True
         except Exception as e:
             logging.error(f"Su verimliliği projesi güncelleme hatası: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
     def delete_efficiency_project(self, project_id: int) -> bool:
         """Su verimliliği projesini sil"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
         try:
-            cursor.execute("DELETE FROM water_efficiency_projects WHERE id = ?", (project_id,))
-            conn.commit()
-            return cursor.rowcount > 0
+            self.execute_update("DELETE FROM water_efficiency_projects WHERE id = ?", (project_id,))
+            return True
         except Exception as e:
             logging.error(f"Su verimliliği projesi silme hatası: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
     # ==================== SU KALİTESİ İZLEME ====================
 
@@ -704,11 +671,8 @@ class WaterManager:
                                responsible_lab: Optional[str] = None, certification: Optional[str] = None,
                                notes: Optional[str] = None) -> Optional[int]:
         """Yeni su kalitesi ölçümü ekle"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            self.execute_update("""
                 INSERT INTO water_quality_monitoring 
                 (company_id, monitoring_date, water_source, location, parameter_name,
                  parameter_value, parameter_unit, measurement_method, standard_limit,
@@ -719,24 +683,19 @@ class WaterManager:
                 parameter_value, parameter_unit, measurement_method, standard_limit,
                 compliance_status, responsible_lab, certification, notes or ''
             ))
-
-            measurement_id = cursor.lastrowid
-            conn.commit()
-            return measurement_id
+            
+            rows = self.execute_query("SELECT seq FROM sqlite_sequence WHERE name='water_quality_monitoring'")
+            if rows:
+                return rows[0]['seq']
+            return 1
 
         except Exception as e:
             logging.error(f"Su kalitesi ölçümü kaydetme hatası: {e}")
-            conn.rollback()
             return None
-        finally:
-            conn.close()
 
     def get_quality_measurements(self, company_id: int, water_source: Optional[str] = None,
                                 start_date: Optional[date] = None, end_date: Optional[date] = None) -> List[Dict]:
         """Su kalitesi ölçümlerini getir"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         query = """
             SELECT id, monitoring_date, water_source, location, parameter_name,
                    parameter_value, parameter_unit, measurement_method, standard_limit,
@@ -760,34 +719,34 @@ class WaterManager:
 
         query += " ORDER BY monitoring_date DESC, parameter_name"
 
-        cursor.execute(query, params)
+        try:
+            rows = self.execute_query(query, params)
 
-        measurements = []
-        for row in cursor.fetchall():
-            measurements.append({
-                'id': row[0],
-                'monitoring_date': row[1],
-                'water_source': row[2],
-                'location': row[3],
-                'parameter_name': row[4],
-                'parameter_value': row[5],
-                'parameter_unit': row[6],
-                'measurement_method': row[7],
-                'standard_limit': row[8],
-                'compliance_status': row[9],
-                'responsible_lab': row[10],
-                'certification': row[11],
-                'notes': row[12],
-                'created_at': row[13]
-            })
-
-        conn.close()
-        return measurements
+            measurements = []
+            for row in rows:
+                measurements.append({
+                    'id': row['id'],
+                    'monitoring_date': row['monitoring_date'],
+                    'water_source': row['water_source'],
+                    'location': row['location'],
+                    'parameter_name': row['parameter_name'],
+                    'parameter_value': row['parameter_value'],
+                    'parameter_unit': row['parameter_unit'],
+                    'measurement_method': row['measurement_method'],
+                    'standard_limit': row['standard_limit'],
+                    'compliance_status': row['compliance_status'],
+                    'responsible_lab': row['responsible_lab'],
+                    'certification': row['certification'],
+                    'notes': row['notes'],
+                    'created_at': row['created_at']
+                })
+            return measurements
+        except Exception as e:
+            logging.error(f"Su kalitesi ölçümleri getirme hatası: {e}")
+            return []
 
     def update_quality_measurement(self, measurement_id: int, **updates) -> bool:
         """Su kalitesi ölçümünü güncelle"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
         try:
             allowed = [
                 'monitoring_date', 'water_source', 'location', 'parameter_name',
@@ -804,30 +763,20 @@ class WaterManager:
                 return False
             values.append(measurement_id)
             q = f"UPDATE water_quality_monitoring SET {', '.join(fields)} WHERE id = ?"
-            cursor.execute(q, values)
-            conn.commit()
-            return cursor.rowcount > 0
+            self.execute_update(q, values)
+            return True
         except Exception as e:
             logging.error(f"Su kalitesi ölçümü güncelleme hatası: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
     def delete_quality_measurement(self, measurement_id: int) -> bool:
         """Su kalitesi ölçümünü sil"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
         try:
-            cursor.execute("DELETE FROM water_quality_monitoring WHERE id = ?", (measurement_id,))
-            conn.commit()
-            return cursor.rowcount > 0
+            self.execute_update("DELETE FROM water_quality_monitoring WHERE id = ?", (measurement_id,))
+            return True
         except Exception as e:
             logging.error(f"Su kalitesi ölçümü silme hatası: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
     # ==================== SU AYAK İZİ HESAPLAMA ====================
 

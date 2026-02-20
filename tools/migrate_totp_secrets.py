@@ -2,6 +2,7 @@ import os
 import sys
 import sqlite3
 import logging
+import pyotp
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -20,11 +21,12 @@ except ImportError as e:
 def migrate_secrets(db_path):
     """
     Migrates TOTP secrets in the users table to be Fernet encrypted.
+    Ensures ALL users have an encrypted TOTP secret (generates one if missing).
     
     Process for each user:
-    1. Retrieve totp_secret.
-    2. Decrypt it (if already encrypted) or get plain text (if not).
-    3. Encrypt it (re-encrypt or encrypt for first time).
+    1. Retrieve secret (if exists).
+    2. If secret exists: Decrypt -> Encrypt.
+    3. If secret missing: Generate -> Encrypt.
     4. Save back to DB.
     """
     
@@ -58,31 +60,48 @@ def migrate_secrets(db_path):
 
         logging.info(f"Using column: {target_column}")
 
-        # Get users with secret
-        cursor.execute(f"SELECT id, username, {target_column} FROM users WHERE {target_column} IS NOT NULL AND {target_column} != ''")
+        # Get ALL users (id, username, secret)
+        cursor.execute(f"SELECT id, username, {target_column} FROM users")
         users = cursor.fetchall()
         
-        logging.info(f"Found {len(users)} users with TOTP secrets.")
+        logging.info(f"Found {len(users)} users. Checking secrets...")
         
         updated_count = 0
+        generated_count = 0
         
         for user_id, username, current_secret in users:
             try:
-                # Step 1: Decrypt (handles backward compatibility)
-                plain_secret = _decrypt_secret(current_secret)
+                new_encrypted_secret = None
                 
-                # Step 2: Encrypt
-                new_encrypted_secret = _encrypt_secret(plain_secret)
+                if current_secret:
+                    # Step 1: Decrypt (handles backward compatibility)
+                    plain_secret = _decrypt_secret(current_secret)
+                    
+                    if not plain_secret:
+                        # Decryption failed or empty -> Generate new
+                        plain_secret = pyotp.random_base32()
+                        generated_count += 1
+                        logging.info(f"Generated NEW secret for user {username} (existing was invalid/empty).")
+                    
+                    # Step 2: Encrypt
+                    new_encrypted_secret = _encrypt_secret(plain_secret)
+                else:
+                    # No secret -> Generate new
+                    plain_secret = pyotp.random_base32()
+                    new_encrypted_secret = _encrypt_secret(plain_secret)
+                    generated_count += 1
+                    logging.info(f"Generated NEW secret for user {username} (was empty).")
                 
                 # Step 3: Save
-                cursor.execute(f"UPDATE users SET {target_column} = ? WHERE id = ?", (new_encrypted_secret, user_id))
-                updated_count += 1
+                if new_encrypted_secret:
+                    cursor.execute(f"UPDATE users SET {target_column} = ? WHERE id = ?", (new_encrypted_secret, user_id))
+                    updated_count += 1
                 
             except Exception as e:
                 logging.error(f"Error processing user {username} (ID: {user_id}): {e}")
         
         conn.commit()
-        logging.info(f"Migration completed. Updated {updated_count} users.")
+        logging.info(f"Migration completed. Processed {updated_count} users. Generated new secrets for {generated_count} users.")
         return True
         
     except Exception as e:

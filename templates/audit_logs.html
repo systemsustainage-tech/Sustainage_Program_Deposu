@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block title %}{{ lang('audit_logs', 'Denetim Kayıtları') }} - Sustainage{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>{{ lang('audit_logs', 'Denetim Kayıtları') }}</h2>
+        <div class="btn-group">
+            <a href="/api/audit/export?format=csv" class="btn btn-outline-success">
+                <i class="bi bi-file-earmark-spreadsheet"></i> CSV İndir
+            </a>
+            <a href="/api/audit/export?format=excel" class="btn btn-outline-success">
+                <i class="bi bi-file-earmark-excel"></i> Excel İndir
+            </a>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID</th>
+                            <th>{{ lang('user', 'Kullanıcı ID') }}</th>
+                            <th>{{ lang('action', 'Eylem') }}</th>
+                            <th>{{ lang('resource', 'Kaynak') }}</th>
+                            <th>{{ lang('details', 'Detaylar') }}</th>
+                            <th>IP</th>
+                            <th>{{ lang('date', 'Tarih') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody id="audit-table-body">
+                        <!-- Data will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <div id="loading-spinner" class="text-center p-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Yükleniyor...</span>
+                </div>
+            </div>
+            
+            <div id="no-records" class="text-center p-5 text-muted" style="display: none;">
+                {{ lang('no_records', 'Kayıt bulunamadı') }}
+            </div>
+        </div>
+        <div class="card-footer d-flex justify-content-between align-items-center">
+            <button id="prev-btn" class="btn btn-sm btn-outline-secondary" onclick="changePage(-1)" disabled>
+                <i class="bi bi-chevron-left"></i> {{ lang('previous', 'Önceki') }}
+            </button>
+            <span id="page-info" class="text-muted small"></span>
+            <button id="next-btn" class="btn btn-sm btn-outline-secondary" onclick="changePage(1)">
+                {{ lang('next', 'Sonraki') }} <i class="bi bi-chevron-right"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentPage = 0;
+const limit = 50;
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadAuditLogs();
+});
+
+function loadAuditLogs() {
+    const offset = currentPage * limit;
+    document.getElementById('loading-spinner').style.display = 'block';
+    document.getElementById('audit-table-body').innerHTML = '';
+    document.getElementById('no-records').style.display = 'none';
+
+    fetch(`/api/audit/data?limit=${limit}&offset=${offset}`)
+        .then(response => response.json())
+        .then(data => {
+            const logs = data.logs;
+            const tbody = document.getElementById('audit-table-body');
+            document.getElementById('loading-spinner').style.display = 'none';
+            
+            if (logs && logs.length > 0) {
+                let html = '';
+                logs.forEach(log => {
+                    const date = new Date(log.created_at).toLocaleString('tr-TR');
+                    // Format details if JSON
+                    let details = log.details || '';
+                    let detailsFull = details;
+                    
+                    try {
+                        const obj = JSON.parse(details);
+                        details = JSON.stringify(obj, null, 2);
+                        detailsFull = details; // Keep formatted for tooltip
+                    } catch(e) {}
+                    
+                    if (details && details.length > 50) {
+                        details = `<span title="${detailsFull.replace(/"/g, '&quot;')}">${details.substring(0, 50)}...</span>`;
+                    }
+                    
+                    html += `
+                        <tr>
+                            <td>${log.id}</td>
+                            <td>${log.user_id || '-'}</td>
+                            <td><span class="badge bg-secondary">${log.action}</span></td>
+                            <td>${log.resource || log.resource_type || '-'}</td>
+                            <td><small class="text-muted">${details}</small></td>
+                            <td><small>${log.ip_address}</small></td>
+                            <td><small>${date}</small></td>
+                        </tr>
+                    `;
+                });
+                tbody.innerHTML = html;
+                
+                // Pagination controls
+                document.getElementById('prev-btn').disabled = currentPage === 0;
+                
+                if (data.total) {
+                    const totalPages = Math.ceil(data.total / limit);
+                    document.getElementById('next-btn').disabled = currentPage >= totalPages - 1;
+                    document.getElementById('page-info').textContent = `Sayfa ${currentPage + 1} / ${totalPages} (Toplam: ${data.total})`;
+                } else {
+                    document.getElementById('next-btn').disabled = logs.length < limit;
+                    document.getElementById('page-info').textContent = `Sayfa ${currentPage + 1}`;
+                }
+                
+            } else {
+                document.getElementById('no-records').style.display = 'block';
+                document.getElementById('next-btn').disabled = true;
+            }
+        })
+        .catch(err => {
+            console.error('Error loading audit logs:', err);
+            document.getElementById('loading-spinner').innerHTML = '<div class="text-danger">Yükleme hatası.</div>';
+        });
+}
+
+function changePage(delta) {
+    currentPage += delta;
+    if (currentPage < 0) currentPage = 0;
+    loadAuditLogs();
+}
+</script>
+{% endblock %}

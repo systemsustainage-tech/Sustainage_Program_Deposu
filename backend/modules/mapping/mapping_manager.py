@@ -4,8 +4,9 @@ GRI-SDG-TSRS-UNGC-ISSB standartları arası eşleştirme yönetimi
 """
 
 import logging
-import sqlite3
 from typing import Any, Dict, List, Optional, Tuple
+
+from backend.core.base_manager import BaseTenantManager
 
 try:
     from sklearn.feature_extraction.text import TfidfVectorizer
@@ -16,22 +17,19 @@ except ImportError:
 
 
 
-class MappingManager:
+class MappingManager(BaseTenantManager):
     """Standart eşleştirme yönetimi"""
 
-    def __init__(self, db_path: str):
-        self.db_path = db_path
+    def __init__(self, db_path: str = None, company_id: Optional[int] = None) -> None:
+        super().__init__(db_path, company_id)
         self.create_tables()
         self.initialize_default_mappings()
 
     def create_tables(self) -> None:
         """Eşleştirme tablolarını oluştur"""
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-
             # Ana eşleştirme tablosu
-            cursor.execute('''
+            self.execute_update('''
                 CREATE TABLE IF NOT EXISTS standard_mappings (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     source_standard TEXT NOT NULL,
@@ -49,10 +47,10 @@ class MappingManager:
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
-            ''')
+            ''', skip_tenant_filter=True)
 
             # Özel eşleştirmeler (kullanıcı tarafından eklenen)
-            cursor.execute('''
+            self.execute_update('''
                 CREATE TABLE IF NOT EXISTS custom_mappings (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER,
@@ -65,10 +63,10 @@ class MappingManager:
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (company_id) REFERENCES companies (id)
                 )
-            ''')
+            ''', skip_tenant_filter=True)
 
             # Eşleştirme önerileri
-            cursor.execute('''
+            self.execute_update('''
                 CREATE TABLE IF NOT EXISTS mapping_suggestions (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     source_standard TEXT NOT NULL,
@@ -80,10 +78,8 @@ class MappingManager:
                     status TEXT DEFAULT 'pending',
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
-            ''')
+            ''', skip_tenant_filter=True)
 
-            conn.commit()
-            conn.close()
             logging.info("[OK] Eşleştirme tabloları oluşturuldu")
 
         except Exception as e:
@@ -92,181 +88,98 @@ class MappingManager:
     def initialize_default_mappings(self) -> None:
         """Varsayılan eşleştirmeleri yükle"""
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
+                
+                # Check if mappings exist
+                cursor.execute("SELECT COUNT(*) FROM standard_mappings")
+                count = cursor.fetchone()[0]
+                
+                if count > 0:
+                    return
 
-            # Mevcut eşleştirme sayısını kontrol et
-            cursor.execute("SELECT COUNT(*) FROM standard_mappings")
-            count = cursor.fetchone()[0]
+                # TSRS → ESRS başlangıç eşleştirmeleri
+                tsrs_esrs = [
+                    ('TSRS', 'TSRS E1', 'İklim Değişikliği',
+                     'Enerji, emisyon ve iklimle ilgili TSRS göstergeleri',
+                     'ESRS', 'ESRS E1', 'İklim Değişikliği',
+                     'ESRS E1 kapsamındaki iklim açıklamaları',
+                     'direct', 'strong', 'TSRS çevre standartları ↔ ESRS E1'),
+                    ('TSRS', 'TSRS E2', 'Kirlilik',
+                     'Kirletici emisyonlar ve yönetimi',
+                     'ESRS', 'ESRS E2', 'Kirlilik',
+                     'ESRS E2 kapsamındaki kirlilik açıklamaları',
+                     'direct', 'strong', 'TSRS çevre standartları ↔ ESRS E2'),
+                    ('TSRS', 'TSRS E3', 'Su ve Deniz Kaynakları',
+                     'Su tüketimi ve kaynak yönetimi',
+                     'ESRS', 'ESRS E3', 'Su ve Deniz Kaynakları',
+                     'ESRS E3 kapsamındaki su ve deniz açıklamaları',
+                     'direct', 'strong', 'TSRS çevre standartları ↔ ESRS E3')
+                ]
+                
+                cursor.executemany('''
+                    INSERT INTO standard_mappings 
+                    (source_standard, source_code, source_title, source_description,
+                     target_standard, target_code, target_title, target_description,
+                     mapping_type, mapping_strength, notes, verified)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+                ''', tsrs_esrs)
 
-            if count > 0:
-                conn.close()
-                return  # Zaten yüklenmiş
-
-            # Örnek GRI-SDG eşleştirmeleri
-            default_mappings = [
-                # GRI 302 (Enerji) -> SDG 7 (Erişilebilir ve Temiz Enerji)
-                ('GRI', 'GRI 302-1', 'Energy consumption within the organization',
-                 'Total fuel consumption, electricity, heating, cooling, and steam',
-                 'SDG', 'SDG 7.3', 'Affordable and Clean Energy',
-                 'Double the global rate of improvement in energy efficiency',
-                 'direct', 'strong', 'Energy efficiency metrics'),
-
-                # GRI 305 (Emisyonlar) -> SDG 13 (İklim Eylemi)
-                ('GRI', 'GRI 305-1', 'Direct GHG emissions (Scope 1)',
-                 'Gross direct greenhouse gas emissions in metric tons of CO2 equivalent',
-                 'SDG', 'SDG 13.2', 'Climate Action',
-                 'Integrate climate change measures into national policies',
-                 'direct', 'strong', 'GHG emissions tracking'),
-
-                # GRI 303 (Su) -> SDG 6 (Temiz Su ve Sanitasyon)
-                ('GRI', 'GRI 303-3', 'Water withdrawal',
-                 'Total water withdrawal from all sources',
-                 'SDG', 'SDG 6.4', 'Clean Water and Sanitation',
-                 'Substantially increase water-use efficiency',
-                 'direct', 'strong', 'Water management'),
-
-                # GRI 401 (İstihdam) -> SDG 8 (İnsana Yakışır İş)
-                ('GRI', 'GRI 401-1', 'New employee hires and employee turnover',
-                 'Total number and rate of new employee hires and employee turnover',
-                 'SDG', 'SDG 8.5', 'Decent Work and Economic Growth',
-                 'Full and productive employment and decent work for all',
-                 'direct', 'strong', 'Employment metrics'),
-
-                # GRI 403 (İSG) -> SDG 8 (İnsana Yakışır İş)
-                ('GRI', 'GRI 403-9', 'Work-related injuries',
-                 'Number and rate of fatalities, high-consequence and recordable work-related injuries',
-                 'SDG', 'SDG 8.8', 'Decent Work and Economic Growth',
-                 'Protect labour rights and promote safe working environments',
-                 'direct', 'strong', 'Occupational health and safety'),
-
-                # GRI 404 (Eğitim) -> SDG 4 (Nitelikli Eğitim)
-                ('GRI', 'GRI 404-1', 'Average hours of training per year per employee',
-                 'Average hours of training that employees have undertaken',
-                 'SDG', 'SDG 4.4', 'Quality Education',
-                 'Increase the number of people with relevant skills for employment',
-                 'direct', 'strong', 'Training and development'),
-
-                # GRI 405 (Çeşitlilik) -> SDG 5 (Toplumsal Cinsiyet Eşitliği)
-                ('GRI', 'GRI 405-1', 'Diversity of governance bodies and employees',
-                 'Percentage of individuals within governance bodies and employees per category',
-                 'SDG', 'SDG 5.5', 'Gender Equality',
-                 'Ensure women\'s full participation in leadership',
-                 'direct', 'strong', 'Gender diversity'),
-
-                # GRI 306 (Atık) -> SDG 12 (Sorumlu Üretim ve Tüketim)
-                ('GRI', 'GRI 306-3', 'Waste generated',
-                 'Total weight of waste generated and waste diverted from disposal',
-                 'SDG', 'SDG 12.5', 'Responsible Consumption and Production',
-                 'Substantially reduce waste generation',
-                 'direct', 'strong', 'Waste management'),
-
-                # GRI 413 (Yerel Topluluklar) -> SDG 11 (Sürdürülebilir Şehirler)
-                ('GRI', 'GRI 413-1', 'Operations with local community engagement',
-                 'Percentage of operations with implemented local community engagement',
-                 'SDG', 'SDG 11.3', 'Sustainable Cities and Communities',
-                 'Enhance inclusive and sustainable urbanization',
-                 'direct', 'medium', 'Community engagement'),
-
-                # GRI 201 (Ekonomik Performans) -> SDG 8 (Ekonomik Büyüme)
-                ('GRI', 'GRI 201-1', 'Direct economic value generated and distributed',
-                 'Direct economic value generated and distributed including revenues',
-                 'SDG', 'SDG 8.1', 'Decent Work and Economic Growth',
-                 'Sustain per capita economic growth',
-                 'direct', 'medium', 'Economic contribution'),
-            ]
-
-            # TSRS → ESRS başlangıç eşleştirmeleri
-            tsrs_esrs = [
-                ('TSRS', 'TSRS E1', 'İklim Değişikliği',
-                 'Enerji, emisyon ve iklimle ilgili TSRS göstergeleri',
-                 'ESRS', 'ESRS E1', 'İklim Değişikliği',
-                 'ESRS E1 kapsamındaki iklim açıklamaları',
-                 'direct', 'strong', 'TSRS çevre standartları ↔ ESRS E1'),
-                ('TSRS', 'TSRS E2', 'Kirlilik',
-                 'Kirletici emisyonlar ve yönetimi',
-                 'ESRS', 'ESRS E2', 'Kirlilik',
-                 'ESRS E2 kapsamındaki kirlilik açıklamaları',
-                 'direct', 'strong', 'TSRS çevre standartları ↔ ESRS E2'),
-                ('TSRS', 'TSRS E3', 'Su ve Deniz Kaynakları',
-                 'Su tüketimi ve kaynak yönetimi',
-                 'ESRS', 'ESRS E3', 'Su ve Deniz Kaynakları',
-                 'ESRS E3 kapsamındaki su ve deniz açıklamaları',
-                 'direct', 'strong', 'TSRS çevre standartları ↔ ESRS E3')
-            ]
-            cursor.executemany('''
-                INSERT INTO standard_mappings 
-                (source_standard, source_code, source_title, source_description,
-                 target_standard, target_code, target_title, target_description,
-                 mapping_type, mapping_strength, notes, verified)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
-            ''', tsrs_esrs)
-
-            cursor.executemany('''
-                INSERT INTO standard_mappings 
-                (source_standard, source_code, source_title, source_description,
-                 target_standard, target_code, target_title, target_description,
-                 mapping_type, mapping_strength, notes, verified)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
-            ''', default_mappings)
-
-            conn.commit()
-            conn.close()
-            logging.info(f"[OK] {len(default_mappings)} varsayılan eşleştirme yüklendi")
+                conn.commit()
+                logging.info(f"[OK] {len(tsrs_esrs)} varsayılan eşleştirme yüklendi")
 
         except Exception as e:
-            logging.error(f"[HATA] Varsayılan eşleştirme yükleme hatası: {e}")
+            logging.error(f"[HATA] Varsayılan eşleştirmeler yüklenemedi: {e}")
 
     def get_all_mappings(self, filters: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         """Tüm eşleştirmeleri getir"""
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
 
-            query = "SELECT * FROM standard_mappings WHERE 1=1"
-            params = []
+                query = "SELECT * FROM standard_mappings WHERE 1=1"
+                params = []
 
-            if filters:
-                if 'source_standard' in filters:
-                    query += " AND source_standard = ?"
-                    params.append(filters['source_standard'])
+                if filters:
+                    if 'source_standard' in filters:
+                        query += " AND source_standard = ?"
+                        params.append(filters['source_standard'])
 
-                if 'target_standard' in filters:
-                    query += " AND target_standard = ?"
-                    params.append(filters['target_standard'])
+                    if 'target_standard' in filters:
+                        query += " AND target_standard = ?"
+                        params.append(filters['target_standard'])
 
-                if 'mapping_strength' in filters:
-                    query += " AND mapping_strength = ?"
-                    params.append(filters['mapping_strength'])
+                    if 'mapping_strength' in filters:
+                        query += " AND mapping_strength = ?"
+                        params.append(filters['mapping_strength'])
 
-                if 'verified_only' in filters and filters['verified_only']:
-                    query += " AND verified = 1"
+                    if 'verified_only' in filters and filters['verified_only']:
+                        query += " AND verified = 1"
 
-            query += " ORDER BY source_code, target_code"
+                query += " ORDER BY source_code, target_code"
 
-            cursor.execute(query, params)
-            rows = cursor.fetchall()
-            conn.close()
+                cursor.execute(query, params)
+                rows = cursor.fetchall()
 
-            mappings = []
-            for row in rows:
-                mappings.append({
-                    'id': row[0],
-                    'source_standard': row[1],
-                    'source_code': row[2],
-                    'source_title': row[3],
-                    'source_description': row[4],
-                    'target_standard': row[5],
-                    'target_code': row[6],
-                    'target_title': row[7],
-                    'target_description': row[8],
-                    'mapping_type': row[9],
-                    'mapping_strength': row[10],
-                    'notes': row[11],
-                    'verified': row[12]
-                })
+                mappings = []
+                for row in rows:
+                    mappings.append({
+                        'id': row[0],
+                        'source_standard': row[1],
+                        'source_code': row[2],
+                        'source_title': row[3],
+                        'source_description': row[4],
+                        'target_standard': row[5],
+                        'target_code': row[6],
+                        'target_title': row[7],
+                        'target_description': row[8],
+                        'mapping_type': row[9],
+                        'mapping_strength': row[10],
+                        'notes': row[11],
+                        'verified': row[12]
+                    })
 
-            return mappings
+                return mappings
 
         except Exception as e:
             logging.error(f"[HATA] Eşleştirme getirme hatası: {e}")
@@ -275,32 +188,31 @@ class MappingManager:
     def add_mapping(self, mapping_data: Dict[str, Any]) -> bool:
         """Yeni eşleştirme ekle"""
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
 
-            cursor.execute('''
-                INSERT INTO standard_mappings 
-                (source_standard, source_code, source_title, source_description,
-                 target_standard, target_code, target_title, target_description,
-                 mapping_type, mapping_strength, notes, verified)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                mapping_data.get('source_standard'),
-                mapping_data.get('source_code'),
-                mapping_data.get('source_title', ''),
-                mapping_data.get('source_description', ''),
-                mapping_data.get('target_standard'),
-                mapping_data.get('target_code'),
-                mapping_data.get('target_title', ''),
-                mapping_data.get('target_description', ''),
-                mapping_data.get('mapping_type', 'direct'),
-                mapping_data.get('mapping_strength', 'medium'),
-                mapping_data.get('notes', ''),
-                mapping_data.get('verified', 0)
-            ))
+                cursor.execute('''
+                    INSERT INTO standard_mappings 
+                    (source_standard, source_code, source_title, source_description,
+                     target_standard, target_code, target_title, target_description,
+                     mapping_type, mapping_strength, notes, verified)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    mapping_data.get('source_standard'),
+                    mapping_data.get('source_code'),
+                    mapping_data.get('source_title', ''),
+                    mapping_data.get('source_description', ''),
+                    mapping_data.get('target_standard'),
+                    mapping_data.get('target_code'),
+                    mapping_data.get('target_title', ''),
+                    mapping_data.get('target_description', ''),
+                    mapping_data.get('mapping_type', 'direct'),
+                    mapping_data.get('mapping_strength', 'medium'),
+                    mapping_data.get('notes', ''),
+                    mapping_data.get('verified', 0)
+                ))
 
-            conn.commit()
-            conn.close()
+                conn.commit()
             return True
 
         except Exception as e:
@@ -310,16 +222,15 @@ class MappingManager:
     def get_mapping_by_id(self, mapping_id: int) -> Optional[Tuple]:
         """ID'ye göre eşleştirme getir"""
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-            cursor.execute("""
-                SELECT id, source_standard, source_code, target_standard, 
-                       target_code, mapping_type, notes
-                FROM standard_mappings 
-                WHERE id = ?
-            """, (mapping_id,))
-            result = cursor.fetchone()
-            conn.close()
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT id, source_standard, source_code, target_standard, 
+                           target_code, mapping_type, notes
+                    FROM standard_mappings 
+                    WHERE id = ?
+                """, (mapping_id,))
+                result = cursor.fetchone()
             return result
         except Exception as e:
             logging.error(f"[HATA] Eşleştirme getirme hatası: {e}")
@@ -328,11 +239,10 @@ class MappingManager:
     def delete_mapping(self, mapping_id: int) -> bool:
         """Eşleştirme sil"""
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-            cursor.execute("DELETE FROM standard_mappings WHERE id = ?", (mapping_id,))
-            conn.commit()
-            conn.close()
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("DELETE FROM standard_mappings WHERE id = ?", (mapping_id,))
+                conn.commit()
             return True
         except Exception as e:
             logging.error(f"[HATA] Eşleştirme silme hatası: {e}")
@@ -341,43 +251,42 @@ class MappingManager:
     def update_mapping(self, mapping_id: int, mapping_data: Dict[str, Any]) -> bool:
         """Eşleştirme güncelle"""
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
 
-            cursor.execute('''
-                UPDATE standard_mappings SET
-                    source_standard = ?,
-                    source_code = ?,
-                    source_title = ?,
-                    source_description = ?,
-                    target_standard = ?,
-                    target_code = ?,
-                    target_title = ?,
-                    target_description = ?,
-                    mapping_type = ?,
-                    mapping_strength = ?,
-                    notes = ?,
-                    verified = ?,
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE id = ?
-            ''', (
-                mapping_data.get('source_standard'),
-                mapping_data.get('source_code'),
-                mapping_data.get('source_title', ''),
-                mapping_data.get('source_description', ''),
-                mapping_data.get('target_standard'),
-                mapping_data.get('target_code'),
-                mapping_data.get('target_title', ''),
-                mapping_data.get('target_description', ''),
-                mapping_data.get('mapping_type', 'direct'),
-                mapping_data.get('mapping_strength', 'medium'),
-                mapping_data.get('notes', ''),
-                mapping_data.get('verified', 0),
-                mapping_id
-            ))
+                cursor.execute('''
+                    UPDATE standard_mappings SET
+                        source_standard = ?,
+                        source_code = ?,
+                        source_title = ?,
+                        source_description = ?,
+                        target_standard = ?,
+                        target_code = ?,
+                        target_title = ?,
+                        target_description = ?,
+                        mapping_type = ?,
+                        mapping_strength = ?,
+                        notes = ?,
+                        verified = ?,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = ?
+                ''', (
+                    mapping_data.get('source_standard'),
+                    mapping_data.get('source_code'),
+                    mapping_data.get('source_title', ''),
+                    mapping_data.get('source_description', ''),
+                    mapping_data.get('target_standard'),
+                    mapping_data.get('target_code'),
+                    mapping_data.get('target_title', ''),
+                    mapping_data.get('target_description', ''),
+                    mapping_data.get('mapping_type', 'direct'),
+                    mapping_data.get('mapping_strength', 'medium'),
+                    mapping_data.get('notes', ''),
+                    mapping_data.get('verified', 0),
+                    mapping_id
+                ))
 
-            conn.commit()
-            conn.close()
+                conn.commit()
             return True
 
         except Exception as e:
@@ -387,34 +296,32 @@ class MappingManager:
     def get_mapping_statistics(self) -> Dict[str, Any]:
         """Eşleştirme istatistikleri"""
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
 
-            # Toplam eşleştirme
-            cursor.execute("SELECT COUNT(*) FROM standard_mappings")
-            total = cursor.fetchone()[0]
+                # Toplam eşleştirme
+                cursor.execute("SELECT COUNT(*) FROM standard_mappings")
+                total = cursor.fetchone()[0]
 
-            # Doğrulanmış eşleştirmeler
-            cursor.execute("SELECT COUNT(*) FROM standard_mappings WHERE verified = 1")
-            verified = cursor.fetchone()[0]
+                # Doğrulanmış eşleştirmeler
+                cursor.execute("SELECT COUNT(*) FROM standard_mappings WHERE verified = 1")
+                verified = cursor.fetchone()[0]
 
-            # Standart bazlı
-            cursor.execute("""
-                SELECT source_standard, target_standard, COUNT(*) 
-                FROM standard_mappings 
-                GROUP BY source_standard, target_standard
-            """)
-            by_standard = cursor.fetchall()
+                # Standart bazlı
+                cursor.execute("""
+                    SELECT source_standard, target_standard, COUNT(*) 
+                    FROM standard_mappings 
+                    GROUP BY source_standard, target_standard
+                """)
+                by_standard = cursor.fetchall()
 
-            # Güç bazlı
-            cursor.execute("""
-                SELECT mapping_strength, COUNT(*) 
-                FROM standard_mappings 
-                GROUP BY mapping_strength
-            """)
-            by_strength = cursor.fetchall()
-
-            conn.close()
+                # Güç bazlı
+                cursor.execute("""
+                    SELECT mapping_strength, COUNT(*) 
+                    FROM standard_mappings 
+                    GROUP BY mapping_strength
+                """)
+                by_strength = cursor.fetchall()
 
             return {
                 'total_mappings': total,
@@ -531,78 +438,75 @@ class MappingManager:
             return 0
 
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
 
-            # 1. Mevcut tüm standart maddelerini topla
-            cursor.execute("SELECT source_standard, source_code, source_description FROM standard_mappings")
-            sources = cursor.fetchall()
-            
-            cursor.execute("SELECT target_standard, target_code, target_description FROM standard_mappings")
-            targets = cursor.fetchall()
-            
-            # Benzersizleri al
-            unique_sources = list(set(sources))
-            unique_targets = list(set(targets))
-            
-            if not unique_sources or not unique_targets:
-                conn.close()
-                return 0
+                # 1. Mevcut tüm standart maddelerini topla
+                cursor.execute("SELECT source_standard, source_code, source_description FROM standard_mappings")
+                sources = cursor.fetchall()
+                
+                cursor.execute("SELECT target_standard, target_code, target_description FROM standard_mappings")
+                targets = cursor.fetchall()
+                
+                # Benzersizleri al ve açıklaması olanları filtrele
+                unique_sources = [s for s in set(sources) if s[2]]
+                unique_targets = [t for t in set(targets) if t[2]]
+                
+                if not unique_sources or not unique_targets:
+                    return 0
 
-            # 2. Metinleri hazırla
-            source_docs = [s[2] for s in unique_sources if s[2]]
-            target_docs = [t[2] for t in unique_targets if t[2]]
-            
-            if not source_docs or not target_docs:
-                conn.close()
-                return 0
+                # 2. Metinleri hazırla
+                source_docs = [s[2] for s in unique_sources]
+                target_docs = [t[2] for t in unique_targets]
+                
+                if not source_docs or not target_docs:
+                    return 0
 
-            # 3. TF-IDF ve Benzerlik
-            vectorizer = TfidfVectorizer(stop_words='english')
-            # Tüm corpus
-            all_docs = source_docs + target_docs
-            vectorizer.fit(all_docs)
-            
-            tfidf_source = vectorizer.transform(source_docs)
-            tfidf_target = vectorizer.transform(target_docs)
-            
-            similarity_matrix = cosine_similarity(tfidf_source, tfidf_target)
-            
-            suggestions_count = 0
-            
-            # 4. Önerileri bul ve kaydet
-            for i, src in enumerate(unique_sources):
-                for j, tgt in enumerate(unique_targets):
-                    score = float(similarity_matrix[i][j])
-                    
-                    # Eşik değer ve aynı standart kontrolü
-                    if score > 0.3 and src[0] != tgt[0]:
-                        # Zaten var mı kontrol et
-                        cursor.execute("""
-                            SELECT 1 FROM standard_mappings 
-                            WHERE source_code = ? AND target_code = ?
-                        """, (src[1], tgt[1]))
-                        exists = cursor.fetchone()
+                # 3. TF-IDF ve Benzerlik
+                vectorizer = TfidfVectorizer(stop_words='english')
+                # Tüm corpus
+                all_docs = source_docs + target_docs
+                vectorizer.fit(all_docs)
+                
+                tfidf_source = vectorizer.transform(source_docs)
+                tfidf_target = vectorizer.transform(target_docs)
+                
+                similarity_matrix = cosine_similarity(tfidf_source, tfidf_target)
+                
+                suggestions_count = 0
+                
+                # 4. Önerileri bul ve kaydet
+                for i, src in enumerate(unique_sources):
+                    for j, tgt in enumerate(unique_targets):
+                        score = float(similarity_matrix[i][j])
                         
-                        if not exists:
-                            # Zaten önerilmiş mi?
+                        # Eşik değer ve aynı standart kontrolü
+                        if score > 0.3 and src[0] != tgt[0]:
+                            # Zaten var mı kontrol et
                             cursor.execute("""
-                                SELECT 1 FROM mapping_suggestions 
+                                SELECT 1 FROM standard_mappings 
                                 WHERE source_code = ? AND target_code = ?
                             """, (src[1], tgt[1]))
-                            suggested = cursor.fetchone()
+                            exists = cursor.fetchone()
                             
-                            if not suggested:
+                            if not exists:
+                                # Zaten önerilmiş mi?
                                 cursor.execute("""
-                                    INSERT INTO mapping_suggestions 
-                                    (source_standard, source_code, target_standard, target_code, 
-                                     confidence_score, suggestion_reason, status)
-                                    VALUES (?, ?, ?, ?, ?, ?, 'pending')
-                                """, (src[0], src[1], tgt[0], tgt[1], score, f"Similarity: {score:.2f}"))
-                                suggestions_count += 1
+                                    SELECT 1 FROM mapping_suggestions 
+                                    WHERE source_code = ? AND target_code = ?
+                                """, (src[1], tgt[1]))
+                                suggested = cursor.fetchone()
+                                
+                                if not suggested:
+                                    cursor.execute("""
+                                        INSERT INTO mapping_suggestions 
+                                        (source_standard, source_code, target_standard, target_code, 
+                                         confidence_score, suggestion_reason, status)
+                                        VALUES (?, ?, ?, ?, ?, ?, 'pending')
+                                    """, (src[0], src[1], tgt[0], tgt[1], score, f"Similarity: {score:.2f}"))
+                                    suggestions_count += 1
             
-            conn.commit()
-            conn.close()
+                conn.commit()
             return suggestions_count
 
         except Exception as e:
@@ -612,19 +516,18 @@ class MappingManager:
     def get_suggestions(self, status: str = 'pending') -> List[Dict[str, Any]]:
         """Önerileri listele"""
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-            
-            cursor.execute("""
-                SELECT id, source_standard, source_code, target_standard, target_code, 
-                       confidence_score, suggestion_reason, status, created_at
-                FROM mapping_suggestions
-                WHERE status = ?
-                ORDER BY confidence_score DESC
-            """, (status,))
-            
-            rows = cursor.fetchall()
-            conn.close()
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
+                
+                cursor.execute("""
+                    SELECT id, source_standard, source_code, target_standard, target_code, 
+                           confidence_score, suggestion_reason, status, created_at
+                    FROM mapping_suggestions
+                    WHERE status = ?
+                    ORDER BY confidence_score DESC
+                """, (status,))
+                
+                rows = cursor.fetchall()
             
             suggestions = []
             for row in rows:
@@ -648,50 +551,48 @@ class MappingManager:
     def approve_suggestion(self, suggestion_id: int) -> bool:
         """Öneriyi onayla ve standard_mappings'e taşı"""
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-            
-            # Öneriyi al
-            cursor.execute("SELECT * FROM mapping_suggestions WHERE id = ?", (suggestion_id,))
-            row = cursor.fetchone()
-            
-            if not row:
-                conn.close()
-                return False
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
                 
-            # Mapping verisi (Indices based on SELECT * or schema)
-            # Schema: id, source_std, source_code, target_std, target_code, score, reason, status, created
-            # Indices: 0, 1, 2, 3, 4, 5, 6, 7, 8
-            
-            # Standard mapping ekle
-            # Description'ları bulmak için standard_mappings'den tekrar sorgulamak gerekebilir 
-            # veya boş bırakabiliriz. Şimdilik boş bırakalım veya mevcutlardan bulmaya çalışalım.
-            
-            # Kaynak tanımını bul
-            cursor.execute("SELECT source_title, source_description FROM standard_mappings WHERE source_code = ? LIMIT 1", (row[2],))
-            src_info = cursor.fetchone() or ('', '')
-            
-            # Hedef tanımını bul
-            cursor.execute("SELECT target_title, target_description FROM standard_mappings WHERE target_code = ? LIMIT 1", (row[4],))
-            tgt_info = cursor.fetchone() or ('', '')
+                # Öneriyi al
+                cursor.execute("SELECT * FROM mapping_suggestions WHERE id = ?", (suggestion_id,))
+                row = cursor.fetchone()
+                
+                if not row:
+                    return False
+                    
+                # Mapping verisi (Indices based on SELECT * or schema)
+                # Schema: id, source_std, source_code, target_std, target_code, score, reason, status, created
+                # Indices: 0, 1, 2, 3, 4, 5, 6, 7, 8
+                
+                # Standard mapping ekle
+                # Description'ları bulmak için standard_mappings'den tekrar sorgulamak gerekebilir 
+                # veya boş bırakabiliriz. Şimdilik boş bırakalım veya mevcutlardan bulmaya çalışalım.
+                
+                # Kaynak tanımını bul
+                cursor.execute("SELECT source_title, source_description FROM standard_mappings WHERE source_code = ? LIMIT 1", (row[2],))
+                src_info = cursor.fetchone() or ('', '')
+                
+                # Hedef tanımını bul
+                cursor.execute("SELECT target_title, target_description FROM standard_mappings WHERE target_code = ? LIMIT 1", (row[4],))
+                tgt_info = cursor.fetchone() or ('', '')
 
-            cursor.execute('''
-                INSERT INTO standard_mappings 
-                (source_standard, source_code, source_title, source_description,
-                 target_standard, target_code, target_title, target_description,
-                 mapping_type, mapping_strength, notes, verified)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'direct', 'medium', ?, 1)
-            ''', (
-                row[1], row[2], src_info[0], src_info[1],
-                row[3], row[4], tgt_info[0], tgt_info[1],
-                f"Auto-generated from suggestion (Score: {row[5]:.2f})"
-            ))
-            
-            # Öneri durumunu güncelle
-            cursor.execute("UPDATE mapping_suggestions SET status = 'approved' WHERE id = ?", (suggestion_id,))
-            
-            conn.commit()
-            conn.close()
+                cursor.execute('''
+                    INSERT INTO standard_mappings 
+                    (source_standard, source_code, source_title, source_description,
+                     target_standard, target_code, target_title, target_description,
+                     mapping_type, mapping_strength, notes, verified)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'direct', 'medium', ?, 1)
+                ''', (
+                    row[1], row[2], src_info[0], src_info[1],
+                    row[3], row[4], tgt_info[0], tgt_info[1],
+                    f"Auto-generated from suggestion (Score: {row[5]:.2f})"
+                ))
+                
+                # Öneri durumunu güncelle
+                cursor.execute("UPDATE mapping_suggestions SET status = 'approved' WHERE id = ?", (suggestion_id,))
+                
+                conn.commit()
             return True
             
         except Exception as e:
@@ -701,11 +602,10 @@ class MappingManager:
     def reject_suggestion(self, suggestion_id: int) -> bool:
         """Öneriyi reddet"""
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-            cursor.execute("UPDATE mapping_suggestions SET status = 'rejected' WHERE id = ?", (suggestion_id,))
-            conn.commit()
-            conn.close()
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("UPDATE mapping_suggestions SET status = 'rejected' WHERE id = ?", (suggestion_id,))
+                conn.commit()
             return True
         except Exception as e:
             logging.error(f"[HATA] Öneri reddetme hatası: {e}")

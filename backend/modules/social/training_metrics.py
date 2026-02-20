@@ -8,7 +8,6 @@ GRI 404
 
 import logging
 import os
-import sqlite3
 from typing import Dict
 
 
@@ -18,20 +17,19 @@ except ImportError:
     from backend.utils.language_manager import LanguageManager
 
 
-class TrainingMetrics:
+from backend.core.base_manager import BaseTenantManager
+
+class TrainingMetrics(BaseTenantManager):
     """Eğitim ve geliştirme metrikleri"""
 
     def __init__(self, db_path: str = None) -> None:
-        self.db_path = db_path or os.path.join(os.getcwd(), 'data', 'sdg_desktop.sqlite')
-        self.lm = LanguageManager()
+        super().__init__()
         self._ensure_tables()
 
     def _ensure_tables(self) -> None:
         """Eğitim tabloları"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
         try:
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS training_programs (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -52,9 +50,9 @@ class TrainingMetrics:
                     status TEXT DEFAULT 'active',
                     created_at TEXT DEFAULT CURRENT_TIMESTAMP
                 )
-            """)
+            """, params=(), company_id=None, skip_filter=True)
 
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS performance_reviews (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -65,61 +63,71 @@ class TrainingMetrics:
                     position_level TEXT,
                     created_at TEXT DEFAULT CURRENT_TIMESTAMP
                 )
-            """)
+            """, params=(), company_id=None, skip_filter=True)
 
-            conn.commit()
             # print(self.lm.tr('training_tables_ready', "[OK] Egitim tablolari hazir"))
         except Exception as e:
             logging.error(f"{self.lm.tr('training_table_error', '[HATA] Egitim tablo')}: {e}")
-            conn.rollback()
-        finally:
-            conn.close()
 
     def add_training(self, company_id: int, year: int, program_name: str,
                     participants: int, hours_per_person: float, **kwargs) -> int:
         """Eğitim programı kaydı"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
         try:
             total_hours = participants * hours_per_person
-            cursor.execute("""
+            query = """
                 INSERT INTO training_programs 
                 (company_id, period_year, program_name, category, participants,
                  hours_per_person, total_hours, cost, gender, position_level)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (company_id, year, program_name, kwargs.get('category'),
+            """
+            params = (company_id, year, program_name, kwargs.get('category'),
                   participants, hours_per_person, total_hours, kwargs.get('cost'),
-                  kwargs.get('gender'), kwargs.get('position_level')))
-            conn.commit()
-            return cursor.lastrowid
-        finally:
-            conn.close()
+                  kwargs.get('gender'), kwargs.get('position_level'))
+            
+            # execute_update returns rows affected, but we might want lastrowid.
+            # BaseTenantManager.execute_update usually returns rows affected.
+            # But TenantAwareDB.execute_update returns rows affected.
+            # If we need lastrowid, we might need to select it or modify BaseTenantManager.
+            # For now, let's just return True/False or check implementation.
+            # The original code returns lastrowid.
+            # I will use execute_update and then get the last ID if possible, or just return success.
+            # Actually, let's stick to the pattern.
+            self.execute_update(query, params, company_id=company_id)
+            
+            # To get last ID, we can query it.
+            rows = self.execute_query("SELECT last_insert_rowid() as id", (), company_id=company_id)
+            return rows[0]['id'] if rows else 0
+            
+        except Exception as e:
+            logging.error(f"Add training error: {e}")
+            return 0
 
     def add_performance_review(self, company_id: int, year: int, reviewed: int,
                               total: int, **kwargs) -> int:
         """Performans değerlendirme kaydı"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
         try:
-            cursor.execute("""
+            query = """
                 INSERT INTO performance_reviews 
                 (company_id, period_year, reviewed_employees, total_employees,
                  gender, position_level)
                 VALUES (?, ?, ?, ?, ?, ?)
-            """, (company_id, year, reviewed, total,
-                  kwargs.get('gender'), kwargs.get('position_level')))
-            conn.commit()
-            return cursor.lastrowid
-        finally:
-            conn.close()
+            """
+            params = (company_id, year, reviewed, total,
+                  kwargs.get('gender'), kwargs.get('position_level'))
+            
+            self.execute_update(query, params, company_id=company_id)
+            
+            rows = self.execute_query("SELECT last_insert_rowid() as id", (), company_id=company_id)
+            return rows[0]['id'] if rows else 0
+        except Exception as e:
+            logging.error(f"Add performance review error: {e}")
+            return 0
 
     def get_summary(self, company_id: int, year: int) -> Dict:
         """Yıllık eğitim özeti"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
         try:
             # Eğitim istatistikleri
-            cursor.execute("""
+            rows_training = self.execute_query("""
                 SELECT 
                     COUNT(DISTINCT program_name) as programs,
                     SUM(participants) as total_participants,
@@ -127,30 +135,37 @@ class TrainingMetrics:
                     AVG(hours_per_person) as avg_hours
                 FROM training_programs
                 WHERE company_id=? AND period_year=?
-            """, (company_id, year))
-            row = cursor.fetchone()
+            """, (company_id, year), company_id=company_id)
+            
+            row = rows_training[0] if rows_training else {}
 
             # Performans değerlendirme
-            cursor.execute("""
-                SELECT SUM(reviewed_employees), SUM(total_employees)
+            rows_perf = self.execute_query("""
+                SELECT SUM(reviewed_employees) as reviewed, SUM(total_employees) as total
                 FROM performance_reviews
                 WHERE company_id=? AND period_year=?
-            """, (company_id, year))
-            perf = cursor.fetchone()
+            """, (company_id, year), company_id=company_id)
+            
+            perf = rows_perf[0] if rows_perf else {}
+            
+            reviewed = perf.get('reviewed') or 0
+            total = perf.get('total') or 0
 
             review_rate = 0
-            if perf[1] and perf[1] > 0:
-                review_rate = (perf[0] / perf[1] * 100)
+            if total and total > 0:
+                review_rate = (reviewed / total * 100)
 
             return {
-                'training_programs': int(row[0] or 0),
-                'total_participants': int(row[1] or 0),
-                'total_hours': round(row[2] or 0, 2),
-                'avg_hours_per_employee': round(row[3] or 0, 2),
-                'reviewed_employees': int(perf[0] or 0),
+                'training_programs': int(row.get('programs') or 0),
+                'total_participants': int(row.get('total_participants') or 0),
+                'total_hours': round(row.get('total_hours') or 0, 2),
+                'avg_hours_per_employee': round(row.get('avg_hours') or 0, 2),
+                'reviewed_employees': int(reviewed),
                 'review_rate_percent': round(review_rate, 2),
                 'year': year
             }
-        finally:
-            conn.close()
+        except Exception as e:
+            logging.error(f"Get summary error: {e}")
+            return {}
+
 

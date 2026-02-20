@@ -8,23 +8,20 @@ Performans optimizasyonu ve cache sistemi
 import logging
 import hashlib
 import os
-import sqlite3
 import threading
 import time
 from functools import wraps
 from typing import Any, Dict, List, Optional
 from config.database import DB_PATH
+from backend.core.base_manager import BaseTenantManager
 
 
-class GRIPerformanceCache:
+class GRIPerformanceCache(BaseTenantManager):
     """GRI performans cache sistemi"""
 
     def __init__(self, db_path: str = DB_PATH, cache_duration: int = 3600) -> None:
-        # db_path göreli ise proje köküne göre mutlak hale getir
-        if not os.path.isabs(db_path):
-            base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-            db_path = os.path.join(base_dir, db_path)
-        self.db_path = db_path
+        # Global cache, belirli bir şirket bağlamı yok
+        super().__init__(db_path, None)
         self.cache_duration = cache_duration  # saniye
         self.cache = {}
         self.cache_lock = threading.Lock()
@@ -36,10 +33,6 @@ class GRIPerformanceCache:
             'total_query_time': 0.0,
             'avg_query_time': 0.0
         }
-
-    def get_connection(self) -> None:
-        """Veritabanı bağlantısı"""
-        return sqlite3.connect(self.db_path)
 
     def generate_cache_key(self, query: str, params: tuple = ()) -> str:
         """Cache key oluştur"""
@@ -95,8 +88,9 @@ class GRIPerformanceCache:
                 self.performance_stats['total_queries'] += 1
                 self.performance_stats['total_query_time'] += query_time
                 self.performance_stats['avg_query_time'] = (
+                    self.performance_stats['total_queries'] > 0 and
                     self.performance_stats['total_query_time'] /
-                    self.performance_stats['total_queries']
+                    self.performance_stats['total_queries'] or 0.0
                 )
 
                 # Cache'e kaydet
@@ -120,20 +114,9 @@ class GRIPerformanceCache:
 
         @self.cached_query(query, params)
         def _execute_query() -> None:
-            conn = self.get_connection()
-            cursor = conn.cursor()
-
-            try:
-                cursor.execute(query, params)
-                columns = [desc[0] for desc in cursor.description]
-                results = []
-
-                for row in cursor.fetchall():
-                    results.append(dict(zip(columns, row)))
-
-                return results
-            finally:
-                conn.close()
+            # Global tablo, doğrudan db.execute_query kullanıyoruz
+            rows = self.db.execute_query(query, params)
+            return [dict(row) for row in rows]
 
         return _execute_query()
 
@@ -173,20 +156,9 @@ class GRIPerformanceCache:
 
         @self.cached_query(query, tuple(params))
         def _execute_query() -> None:
-            conn = self.get_connection()
-            cursor = conn.cursor()
-
-            try:
-                cursor.execute(query, params)
-                columns = [desc[0] for desc in cursor.description]
-                results = []
-
-                for row in cursor.fetchall():
-                    results.append(dict(zip(columns, row)))
-
-                return results
-            finally:
-                conn.close()
+            # Global tablo, doğrudan db.execute_query
+            rows = self.db.execute_query(query, params)
+            return [dict(row) for row in rows]
 
         return _execute_query()
 
@@ -215,25 +187,16 @@ class GRIPerformanceCache:
 
         @self.cached_query(query, tuple(params))
         def _execute_query() -> None:
-            conn = self.get_connection()
-            cursor = conn.cursor()
-
-            try:
-                cursor.execute(query, params)
-                columns = [desc[0] for desc in cursor.description]
-                results = []
-
-                for row in cursor.fetchall():
-                    results.append(dict(zip(columns, row)))
-
-                return results
-            finally:
-                conn.close()
+            # Tenant tablosu ama sorguda company_id var, bu yüzden db.execute_query güvenli
+            # BaseTenantManager.execute_query de kullanılabilir ama injection'ı atlar çünkü company_id var
+            rows = self.db.execute_query(query, tuple(params))
+            return [dict(row) for row in rows]
 
         return _execute_query()
 
     def get_gri_kpis_cached(self, indicator_id: int = None) -> List[Dict]:
         """Cache'li GRI KPI'ları getir"""
+        # gri_kpis tablosunun global olduğu varsayılıyor (standart kütüphane)
         query = """
             SELECT 
                 k.id, k.indicator_id, k.name, k.formula, k.unit, k.frequency,
@@ -255,25 +218,14 @@ class GRIPerformanceCache:
 
         @self.cached_query(query, tuple(params))
         def _execute_query() -> None:
-            conn = self.get_connection()
-            cursor = conn.cursor()
-
-            try:
-                cursor.execute(query, params)
-                columns = [desc[0] for desc in cursor.description]
-                results = []
-
-                for row in cursor.fetchall():
-                    results.append(dict(zip(columns, row)))
-
-                return results
-            finally:
-                conn.close()
+            rows = self.db.execute_query(query, tuple(params))
+            return [dict(row) for row in rows]
 
         return _execute_query()
 
-    def get_gri_targets_cached(self, year: int = None) -> List[Dict]:
+    def get_gri_targets_cached(self, company_id: int, year: int = None) -> List[Dict]:
         """Cache'li GRI hedefleri getir"""
+        # Multi-tenant düzeltmesi: company_id zorunlu
         query = """
             SELECT 
                 t.id, t.indicator_id, t.year, t.target_value, t.unit, t.method,
@@ -283,37 +235,27 @@ class GRIPerformanceCache:
             FROM gri_targets t
             JOIN gri_indicators gi ON t.indicator_id = gi.id
             JOIN gri_standards gs ON gi.standard_id = gs.id
+            WHERE t.company_id = ?
         """
 
-        params = []
+        params = [company_id]
 
         if year:
-            query += " WHERE t.year = ?"
+            query += " AND t.year = ?"
             params.append(year)
 
         query += " ORDER BY t.year, gs.category, gi.code"
 
         @self.cached_query(query, tuple(params))
         def _execute_query() -> None:
-            conn = self.get_connection()
-            cursor = conn.cursor()
-
-            try:
-                cursor.execute(query, params)
-                columns = [desc[0] for desc in cursor.description]
-                results = []
-
-                for row in cursor.fetchall():
-                    results.append(dict(zip(columns, row)))
-
-                return results
-            finally:
-                conn.close()
+            rows = self.db.execute_query(query, tuple(params))
+            return [dict(row) for row in rows]
 
         return _execute_query()
 
-    def get_gri_risks_cached(self, risk_level: str = None) -> List[Dict]:
+    def get_gri_risks_cached(self, company_id: int, risk_level: str = None) -> List[Dict]:
         """Cache'li GRI riskleri getir"""
+        # Multi-tenant düzeltmesi: company_id zorunlu
         query = """
             SELECT 
                 r.id, r.indicator_id, r.risk_level, r.impact, r.likelihood,
@@ -323,32 +265,21 @@ class GRIPerformanceCache:
             FROM gri_risks r
             JOIN gri_indicators gi ON r.indicator_id = gi.id
             JOIN gri_standards gs ON gi.standard_id = gs.id
+            WHERE r.company_id = ?
         """
 
-        params = []
+        params = [company_id]
 
         if risk_level:
-            query += " WHERE r.risk_level = ?"
+            query += " AND r.risk_level = ?"
             params.append(risk_level)
 
         query += " ORDER BY r.risk_level, gs.category, gi.code"
 
         @self.cached_query(query, tuple(params))
         def _execute_query() -> None:
-            conn = self.get_connection()
-            cursor = conn.cursor()
-
-            try:
-                cursor.execute(query, params)
-                columns = [desc[0] for desc in cursor.description]
-                results = []
-
-                for row in cursor.fetchall():
-                    results.append(dict(zip(columns, row)))
-
-                return results
-            finally:
-                conn.close()
+            rows = self.db.execute_query(query, tuple(params))
+            return [dict(row) for row in rows]
 
         return _execute_query()
 
@@ -358,34 +289,32 @@ class GRIPerformanceCache:
 
         @self.cached_query(query, ())
         def _execute_query() -> None:
-            conn = self.get_connection()
-            cursor = conn.cursor()
-
             try:
                 # SDG-GRI eşleştirme sayısı
-                cursor.execute("SELECT COUNT(*) FROM map_sdg_gri")
-                sdg_gri_count = cursor.fetchone()[0]
+                rows = self.db.execute_query("SELECT COUNT(*) as cnt FROM map_sdg_gri")
+                sdg_gri_count = rows[0]['cnt']
 
                 # GRI-TSRS eşleştirme sayısı
-                cursor.execute("SELECT COUNT(*) FROM map_gri_tsrs")
-                gri_tsrs_count = cursor.fetchone()[0]
+                rows = self.db.execute_query("SELECT COUNT(*) as cnt FROM map_gri_tsrs")
+                gri_tsrs_count = rows[0]['cnt']
 
                 # Kategori bazında dağılım
-                cursor.execute("""
-                    SELECT gs.category, COUNT(*) 
+                rows = self.db.execute_query("""
+                    SELECT gs.category, COUNT(*) as cnt
                     FROM gri_indicators gi
                     JOIN gri_standards gs ON gi.standard_id = gs.id
                     GROUP BY gs.category
                 """)
-                category_distribution = dict(cursor.fetchall())
+                category_distribution = {row['category']: row['cnt'] for row in rows}
 
                 return {
                     'sdg_gri_mappings': sdg_gri_count,
                     'gri_tsrs_mappings': gri_tsrs_count,
                     'category_distribution': category_distribution
                 }
-            finally:
-                conn.close()
+            except Exception as e:
+                logging.error(f"Mapping summaries error: {e}")
+                return {}
 
         return _execute_query()
 
@@ -433,50 +362,42 @@ class GRIPerformanceCache:
 
     def optimize_database(self) -> Dict:
         """Veritabanı optimizasyonu"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
             logging.info("GRI veritabanı optimizasyonu başlıyor...")
 
-            # ANALYZE komutu - istatistikleri güncelle
-            cursor.execute("ANALYZE")
-
-            # VACUUM komutu - veritabanını optimize et
-            cursor.execute("VACUUM")
+            # ANALYZE ve VACUUM genellikle DDL/PRAGMA gibi davranır
+            self.db.execute_update("ANALYZE")
+            self.db.execute_update("VACUUM")
 
             # Index'leri kontrol et
-            cursor.execute("""
+            indexes = self.db.execute_query("""
                 SELECT name FROM sqlite_master 
                 WHERE type='index' AND sql IS NOT NULL
                 ORDER BY name
             """)
-            indexes = cursor.fetchall()
 
             # Tablo boyutlarını kontrol et
-            cursor.execute("""
+            table_names = self.db.execute_query("""
                 SELECT name FROM sqlite_master 
                 WHERE type='table' AND name LIKE 'gri_%'
                 ORDER BY name
             """)
-            table_names = cursor.fetchall()
 
             table_stats = []
-            for table_name in table_names:
+            for row in table_names:
+                table_name = row['name']
                 try:
-                    cursor.execute(f"SELECT COUNT(*) FROM {table_name[0]}")
-                    count = cursor.fetchone()[0]
-                    table_stats.append((table_name[0], count))
+                    count_res = self.db.execute_query(f"SELECT COUNT(*) as cnt FROM {table_name}")
+                    count = count_res[0]['cnt']
+                    table_stats.append((table_name, count))
                 except Exception:
-                    table_stats.append((table_name[0], 0))
-
-            conn.commit()
+                    table_stats.append((table_name, 0))
 
             optimization_result = {
                 'analyze_completed': True,
                 'vacuum_completed': True,
-                'indexes': [idx[0] for idx in indexes],
-                'table_stats': {table[0]: table[1] for table in table_stats}
+                'indexes': [row['name'] for row in indexes],
+                'table_stats': {t[0]: t[1] for t in table_stats}
             }
 
             logging.info("GRI veritabanı optimizasyonu tamamlandı.")
@@ -484,16 +405,10 @@ class GRIPerformanceCache:
 
         except Exception as e:
             logging.error(f"Veritabanı optimizasyonu hatası: {e}")
-            conn.rollback()
             return {'error': str(e)}
-        finally:
-            conn.close()
 
     def create_performance_indexes(self) -> Dict:
         """Performans indexleri oluştur"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
             logging.info("GRI performans indexleri oluşturuluyor...")
 
@@ -514,13 +429,11 @@ class GRIPerformanceCache:
 
             for index_sql in indexes:
                 try:
-                    cursor.execute(index_sql)
+                    self.db.execute_update(index_sql)
                     index_name = index_sql.split("idx_")[1].split(" ")[0]
                     created_indexes.append(index_name)
                 except Exception as e:
                     logging.error(f"Index oluşturma hatası ({index_sql}): {e}")
-
-            conn.commit()
 
             result = {
                 'created_indexes': created_indexes,
@@ -532,10 +445,7 @@ class GRIPerformanceCache:
 
         except Exception as e:
             logging.error(f"Index oluşturma hatası: {e}")
-            conn.rollback()
             return {'error': str(e)}
-        finally:
-            conn.close()
 
 # Global cache instance
 gri_cache = GRIPerformanceCache()
@@ -563,6 +473,7 @@ if __name__ == "__main__":
     # Test cache sistemi
     cache = get_gri_cache()
 
+    logging.basicConfig(level=logging.INFO)
     logging.info("=== GRI Performance Cache Test ===")
 
     # Cache istatistikleri
@@ -574,28 +485,3 @@ if __name__ == "__main__":
     # Performans indexleri oluştur
     index_result = create_gri_performance_indexes()
     logging.info(f"Oluşturulan indexler: {index_result.get('created_indexes', [])}")
-
-    # Veritabanı optimizasyonu
-    opt_result = optimize_gri_database()
-    logging.info(f"Optimizasyon tamamlandı: {opt_result.get('analyze_completed', False)}")
-
-    # Cache'li sorgu testi
-    logging.info("\nCache'li sorgu testi...")
-
-    start_time = time.time()
-    standards = cache.get_gri_standards_cached()
-    query_time = time.time() - start_time
-    logging.info(f"Standartlar sorgusu: {query_time:.3f}s, {len(standards)} kayıt")
-
-    start_time = time.time()
-    indicators = cache.get_gri_indicators_cached()
-    query_time = time.time() - start_time
-    logging.info(f"Göstergeler sorgusu: {query_time:.3f}s, {len(indicators)} kayıt")
-
-    # Cache istatistikleri (güncellenmiş)
-    stats = cache.get_cache_stats()
-    logging.info("\nGüncellenmiş cache istatistikleri:")
-    logging.info(f"Toplam sorgu: {stats['performance_stats']['total_queries']}")
-    logging.info(f"Cache hit: {stats['performance_stats']['cache_hits']}")
-    logging.info(f"Cache miss: {stats['performance_stats']['cache_misses']}")
-    logging.info(f"Ortalama sorgu süresi: {stats['performance_stats']['avg_query_time']:.3f}s")

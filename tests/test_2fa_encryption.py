@@ -12,6 +12,7 @@ sys.path.insert(0, root_dir)
 sys.path.insert(0, os.path.join(root_dir, 'backend'))
 
 from backend.security.core.enhanced_2fa import enable_totp_for_user, verify_totp_code, _decrypt_secret, _encrypt_secret
+from backend.core.database_manager import DatabaseManager
 
 class Test2FAEncryption(unittest.TestCase):
     def setUp(self):
@@ -41,8 +42,17 @@ class Test2FAEncryption(unittest.TestCase):
         
     def tearDown(self):
         self.conn.close()
+        # Close DatabaseManager connections to release file lock
+        try:
+            DatabaseManager(self.db_path).close()
+        except Exception:
+            pass
         os.close(self.db_fd)
-        os.unlink(self.db_path)
+        try:
+            os.unlink(self.db_path)
+        except PermissionError:
+            # If still locked, ignore on Windows
+            pass
 
     def test_encryption(self):
         # 1. Enable 2FA

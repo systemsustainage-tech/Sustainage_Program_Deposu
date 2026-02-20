@@ -12,16 +12,19 @@ from typing import Dict, Optional
 
 from PIL import Image
 from config.database import DB_PATH
+from backend.core.base_manager import BaseTenantManager
 
 
-class CompanyProfileManager:
+class CompanyProfileManager(BaseTenantManager):
     """Firma profil ve logo yönetimi"""
 
-    def __init__(self, db_path: str = DB_PATH) -> None:
+    def __init__(self, db_path: str = DB_PATH, company_id: Optional[int] = None) -> None:
         if not os.path.isabs(db_path):
             base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
             db_path = os.path.join(base_dir, db_path)
-        self.db_path = db_path
+        
+        super().__init__(db_path, company_id)
+        
         self.logo_dir = os.path.join(os.path.dirname(db_path), "company_logos")
 
         # Logo dizinini oluştur
@@ -31,12 +34,9 @@ class CompanyProfileManager:
 
     def _init_profile_tables(self) -> None:
         """Profil tablolarını oluştur"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
             # Firma profil bilgileri
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS company_profiles (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER UNIQUE NOT NULL,
@@ -57,13 +57,10 @@ class CompanyProfileManager:
                 )
             """)
 
-            conn.commit()
             logging.info("[OK] Firma profil tablolari olusturuldu")
 
         except Exception as e:
             logging.error(f"[ERROR] Profil tablolari olusturulurken hata: {e}")
-        finally:
-            conn.close()
 
     def upload_logo(self, company_id: int, logo_file_path: str,
                    max_width: int = 400, max_height: int = 200) -> bool:

@@ -11,6 +11,7 @@
 </div>
 <div class="card shadow-sm border-0">
 <div class="card-body">
+<p class="text-muted mb-3">Bu form üzerinden seçtiğiniz modüle ait tekil bir veri kaydı girebilirsiniz. Tüm zorunlu alanları doldurduğunuzda kayıtlar raporlama modülünde kullanılacaktır.</p>
 <form method="POST">
 <div class="row g-3">
 <div class="col-md-12 {% if module %}d-none{% endif %}">
@@ -29,7 +30,8 @@
 <!-- Common Fields -->
 <div class="col-md-6">
 <label class="form-label" for="date">Tarih / Dönem</label>
-<input class="form-control" id="date" name="date" placeholder="YYYY-AA veya YYYY" required="" type="text"/>
+<input class="form-control" id="date" name="date" placeholder="YYYY-AA veya YYYY" required="" type="text" value="{{ date or '' }}"/>
+<small class="form-text text-muted">Ay bazlı giriş için YYYY-AA (örn: 2024-01), yıl bazlı giriş için YYYY formatını kullanın.</small>
 </div>
 <!-- Carbon Fields -->
 <div class="col-12 row g-3 {% if data_type != 'carbon' and data_type is not none %}d-none{% endif %}" id="carbon_fields">
@@ -43,76 +45,76 @@
 </div>
 <div class="col-md-6">
 <label class="form-label" for="category">Kategori</label>
-<input class="form-control" id="category" name="category" placeholder="Örn: Sabit Yanma, Elektrik" type="text"/>
+<input class="form-control" id="category" name="category" placeholder="Örn: Sabit Yanma, Elektrik" type="text" value="{{ category or '' }}"/>
 </div>
 <div class="col-md-6">
 <label class="form-label" for="amount">Miktar</label>
-<input class="form-control" id="amount" name="amount" step="any" type="number"/>
+<input class="form-control" id="amount" name="amount" min="0" step="any" type="number" value="{{ amount or '' }}"/>
 </div>
 <div class="col-md-6">
 <label class="form-label" for="unit">Birim</label>
-<input class="form-control" id="unit" name="unit" placeholder="m3, kg, kWh" type="text"/>
+<input class="form-control" id="unit" name="unit" placeholder="m3, kg, kWh" type="text" value="{{ unit or '' }}"/>
 </div>
 <div class="col-md-6">
 <label class="form-label" for="co2e">CO2e (kg)</label>
-<input class="form-control" id="co2e" name="co2e" step="any" type="number"/>
+<input class="form-control" id="co2e" name="co2e" step="any" type="number" value="{{ co2e or '' }}"/>
 </div>
 </div>
 <!-- Energy Fields -->
 <div class="col-12 row g-3 {% if data_type != 'energy' %}d-none{% endif %}" id="energy_fields">
 <div class="col-md-6">
 <label class="form-label" for="energy_type">Enerji Türü</label>
-<input class="form-control" id="energy_type" name="energy_type" placeholder="Elektrik, Doğalgaz" type="text"/>
+<input class="form-control" id="energy_type" name="energy_type" placeholder="Elektrik, Doğalgaz" type="text" value="{{ energy_type or '' }}"/>
 </div>
 <div class="col-md-6">
 <label class="form-label" for="energy_consumption">Tüketim Miktarı</label>
-<input class="form-control" id="energy_consumption" name="energy_consumption" step="any" type="number"/>
+<input class="form-control" id="energy_consumption" name="energy_consumption" min="0" step="any" type="number" value="{{ energy_consumption or '' }}"/>
 </div>
 <div class="col-md-6">
 <label class="form-label" for="energy_unit">Birim</label>
-<input class="form-control" id="energy_unit" name="energy_unit" placeholder="kWh, m3" type="text"/>
+<input class="form-control" id="energy_unit" name="energy_unit" placeholder="kWh, m3" type="text" value="{{ energy_unit or '' }}"/>
 </div>
 <div class="col-md-6">
 <label class="form-label" for="cost">Maliyet</label>
-<input class="form-control" id="cost" name="cost" step="any" type="number"/>
+<input class="form-control" id="cost" name="cost" min="0" step="any" type="number" value="{{ cost or '' }}"/>
 </div>
 </div>
 <!-- Water Fields -->
 <div class="col-12 row g-3 {% if data_type != 'water' %}d-none{% endif %}" id="water_fields">
 <div class="col-md-6">
 <label class="form-label" for="water_type">Su Kaynağı</label>
-<input class="form-control" id="water_type" name="water_type" placeholder="Şebeke, Kuyu" type="text"/>
+<input class="form-control" id="water_type" name="water_type" placeholder="Şebeke, Kuyu" type="text" value="{{ water_type or '' }}"/>
 </div>
 <div class="col-md-6">
 <label class="form-label" for="water_consumption">Tüketim Miktarı</label>
-<input class="form-control" id="water_consumption" name="water_consumption" step="any" type="number"/>
+<input class="form-control" id="water_consumption" name="water_consumption" min="0" step="any" type="number" value="{{ water_consumption or '' }}"/>
 </div>
 <div class="col-md-6">
 <label class="form-label" for="water_unit">Birim</label>
-<input class="form-control" id="water_unit" name="water_unit" type="text" value="m3"/>
+<input class="form-control" id="water_unit" name="water_unit" type="text" value="{{ water_unit or 'm3' }}"/>
 </div>
 </div>
 <!-- Waste Fields -->
 <div class="col-12 row g-3 {% if data_type != 'waste' %}d-none{% endif %}" id="waste_fields">
 <div class="col-md-6">
 <label class="form-label" for="waste_type">Atık Türü</label>
-<input class="form-control" id="waste_type" name="waste_type" placeholder="Kağıt, Plastik, Tehlikeli" type="text"/>
+<input class="form-control" id="waste_type" name="waste_type" placeholder="Kağıt, Plastik, Tehlikeli" type="text" value="{{ waste_type or '' }}"/>
 </div>
 <div class="col-md-6">
 <label class="form-label" for="waste_amount">Miktar</label>
-<input class="form-control" id="waste_amount" name="waste_amount" step="any" type="number"/>
+<input class="form-control" id="waste_amount" name="waste_amount" min="0" step="any" type="number" value="{{ waste_amount or '' }}"/>
 </div>
 <div class="col-md-6">
 <label class="form-label" for="waste_unit">Birim</label>
-<input class="form-control" id="waste_unit" name="waste_unit" placeholder="kg, ton" type="text"/>
+<input class="form-control" id="waste_unit" name="waste_unit" placeholder="kg, ton" type="text" value="{{ waste_unit or '' }}"/>
 </div>
 <div class="col-md-6">
 <label class="form-label" for="disposal_method">Bertaraf Yöntemi</label>
 <select class="form-select" id="disposal_method" name="disposal_method">
-<option value="recycle">Geri Dönüşüm</option>
-<option value="landfill">Düzenli Depolama</option>
-<option value="incineration">Yakma</option>
-<option value="reuse">Yeniden Kullanım</option>
+<option value="recycle" {% if disposal_method == 'recycle' %}selected{% endif %}>Geri Dönüşüm</option>
+<option value="landfill" {% if disposal_method == 'landfill' %}selected{% endif %}>Düzenli Depolama</option>
+<option value="incineration" {% if disposal_method == 'incineration' %}selected{% endif %}>Yakma</option>
+<option value="reuse" {% if disposal_method == 'reuse' %}selected{% endif %}>Yeniden Kullanım</option>
 </select>
 </div>
 </div>

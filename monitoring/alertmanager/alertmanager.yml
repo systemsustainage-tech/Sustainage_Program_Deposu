@@ -1,0 +1,22 @@
+global:
+  resolve_timeout: 5m
+
+route:
+  group_by: ['alertname']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 1h
+  receiver: 'email-slack'
+
+receivers:
+- name: 'email-slack'
+  email_configs:
+  - to: 'admin@sustainage.com'
+    from: 'alertmanager@sustainage.com'
+    smarthost: 'smtp.example.org:587'
+    auth_username: 'alertmanager'
+    auth_identity: 'alertmanager'
+    auth_password: 'password'
+  slack_configs:
+  - api_url: 'https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX'
+    channel: '#alerts'

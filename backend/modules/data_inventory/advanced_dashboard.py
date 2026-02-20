@@ -39,23 +39,21 @@ class DataSource:
     last_updated: str
     is_active: bool
 
-class AdvancedDashboard:
+from backend.core.base_manager import BaseTenantManager
+
+class AdvancedDashboard(BaseTenantManager):
     """Gelişmiş dashboard yöneticisi"""
 
-    def __init__(self, db_path: str = None):
-        self.db_path = db_path or 'data/sdg_desktop.db'
-        self.widgets = {}
-        self.data_sources = {}
+    def __init__(self, db_path: str = None, company_id: Optional[int] = None):
+        super().__init__(db_path, company_id)
         self._create_tables()
 
     def _create_tables(self):
         """Dashboard tablolarını oluştur"""
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-
-            # Dashboard widget'ları
-            cursor.execute("""
+            # Tabloları oluştur (DatabaseManager zaten bağlantıyı yönetir)
+            queries = [
+                """
                 CREATE TABLE IF NOT EXISTS dashboard_widgets (
                     id TEXT PRIMARY KEY,
                     company_id INTEGER NOT NULL,
@@ -68,13 +66,13 @@ class AdvancedDashboard:
                     width INTEGER DEFAULT 4,
                     height INTEGER DEFAULT 3,
                     is_active INTEGER DEFAULT 1,
-                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY(company_id) REFERENCES companies(id)
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+                    -- FOREIGN KEY constraint is handled by logical checks in SQLite usually, 
+                    -- or enforced if PRAGMA foreign_keys=ON. 
+                    -- We rely on BaseTenantManager for isolation.
                 )
-            """)
-
-            # Veri kaynakları
-            cursor.execute("""
+                """,
+                """
                 CREATE TABLE IF NOT EXISTS data_sources (
                     id TEXT PRIMARY KEY,
                     company_id INTEGER NOT NULL,
@@ -85,26 +83,20 @@ class AdvancedDashboard:
                     refresh_interval INTEGER DEFAULT 60,
                     last_updated TEXT,
                     is_active INTEGER DEFAULT 1,
-                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY(company_id) REFERENCES companies(id)
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP
                 )
-            """)
-
-            # Dashboard layout'ları
-            cursor.execute("""
+                """,
+                """
                 CREATE TABLE IF NOT EXISTS dashboard_layouts (
                     id TEXT PRIMARY KEY,
                     company_id INTEGER NOT NULL,
                     layout_name TEXT NOT NULL,
                     layout_config TEXT NOT NULL,
                     is_default INTEGER DEFAULT 0,
-                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY(company_id) REFERENCES companies(id)
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP
                 )
-            """)
-
-            # KPI tanımları
-            cursor.execute("""
+                """,
+                """
                 CREATE TABLE IF NOT EXISTS kpi_definitions (
                     id TEXT PRIMARY KEY,
                     company_id INTEGER NOT NULL,
@@ -115,13 +107,10 @@ class AdvancedDashboard:
                     unit TEXT,
                     category TEXT,
                     is_active INTEGER DEFAULT 1,
-                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY(company_id) REFERENCES companies(id)
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP
                 )
-            """)
-
-            # KPI değerleri
-            cursor.execute("""
+                """,
+                """
                 CREATE TABLE IF NOT EXISTS kpi_values (
                     id TEXT PRIMARY KEY,
                     kpi_id TEXT NOT NULL,
@@ -129,35 +118,34 @@ class AdvancedDashboard:
                     period TEXT NOT NULL,
                     value REAL NOT NULL,
                     calculated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY(kpi_id) REFERENCES kpi_definitions(id),
-                    FOREIGN KEY(company_id) REFERENCES companies(id)
+                    FOREIGN KEY(kpi_id) REFERENCES kpi_definitions(id)
                 )
-            """)
-
-            conn.commit()
-            conn.close()
-
+                """
+            ]
+            
+            for query in queries:
+                self.db.execute_update(query)
+                
         except Exception as e:
             logging.error(f"[HATA] Dashboard tabloları oluşturulamadı: {e}")
 
-    def add_data_source(self, company_id: int, source_name: str, source_type: str,
+    def add_data_source(self, company_id: Optional[int], source_name: str, source_type: str,
                        connection_string: str, query: str, refresh_interval: int = 60) -> str:
         """Veri kaynağı ekle"""
         try:
-            source_id = f"source_{company_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            cid = self._ensure_context(company_id)
+            source_id = f"source_{cid}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-
-            cursor.execute("""
-                INSERT INTO data_sources
-                (id, company_id, source_name, source_type, connection_string, query, refresh_interval)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (source_id, company_id, source_name, source_type, connection_string, query, refresh_interval))
-
-            conn.commit()
-            conn.close()
-
+            data = {
+                'id': source_id,
+                'source_name': source_name,
+                'source_type': source_type,
+                'connection_string': connection_string,
+                'query': query,
+                'refresh_interval': refresh_interval
+            }
+            
+            self.insert('data_sources', data, company_id=cid)
             logging.info(f"[OK] Veri kaynağı eklendi: {source_id}")
             return source_id
 
@@ -165,29 +153,28 @@ class AdvancedDashboard:
             logging.error(f"[HATA] Veri kaynağı eklenemedi: {e}")
             return ""
 
-    def add_dashboard_widget(self, company_id: int, widget_type: str, title: str,
+    def add_dashboard_widget(self, company_id: Optional[int], widget_type: str, title: str,
                            data_source: str, config: Dict[str, Any],
                            position: Tuple[int, int] = (0, 0),
                            size: Tuple[int, int] = (4, 3)) -> str:
         """Dashboard widget ekle"""
         try:
-            widget_id = f"widget_{company_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            cid = self._ensure_context(company_id)
+            widget_id = f"widget_{cid}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-
-            cursor.execute("""
-                INSERT INTO dashboard_widgets
-                (id, company_id, widget_type, title, data_source, config, position_x, position_y, width, height)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                widget_id, company_id, widget_type, title, data_source,
-                json.dumps(config), position[0], position[1], size[0], size[1]
-            ))
-
-            conn.commit()
-            conn.close()
-
+            data = {
+                'id': widget_id,
+                'widget_type': widget_type,
+                'title': title,
+                'data_source': data_source,
+                'config': json.dumps(config),
+                'position_x': position[0],
+                'position_y': position[1],
+                'width': size[0],
+                'height': size[1]
+            }
+            
+            self.insert('dashboard_widgets', data, company_id=cid)
             logging.info(f"[OK] Dashboard widget eklendi: {widget_id}")
             return widget_id
 
@@ -195,23 +182,46 @@ class AdvancedDashboard:
             logging.error(f"[HATA] Dashboard widget eklenemedi: {e}")
             return ""
 
-    def get_dashboard_data(self, company_id: int) -> Dict[str, Any]:
+    def get_dashboard_data(self, company_id: Optional[int] = None) -> Dict[str, Any]:
         """Dashboard verilerini getir"""
         try:
+            cid = self._ensure_context(company_id)
+            
             # Widget'ları al
-            widgets = self._get_widgets(company_id)
+            widgets = self._get_widgets(cid)
 
             # Veri kaynaklarını al
-            data_sources = self._get_data_sources(company_id)
+            data_sources = self._get_data_sources(cid)
 
             # KPI'ları al
-            kpis = self._get_kpis(company_id)
+            kpis = self._get_kpis(cid)
+            
+            # İstatistikler (Şablon uyumluluğu için)
+            stats = {
+                'total_widgets': len(widgets),
+                'active_sources': len(data_sources),
+                'kpi_count': len(kpis),
+                'system_status': 'Active'
+            }
+
+            # Kayıtlar (Şablon uyumluluğu için - KPI listesi)
+            records = []
+            for kpi in kpis:
+                records.append({
+                    'KPI Adı': kpi.get('kpi_name'),
+                    'Değer': f"{kpi.get('value', 0)} {kpi.get('unit', '')}",
+                    'Hedef': kpi.get('target_value'),
+                    'Durum': 'İyi' if (kpi.get('value', 0) or 0) >= (kpi.get('target_value', 0) or 0) else 'Riskli'
+                })
 
             # Dashboard verilerini oluştur
             dashboard_data = {
                 'widgets': widgets,
                 'data_sources': data_sources,
                 'kpis': kpis,
+                'stats': stats,
+                'records': records,
+                'columns': ['KPI Adı', 'Değer', 'Hedef', 'Durum'],
                 'last_updated': datetime.now().isoformat()
             }
 
@@ -224,27 +234,19 @@ class AdvancedDashboard:
     def _get_widgets(self, company_id: int) -> List[Dict[str, Any]]:
         """Widget'ları getir"""
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-
-            cursor.execute("""
-                SELECT * FROM dashboard_widgets WHERE company_id = ? AND is_active = 1
-                ORDER BY position_y, position_x
-            """, (company_id,))
-
+            rows = self.select('dashboard_widgets', company_id=company_id, where="is_active = 1", order_by="position_y, position_x")
+            
             widgets = []
-            for row in cursor.fetchall():
+            for row in rows:
                 widgets.append({
-                    'id': row[0],
-                    'widget_type': row[2],
-                    'title': row[3],
-                    'data_source': row[4],
-                    'config': json.loads(row[5]),
-                    'position': (row[6], row[7]),
-                    'size': (row[8], row[9])
+                    'id': row['id'],
+                    'widget_type': row['widget_type'],
+                    'title': row['title'],
+                    'data_source': row['data_source'],
+                    'config': json.loads(row['config']),
+                    'position': (row['position_x'], row['position_y']),
+                    'size': (row['width'], row['height'])
                 })
-
-            conn.close()
             return widgets
 
         except Exception as e:
@@ -254,26 +256,19 @@ class AdvancedDashboard:
     def _get_data_sources(self, company_id: int) -> List[Dict[str, Any]]:
         """Veri kaynaklarını getir"""
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-
-            cursor.execute("""
-                SELECT * FROM data_sources WHERE company_id = ? AND is_active = 1
-            """, (company_id,))
-
+            rows = self.select('data_sources', company_id=company_id, where="is_active = 1")
+            
             sources = []
-            for row in cursor.fetchall():
+            for row in rows:
                 sources.append({
-                    'id': row[0],
-                    'source_name': row[2],
-                    'source_type': row[3],
-                    'connection_string': row[4],
-                    'query': row[5],
-                    'refresh_interval': row[6],
-                    'last_updated': row[7]
+                    'id': row['id'],
+                    'source_name': row['source_name'],
+                    'source_type': row['source_type'],
+                    'connection_string': row['connection_string'],
+                    'query': row['query'],
+                    'refresh_interval': row['refresh_interval'],
+                    'last_updated': row['last_updated']
                 })
-
-            conn.close()
             return sources
 
         except Exception as e:
@@ -283,33 +278,33 @@ class AdvancedDashboard:
     def _get_kpis(self, company_id: int) -> List[Dict[str, Any]]:
         """KPI'ları getir"""
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-
-            cursor.execute("""
+            # JOIN işlemi BaseTenantManager'da doğrudan desteklenmez, bu yüzden raw query kullanacağız ama company_id'yi inject edeceğiz
+            query = """
                 SELECT kd.*, kv.value, kv.period, kv.calculated_at
                 FROM kpi_definitions kd
                 LEFT JOIN kpi_values kv ON kd.id = kv.kpi_id
                 WHERE kd.company_id = ? AND kd.is_active = 1
                 ORDER BY kd.category, kd.kpi_name
-            """, (company_id,))
-
+            """
+            
+            # BaseTenantManager.db.execute_query doğrudan kullanılabilir
+            rows = self.db.execute_query(query, (company_id,))
+            
             kpis = []
-            for row in cursor.fetchall():
+            for row in rows:
                 kpis.append({
                     'id': row[0],
+                    'company_id': row[1],
                     'kpi_name': row[2],
                     'kpi_description': row[3],
                     'calculation_formula': row[4],
                     'target_value': row[5],
                     'unit': row[6],
                     'category': row[7],
-                    'current_value': row[9],
-                    'period': row[10],
-                    'calculated_at': row[11]
+                    'value': row[8],
+                    'period': row[9],
+                    'calculated_at': row[10]
                 })
-
-            conn.close()
             return kpis
 
         except Exception as e:
@@ -400,20 +395,20 @@ class AdvancedDashboard:
                           unit: str = "", category: str = "") -> str:
         """KPI tanımı ekle"""
         try:
-            kpi_id = f"kpi_{company_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            cid = self._ensure_context(company_id)
+            kpi_id = f"kpi_{cid}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-
-            cursor.execute("""
-                INSERT INTO kpi_definitions
-                (id, company_id, kpi_name, kpi_description, calculation_formula, target_value, unit, category)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """, (kpi_id, company_id, kpi_name, description, calculation_formula, target_value, unit, category))
-
-            conn.commit()
-            conn.close()
-
+            data = {
+                'id': kpi_id,
+                'kpi_name': kpi_name,
+                'kpi_description': description,
+                'calculation_formula': calculation_formula,
+                'target_value': target_value,
+                'unit': unit,
+                'category': category
+            }
+            
+            self.insert('kpi_definitions', data, company_id=cid)
             logging.info(f"[OK] KPI tanımı eklendi: {kpi_id}")
             return kpi_id
 
@@ -454,17 +449,13 @@ class AdvancedDashboard:
     def _get_kpi_definition(self, kpi_id: str) -> Optional[Dict[str, Any]]:
         """KPI tanımını al"""
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-
-            cursor.execute("""
-                SELECT * FROM kpi_definitions WHERE id = ?
-            """, (kpi_id,))
-
-            row = cursor.fetchone()
-            conn.close()
-
-            if row:
+            # Not: BaseTenantManager.select genellikle company_id filtreler, ancak ID ile doğrudan seçimde gerek olmayabilir
+            # Yine de güvenli tarafta kalmak için raw query kullanabiliriz veya select
+            # Burada company_id bağlamı olmadığı için raw query daha güvenli
+            
+            rows = self.db.execute_query("SELECT * FROM kpi_definitions WHERE id = ?", (kpi_id,))
+            if rows:
+                row = rows[0]
                 return {
                     'id': row[0],
                     'kpi_name': row[2],
@@ -481,19 +472,15 @@ class AdvancedDashboard:
     def _save_kpi_value(self, kpi_id: str, company_id: int, period: str, value: float):
         """KPI değerini kaydet"""
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-
+            cid = self._ensure_context(company_id)
             value_id = f"value_{kpi_id}_{period}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
-            cursor.execute("""
+            # Upsert mantığı
+            self.db.execute_update("""
                 INSERT OR REPLACE INTO kpi_values
                 (id, kpi_id, company_id, period, value)
                 VALUES (?, ?, ?, ?, ?)
-            """, (value_id, kpi_id, company_id, period, value))
-
-            conn.commit()
-            conn.close()
+            """, (value_id, kpi_id, cid, period, value))
 
         except Exception as e:
             logging.error(f"[HATA] KPI değeri kaydedilemedi: {e}")

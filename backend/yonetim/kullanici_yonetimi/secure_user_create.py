@@ -10,13 +10,13 @@ GÜVENLİ KULLANICI OLUŞTURMA
 """
 
 import secrets
-import sqlite3
 import string
 from datetime import datetime
 from typing import Dict, Optional, Tuple
 
 from services.email_service import EmailService
 from utils.language_manager import LanguageManager
+from backend.core.database_manager import DatabaseManager
 
 lm = LanguageManager()
 
@@ -61,11 +61,10 @@ def audit_log(db_path: str, action: str, **kwargs) -> None:
         'success': kwargs.get('success'),
         'user_id': kwargs.get('user_id'),
     })
-    conn = sqlite3.connect(db_path)
-    try:
+    db = DatabaseManager(db_path)
+    with db.get_connection() as conn:
         write_audit(conn, actor, action, details)
-    finally:
-        conn.close()
+        conn.commit()
 
 
 def generate_temp_password(length: int = 12) -> str:
@@ -151,131 +150,132 @@ def create_user_with_temp_password(
     # Şifreyi hash'le
     password_hash = hash_password(temp_password)
 
-    conn = sqlite3.connect(db_path)
-    cur = conn.cursor()
-
-    try:
-        # Kullanıcı adı benzersizliği kontrol et
-        cur.execute("SELECT id FROM users WHERE LOWER(username) = LOWER(?)", (username,))
-        if cur.fetchone():
-            return False, lm.tr("err_username_exists", "Kullanıcı adı '{}' zaten kullanılıyor").format(username), None, None
-
-        # Email benzersizliği kontrol et
-        cur.execute("SELECT id FROM users WHERE LOWER(email) = LOWER(?)", (email,))
-        if cur.fetchone():
-            return False, lm.tr("err_email_exists", "Email '{}' zaten kullanılıyor").format(email), None, None
-
-        # Get table info to check for columns
-        cur.execute("PRAGMA table_info(users)")
-        columns_info = cur.fetchall()
-        column_names = [info[1] for info in columns_info]
-
-        # Dynamic column availability
-        has_display_name = 'display_name' in column_names
-        has_first_name = 'first_name' in column_names
-        has_last_name = 'last_name' in column_names
-        has_role = 'role' in column_names
-        has_must_change_password = 'must_change_password' in column_names
-        has_failed_attempts = 'failed_attempts' in column_names
-        has_login_attempts = 'login_attempts' in column_names
-        has_pw_hash_version = 'pw_hash_version' in column_names
-        
-        # Base columns
-        insert_cols = ['username', 'email', 'password_hash', 'created_at']
-        insert_vals = [username, email, password_hash, datetime.now().isoformat()]
-
-        # Active status
-        if 'is_active' in column_names:
-            insert_cols.append('is_active')
-            insert_vals.append(1 if is_active else 0)
-
-        # Name handling
-        if has_display_name:
-            insert_cols.append('display_name')
-            insert_vals.append(display_name)
-        elif has_first_name and has_last_name:
-            # Split display_name or use defaults
-            parts = display_name.split(' ', 1) if display_name else [username, '']
-            first = parts[0]
-            last = parts[1] if len(parts) > 1 else ''
-            insert_cols.extend(['first_name', 'last_name'])
-            insert_vals.extend([first, last])
-            
-        # Role
-        if has_role:
-            insert_cols.append('role')
-            insert_vals.append(role)
-            
-        # Password change requirement
-        if has_must_change_password:
-            insert_cols.append('must_change_password')
-            insert_vals.append(1)
-            
-        # Failed attempts
-        if has_failed_attempts:
-            insert_cols.append('failed_attempts')
-            insert_vals.append(0)
-        elif has_login_attempts:
-            insert_cols.append('login_attempts')
-            insert_vals.append(0)
-            
-        # Hash version
-        if has_pw_hash_version:
-            insert_cols.append('pw_hash_version')
-            insert_vals.append('argon2' if password_hash.startswith('argon2$') else 'pbkdf2')
-
-        placeholders = ', '.join(['?'] * len(insert_cols))
-        col_str = ', '.join(insert_cols)
-        
-        query = f"INSERT INTO users ({col_str}) VALUES ({placeholders})"  # nosec B608 - col_str is constructed from hardcoded safe strings
-        cur.execute(query, tuple(insert_vals))
-
-        user_id = cur.lastrowid
-        conn.commit()
-
-        # Audit log
-        audit_log(
-            db_path,
-            "USER_CREATE",
-            user_id=created_by_user_id,
-            username=f"admin_created_{username}",
-            success=True,
-            metadata={
-                "created_user_id": user_id,
-                "created_username": username,
-                "role": role,
-                "temp_password_used": True
-            }
-        )
+    db = DatabaseManager(db_path)
+    with db.get_connection() as conn:
         try:
-            email_service = EmailService()
-            email_service.send_new_user_welcome(
-                to_email=email,
-                user_name=(display_name or username),
-                login_url="https://sustainage.cloud/login",
-                program_name=lm.tr("app_name_sdg", "Sustainage SDG Platformu"),
-                short_description=lm.tr("email_welcome_short_desc", "Hesabınız oluşturuldu ve Sustainage SDG programına erişim sağlandı."),
-                reason=lm.tr("email_welcome_reason", "Admin tarafından kullanıcı oluşturuldu"),
-                support_email="sdg@digage.tr",
+            cur = conn.cursor()
+
+            # Kullanıcı adı benzersizliği kontrol et
+            cur.execute("SELECT id FROM users WHERE LOWER(username) = LOWER(?)", (username,))
+            if cur.fetchone():
+                return False, lm.tr("err_username_exists", "Kullanıcı adı '{}' zaten kullanılıyor").format(username), None, None
+
+            # Email benzersizliği kontrol et
+            cur.execute("SELECT id FROM users WHERE LOWER(email) = LOWER(?)", (email,))
+            if cur.fetchone():
+                return False, lm.tr("err_email_exists", "Email '{}' zaten kullanılıyor").format(email), None, None
+
+            # Get table info to check for columns
+            cur.execute("PRAGMA table_info(users)")
+            columns_info = cur.fetchall()
+            column_names = [info[1] for info in columns_info] # sqlite3.Row or tuple?
+            # If row_factory is set to sqlite3.Row, access by index is still valid for fetching column names from PRAGMA
+            # But let's be safe. DatabaseManager sets row_factory=sqlite3.Row
+            # row[1] is name in PRAGMA table_info
+            
+            # Dynamic column availability
+            has_display_name = 'display_name' in column_names
+            has_first_name = 'first_name' in column_names
+            has_last_name = 'last_name' in column_names
+            has_role = 'role' in column_names
+            has_must_change_password = 'must_change_password' in column_names
+            has_failed_attempts = 'failed_attempts' in column_names
+            has_login_attempts = 'login_attempts' in column_names
+            has_pw_hash_version = 'pw_hash_version' in column_names
+            
+            # Base columns
+            insert_cols = ['username', 'email', 'password_hash', 'created_at']
+            insert_vals = [username, email, password_hash, datetime.now().isoformat()]
+
+            # Active status
+            if 'is_active' in column_names:
+                insert_cols.append('is_active')
+                insert_vals.append(1 if is_active else 0)
+
+            # Name handling
+            if has_display_name:
+                insert_cols.append('display_name')
+                insert_vals.append(display_name)
+            elif has_first_name and has_last_name:
+                # Split display_name or use defaults
+                parts = display_name.split(' ', 1) if display_name else [username, '']
+                first = parts[0]
+                last = parts[1] if len(parts) > 1 else ''
+                insert_cols.extend(['first_name', 'last_name'])
+                insert_vals.extend([first, last])
+                
+            # Role
+            if has_role:
+                insert_cols.append('role')
+                insert_vals.append(role)
+                
+            # Password change requirement
+            if has_must_change_password:
+                insert_cols.append('must_change_password')
+                insert_vals.append(1)
+                
+            # Failed attempts
+            if has_failed_attempts:
+                insert_cols.append('failed_attempts')
+                insert_vals.append(0)
+            elif has_login_attempts:
+                insert_cols.append('login_attempts')
+                insert_vals.append(0)
+                
+            # Hash version
+            if has_pw_hash_version:
+                insert_cols.append('pw_hash_version')
+                insert_vals.append('argon2' if password_hash.startswith('argon2$') else 'pbkdf2')
+
+            placeholders = ', '.join(['?'] * len(insert_cols))
+            col_str = ', '.join(insert_cols)
+            
+            query = f"INSERT INTO users ({col_str}) VALUES ({placeholders})"  # nosec B608 - col_str is constructed from hardcoded safe strings
+            cur.execute(query, tuple(insert_vals))
+
+            user_id = cur.lastrowid
+            conn.commit()
+
+            # Audit log
+            audit_log(
+                db_path,
+                "USER_CREATE",
+                user_id=created_by_user_id,
+                username=f"admin_created_{username}",
+                success=True,
+                metadata={
+                    "created_user_id": user_id,
+                    "created_username": username,
+                    "role": role,
+                    "temp_password_used": True
+                }
             )
+            try:
+                email_service = EmailService()
+                email_service.send_new_user_welcome(
+                    to_email=email,
+                    user_name=(display_name or username),
+                    login_url="https://sustainage.cloud/login",
+                    program_name=lm.tr("app_name_sdg", "Sustainage SDG Platformu"),
+                    short_description=lm.tr("email_welcome_short_desc", "Hesabınız oluşturuldu ve Sustainage SDG programına erişim sağlandı."),
+                    reason=lm.tr("email_welcome_reason", "Admin tarafından kullanıcı oluşturuldu"),
+                    support_email="sdg@digage.tr",
+                )
+            except Exception as e:
+                logging.error(f'Silent error in secure_user_create.py: {str(e)}')
+
+            return True, lm.tr("msg_user_created_success", "Kullanıcı başarıyla oluşturuldu"), user_id, temp_password
+
         except Exception as e:
-            logging.error(f'Silent error in secure_user_create.py: {str(e)}')
-
-        return True, lm.tr("msg_user_created_success", "Kullanıcı başarıyla oluşturuldu"), user_id, temp_password
-
-    except Exception as e:
-        conn.rollback()
-        audit_log(
-            db_path,
-            "USER_CREATE",
-            user_id=created_by_user_id,
-            success=False,
-            metadata={"error": str(e), "username": username}
-        )
-        return False, lm.tr("err_user_creation_failed", "Kullanıcı oluşturulamadı: {}").format(str(e)), None, None
-
-    finally:
-        conn.close()
+            conn.rollback()
+            audit_log(
+                db_path,
+                "USER_CREATE",
+                user_id=created_by_user_id,
+                success=False,
+                metadata={"error": str(e), "username": username}
+            )
+            return False, lm.tr("err_user_creation_failed", "Kullanıcı oluşturulamadı: {}").format(str(e)), None, None
 
 
 def bulk_create_users_from_list(

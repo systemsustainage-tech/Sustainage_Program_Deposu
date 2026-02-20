@@ -10,143 +10,135 @@ import json
 import os
 import sqlite3
 from datetime import datetime, timedelta
-from typing import Dict, List
+from typing import Dict, List, Optional
+try:
+    from backend.core.base_manager import BaseTenantManager
+except ImportError:
+    from core.base_manager import BaseTenantManager
 
 
-class RiskOpportunityManager:
+class RiskOpportunityManager(BaseTenantManager):
     """Risk ve fırsatlar yöneticisi"""
 
-    def __init__(self, db_path: str = None) -> None:
-        self.db_path = db_path or os.path.join(os.getcwd(), 'data', 'sdg_desktop.sqlite')
+    def __init__(self, db_path: str = None, company_id: Optional[int] = None) -> None:
+        super().__init__(db_path, company_id)
         self._ensure_tables()
 
     def _ensure_tables(self) -> None:
         """Gerekli tabloları oluştur"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        # Riskler tablosu
+        self.execute_update("""
+            CREATE TABLE IF NOT EXISTS sustainability_risks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                company_id INTEGER NOT NULL,
+                risk_title TEXT NOT NULL,
+                description TEXT,
+                risk_category TEXT NOT NULL, -- 'environmental', 'social', 'economic', 'governance', 'operational'
+                risk_type TEXT NOT NULL, -- 'strategic', 'operational', 'financial', 'compliance', 'reputational'
+                impact_level TEXT NOT NULL, -- 'low', 'medium', 'high', 'critical'
+                probability_level TEXT NOT NULL, -- 'low', 'medium', 'high', 'very_high'
+                risk_score INTEGER, -- calculated from impact * probability
+                potential_impact TEXT,
+                root_causes TEXT, -- JSON array
+                affected_stakeholders TEXT, -- JSON array
+                current_controls TEXT, -- JSON array
+                mitigation_measures TEXT, -- JSON array
+                responsible_department TEXT,
+                risk_owner TEXT,
+                assessment_date TEXT NOT NULL,
+                next_assessment_date TEXT,
+                status TEXT DEFAULT 'active', -- 'active', 'mitigated', 'closed', 'transferred'
+                created_by INTEGER,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT
+            )
+        """, skip_tenant_filter=True)
 
-        try:
-            # Riskler tablosu
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS sustainability_risks (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    company_id INTEGER NOT NULL,
-                    risk_title TEXT NOT NULL,
-                    description TEXT,
-                    risk_category TEXT NOT NULL, -- 'environmental', 'social', 'economic', 'governance', 'operational'
-                    risk_type TEXT NOT NULL, -- 'strategic', 'operational', 'financial', 'compliance', 'reputational'
-                    impact_level TEXT NOT NULL, -- 'low', 'medium', 'high', 'critical'
-                    probability_level TEXT NOT NULL, -- 'low', 'medium', 'high', 'very_high'
-                    risk_score INTEGER, -- calculated from impact * probability
-                    potential_impact TEXT,
-                    root_causes TEXT, -- JSON array
-                    affected_stakeholders TEXT, -- JSON array
-                    current_controls TEXT, -- JSON array
-                    mitigation_measures TEXT, -- JSON array
-                    responsible_department TEXT,
-                    risk_owner TEXT,
-                    assessment_date TEXT NOT NULL,
-                    next_assessment_date TEXT,
-                    status TEXT DEFAULT 'active', -- 'active', 'mitigated', 'closed', 'transferred'
-                    created_by INTEGER,
-                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TEXT
-                )
-            """)
+        # Fırsatlar tablosu
+        self.execute_update("""
+            CREATE TABLE IF NOT EXISTS sustainability_opportunities (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                company_id INTEGER NOT NULL,
+                opportunity_title TEXT NOT NULL,
+                description TEXT,
+                opportunity_category TEXT NOT NULL, -- 'environmental', 'social', 'economic', 'governance'
+                opportunity_type TEXT NOT NULL, -- 'innovation', 'market', 'partnership', 'efficiency', 'reputation'
+                potential_value TEXT, -- monetary or qualitative
+                probability_level TEXT NOT NULL, -- 'low', 'medium', 'high', 'very_high'
+                implementation_effort TEXT NOT NULL, -- 'low', 'medium', 'high'
+                opportunity_score INTEGER, -- calculated from value * probability / effort
+                expected_benefits TEXT,
+                required_resources TEXT, -- JSON array
+                implementation_plan TEXT, -- JSON array
+                success_metrics TEXT, -- JSON array
+                responsible_department TEXT,
+                opportunity_owner TEXT,
+                assessment_date TEXT NOT NULL,
+                target_implementation_date TEXT,
+                status TEXT DEFAULT 'identified', -- 'identified', 'evaluating', 'implementing', 'realized', 'cancelled'
+                created_by INTEGER,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT
+            )
+        """, skip_tenant_filter=True)
 
-            # Fırsatlar tablosu
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS sustainability_opportunities (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    company_id INTEGER NOT NULL,
-                    opportunity_title TEXT NOT NULL,
-                    description TEXT,
-                    opportunity_category TEXT NOT NULL, -- 'environmental', 'social', 'economic', 'governance'
-                    opportunity_type TEXT NOT NULL, -- 'innovation', 'market', 'partnership', 'efficiency', 'reputation'
-                    potential_value TEXT, -- monetary or qualitative
-                    probability_level TEXT NOT NULL, -- 'low', 'medium', 'high', 'very_high'
-                    implementation_effort TEXT NOT NULL, -- 'low', 'medium', 'high'
-                    opportunity_score INTEGER, -- calculated from value * probability / effort
-                    expected_benefits TEXT,
-                    required_resources TEXT, -- JSON array
-                    implementation_plan TEXT, -- JSON array
-                    success_metrics TEXT, -- JSON array
-                    responsible_department TEXT,
-                    opportunity_owner TEXT,
-                    assessment_date TEXT NOT NULL,
-                    target_implementation_date TEXT,
-                    status TEXT DEFAULT 'identified', -- 'identified', 'evaluating', 'implementing', 'realized', 'cancelled'
-                    created_by INTEGER,
-                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TEXT
-                )
-            """)
+        # Risk değerlendirmeleri
+        self.execute_update("""
+            CREATE TABLE IF NOT EXISTS risk_assessments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                risk_id INTEGER NOT NULL,
+                assessment_date TEXT NOT NULL,
+                assessor_name TEXT NOT NULL,
+                impact_level TEXT NOT NULL,
+                probability_level TEXT NOT NULL,
+                risk_score INTEGER NOT NULL,
+                assessment_rationale TEXT,
+                new_mitigation_measures TEXT, -- JSON array
+                status_change TEXT, -- if any
+                next_assessment_date TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (risk_id) REFERENCES sustainability_risks(id)
+            )
+        """, skip_tenant_filter=True)
 
-            # Risk değerlendirmeleri
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS risk_assessments (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    risk_id INTEGER NOT NULL,
-                    assessment_date TEXT NOT NULL,
-                    assessor_name TEXT NOT NULL,
-                    impact_level TEXT NOT NULL,
-                    probability_level TEXT NOT NULL,
-                    risk_score INTEGER NOT NULL,
-                    assessment_rationale TEXT,
-                    new_mitigation_measures TEXT, -- JSON array
-                    status_change TEXT, -- if any
-                    next_assessment_date TEXT,
-                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (risk_id) REFERENCES sustainability_risks(id)
-                )
-            """)
+        # Fırsat değerlendirmeleri
+        self.execute_update("""
+            CREATE TABLE IF NOT EXISTS opportunity_assessments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                opportunity_id INTEGER NOT NULL,
+                assessment_date TEXT NOT NULL,
+                assessor_name TEXT NOT NULL,
+                potential_value TEXT,
+                probability_level TEXT NOT NULL,
+                implementation_effort TEXT NOT NULL,
+                opportunity_score INTEGER NOT NULL,
+                assessment_rationale TEXT,
+                implementation_progress TEXT, -- percentage
+                status_change TEXT, -- if any
+                next_assessment_date TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (opportunity_id) REFERENCES sustainability_opportunities(id)
+            )
+        """, skip_tenant_filter=True)
 
-            # Fırsat değerlendirmeleri
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS opportunity_assessments (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    opportunity_id INTEGER NOT NULL,
-                    assessment_date TEXT NOT NULL,
-                    assessor_name TEXT NOT NULL,
-                    potential_value TEXT,
-                    probability_level TEXT NOT NULL,
-                    implementation_effort TEXT NOT NULL,
-                    opportunity_score INTEGER NOT NULL,
-                    assessment_rationale TEXT,
-                    implementation_progress TEXT, -- percentage
-                    status_change TEXT, -- if any
-                    next_assessment_date TEXT,
-                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (opportunity_id) REFERENCES sustainability_opportunities(id)
-                )
-            """)
+        # Risk-Fırsat matrisi
+        self.execute_update("""
+            CREATE TABLE IF NOT EXISTS risk_opportunity_matrix (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                company_id INTEGER NOT NULL,
+                matrix_name TEXT NOT NULL,
+                description TEXT,
+                matrix_data TEXT NOT NULL, -- JSON matrix data
+                assessment_date TEXT NOT NULL,
+                created_by INTEGER,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        """, skip_tenant_filter=True)
 
-            # Risk-Fırsat matrisi
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS risk_opportunity_matrix (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    company_id INTEGER NOT NULL,
-                    matrix_name TEXT NOT NULL,
-                    description TEXT,
-                    matrix_data TEXT NOT NULL, -- JSON matrix data
-                    assessment_date TEXT NOT NULL,
-                    created_by INTEGER,
-                    created_at TEXT DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
-
-            conn.commit()
-            logging.info("[OK] Risk ve fırsat tabloları hazır")
-
-        except Exception as e:
-            logging.error(f"[HATA] Tablo oluşturma hatası: {e}")
-        finally:
-            conn.close()
+        logging.info("[OK] Risk ve fırsat tabloları hazır")
 
     def get_dashboard_stats(self, company_id: int) -> Dict:
         """Dashboard için özet istatistikleri getir"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
         stats = {
             'total_risks': 0,
             'high_risks': 0,
@@ -154,24 +146,44 @@ class RiskOpportunityManager:
             'high_value_opportunities': 0
         }
         try:
-            cursor.execute("SELECT COUNT(*) FROM sustainability_risks WHERE company_id = ? AND status = 'active'", (company_id,))
-            stats['total_risks'] = cursor.fetchone()[0] or 0
+            # Note: execute_query returns a list of rows (dicts)
             
-            cursor.execute("SELECT COUNT(*) FROM sustainability_risks WHERE company_id = ? AND status = 'active' AND (risk_score >= 9 OR impact_level IN ('high', 'critical'))", (company_id,))
-            stats['high_risks'] = cursor.fetchone()[0] or 0
+            # Total Risks
+            res = self.execute_query(
+                "SELECT COUNT(*) as count FROM sustainability_risks WHERE company_id = ? AND status = 'active'", 
+                (company_id,),
+                company_id=company_id
+            )
+            stats['total_risks'] = res[0]['count'] if res else 0
             
-            cursor.execute("SELECT COUNT(*) FROM sustainability_opportunities WHERE company_id = ? AND status != 'cancelled'", (company_id,))
-            stats['total_opportunities'] = cursor.fetchone()[0] or 0
+            # High Risks
+            res = self.execute_query(
+                "SELECT COUNT(*) as count FROM sustainability_risks WHERE company_id = ? AND status = 'active' AND (risk_score >= 9 OR impact_level IN ('high', 'critical'))", 
+                (company_id,),
+                company_id=company_id
+            )
+            stats['high_risks'] = res[0]['count'] if res else 0
             
-            cursor.execute("SELECT COUNT(*) FROM sustainability_opportunities WHERE company_id = ? AND status != 'cancelled' AND (opportunity_score >= 9 OR potential_value IN ('high', 'very_high'))", (company_id,))
-            stats['high_value_opportunities'] = cursor.fetchone()[0] or 0
+            # Total Opportunities
+            res = self.execute_query(
+                "SELECT COUNT(*) as count FROM sustainability_opportunities WHERE company_id = ? AND status != 'cancelled'", 
+                (company_id,),
+                company_id=company_id
+            )
+            stats['total_opportunities'] = res[0]['count'] if res else 0
+            
+            # High Value Opportunities
+            res = self.execute_query(
+                "SELECT COUNT(*) as count FROM sustainability_opportunities WHERE company_id = ? AND status != 'cancelled' AND (opportunity_score >= 9 OR potential_value IN ('high', 'very_high'))", 
+                (company_id,),
+                company_id=company_id
+            )
+            stats['high_value_opportunities'] = res[0]['count'] if res else 0
             
             return stats
         except Exception as e:
             logging.error(f"Risk/Fırsat istatistikleri getirme hatası: {e}")
             return stats
-        finally:
-            conn.close()
 
     def calculate_risk_score(self, impact_level: str, probability_level: str) -> int:
         """Risk skorunu hesapla"""
@@ -204,69 +216,35 @@ class RiskOpportunityManager:
                    risk_owner: str = "", created_by: int = None) -> int:
         """
         Yeni risk kaydı oluştur
-        
-        Args:
-            company_id: Şirket ID
-            risk_title: Risk başlığı
-            description: Açıklama
-            risk_category: Risk kategorisi
-            risk_type: Risk türü
-            impact_level: Etki seviyesi
-            probability_level: Olasılık seviyesi
-            potential_impact: Potansiyel etki
-            root_causes: Kök nedenler listesi
-            affected_stakeholders: Etkilenen paydaşlar listesi
-            current_controls: Mevcut kontroller listesi
-            mitigation_measures: Azaltma önlemleri listesi
-            responsible_department: Sorumlu departman
-            risk_owner: Risk sahibi
-            created_by: Oluşturan kullanıcı ID
-        
-        Returns:
-            Oluşturulan risk ID'si
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
-        try:
-            # Risk skorunu hesapla
-            risk_score = self.calculate_risk_score(impact_level, probability_level)
-
-            # Sonraki değerlendirme tarihini hesapla (6 ay sonra)
-            next_assessment = (datetime.now() + timedelta(days=180)).strftime('%Y-%m-%d')
-
-            cursor.execute("""
-                INSERT INTO sustainability_risks 
-                (company_id, risk_title, description, risk_category, risk_type, 
-                 impact_level, probability_level, risk_score, potential_impact,
-                 root_causes, affected_stakeholders, current_controls, mitigation_measures,
-                 responsible_department, risk_owner, assessment_date, next_assessment_date, created_by)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                company_id, risk_title, description, risk_category, risk_type,
-                impact_level, probability_level, risk_score, potential_impact,
-                json.dumps(root_causes or []),
-                json.dumps(affected_stakeholders or []),
-                json.dumps(current_controls or []),
-                json.dumps(mitigation_measures or []),
-                responsible_department, risk_owner,
-                datetime.now().strftime('%Y-%m-%d'),
-                next_assessment,
-                created_by
-            ))
-
-            risk_id = cursor.lastrowid
-            conn.commit()
-
-            logging.info(f"[OK] Risk kaydı oluşturuldu: {risk_title} (ID: {risk_id}, Skor: {risk_score})")
-            return risk_id
-
-        except Exception as e:
-            conn.rollback()
-            logging.error(f"[HATA] Risk oluşturma hatası: {e}")
-            raise
-        finally:
-            conn.close()
+        risk_score = self.calculate_risk_score(impact_level, probability_level)
+        
+        risk_id = self.insert(
+            "sustainability_risks",
+            {
+                "company_id": company_id,
+                "risk_title": risk_title,
+                "description": description,
+                "risk_category": risk_category,
+                "risk_type": risk_type,
+                "impact_level": impact_level,
+                "probability_level": probability_level,
+                "risk_score": risk_score,
+                "potential_impact": potential_impact,
+                "root_causes": json.dumps(root_causes or []),
+                "affected_stakeholders": json.dumps(affected_stakeholders or []),
+                "current_controls": json.dumps(current_controls or []),
+                "mitigation_measures": json.dumps(mitigation_measures or []),
+                "responsible_department": responsible_department,
+                "risk_owner": risk_owner,
+                "assessment_date": datetime.now().strftime('%Y-%m-%d'),
+                "created_by": created_by
+            },
+            company_id=company_id
+        )
+        
+        logging.info(f"[OK] Risk kaydı oluşturuldu: {risk_title} (ID: {risk_id})")
+        return risk_id
 
     def create_opportunity(self, company_id: int, opportunity_title: str, description: str = "",
                           opportunity_category: str = "environmental", opportunity_type: str = "innovation",

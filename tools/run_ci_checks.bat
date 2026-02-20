@@ -18,6 +18,27 @@ if "%EXIT_CODE%" NEQ "0" (
     exit /b 1
 )
 
+echo [CI] Auditing Translations...
+python audit_translations.py
+
+echo [CI] Preparing Frontend Build Assets...
+python prepare_frontend_build.py
+if %ERRORLEVEL% NEQ 0 (
+    echo [CI] ERROR: Frontend preparation failed!
+    popd
+    exit /b 1
+)
+
+echo [CI] Fetching Latest Standards Info...
+python fetch_latest_standards.py
+
+echo [CI] Running Security and Quality Scan...
+python run_security_scan.py
+if %ERRORLEVEL% NEQ 0 (
+    echo [CI] WARNING: Security issues found. Please review the report.
+    :: We don't fail build on warnings yet, but in strict mode we should.
+)
+
 echo [CI] Running Translation Tests...
 python ../tests/test_translations.py
 if %ERRORLEVEL% NEQ 0 (

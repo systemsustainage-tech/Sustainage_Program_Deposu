@@ -1,0 +1,14 @@
+
+--- Test Sonuçları ---
+Toplam İstek: 122
+Başarılı İstek: 5
+Hatalı İstek: 117
+Hata Dağılımı: {500: 117}
+Ortalama Gecikme: 2.74 ms
+Min Gecikme: 1.75 ms
+Max Gecikme: 3.16 ms
+95. Persentil: 3.19 ms
+Saniye Başına İstek (RPS): 0.33
+
+--- Öneriler ---
+! Hatalar alındı. Logları kontrol edin (500/502/504).

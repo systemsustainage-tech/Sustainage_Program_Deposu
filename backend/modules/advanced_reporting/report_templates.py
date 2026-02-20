@@ -10,10 +10,10 @@ GELİŞMİŞ RAPORLAMA SİSTEMİ
 import logging
 import json
 import os
-import sqlite3
-from dataclasses import dataclass
+import uuid
+from dataclasses import dataclass, asdict
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import openpyxl
 from docx import Document
@@ -25,6 +25,10 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import inch
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle, PageBreak
+
+# Backend Imports
+from backend.core.base_manager import BaseTenantManager
+from backend.core.database_manager import DatabaseManager
 
 # Try to import font registration, if fails, define dummy
 try:
@@ -193,23 +197,30 @@ def _add_turkish_heading(doc, text, level=1, font_name='Calibri'):
     return heading
 
 
-class AdvancedReportTemplates:
+class AdvancedReportTemplates(BaseTenantManager):
     """Gelişmiş rapor şablonları yöneticisi"""
 
-    def __init__(self, db_path: str = None):
-        self.db_path = db_path or 'data/sdg_desktop.db'
+    def __init__(self, db_path: str = None, company_id: Optional[int] = None):
+        if not db_path:
+            # Varsayılan path
+            db_path = 'backend/data/sdg_desktop.sqlite'
+        
+        # Absolute path kontrolü
+        if not os.path.isabs(db_path):
+            base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
+            db_path = os.path.join(base_dir, db_path)
+
+        super().__init__(db_path, company_id=company_id)
+        
         self.templates = {}
-        self._create_tables()
+        self._ensure_schema()
         self._load_default_templates()
 
-    def _create_tables(self):
+    def _ensure_schema(self):
         """Raporlama tablolarını oluştur"""
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-
             # Rapor şablonları
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS report_templates (
                     id TEXT PRIMARY KEY,
                     template_name TEXT NOT NULL,
@@ -223,7 +234,7 @@ class AdvancedReportTemplates:
             """)
 
             # Rapor bölümleri
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS report_sections (
                     id TEXT PRIMARY KEY,
                     template_id TEXT NOT NULL,
@@ -238,7 +249,7 @@ class AdvancedReportTemplates:
             """)
 
             # Rapor oluşturma geçmişi
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS report_generation_log (
                     id TEXT PRIMARY KEY,
                     company_id INTEGER NOT NULL,
@@ -255,7 +266,7 @@ class AdvancedReportTemplates:
             """)
 
             # Rapor özelleştirmeleri
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS report_customizations (
                     id TEXT PRIMARY KEY,
                     company_id INTEGER NOT NULL,
@@ -267,9 +278,6 @@ class AdvancedReportTemplates:
                     FOREIGN KEY(template_id) REFERENCES report_templates(id)
                 )
             """)
-
-            conn.commit()
-            conn.close()
 
         except Exception as e:
             logging.error(f"[HATA] Raporlama tabloları oluşturulamadı: {e}")
@@ -360,9 +368,7 @@ class AdvancedReportTemplates:
     def _save_section(self, section: ReportSection):
         """Bölümü kaydet"""
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-            cursor.execute("""
+            self.execute_update("""
                 INSERT OR REPLACE INTO report_sections
                 (id, template_id, section_name, section_type, content, order_index, is_required)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -371,32 +377,24 @@ class AdvancedReportTemplates:
                 section.section_type, section.content, section.order,
                 1 if section.is_required else 0
             ))
-            conn.commit()
-            conn.close()
         except Exception as e:
             logging.error(f"[HATA] Bölüm kaydedilemedi: {e}")
 
     def delete_section(self, section_id: str) -> bool:
         """Bölümü sil (Zorunlu bölümler silinemez)"""
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-            
             # Kontrol et
-            cursor.execute("SELECT is_required FROM report_sections WHERE id = ?", (section_id,))
-            result = cursor.fetchone()
-            
-            if not result:
+            rows = self.execute_query("SELECT is_required FROM report_sections WHERE id = ?", (section_id,))
+            if not rows:
                 logging.warning(f"Silinecek bölüm bulunamadı: {section_id}")
                 return False
                 
-            if result[0] == 1:
+            result = rows[0]
+            if result['is_required'] == 1:
                 logging.warning(f"Zorunlu bölüm silinemez: {section_id}")
                 return False
                 
-            cursor.execute("DELETE FROM report_sections WHERE id = ?", (section_id,))
-            conn.commit()
-            conn.close()
+            self.execute_update("DELETE FROM report_sections WHERE id = ?", (section_id,))
             return True
             
         except Exception as e:
@@ -406,10 +404,7 @@ class AdvancedReportTemplates:
     def _save_template(self, template: ReportTemplate):
         """Şablonu kaydet"""
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-
-            cursor.execute("""
+            self.execute_update("""
                 INSERT OR REPLACE INTO report_templates
                 (id, template_name, template_type, category, language, template_config, is_active, created_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -418,10 +413,6 @@ class AdvancedReportTemplates:
                 template.category, template.language, json.dumps(template.template_config),
                 template.is_active, template.created_at
             ))
-
-            conn.commit()
-            conn.close()
-
         except Exception as e:
             logging.error(f"[HATA] Şablon kaydedilemedi: {e}")
 
@@ -429,10 +420,6 @@ class AdvancedReportTemplates:
         """Şablon ID'sine göre rapor oluştur"""
         try:
             if template_id not in self.templates:
-                # Veritabanından yüklemeyi dene (hafızada yoksa)
-                # Şimdilik varsayalım ki load_default_templates her şeyi yüklüyor
-                # veya get_available_templates kullanıcısı bu ID'yi oradan aldı.
-                # Basitçe self.templates'e güvenelim.
                 logging.error(f"Şablon bulunamadı: {template_id}")
                 return ""
 
@@ -863,37 +850,31 @@ class AdvancedReportTemplates:
     def _save_generation_log(self, company_id: int, template_id: str, report_name: str, file_path: str):
         """Rapor oluşturma geçmişini kaydet"""
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-            import uuid
             log_id = f"log_{company_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{str(uuid.uuid4())[:8]}"
-            cursor.execute("""
+            self.execute_update("""
                 INSERT INTO report_generation_log
                 (id, company_id, template_id, report_name, file_path, status)
                 VALUES (?, ?, ?, ?, ?, ?)
             """, (log_id, company_id, template_id, report_name, file_path, 'success'))
-            conn.commit()
-            conn.close()
         except Exception as e:
             logging.error(f"[HATA] Rapor geçmişi kaydedilemedi: {e}")
 
     def get_available_templates(self) -> List[Dict[str, Any]]:
         """Mevcut şablonları getir"""
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM report_templates WHERE is_active = 1 ORDER BY category, language, template_name")
+            # report_templates is in GLOBAL_TABLES, so no tenant filtering applied automatically
+            rows = self.execute_query("SELECT * FROM report_templates WHERE is_active = 1 ORDER BY category, language, template_name")
             templates = []
-            for row in cursor.fetchall():
+            for row in rows:
+                # Use dict access from sqlite3.Row
                 templates.append({
-                    'id': row[0],
-                    'name': row[1],
-                    'type': row[2],
-                    'category': row[3],
-                    'language': row[4],
-                    'config': json.loads(row[5])
+                    'id': row['id'],
+                    'name': row['template_name'],
+                    'type': row['template_type'],
+                    'category': row['category'],
+                    'language': row['language'],
+                    'config': json.loads(row['template_config'])
                 })
-            conn.close()
             return templates
         except Exception as e:
             logging.error(f"[HATA] Şablonlar alınamadı: {e}")
@@ -903,7 +884,8 @@ if __name__ == "__main__":
     # Test
     logging.basicConfig(level=logging.INFO)
     logging.info("[TEST] Gelişmiş Raporlama...")
-    templates = AdvancedReportTemplates()
+    # For testing, we can use a dummy company_id
+    templates = AdvancedReportTemplates(company_id=1)
     
     # Test Data
     test_data = {
@@ -922,5 +904,3 @@ if __name__ == "__main__":
     
     logging.info("Testing HTML Preview...")
     templates.generate_report('sdg_template_tr_html', 1, '2024', test_data)
-    
-    logging.info("[OK] Test completed")

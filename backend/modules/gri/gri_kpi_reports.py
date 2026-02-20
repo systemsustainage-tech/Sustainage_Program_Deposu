@@ -7,37 +7,25 @@ KPI Dashboard ve Target Progress raporları
 
 import logging
 import os
-import sqlite3
 from typing import Dict
 
 import pandas as pd
-from config.database import DB_PATH
+from backend.core.base_manager import BaseTenantManager
 
 
-class GRIKPIReports:
+class GRIKPIReports(BaseTenantManager):
     """GRI KPI ve Target Progress raporları sınıfı"""
 
-    def __init__(self, db_path: str = DB_PATH) -> None:
-        # db_path göreli ise proje köküne göre mutlak hale getir
-        if not os.path.isabs(db_path):
-            base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-            db_path = os.path.join(base_dir, db_path)
-        self.db_path = db_path
-
-    def get_connection(self) -> None:
-        """Veritabanı bağlantısı"""
-        return sqlite3.connect(self.db_path)
+    def __init__(self, db_path=None):
+        super().__init__(db_path)
 
     def generate_kpi_dashboard(self, company_id: int = 1) -> Dict:
         """KPI Dashboard oluştur"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
             logging.info("GRI KPI Dashboard oluşturuluyor...")
 
             # KPI verilerini al
-            cursor.execute("""
+            query = """
                 SELECT 
                     k.id,
                     k.indicator_id,
@@ -61,9 +49,10 @@ class GRIKPIReports:
                 JOIN gri_standards gs ON gi.standard_id = gs.id
                 LEFT JOIN gri_responses gr ON gi.id = gr.indicator_id AND gr.company_id = ?
                 ORDER BY gs.category, gi.code
-            """, (company_id,))
-
-            kpi_data = cursor.fetchall()
+            """
+            
+            # skip_tenant_filter=True because we query global tables and handle company_id in JOIN
+            kpi_data = self.execute_query(query, (company_id,), skip_tenant_filter=True)
 
             # KPI'ları kategorilere göre organize et
             kpi_dashboard = {
@@ -81,27 +70,27 @@ class GRIKPIReports:
             }
 
             for kpi in kpi_data:
-                category = kpi[12]  # gs.category
-                has_response = kpi[13] is not None  # gr.response_value
+                category = kpi['category']
+                has_response = kpi['response_value'] is not None
 
                 kpi_info = {
-                    'kpi_id': kpi[0],
-                    'indicator_id': kpi[1],
-                    'kpi_name': kpi[2],
-                    'formula': kpi[3],
-                    'unit': kpi[4],
-                    'frequency': kpi[5],
-                    'owner': kpi[6],
-                    'notes': kpi[7],
-                    'disclosure_code': kpi[8],
-                    'disclosure_title': kpi[9],
-                    'description': kpi[10],
-                    'standard_code': kpi[11],
+                    'kpi_id': kpi['id'],
+                    'indicator_id': kpi['indicator_id'],
+                    'kpi_name': kpi['kpi_name'],
+                    'formula': kpi['formula'],
+                    'unit': kpi['unit'],
+                    'frequency': kpi['frequency'],
+                    'owner': kpi['owner'],
+                    'notes': kpi['notes'],
+                    'disclosure_code': kpi['disclosure_code'],
+                    'disclosure_title': kpi['disclosure_title'],
+                    'description': kpi['description'],
+                    'standard_code': kpi['standard_code'],
                     'category': category,
-                    'response_value': kpi[13],
-                    'numerical_value': kpi[14],
-                    'reporting_status': kpi[15],
-                    'period': kpi[16],
+                    'response_value': kpi['response_value'],
+                    'numerical_value': kpi['numerical_value'],
+                    'reporting_status': kpi['reporting_status'],
+                    'period': kpi['period'],
                     'has_response': has_response
                 }
 
@@ -141,19 +130,14 @@ class GRIKPIReports:
         except Exception as e:
             logging.error(f"KPI Dashboard oluşturma hatası: {e}")
             return {}
-        finally:
-            conn.close()
 
     def generate_target_progress(self, company_id: int = 1) -> Dict:
         """Target Progress raporu oluştur"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
             logging.info("GRI Target Progress raporu oluşturuluyor...")
 
             # Target verilerini al
-            cursor.execute("""
+            query = """
                 SELECT 
                     t.id,
                     t.indicator_id,
@@ -175,9 +159,9 @@ class GRIKPIReports:
                 JOIN gri_standards gs ON gi.standard_id = gs.id
                 LEFT JOIN gri_responses gr ON gi.id = gr.indicator_id AND gr.company_id = ?
                 ORDER BY t.year, gs.category, gi.code
-            """, (company_id,))
-
-            target_data = cursor.fetchall()
+            """
+            
+            target_data = self.execute_query(query, (company_id,), skip_tenant_filter=True)
 
             # Target'ları yıllara göre organize et
             target_progress = {
@@ -194,27 +178,27 @@ class GRIKPIReports:
             }
 
             for target in target_data:
-                year = str(target[2])  # t.year
-                has_response = target[11] is not None  # gr.response_value
-                target_value = target[3]  # t.target_value
-                actual_value = target[12]  # gr.numerical_value
+                year = str(target['year'])
+                has_response = target['response_value'] is not None
+                target_value = target['target_value']
+                actual_value = target['numerical_value']
 
                 target_info = {
-                    'target_id': target[0],
-                    'indicator_id': target[1],
+                    'target_id': target['id'],
+                    'indicator_id': target['indicator_id'],
                     'year': year,
                     'target_value': target_value,
-                    'unit': target[4],
-                    'method': target[5],
-                    'notes': target[6],
-                    'disclosure_code': target[7],
-                    'disclosure_title': target[8],
-                    'standard_code': target[9],
-                    'category': target[10],
-                    'response_value': target[11],
+                    'unit': target['unit'],
+                    'method': target['method'],
+                    'notes': target['notes'],
+                    'disclosure_code': target['disclosure_code'],
+                    'disclosure_title': target['disclosure_title'],
+                    'standard_code': target['standard_code'],
+                    'category': target['category'],
+                    'response_value': target['response_value'],
                     'actual_value': actual_value,
-                    'reporting_status': target[13],
-                    'period': target[14],
+                    'reporting_status': target['reporting_status'],
+                    'period': target['period'],
                     'has_response': has_response,
                     'progress_status': self.calculate_progress_status(target_value, actual_value, has_response)
                 }
@@ -239,8 +223,6 @@ class GRIKPIReports:
         except Exception as e:
             logging.error(f"Target Progress oluşturma hatası: {e}")
             return {}
-        finally:
-            conn.close()
 
     def calculate_progress_status(self, target_value, actual_value, has_response) -> None:
         """Progress status hesapla"""

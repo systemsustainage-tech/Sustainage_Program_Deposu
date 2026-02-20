@@ -8,43 +8,41 @@ Bu modül, kullanıcının sürdürülebilirlik raporlama sürecindeki ilerlemes
 """
 
 import logging
-import sqlite3
 import os
 from typing import Dict, List, Any, Tuple
 from config.database import DB_PATH
+from backend.core.db_manager import DatabaseManager
 
 class ReportingJourneyManager:
     """Raporlama yolculuğu ve ilerleme takibi"""
 
     def __init__(self, db_path: str = DB_PATH) -> None:
         self.db_path = db_path
+        self.db = DatabaseManager(db_path)
         self._init_tables()
 
     def _init_tables(self) -> None:
         """Gerekli tabloları oluştur"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        try:
-            # Yolculuk ilerleme tablosu
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS reporting_journey_progress (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    company_id INTEGER NOT NULL,
-                    step_number INTEGER NOT NULL,
-                    step_code TEXT NOT NULL,
-                    status TEXT DEFAULT 'pending', -- pending, active, completed
-                    completed_at TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (company_id) REFERENCES companies(id),
-                    UNIQUE(company_id, step_number)
-                )
-            """)
-            conn.commit()
-        except Exception as e:
-            logging.error(f"Reporting Journey tables creation error: {e}")
-        finally:
-            conn.close()
+        with self.db.get_connection() as conn:
+            cursor = conn.cursor()
+            try:
+                # Yolculuk ilerleme tablosu
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS reporting_journey_progress (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        company_id INTEGER NOT NULL,
+                        step_number INTEGER NOT NULL,
+                        step_code TEXT NOT NULL,
+                        status TEXT DEFAULT 'pending', -- pending, active, completed
+                        completed_at TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (company_id) REFERENCES companies(id),
+                        UNIQUE(company_id, step_number)
+                    )
+                """)
+                conn.commit()
+            except Exception as e:
+                logging.error(f"Reporting Journey tables creation error: {e}")
 
     def get_journey_status(self, company_id: int) -> List[Dict[str, Any]]:
         """Şirketin 13 adımlık yolculuk durumunu döndürür"""
@@ -196,143 +194,136 @@ class ReportingJourneyManager:
 
     def _get_stored_progress(self, company_id: int) -> Dict[int, str]:
         """DB'den kayıtlı ilerlemeyi çeker"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
         progress = {}
         try:
-            cursor.execute("SELECT step_number, status FROM reporting_journey_progress WHERE company_id = ?", (company_id,))
-            rows = cursor.fetchall()
-            for r in rows:
-                progress[r[0]] = r[1]
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT step_number, status FROM reporting_journey_progress WHERE company_id = ?", (company_id,))
+                rows = cursor.fetchall()
+                for r in rows:
+                    progress[r[0]] = r[1]
         except Exception:
             pass
-        finally:
-            conn.close()
         return progress
 
     def _check_real_status(self, company_id: int) -> Dict[str, bool]:
         """Sistemdeki gerçek verilere bakarak adımların tamamlanıp tamamlanmadığını kontrol eder"""
         status = {}
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
         
         try:
-            # 1. Company Profile: company_info tablosunda temel alanlar dolu mu?
-            # sirket_adi yerine name kullanıyoruz
-            cursor.execute("SELECT name, sector FROM company_info WHERE company_id = ?", (company_id,))
-            row = cursor.fetchone()
-            if row and row[0] and row[1]:
-                status['company_profile'] = True
-            else:
-                # Fallback to companies table
-                cursor.execute("SELECT name, sector FROM companies WHERE id = ?", (company_id,))
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
+                
+                # 1. Company Profile: company_info tablosunda temel alanlar dolu mu?
+                # sirket_adi yerine name kullanıyoruz
+                cursor.execute("SELECT name, sector FROM company_info WHERE company_id = ?", (company_id,))
                 row = cursor.fetchone()
-                status['company_profile'] = bool(row and row[0] and row[1])
-            
-            # 2. Internal Stakeholders: 'users' tablosunda 1'den fazla kayıt var mı veya stakeholders tablosunda 'internal' var mı?
-            # Basitçe users tablosunda admin harici user var mı diye bakalım veya stakeholders tablosuna bakalım
-            # Stakeholders tablosu varsa oraya bakalım
-            try:
-                cursor.execute("SELECT COUNT(*) FROM stakeholders WHERE company_id = ? AND (stakeholder_type = 'internal' OR stakeholder_group = 'internal')", (company_id,))
-                count = cursor.fetchone()[0]
-                status['internal_stakeholders'] = count > 0
-            except:
-                status['internal_stakeholders'] = False # Tablo yoksa false
-
-            # 3. Send SDG Survey (Simulasyon: Anket tablosunda kayıt var mı)
-            # Şimdilik manuel geçiş varsayalım veya 'surveys' tablosu varsa bakalım
-            status['send_sdg_survey_internal'] = False 
-            
-            # 4. Complete SDG Survey: user_sdg_selections tablosunda kayıt var mı?
-            try:
-                cursor.execute("SELECT COUNT(*) FROM user_sdg_selections WHERE company_id = ?", (company_id,))
-                count = cursor.fetchone()[0]
-                status['complete_sdg_survey'] = count > 0
-            except:
-                # Tablo yoksa veya hata olursa false
-                status['complete_sdg_survey'] = False
-
-            # 5. External Stakeholders
-            try:
-                cursor.execute("SELECT COUNT(*) FROM stakeholders WHERE company_id = ? AND (stakeholder_type = 'external' OR stakeholder_group = 'external')", (company_id,))
-                count = cursor.fetchone()[0]
-                status['external_stakeholders'] = count > 0
-            except:
-                status['external_stakeholders'] = False
-
-            # 6-8 Materiality: materiality_matrix tablosu var mı?
-            try:
-                # 6. Prepare Materiality: materiality_topics tablosunda konu var mı?
-                cursor.execute("SELECT COUNT(*) FROM materiality_topics WHERE company_id = ?", (company_id,))
-                topic_count = cursor.fetchone()[0]
-                status['prepare_materiality'] = topic_count > 0
-                
-                # 7. Send Materiality Survey: (Simulasyon - surveys tablosu)
-                # Şimdilik topics varsa bu adım da aktif/tamamlanabilir kabul edelim
-                status['send_materiality_survey'] = topic_count > 0
-
-                # 8. Complete Materiality: materiality_matrix tablosunda veri var mı?
-                cursor.execute("SELECT COUNT(*) FROM materiality_matrix WHERE company_id = ?", (company_id,))
-                matrix_count = cursor.fetchone()[0]
-                status['complete_materiality'] = matrix_count > 0
-                
-                # 9. Approve Charts: Matris varsa bu da tamamdır
-                status['approve_charts'] = matrix_count > 0
-            except:
-                status['prepare_materiality'] = False
-                status['complete_materiality'] = False
-                status['approve_charts'] = False
-            
-            # 11. KPI Entry: emission_records tablosunda kayıt var mı?
-            try:
-                cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='emission_records'")
-                if cursor.fetchone():
-                    cursor.execute("SELECT COUNT(*) FROM emission_records WHERE company_id = ?", (company_id,))
-                    count = cursor.fetchone()[0]
-                    status['kpi_entry'] = count > 0
+                if row and row[0] and row[1]:
+                    status['company_profile'] = True
                 else:
+                    # Fallback to companies table
+                    cursor.execute("SELECT name, sector FROM companies WHERE id = ?", (company_id,))
+                    row = cursor.fetchone()
+                    status['company_profile'] = bool(row and row[0] and row[1])
+                
+                # 2. Internal Stakeholders: 'users' tablosunda 1'den fazla kayıt var mı veya stakeholders tablosunda 'internal' var mı?
+                # Basitçe users tablosunda admin harici user var mı diye bakalım veya stakeholders tablosuna bakalım
+                # Stakeholders tablosu varsa oraya bakalım
+                try:
+                    cursor.execute("SELECT COUNT(*) FROM stakeholders WHERE company_id = ? AND (stakeholder_type = 'internal' OR stakeholder_group = 'internal')", (company_id,))
+                    count = cursor.fetchone()[0]
+                    status['internal_stakeholders'] = count > 0
+                except:
+                    status['internal_stakeholders'] = False # Tablo yoksa false
+
+                # 3. Send SDG Survey (Simulasyon: Anket tablosunda kayıt var mı)
+                # Şimdilik manuel geçiş varsayalım veya 'surveys' tablosu varsa bakalım
+                status['send_sdg_survey_internal'] = False 
+                
+                # 4. Complete SDG Survey: user_sdg_selections tablosunda kayıt var mı?
+                try:
+                    cursor.execute("SELECT COUNT(*) FROM user_sdg_selections WHERE company_id = ?", (company_id,))
+                    count = cursor.fetchone()[0]
+                    status['complete_sdg_survey'] = count > 0
+                except:
+                    # Tablo yoksa veya hata olursa false
+                    status['complete_sdg_survey'] = False
+
+                # 5. External Stakeholders
+                try:
+                    cursor.execute("SELECT COUNT(*) FROM stakeholders WHERE company_id = ? AND (stakeholder_type = 'external' OR stakeholder_group = 'external')", (company_id,))
+                    count = cursor.fetchone()[0]
+                    status['external_stakeholders'] = count > 0
+                except:
+                    status['external_stakeholders'] = False
+
+                # 6-8 Materiality: materiality_matrix tablosu var mı?
+                try:
+                    # 6. Prepare Materiality: materiality_topics tablosunda konu var mı?
+                    cursor.execute("SELECT COUNT(*) FROM materiality_topics WHERE company_id = ?", (company_id,))
+                    topic_count = cursor.fetchone()[0]
+                    status['prepare_materiality'] = topic_count > 0
+                    
+                    # 7. Send Materiality Survey: (Simulasyon - surveys tablosu)
+                    # Şimdilik topics varsa bu adım da aktif/tamamlanabilir kabul edelim
+                    status['send_materiality_survey'] = topic_count > 0
+
+                    # 8. Complete Materiality: materiality_matrix tablosunda veri var mı?
+                    cursor.execute("SELECT COUNT(*) FROM materiality_matrix WHERE company_id = ?", (company_id,))
+                    matrix_count = cursor.fetchone()[0]
+                    status['complete_materiality'] = matrix_count > 0
+                    
+                    # 9. Approve Charts: Matris varsa bu da tamamdır
+                    status['approve_charts'] = matrix_count > 0
+                except:
+                    status['prepare_materiality'] = False
+                    status['complete_materiality'] = False
+                    status['approve_charts'] = False
+                
+                # 11. KPI Entry: emission_records tablosunda kayıt var mı?
+                try:
+                    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='emission_records'")
+                    if cursor.fetchone():
+                        cursor.execute("SELECT COUNT(*) FROM emission_records WHERE company_id = ?", (company_id,))
+                        count = cursor.fetchone()[0]
+                        status['kpi_entry'] = count > 0
+                    else:
+                        status['kpi_entry'] = False
+                except:
                     status['kpi_entry'] = False
-            except:
-                status['kpi_entry'] = False
 
         except Exception as e:
             logging.error(f"Journey status check error: {e}")
-        finally:
-            conn.close()
             
         return status
 
     def _sync_progress(self, company_id: int, journey: List[Dict]) -> None:
         """Hesaplanan durumu DB'ye kaydeder"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
         try:
-            for step in journey:
-                cursor.execute("""
-                    INSERT OR REPLACE INTO reporting_journey_progress 
-                    (company_id, step_number, step_code, status, updated_at)
-                    VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
-                """, (company_id, step['number'], step['code'], step['status']))
-            conn.commit()
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
+                for step in journey:
+                    cursor.execute("""
+                        INSERT OR REPLACE INTO reporting_journey_progress 
+                        (company_id, step_number, step_code, status, updated_at)
+                        VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+                    """, (company_id, step['number'], step['code'], step['status']))
+                conn.commit()
         except Exception as e:
             logging.error(f"Sync progress error: {e}")
-        finally:
-            conn.close()
 
     def mark_step_completed(self, company_id: int, step_number: int) -> bool:
         """Bir adımı manuel olarak tamamlandı işaretle"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
         try:
-            cursor.execute("""
-                UPDATE reporting_journey_progress 
-                SET status = 'completed', completed_at = CURRENT_TIMESTAMP
-                WHERE company_id = ? AND step_number = ?
-            """, (company_id, step_number))
-            conn.commit()
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    UPDATE reporting_journey_progress 
+                    SET status = 'completed', completed_at = CURRENT_TIMESTAMP
+                    WHERE company_id = ? AND step_number = ?
+                """, (company_id, step_number))
+                conn.commit()
             return True
         except Exception as e:
             logging.error(f"Mark completed error: {e}")
             return False
-        finally:
-            conn.close()

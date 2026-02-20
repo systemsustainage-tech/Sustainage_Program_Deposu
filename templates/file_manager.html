@@ -1,111 +1,392 @@
 {% extends "base.html" %}
 
-{% block title %}{{ lang('file_manager_title', 'File Manager') }} - SDG{% endblock %}
+{% block title %}{{ lang('file_manager_title', 'Dosya Yöneticisi') }} - SDG{% endblock %}
+
+{% block styles %}
+<style>
+    .folder-item, .file-item {
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .folder-item:hover, .file-item:hover {
+        background-color: #f8f9fa;
+        transform: translateY(-2px);
+    }
+    .breadcrumb-item.active {
+        color: #6c757d;
+    }
+    .drop-zone {
+        border: 2px dashed #ccc;
+        border-radius: 5px;
+        padding: 20px;
+        text-align: center;
+        background-color: #f8f9fa;
+        transition: border-color 0.3s;
+    }
+    .drop-zone.dragover {
+        border-color: #0d6efd;
+        background-color: #e9ecef;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-
-<div class="row mb-4">
-<div class="col-md-12">
-<div class="d-flex justify-content-between align-items-center">
-<h1><i class="fas fa-cube me-2"></i>{{ lang('file_manager_title', 'File Manager') }}</h1>
-<div>
-<span class="badge bg-{{ 'success' if manager_available else 'secondary' }}">
-                    {{ lang('module_active_badge') if manager_available else lang('module_passive_badge') }}
-                </span>
-<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}</button></div>
-</div>
-<p class="lead text-muted">{{ lang('file_manager_desc', 'Module description for File Manager') }}</p>
-</div>
-</div>
-<div class="row">
-<div class="col-12">
-<div class="card shadow-sm border-0">
-<div class="card-body">
-                
-                    {% if stats or records %}
-                        <!-- Dashboard View -->
-<div class="row mb-4">
-                            {% if stats %}
-                            <div class="col-12 mb-4">
-<div class="card">
-<div class="card-header">
-<h5 class="mb-0">{{ lang('statistics', 'İstatistikler') }}</h5>
-</div>
-<div class="card-body">
-<div class="row">
-                                            {% for key, value in stats.items() %}
-                                            <div class="col-md-3 mb-3">
-<div class="border rounded p-3 text-center bg-light">
-<h6 class="text-muted text-uppercase small">{{ key|replace('_', ' ')|title }}</h6>
-<h3 class="mb-0 text-primary">{{ value }}</h3>
-</div>
-</div>
-                                            {% endfor %}
-                                        </div>
-</div>
-</div>
-</div>
-                            {% endif %}
-
-                            {% if records %}
-                            <div class="col-12">
-<div class="card">
-<div class="card-header d-flex justify-content-between align-items-center">
-<h5 class="mb-0">{{ lang('records', 'Kayıtlar') }}</h5>
-<button class="btn btn-sm btn-primary">
-<i class="fas fa-plus"></i> {{ lang('btn_add_data', 'Yeni Veri Girişi') }}
-                                        </button>
-</div>
-<div class="card-body">
-<div class="table-responsive">
-<table class="table table-hover">
-<thead>
-<tr>
-                                                        {% if columns %}
-                                                            {% for col in columns %}
-                                                            <th>{{ col|replace('_', ' ')|title }}</th>
-                                                            {% endfor %}
-                                                        {% else %}
-                                                            <th>{{ lang('details', 'Detaylar') }}</th>
-                                                        {% endif %}
-                                                    </tr>
-</thead>
-<tbody>
-                                                    {% for record in records %}
-                                                    <tr>
-                                                        {% if columns %}
-                                                            {% for col in columns %}
-                                                                {% if record is mapping %}
-                                                                    <td>{{ record[col] }}</td>
-                                                                {% else %}
-                                                                    <td>{{ record }}</td>
-                                                                {% endif %}
-                                                            {% endfor %}
-                                                        {% else %}
-                                                            <td>{{ record }}</td>
-                                                        {% endif %}
-                                                    </tr>
-                                                    {% endfor %}
-                                                </tbody>
-</table>
-</div>
-</div>
-</div>
-</div>
-                            {% endif %}
-                        </div>
-                    {% else %}
-                        <!-- Fallback to Under Construction if no data -->
-<div class="text-center py-5">
-<i class="bi bi-cone-striped display-1 text-warning mb-3"></i>
-<h3>{{ lang('module_under_construction') }}</h3>
-<p class="text-muted">{{ lang('module_coming_soon_desc', 'Bu modülün web arayüzü entegrasyonu devam etmektedir.') }}</p>
-<p class="small text-muted">{{ lang('no_data_msg', 'Veri bulunamadı veya modül henüz aktif değil.') }}</p>
-</div>
-                    {% endif %}
-
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1><i class="fas fa-folder-open me-2"></i>{{ lang('file_manager_title', 'Dosya Yöneticisi') }}</h1>
+                <div>
+                    <button class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#uploadModal">
+                        <i class="fas fa-upload"></i> {{ lang('btn_upload', 'Dosya Yükle') }}
+                    </button>
+                    <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#newFolderModal">
+                        <i class="fas fa-folder-plus"></i> {{ lang('btn_new_folder', 'Yeni Klasör') }}
+                    </button>
+                </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Breadcrumbs -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb" id="breadcrumbs">
+                    <li class="breadcrumb-item"><a href="#" onclick="loadFolder(null)">{{ lang('root_folder', 'Ana Dizin') }}</a></li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <!-- File Explorer Area -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div id="loading" class="text-center py-5" style="display: none;">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Yükleniyor...</span>
+                        </div>
+                    </div>
+                    
+                    <div id="file-list" class="row g-3">
+                        <!-- Content will be loaded here via JS -->
+                    </div>
+                    
+                    <div id="empty-state" class="text-center py-5" style="display: none;">
+                        <i class="fas fa-folder-open display-4 text-muted mb-3"></i>
+                        <p class="text-muted">{{ lang('no_files', 'Bu klasör boş.') }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+
+<!-- Upload Modal -->
+<div class="modal fade" id="uploadModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ lang('upload_file', 'Dosya Yükle') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="uploadForm">
+                    <input type="hidden" id="uploadFolderId" name="folder_id">
+                    <div class="mb-3">
+                        <div class="drop-zone" id="dropZone">
+                            <i class="fas fa-cloud-upload-alt fa-3x mb-2 text-primary"></i>
+                            <p class="mb-0">{{ lang('drag_drop_text', 'Dosyayı buraya sürükleyin veya seçmek için tıklayın') }}</p>
+                            <input type="file" id="fileInput" name="file" class="d-none" required>
+                        </div>
+                        <div id="selectedFile" class="mt-2 text-center text-success fw-bold"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ lang('description', 'Açıklama') }}</label>
+                        <input type="text" class="form-control" name="description">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ lang('tags', 'Etiketler (Virgülle ayırın)') }}</label>
+                        <input type="text" class="form-control" name="tags" placeholder="örn. rapor, 2024, finans">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ lang('btn_cancel', 'İptal') }}</button>
+                <button type="button" class="btn btn-primary" onclick="uploadFile()">{{ lang('btn_upload', 'Yükle') }}</button>
+            </div>
+        </div>
+    </div>
 </div>
+
+<!-- New Folder Modal -->
+<div class="modal fade" id="newFolderModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ lang('new_folder', 'Yeni Klasör') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="newFolderForm">
+                    <input type="hidden" id="newFolderParentId" name="parent_id">
+                    <div class="mb-3">
+                        <label class="form-label">{{ lang('folder_name', 'Klasör Adı') }}</label>
+                        <input type="text" class="form-control" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ lang('description', 'Açıklama') }}</label>
+                        <input type="text" class="form-control" name="description">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ lang('btn_cancel', 'İptal') }}</button>
+                <button type="button" class="btn btn-primary" onclick="createFolder()">{{ lang('btn_create', 'Oluştur') }}</button>
+            </div>
+        </div>
+    </div>
 </div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let currentFolderId = null;
+    const folderHistory = [{id: null, name: "{{ lang('root_folder', 'Ana Dizin') }}"}];
+
+    document.addEventListener('DOMContentLoaded', function() {
+        loadFolder(null);
+
+        // Drag and drop setup
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            fileInput.files = e.dataTransfer.files;
+            updateSelectedFile();
+        });
+
+        fileInput.addEventListener('change', updateSelectedFile);
+    });
+
+    function updateSelectedFile() {
+        const fileInput = document.getElementById('fileInput');
+        const display = document.getElementById('selectedFile');
+        if (fileInput.files.length > 0) {
+            display.textContent = fileInput.files[0].name;
+        } else {
+            display.textContent = '';
+        }
+    }
+
+    function loadFolder(folderId) {
+        currentFolderId = folderId;
+        document.getElementById('loading').style.display = 'block';
+        document.getElementById('file-list').innerHTML = '';
+        document.getElementById('empty-state').style.display = 'none';
+
+        // Update breadcrumbs (simplified for now)
+        // Ideally fetch full path from server or manage history better
+        
+        // Fetch folders
+        const p1 = fetch(`/api/files/folders?parent_id=${folderId || ''}`)
+            .then(res => res.json());
+        
+        // Fetch files
+        const p2 = fetch(`/api/files/?folder_id=${folderId || ''}`)
+            .then(res => res.json());
+
+        Promise.all([p1, p2])
+            .then(([folders, files]) => {
+                document.getElementById('loading').style.display = 'none';
+                renderContent(folders, files);
+            })
+            .catch(err => {
+                console.error(err);
+                document.getElementById('loading').style.display = 'none';
+                // alert('Klasör içeriği yüklenirken hata oluştu.');
+            });
+    }
+
+    function renderContent(folders, files) {
+        const container = document.getElementById('file-list');
+        
+        if ((!folders || folders.length === 0) && (!files || files.length === 0)) {
+            document.getElementById('empty-state').style.display = 'block';
+            return;
+        }
+
+        if (folders && folders.length > 0) {
+            folders.forEach(folder => {
+                const div = document.createElement('div');
+                div.className = 'col-md-3 col-sm-6';
+                div.innerHTML = `
+                    <div class="card folder-item h-100" onclick="enterFolder(${folder.id}, '${folder.name}')">
+                        <div class="card-body text-center">
+                            <i class="fas fa-folder fa-3x text-warning mb-3"></i>
+                            <h5 class="card-title text-truncate">${folder.name}</h5>
+                            <small class="text-muted">${folder.created_at || ''}</small>
+                            <div class="mt-2">
+                                <button class="btn btn-sm btn-link text-danger" onclick="deleteFolder(event, ${folder.id})"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        if (files && files.length > 0) {
+            files.forEach(file => {
+                const div = document.createElement('div');
+                div.className = 'col-md-3 col-sm-6';
+                div.innerHTML = `
+                    <div class="card file-item h-100">
+                        <div class="card-body text-center">
+                            <i class="fas fa-file-alt fa-3x text-primary mb-3"></i>
+                            <h5 class="card-title text-truncate" title="${file.file_name}">${file.file_name}</h5>
+                            <small class="text-muted">${file.file_size_formatted || file.file_size + ' B'}</small>
+                            <div class="mt-2">
+                                <a href="/api/files/download/${file.id}" class="btn btn-sm btn-link"><i class="fas fa-download"></i></a>
+                                <button class="btn btn-sm btn-link text-danger" onclick="deleteFile(${file.id})"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+    }
+
+    function enterFolder(id, name) {
+        // Add to breadcrumb logic here
+        const ol = document.getElementById('breadcrumbs');
+        const li = document.createElement('li');
+        li.className = 'breadcrumb-item';
+        li.innerHTML = `<a href="#" onclick="loadFolder(${id})">${name}</a>`;
+        ol.appendChild(li);
+        
+        loadFolder(id);
+    }
+
+    function uploadFile() {
+        const form = document.getElementById('uploadForm');
+        const formData = new FormData(form);
+        if (currentFolderId) {
+            formData.set('folder_id', currentFolderId);
+        }
+
+        fetch('/api/files/upload', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': "{{ csrf_token() }}"
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.error) {
+                alert('Hata: ' + data.error);
+            } else {
+                // Close modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('uploadModal'));
+                modal.hide();
+                form.reset();
+                document.getElementById('selectedFile').textContent = '';
+                loadFolder(currentFolderId);
+            }
+        })
+        .catch(err => alert('Yükleme hatası: ' + err));
+    }
+
+    function createFolder() {
+        const form = document.getElementById('newFolderForm');
+        const name = form.name.value;
+        const description = form.description.value;
+        
+        const data = {
+            name: name,
+            description: description,
+            parent_id: currentFolderId
+        };
+
+        fetch('/api/files/folders', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': "{{ csrf_token() }}"
+            },
+            body: JSON.stringify(data)
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.error) {
+                alert('Hata: ' + data.error);
+            } else {
+                const modal = bootstrap.Modal.getInstance(document.getElementById('newFolderModal'));
+                modal.hide();
+                form.reset();
+                loadFolder(currentFolderId);
+            }
+        })
+        .catch(err => alert('Klasör oluşturma hatası: ' + err));
+    }
+
+    function deleteFile(id) {
+        if (!confirm("{{ lang('confirm_delete_file', 'Bu dosyayı silmek istediğinizden emin misiniz?') }}")) return;
+        
+        fetch(`/api/files/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': "{{ csrf_token() }}"
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.error) {
+                alert('Hata: ' + data.error);
+            } else {
+                loadFolder(currentFolderId);
+            }
+        })
+        .catch(err => alert('Silme hatası: ' + err));
+    }
+
+    function deleteFolder(e, id) {
+        e.stopPropagation();
+        if (!confirm("{{ lang('confirm_delete_folder', 'Bu klasörü ve içindekileri silmek istediğinizden emin misiniz?') }}")) return;
+        
+        fetch(`/api/files/folders/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': "{{ csrf_token() }}"
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.error) {
+                alert('Hata: ' + data.error);
+            } else {
+                loadFolder(currentFolderId);
+            }
+        })
+        .catch(err => alert('Silme hatası: ' + err));
+    }
+</script>
 {% endblock %}

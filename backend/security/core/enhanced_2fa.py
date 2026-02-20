@@ -1,10 +1,10 @@
 import logging
 import io
-import sqlite3
 import os
 from typing import List, Tuple
 from cryptography.fernet import Fernet
 from dotenv import load_dotenv
+from backend.core.database_manager import DatabaseManager
 
 # Load .env explicitly to ensure we get the key
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -42,74 +42,82 @@ def enable_totp_for_user(db_path: str, username: str) -> Tuple[bool, str, str, b
     # Encrypt secret before storing in DB
     encrypted_secret = _encrypt_secret(secret)
     
-    conn = sqlite3.connect(db_path)
-    try:
+    db = DatabaseManager(db_path)
+    with db.get_connection() as conn:
         _ensure_2fa_columns(conn)
         # Pass encrypted secret to enable_2fa (which saves it to DB)
         res = enable_2fa(conn, username, encrypted_secret)
+        # Also ensure explicit column is populated
+        conn.execute("UPDATE users SET totp_secret_encrypted=? WHERE username=?", (encrypted_secret, username))
+        conn.commit()
         
         # Use PLAIN secret for QR code generation (so user can scan it)
         uri = get_otpauth_uri(username, secret)
         qr_bytes = _qr_bytes(uri)
         
         return bool(res.get("ok")), "2FA etkin", secret, qr_bytes
-    finally:
-        conn.close()
 
 def verify_totp_code(db_path: str, username: str, code: str) -> Tuple[bool, str]:
     from yonetim.security.core.auth import verify_totp
-    conn = sqlite3.connect(db_path)
-    cur = conn.cursor()
-    cur.execute("SELECT totp_secret_encrypted FROM users WHERE username=?", (username,))
-    row = cur.fetchone()
-    conn.close()
-    if not row or not row[0]:
+    db = DatabaseManager(db_path)
+    with db.get_connection() as conn:
+        _ensure_2fa_columns(conn)
+        cur = conn.cursor()
+        cur.execute("SELECT totp_secret_encrypted, totp_secret FROM users WHERE username=?", (username,))
+        rows = cur.fetchall()
+    
+    if not rows:
         return False, "secret yok"
     
+    row = rows[0]
+    # Check both column name and index just in case, but prefer name
+    encrypted_secret = row['totp_secret_encrypted']
+    if not encrypted_secret:
+         encrypted_secret = row['totp_secret']
+    
+    if not encrypted_secret:
+         return False, "secret yok"
+    
     # Decrypt secret before verifying
-    secret = _decrypt_secret(row[0])
+    secret = _decrypt_secret(encrypted_secret)
     
     ok = verify_totp(secret, str(code))
     return ok, "ok" if ok else "geçersiz"
 
 def get_backup_codes(db_path: str, username: str) -> Tuple[bool, str, List[str]]:
     from yonetim.security.core.auth import regen_backup_codes
-    conn = sqlite3.connect(db_path)
-    try:
+    db = DatabaseManager(db_path)
+    with db.get_connection() as conn:
         res = regen_backup_codes(conn, username)
+        conn.commit()
         return bool(res.get("ok")), "ok" if res.get("ok") else "hata", list(res.get("backup_plain") or [])
-    finally:
-        conn.close()
 
 def verify_backup_code(db_path: str, username: str, code: str) -> Tuple[bool, str]:
     from yonetim.security.core.auth import consume_backup_code
-    conn = sqlite3.connect(db_path)
-    try:
+    db = DatabaseManager(db_path)
+    with db.get_connection() as conn:
         _ensure_2fa_columns(conn)
         ok = consume_backup_code(conn, username, code)
+        conn.commit()
         return ok, "ok" if ok else "geçersiz"
-    finally:
-        conn.close()
 
 def disable_2fa(db_path: str, username: str) -> Tuple[bool, str]:
     from yonetim.security.core.auth import disable_2fa
-    conn = sqlite3.connect(db_path)
-    try:
+    db = DatabaseManager(db_path)
+    with db.get_connection() as conn:
         _ensure_2fa_columns(conn)
         res = disable_2fa(conn, username)
+        conn.commit()
         return bool(res.get("ok")), "ok" if res.get("ok") else "hata"
-    finally:
-        conn.close()
 
 def regenerate_backup_codes(db_path: str, username: str) -> Tuple[bool, str, List[str]]:
     from yonetim.security.core.auth import regen_backup_codes
-    conn = sqlite3.connect(db_path)
-    try:
+    db = DatabaseManager(db_path)
+    with db.get_connection() as conn:
         _ensure_2fa_columns(conn)
         res = regen_backup_codes(conn, username)
+        conn.commit()
         return bool(res.get("ok")), "ok" if res.get("ok") else "hata", list(res.get("backup_plain") or [])
-    finally:
-        conn.close()
 
 def _qr_bytes(data: str) -> bytes:
     try:
@@ -121,7 +129,7 @@ def _qr_bytes(data: str) -> bytes:
     except Exception:
         return data.encode("utf-8")
 
-def _ensure_2fa_columns(conn: sqlite3.Connection) -> None:
+def _ensure_2fa_columns(conn) -> None:
     cur = conn.cursor()
     try:
         cur.execute("ALTER TABLE users ADD COLUMN totp_secret_encrypted TEXT")

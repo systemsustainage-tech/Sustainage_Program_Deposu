@@ -7,32 +7,37 @@ Enerji tüketimi, verimlilik ve yenilenebilir enerji yönetimi
 
 import logging
 import os
-import sqlite3
-from typing import Dict, List
+from typing import Dict, List, Optional
 
-from utils.language_manager import LanguageManager
-from config.database import DB_PATH
+try:
+    from backend.utils.language_manager import LanguageManager
+    from backend.config.database import DB_PATH
+    from backend.core.base_manager import BaseTenantManager
+except ImportError:
+    from utils.language_manager import LanguageManager
+    from config.database import DB_PATH
+    from core.base_manager import BaseTenantManager
 
 
-class EnergyManager:
+class EnergyManager(BaseTenantManager):
     """Enerji tüketimi ve verimlilik yönetimi"""
 
-    def __init__(self, db_path: str = DB_PATH) -> None:
+    def __init__(self, db_path: str = None, company_id: Optional[int] = None) -> None:
         self.lm = LanguageManager()
-        if not os.path.isabs(db_path):
+        final_db_path = db_path or DB_PATH
+        if final_db_path and not os.path.isabs(final_db_path):
             base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
-            db_path = os.path.join(base_dir, db_path)
-        self.db_path = db_path
+            final_db_path = os.path.join(base_dir, final_db_path)
+        
+        super().__init__(final_db_path, company_id)
         self._init_db_tables()
+        self._migrate_tables()
 
     def _init_db_tables(self) -> None:
         """Enerji yönetimi tablolarını oluştur"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
             # Enerji tüketimi
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS energy_consumption (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -52,24 +57,8 @@ class EnergyManager:
                 )
             """)
 
-            # Mevcut tabloya yeni kolonları eklemeye çalış (Migration)
-            try:
-                cursor.execute("ALTER TABLE energy_consumption ADD COLUMN invoice_date TEXT")
-            except sqlite3.OperationalError:
-                pass
-
-            try:
-                cursor.execute("ALTER TABLE energy_consumption ADD COLUMN due_date TEXT")
-            except sqlite3.OperationalError:
-                pass
-                
-            try:
-                cursor.execute("ALTER TABLE energy_consumption ADD COLUMN supplier TEXT")
-            except sqlite3.OperationalError:
-                pass
-
             # Yenilenebilir enerji
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS renewable_energy (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -88,7 +77,7 @@ class EnergyManager:
             """)
 
             # Enerji verimliliği projeleri
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS energy_efficiency_projects (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -109,7 +98,7 @@ class EnergyManager:
             """)
 
             # Enerji hedefleri
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS energy_targets (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -127,7 +116,7 @@ class EnergyManager:
             """)
 
             # Enerji performans göstergeleri
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS energy_kpis (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -142,35 +131,43 @@ class EnergyManager:
                 )
             """)
 
-            conn.commit()
             logging.info(f"[OK] {self.lm.tr('energy_module_tables_created', 'Enerji modülü tabloları başarıyla oluşturuldu')}")
 
         except Exception as e:
             logging.error(f"[{self.lm.tr('error', 'HATA')}] {self.lm.tr('energy_module_table_error', 'Enerji modülü tablo oluşturma')}: {e}")
-            conn.rollback()
-        finally:
-            conn.close()
+
+    def _migrate_tables(self) -> None:
+        """Tablo şemalarını güncelle"""
+        try:
+            # Mevcut tabloya yeni kolonları eklemeye çalış (Migration)
+            columns = [row['name'] for row in self.execute_query("PRAGMA table_info(energy_consumption)")]
+            
+            if 'invoice_date' not in columns:
+                self.execute_update("ALTER TABLE energy_consumption ADD COLUMN invoice_date TEXT")
+            if 'due_date' not in columns:
+                self.execute_update("ALTER TABLE energy_consumption ADD COLUMN due_date TEXT")
+            if 'supplier' not in columns:
+                self.execute_update("ALTER TABLE energy_consumption ADD COLUMN supplier TEXT")
+        except Exception as e:
+            logging.warning(f"Energy table migration warning: {e}")
 
     def get_dashboard_stats(self, company_id: int) -> Dict:
         """Dashboard için özet istatistikleri getir"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        cid = self._ensure_context(company_id)
         stats = {'total_consumption': 0, 'renewable_ratio': 0, 'total_cost': 0}
 
         try:
             # Total Consumption & Cost
-            cursor.execute("SELECT SUM(consumption_amount), SUM(cost) FROM energy_consumption WHERE company_id = ?", (company_id,))
-            row = cursor.fetchone()
-            if row:
-                stats['total_consumption'] = row[0] or 0
-                stats['total_cost'] = row[1] or 0
+            result = self.execute_query("SELECT SUM(consumption_amount) as total, SUM(cost) as cost FROM energy_consumption WHERE company_id = ?", (cid,))
+            if result:
+                stats['total_consumption'] = result[0]['total'] if result[0]['total'] else 0
+                stats['total_cost'] = result[0]['cost'] if result[0]['cost'] else 0
 
             # Renewable Generation
-            cursor.execute("SELECT SUM(generation) FROM renewable_energy WHERE company_id = ?", (company_id,))
-            renewable_gen = cursor.fetchone()[0] or 0
+            result_ren = self.execute_query("SELECT SUM(generation) as total FROM renewable_energy WHERE company_id = ?", (cid,))
+            renewable_gen = result_ren[0]['total'] if result_ren and result_ren[0]['total'] else 0
 
             # Simple ratio calculation (assuming consumption includes renewable)
-            # Or if renewable is separate generation? Assuming generation is consumed.
             if stats['total_consumption'] > 0:
                 stats['renewable_ratio'] = (renewable_gen / stats['total_consumption']) * 100
             
@@ -178,94 +175,77 @@ class EnergyManager:
         except Exception as e:
             logging.error(f"Energy dashboard stats error: {e}")
             return stats
-        finally:
-            conn.close()
 
     def get_recent_records(self, company_id: int, limit: int = 10) -> List[Dict]:
         """Son eklenen kayıtları getir"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        cid = self._ensure_context(company_id)
         records = []
 
         try:
-            cursor.execute("""
+            rows = self.execute_query("""
                 SELECT energy_type, consumption_amount, unit, cost, created_at, year, month
                 FROM energy_consumption 
                 WHERE company_id = ? 
                 ORDER BY created_at DESC LIMIT ?
-            """, (company_id, limit))
+            """, (cid, limit))
             
-            for row in cursor.fetchall():
+            for row in rows:
                 records.append({
-                    'type': row[0],
-                    'amount': row[1],
-                    'unit': row[2],
-                    'cost': row[3],
-                    'date': row[4],
-                    'year': row[5],
-                    'month': row[6]
+                    'type': row['energy_type'],
+                    'amount': row['consumption_amount'],
+                    'unit': row['unit'],
+                    'cost': row['cost'],
+                    'date': row['created_at'],
+                    'year': row['year'],
+                    'month': row['month']
                 })
             
             return records
         except Exception as e:
             logging.error(f"Energy recent records error: {e}")
             return []
-        finally:
-            conn.close()
 
     def add_energy_consumption(self, company_id: int, year: int, energy_type: str,
                              consumption_amount: float, unit: str, cost: float = None,
                              source: str = None, location: str = None, month: int = None,
                              invoice_date: str = None, due_date: str = None, supplier: str = None) -> bool:
         """Enerji tüketimi ekle"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        cid = self._ensure_context(company_id)
 
         try:
-            cursor.execute("""
+            self.execute_update("""
                 INSERT INTO energy_consumption 
                 (company_id, year, month, energy_type, consumption_amount, 
                  unit, cost, source, location, invoice_date, due_date, supplier)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (company_id, year, month, energy_type, consumption_amount,
+            """, (cid, year, month, energy_type, consumption_amount,
                   unit, cost, source, location, invoice_date, due_date, supplier))
-
-            conn.commit()
             return True
 
         except Exception as e:
             logging.error(f"{self.lm.tr('energy_consumption_add_error', 'Enerji tüketimi ekleme hatası')}: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
     def add_renewable_energy(self, company_id: int, year: int, renewable_type: str,
                            capacity: float, capacity_unit: str, generation: float,
                            generation_unit: str, self_consumption: float = None,
                            grid_feed: float = None, cost: float = None) -> bool:
         """Yenilenebilir enerji ekle"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        cid = self._ensure_context(company_id)
 
         try:
-            cursor.execute("""
+            self.execute_update("""
                 INSERT INTO renewable_energy 
                 (company_id, year, renewable_type, capacity, capacity_unit,
                  generation, generation_unit, self_consumption, grid_feed, cost)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (company_id, year, renewable_type, capacity, capacity_unit,
+            """, (cid, year, renewable_type, capacity, capacity_unit,
                   generation, generation_unit, self_consumption, grid_feed, cost))
-
-            conn.commit()
             return True
 
         except Exception as e:
             logging.error(f"{self.lm.tr('renewable_energy_add_error', 'Yenilenebilir enerji ekleme hatası')}: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
     def add_energy_efficiency_project(self, company_id: int, project_name: str,
                                     project_type: str, start_date: str, end_date: str,
@@ -273,78 +253,69 @@ class EnergyManager:
                                     savings_unit: str, cost_savings: float = None,
                                     payback_period: float = None, co2_reduction: float = None) -> bool:
         """Enerji verimliliği projesi ekle"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        cid = self._ensure_context(company_id)
 
         try:
-            cursor.execute("""
+            self.execute_update("""
                 INSERT INTO energy_efficiency_projects 
                 (company_id, project_name, project_type, start_date, end_date,
                  investment_cost, energy_savings, savings_unit, cost_savings,
                  payback_period, co2_reduction)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (company_id, project_name, project_type, start_date, end_date,
+            """, (cid, project_name, project_type, start_date, end_date,
                   investment_cost, energy_savings, savings_unit, cost_savings,
                   payback_period, co2_reduction))
-
-            conn.commit()
             return True
 
         except Exception as e:
             logging.error(f"{self.lm.tr('energy_efficiency_project_add_error', 'Enerji verimliliği projesi ekleme hatası')}: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
     def set_energy_target(self, company_id: int, target_year: int, target_type: str,
                          baseline_year: int, baseline_consumption: float,
                          target_reduction_percent: float, renewable_target_percent: float = None) -> bool:
         """Enerji hedefi belirle"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        cid = self._ensure_context(company_id)
 
         try:
             target_consumption = baseline_consumption * (1 - target_reduction_percent / 100)
 
-            cursor.execute("""
+            self.execute_update("""
                 INSERT OR REPLACE INTO energy_targets 
                 (company_id, target_year, target_type, baseline_year, 
                  baseline_consumption, target_reduction_percent, target_consumption,
                  renewable_target_percent)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """, (company_id, target_year, target_type, baseline_year,
+            """, (cid, target_year, target_type, baseline_year,
                   baseline_consumption, target_reduction_percent, target_consumption,
                   renewable_target_percent))
-
-            conn.commit()
             return True
 
         except Exception as e:
             logging.error(f"{self.lm.tr('energy_target_set_error', 'Enerji hedefi belirleme hatası')}: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
     def get_energy_summary(self, company_id: int, year: int) -> Dict:
         """Enerji özeti getir"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        cid = self._ensure_context(company_id)
 
         try:
             # Toplam enerji tüketimi
-            cursor.execute("""
-                SELECT energy_type, SUM(consumption_amount), unit, SUM(cost)
+            rows = self.execute_query("""
+                SELECT energy_type, SUM(consumption_amount) as total_amount, unit, SUM(cost) as total_cost
                 FROM energy_consumption 
                 WHERE company_id = ? AND year = ?
                 GROUP BY energy_type, unit
-            """, (company_id, year))
+            """, (cid, year))
 
             energy_consumption = {}
             total_cost = 0
-            for row in cursor.fetchall():
-                energy_type, amount, unit, cost = row
+            for row in rows:
+                energy_type = row['energy_type']
+                amount = row['total_amount']
+                unit = row['unit']
+                cost = row['total_cost']
+                
                 energy_consumption[energy_type] = {
                     'amount': amount,
                     'unit': unit,
@@ -353,16 +324,19 @@ class EnergyManager:
                 total_cost += cost or 0
 
             # Yenilenebilir enerji
-            cursor.execute("""
-                SELECT renewable_type, SUM(generation), generation_unit
+            rows_ren = self.execute_query("""
+                SELECT renewable_type, SUM(generation) as total_gen, generation_unit
                 FROM renewable_energy 
                 WHERE company_id = ? AND year = ?
                 GROUP BY renewable_type, generation_unit
-            """, (company_id, year))
+            """, (cid, year))
 
             renewable_generation = {}
-            for row in cursor.fetchall():
-                renewable_type, generation, unit = row
+            for row in rows_ren:
+                renewable_type = row['renewable_type']
+                generation = row['total_gen']
+                unit = row['generation_unit']
+                
                 renewable_generation[renewable_type] = {
                     'generation': generation,
                     'unit': unit
@@ -392,40 +366,37 @@ class EnergyManager:
                 'renewable_ratio': renewable_ratio,
                 'total_cost': total_cost,
                 'year': year,
-                'company_id': company_id
+                'company_id': cid
             }
 
         except Exception as e:
             logging.error(f"{self.lm.tr('energy_summary_get_error', 'Enerji özeti getirme hatası')}: {e}")
             return {}
-        finally:
-            conn.close()
 
     def get_energy_targets(self, company_id: int) -> List[Dict]:
         """Enerji hedeflerini getir"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        cid = self._ensure_context(company_id)
 
         try:
-            cursor.execute("""
+            rows = self.execute_query("""
                 SELECT target_year, target_type, baseline_year, baseline_consumption,
                        target_reduction_percent, target_consumption, renewable_target_percent, status
                 FROM energy_targets 
                 WHERE company_id = ? AND status = 'active'
                 ORDER BY target_year
-            """, (company_id,))
+            """, (cid,))
 
             targets = []
-            for row in cursor.fetchall():
+            for row in rows:
                 targets.append({
-                    'target_year': row[0],
-                    'target_type': row[1],
-                    'baseline_year': row[2],
-                    'baseline_consumption': row[3],
-                    'target_reduction_percent': row[4],
-                    'target_consumption': row[5],
-                    'renewable_target_percent': row[6],
-                    'status': row[7]
+                    'target_year': row['target_year'],
+                    'target_type': row['target_type'],
+                    'baseline_year': row['baseline_year'],
+                    'baseline_consumption': row['baseline_consumption'],
+                    'target_reduction_percent': row['target_reduction_percent'],
+                    'target_consumption': row['target_consumption'],
+                    'renewable_target_percent': row['renewable_target_percent'],
+                    'status': row['status']
                 })
 
             return targets
@@ -433,38 +404,35 @@ class EnergyManager:
         except Exception as e:
             logging.error(f"{self.lm.tr('energy_targets_get_error', 'Enerji hedefleri getirme hatası')}: {e}")
             return []
-        finally:
-            conn.close()
 
     def get_energy_efficiency_projects(self, company_id: int) -> List[Dict]:
         """Enerji verimliliği projelerini getir"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        cid = self._ensure_context(company_id)
 
         try:
-            cursor.execute("""
+            rows = self.execute_query("""
                 SELECT project_name, project_type, start_date, end_date,
                        investment_cost, energy_savings, savings_unit, cost_savings,
                        payback_period, co2_reduction, status
                 FROM energy_efficiency_projects 
                 WHERE company_id = ? AND status = 'active'
                 ORDER BY start_date DESC
-            """, (company_id,))
+            """, (cid,))
 
             projects = []
-            for row in cursor.fetchall():
+            for row in rows:
                 projects.append({
-                    'project_name': row[0],
-                    'project_type': row[1],
-                    'start_date': row[2],
-                    'end_date': row[3],
-                    'investment_cost': row[4],
-                    'energy_savings': row[5],
-                    'savings_unit': row[6],
-                    'cost_savings': row[7],
-                    'payback_period': row[8],
-                    'co2_reduction': row[9],
-                    'status': row[10]
+                    'project_name': row['project_name'],
+                    'project_type': row['project_type'],
+                    'start_date': row['start_date'],
+                    'end_date': row['end_date'],
+                    'investment_cost': row['investment_cost'],
+                    'energy_savings': row['energy_savings'],
+                    'savings_unit': row['savings_unit'],
+                    'cost_savings': row['cost_savings'],
+                    'payback_period': row['payback_period'],
+                    'co2_reduction': row['co2_reduction'],
+                    'status': row['status']
                 })
 
             return projects
@@ -472,8 +440,6 @@ class EnergyManager:
         except Exception as e:
             logging.error(f"{self.lm.tr('energy_efficiency_projects_get_error', 'Enerji verimliliği projeleri getirme hatası')}: {e}")
             return []
-        finally:
-            conn.close()
 
     def calculate_energy_kpis(self, company_id: int, year: int) -> Dict:
         """Enerji KPI'larını hesapla"""
@@ -494,5 +460,5 @@ class EnergyManager:
             'energy_intensity_per_employee': energy_intensity_per_employee,
             'energy_intensity_per_area': energy_intensity_per_area,
             'year': year,
-            'company_id': company_id
+            'company_id': summary['company_id']
         }

@@ -1,40 +1,50 @@
-import { reactive } from 'vue'
+import { createI18n } from 'vue-i18n'
+import tr from '../locales/tr.json'
+import en from '../locales/en.json'
+import de from '../locales/de.json'
 
-const state = reactive({
-  locale: 'tr',
-  messages: {}
+// Readable fallback function
+const missingHandler = (locale, key, vm, values) => {
+  if (!key) return ''
+  // active_surveys -> Active surveys
+  return key.replace(/_/g, ' ').replace(/-/g, ' ').trim().replace(/^\w/, c => c.toUpperCase())
+}
+
+const i18n = createI18n({
+  legacy: false, // Vue 3 Composition API mode
+  globalInjection: true, // Inject $t globally for templates
+  locale: localStorage.getItem('lang') || 'tr',
+  fallbackLocale: 'en',
+  messages: {
+    tr,
+    en,
+    de
+  },
+  missing: missingHandler,
+  silentTranslationWarn: true,
+  missingWarn: false,
+  fallbackWarn: false
 })
 
-export const t = (key) => {
-  const keys = key.split('.')
-  let value = state.messages
-  
-  for (const k of keys) {
-    if (value && typeof value === 'object' && k in value) {
-      value = value[k]
-    } else {
-      return key // Fallback to key if not found
+// Dynamic update from backend
+// This allows the backend to override/update translations without rebuilding frontend
+// Adding timestamp to bypass browser cache as requested
+fetch('/api/v1/translations?v=' + new Date().getTime())
+  .then(res => res.json())
+  .then(data => {
+    if (data && data.translations && data.lang) {
+      // Update messages for the language returned by backend
+      // Using mergeLocaleMessage to support lazy-loaded additions if any
+      i18n.global.mergeLocaleMessage(data.lang, data.translations)
+      
+      // Sync locale if different
+      if (i18n.global.locale.value !== data.lang) {
+          i18n.global.locale.value = data.lang
+          localStorage.setItem('lang', data.lang)
+      }
+      console.log('Translations updated from backend for:', data.lang)
     }
-  }
-  
-  return typeof value === 'string' ? value : key
-}
-
-const i18n = {
-  install(app) {
-    // Define $t
-    app.config.globalProperties.$t = t
-
-    // Load translations
-    fetch('/api/v1/translations')
-      .then(res => res.json())
-      .then(data => {
-        state.locale = data.lang
-        state.messages = data.translations
-        console.log('Translations loaded:', state.locale)
-      })
-      .catch(err => console.error('Failed to load translations:', err))
-  }
-}
+  })
+  .catch(err => console.error('Failed to update translations:', err))
 
 export default i18n

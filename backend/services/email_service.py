@@ -8,7 +8,6 @@ import os
 import sys
 import time
 import logging
-import sqlite3
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -16,6 +15,8 @@ from email.mime.base import MIMEBase
 from email import encoders
 from typing import List, Dict, Optional, Any
 from .icons import Icons
+
+from backend.core.database_manager import DatabaseManager
 
 # Ensure root path is in sys.path for .env loading if needed
 root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -610,20 +611,19 @@ class EmailService:
     def _load_config_from_db(self):
         """Load configuration from database"""
         try:
-            if not os.path.exists(self.db_path):
+            if not self.db_path or not os.path.exists(self.db_path):
                 return
 
-            conn = sqlite3.connect(self.db_path)
-            cur = conn.cursor()
-            # Check if table exists first to avoid errors during init
-            cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='system_settings'")
-            if not cur.fetchone():
-                conn.close()
-                return
+            db = DatabaseManager(self.db_path)
+            with db.get_connection() as conn:
+                cur = conn.cursor()
+                # Check if table exists first to avoid errors during init
+                cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='system_settings'")
+                if not cur.fetchone():
+                    return
 
-            cur.execute("SELECT key, value FROM system_settings WHERE category='email'")
-            rows = cur.fetchall()
-            conn.close()
+                cur.execute("SELECT key, value FROM system_settings WHERE category='email'")
+                rows = cur.fetchall()
             
             for key, value in rows:
                 if key in self.config:

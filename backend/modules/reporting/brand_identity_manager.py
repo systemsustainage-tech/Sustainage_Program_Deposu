@@ -10,11 +10,15 @@ import os
 import sqlite3
 from datetime import datetime
 from typing import Any, Dict, Optional, Tuple
+try:
+    from backend.core.base_manager import BaseTenantManager
+except ImportError:
+    from core.base_manager import BaseTenantManager
 
 from PIL import Image
 
 
-class BrandIdentityManager:
+class BrandIdentityManager(BaseTenantManager):
     """Marka kimliği yönetim sistemi"""
 
     # Varsayılan renk paleti
@@ -32,18 +36,14 @@ class BrandIdentityManager:
         'text_secondary': '#7f8c8d'
     }
 
-    def __init__(self, db_path: str, company_id: int = 1) -> None:
-        self.db_path = db_path
-        self.company_id = company_id
+    def __init__(self, db_path: str = None, company_id: Optional[int] = None) -> None:
+        super().__init__(db_path, company_id)
         self._init_tables()
 
     def _init_tables(self) -> None:
         """Marka kimliği tablolarını oluştur"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS brand_identity (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER UNIQUE NOT NULL,
@@ -64,16 +64,12 @@ class BrandIdentityManager:
                     updated_at TEXT,
                     FOREIGN KEY (company_id) REFERENCES companies(id)
                 )
-            """)
+            """, skip_tenant_filter=True)
 
-            conn.commit()
             logging.info("[OK] Brand identity tablosu hazır")
 
         except Exception as e:
             logging.error(f"[HATA] Brand identity tablo: {e}")
-            conn.rollback()
-        finally:
-            conn.close()
 
     def save_brand_identity(self, company_id: int, logo_path: Optional[str] = None,
                            colors: Optional[Dict[str, Any]] = None,
@@ -89,13 +85,11 @@ class BrandIdentityManager:
             fonts: {'heading': 'Segoe UI', 'body': 'Georgia'}
             texts: {'header': 'text', 'footer': 'text', 'watermark': 'text'}
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
             # Mevcut kayıt var mı kontrol et
-            cursor.execute("SELECT id FROM brand_identity WHERE company_id = ?", (company_id,))
-            exists = cursor.fetchone()
+            # BaseTenantManager execute_query kullanıyoruz, company_id filtresi otomatik eklenebilir
+            # Ancak company_id parametresi verildigi icin, TenantAwareDB bunu kullanacaktir
+            exists = self.execute_query("SELECT id FROM brand_identity WHERE company_id = ?", (company_id,))
 
             if exists:
                 # Güncelle
@@ -136,37 +130,45 @@ class BrandIdentityManager:
                         update_fields.append('watermark_text = ?')
                         values.append(texts['watermark'])
 
+                # WHERE condition
                 values.append(company_id)
-
+                
                 query = f"UPDATE brand_identity SET {', '.join(update_fields)} WHERE company_id = ?"
-                cursor.execute(query, values)
+                self.execute_update(query, tuple(values))
+
             else:
                 # Yeni kayıt
-                cursor.execute("""
-                    INSERT INTO brand_identity
-                    (company_id, logo_path, color_primary, color_secondary, color_accent,
-                     font_heading, font_body, report_header_text, report_footer_text, watermark_text)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, (company_id,
-                      logo_path,
-                      colors.get('primary', self.DEFAULT_COLORS['primary']) if colors else self.DEFAULT_COLORS['primary'],
-                      colors.get('secondary', self.DEFAULT_COLORS['secondary']) if colors else self.DEFAULT_COLORS['secondary'],
-                      colors.get('accent', self.DEFAULT_COLORS['success']) if colors else self.DEFAULT_COLORS['success'],
-                      fonts.get('heading', 'Segoe UI') if fonts else 'Segoe UI',
-                      fonts.get('body', 'Segoe UI') if fonts else 'Segoe UI',
-                      texts.get('header', '') if texts else '',
-                      texts.get('footer', '') if texts else '',
-                      texts.get('watermark', '') if texts else ''))
+                columns = ['company_id', 'updated_at']
+                placeholders = ['?', '?']
+                values = [company_id, datetime.now().isoformat()]
 
-            conn.commit()
+                if logo_path:
+                    columns.append('logo_path')
+                    placeholders.append('?')
+                    values.append(logo_path)
+                
+                if colors:
+                    columns.append('color_primary')
+                    placeholders.append('?')
+                    values.append(colors.get('primary', self.DEFAULT_COLORS['primary']))
+                    
+                    columns.append('color_secondary')
+                    placeholders.append('?')
+                    values.append(colors.get('secondary', self.DEFAULT_COLORS['secondary']))
+                
+                if fonts:
+                    columns.append('font_heading')
+                    placeholders.append('?')
+                    values.append(fonts.get('heading', 'Segoe UI'))
+                
+                query = f"INSERT INTO brand_identity ({', '.join(columns)}) VALUES ({', '.join(placeholders)})"
+                self.execute_update(query, tuple(values))
+
             return True
 
         except Exception as e:
-            logging.error(f"Marka kimliği kaydetme hatası: {e}")
-            conn.rollback()
+            logging.error(f"[HATA] Brand identity kaydetme: {e}")
             return False
-        finally:
-            conn.close()
 
     def get_brand_identity(self, company_id: int) -> Dict:
         """Marka kimliğini getir"""

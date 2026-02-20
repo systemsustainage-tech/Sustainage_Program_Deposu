@@ -9,14 +9,14 @@ UN Global Compact (Ten Principles) uyum yöneticisi.
 import csv
 import json
 import os
-import sqlite3
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 from config.database import DB_PATH
+from backend.core.base_manager import BaseTenantManager
 
 
-class UNGCManager:
-    def __init__(self, db_path: str, config_path: str = 'config/ungc_config.json') -> None:
-        self.db_path = db_path
+class UNGCManager(BaseTenantManager):
+    def __init__(self, db_path: str, config_path: str = 'config/ungc_config.json', company_id: Optional[int] = None) -> None:
+        super().__init__(db_path, company_id)
         self.config_path = config_path
         self.config = self._load_config()
 
@@ -37,17 +37,11 @@ class UNGCManager:
                 "data_sources": {"csv_dirs": ["data/imports"]}
             }
 
-    def _conn(self) -> sqlite3.Connection:
-        return sqlite3.connect(self.db_path)
-
     def create_ungc_tables(self) -> None:
         """UNGC tablolarını oluştur"""
-        conn = self._conn()
-        cursor = conn.cursor()
-
         try:
             # UNGC uyumluluk durumu tablosu
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS ungc_compliance (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -62,7 +56,7 @@ class UNGCManager:
             """)
 
             # UNGC kanıt tablosu
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS ungc_evidence (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -77,46 +71,35 @@ class UNGCManager:
             """)
             
             # Migration: file_path kontrolü
-            cursor.execute("PRAGMA table_info(ungc_evidence)")
-            columns = [info[1] for info in cursor.fetchall()]
+            rows = self.execute_query("PRAGMA table_info(ungc_evidence)")
+            columns = [row['name'] for row in rows]
             if 'file_path' not in columns:
-                cursor.execute("ALTER TABLE ungc_evidence ADD COLUMN file_path TEXT")
+                self.execute_update("ALTER TABLE ungc_evidence ADD COLUMN file_path TEXT")
                 logging.info("ungc_evidence tablosuna file_path kolonu eklendi")
 
-            conn.commit()
             logging.info("UNGC tabloları başarıyla oluşturuldu")
 
         except Exception as e:
             logging.error(f"UNGC tablo oluşturma hatası: {e}")
-            conn.rollback()
-        finally:
-            conn.close()
 
     def add_evidence(self, company_id: int, principle_id: str, evidence_type: str, 
                      description: str, file_path: str = None) -> bool:
         """Kanıt ekle"""
-        conn = self._conn()
-        cursor = conn.cursor()
         try:
-            cursor.execute("""
+            self.execute_update("""
                 INSERT INTO ungc_evidence 
                 (company_id, principle_id, evidence_type, evidence_description, file_path)
                 VALUES (?, ?, ?, ?, ?)
             """, (company_id, principle_id, evidence_type, description, file_path))
-            conn.commit()
             return True
         except Exception as e:
             logging.error(f"Evidence add error: {e}")
             return False
-        finally:
-            conn.close()
 
     def get_evidence(self, company_id: int) -> List[Dict]:
         """Kanıt listesini getir"""
-        conn = self._conn()
-        cursor = conn.cursor()
         try:
-            cursor.execute("""
+            rows = self.execute_query("""
                 SELECT id, principle_id, evidence_type, evidence_description, file_path, created_at
                 FROM ungc_evidence 
                 WHERE company_id = ?
@@ -124,21 +107,19 @@ class UNGCManager:
             """, (company_id,))
             
             evidence_list = []
-            for row in cursor.fetchall():
+            for row in rows:
                 evidence_list.append({
-                    'id': row[0],
-                    'principle_id': row[1],
-                    'evidence_type': row[2],
-                    'evidence_description': row[3],
-                    'file_path': row[4],
-                    'created_at': row[5]
+                    'id': row['id'],
+                    'principle_id': row['principle_id'],
+                    'evidence_type': row['evidence_type'],
+                    'evidence_description': row['evidence_description'],
+                    'file_path': row['file_path'],
+                    'created_at': row['created_at']
                 })
             return evidence_list
         except Exception as e:
             logging.error(f"Evidence fetch error: {e}")
             return []
-        finally:
-            conn.close()
 
     def get_thresholds(self) -> Dict[str, float]:
         """Eşik değerlerini getir"""
@@ -157,9 +138,9 @@ class UNGCManager:
             return False
 
 
-    def _load_present_gri_disclosures(self, cur, company_id: int, period: str) -> List[str]:
+    def _load_present_gri_disclosures(self, company_id: int, period: str) -> List[str]:
         # SDG indicator codes from responses
-        rows = cur.execute(
+        rows = self.execute_query(
             """
             SELECT DISTINCT i.code
             FROM sdg_indicators i
@@ -167,44 +148,46 @@ class UNGCManager:
             WHERE r.company_id=? AND r.period=?
             """,
             (company_id, period)
-        ).fetchall()
-        sdg_codes = [r[0] for r in rows]
+        )
+        sdg_codes = [r['code'] for r in rows]
         if not sdg_codes:
             return []
         placeholders = ','.join('?' * len(sdg_codes))
-        gri = [row[0] for row in cur.execute(
+        
+        gri_rows = self.execute_query(
             f"SELECT DISTINCT gri_disclosure FROM map_sdg_gri WHERE sdg_indicator_code IN ({placeholders})",
-            sdg_codes
-        ).fetchall()]
-        return gri
+            tuple(sdg_codes)
+        )
+        return [row['gri_disclosure'] for row in gri_rows]
 
-    def _load_present_tsrs_metrics(self, cur, sdg_codes: List[str], gri_disclosures: List[str]) -> List[Tuple[str, str]]:
+    def _load_present_tsrs_metrics(self, sdg_codes: List[str], gri_disclosures: List[str]) -> List[Dict]:
         tsrs = []
         if sdg_codes:
             placeholders = ','.join('?' * len(sdg_codes))
-            tsrs += cur.execute(
+            tsrs += self.execute_query(
                 f"SELECT tsrs_section, tsrs_metric FROM map_sdg_tsrs WHERE sdg_indicator_code IN ({placeholders})",
-                sdg_codes
-            ).fetchall()
+                tuple(sdg_codes)
+            )
         if gri_disclosures:
             gri_ph = ','.join('?' * len(gri_disclosures))
-            tsrs += cur.execute(
+            tsrs += self.execute_query(
                 f"SELECT tsrs_section, tsrs_metric FROM map_gri_tsrs WHERE gri_disclosure IN ({gri_ph})",
-                gri_disclosures
-            ).fetchall()
+                tuple(gri_disclosures)
+            )
         return tsrs
 
-    def _load_company_policies(self, cur, company_id: int) -> Dict[str, str]:
+    def _load_company_policies(self, company_id: int) -> Dict[str, str]:
         out = {}
         try:
-            row = cur.execute(
+            rows = self.execute_query(
                 "SELECT data_sources, governance_notes, assurance_statement FROM company_info WHERE company_id=?",
                 (company_id,)
-            ).fetchone()
-            if row:
-                out["data_sources"] = row[0] or ""
-                out["governance_notes"] = row[1] or ""
-                out["assurance_statement"] = row[2] or ""
+            )
+            if rows:
+                row = rows[0]
+                out["data_sources"] = row['data_sources'] or ""
+                out["governance_notes"] = row['governance_notes'] or ""
+                out["assurance_statement"] = row['assurance_statement'] or ""
         except Exception as e:
             logging.error(f"Silent error caught: {str(e)}")
         return out
@@ -228,8 +211,6 @@ class UNGCManager:
 
     def get_dashboard_stats(self, company_id: int) -> Dict:
         """Dashboard için özet istatistikleri getir"""
-        conn = self._conn()
-        cursor = conn.cursor()
         stats = {
             'total_principles': 10,
             'compliant_principles': 0,
@@ -237,44 +218,38 @@ class UNGCManager:
             'average_score': 0.0
         }
         try:
-            cursor.execute("SELECT COUNT(*) FROM ungc_compliance WHERE company_id = ? AND compliance_level IN ('Full', 'Partial')", (company_id,))
-            stats['compliant_principles'] = cursor.fetchone()[0] or 0
+            rows = self.execute_query("SELECT COUNT(*) as cnt FROM ungc_compliance WHERE company_id = ? AND compliance_level IN ('Full', 'Partial')", (company_id,))
+            stats['compliant_principles'] = rows[0]['cnt'] if rows else 0
             
-            cursor.execute("SELECT COUNT(*) FROM ungc_evidence WHERE company_id = ?", (company_id,))
-            stats['total_evidence'] = cursor.fetchone()[0] or 0
+            rows = self.execute_query("SELECT COUNT(*) as cnt FROM ungc_evidence WHERE company_id = ?", (company_id,))
+            stats['total_evidence'] = rows[0]['cnt'] if rows else 0
             
-            cursor.execute("SELECT AVG(score) FROM ungc_compliance WHERE company_id = ?", (company_id,))
-            stats['average_score'] = round(cursor.fetchone()[0] or 0.0, 2)
+            rows = self.execute_query("SELECT AVG(score) as avg_score FROM ungc_compliance WHERE company_id = ?", (company_id,))
+            stats['average_score'] = round(rows[0]['avg_score'] or 0.0, 2) if rows else 0.0
             
             return stats
         except Exception as e:
             logging.error(f"UNGC istatistikleri getirme hatası: {e}")
             return stats
-        finally:
-            conn.close()
 
     def compute_principle_status(self, company_id: int, period: str) -> Dict:
         """Ten Principles uyum durumu ve skorları."""
-        with self._conn() as con:
-            cur = con.cursor()
-
-            # UNGC uyumluluk verilerini al
-            compliance_data = {}
-            try:
-                rows = cur.execute(
-                    "SELECT principle_id, compliance_level, score FROM ungc_compliance WHERE company_id = ?",
-                    (company_id,)
-                ).fetchall()
-                for row in rows:
-                    compliance_data[row[0]] = {
-                        'compliance_level': row[1],
-                        'score': row[2]
-                    }
-            except Exception as e:
-                logging.error(f"UNGC compliance veri okuma hatası: {e}")
+        # UNGC uyumluluk verilerini al
+        compliance_data = {}
+        try:
+            rows = self.execute_query(
+                "SELECT principle_id, compliance_level, score FROM ungc_compliance WHERE company_id = ?",
+                (company_id,)
+            )
+            for row in rows:
+                compliance_data[row['principle_id']] = {
+                    'compliance_level': row['compliance_level'],
+                    'score': row['score']
+                }
+        except Exception as e:
+            logging.error(f"UNGC compliance veri okuma hatası: {e}")
 
         thresholds = self.config.get("thresholds", {"full": 0.6, "partial": 0.2})
-        self.config.get("mappings", {})
         principles = self.config.get("principles", [])
 
         details = []
@@ -287,7 +262,6 @@ class UNGCManager:
 
             # Veritabanından uyumluluk verisini al
             compliance_info = compliance_data.get(pid, {})
-            compliance_info.get('compliance_level', 'None')
             score = compliance_info.get('score', 0.0)
 
             # Durum belirleme
@@ -297,6 +271,7 @@ class UNGCManager:
                 status = "Partial"
             else:
                 status = "None"
+
             det = {
                 "principle_id": pid,
                 "category": cat,
@@ -321,13 +296,10 @@ class UNGCManager:
 
     def save_compliance_data(self, company_id: int, principle_id: str, compliance_level: str, notes: str = None) -> bool:
         """UNGC uyumluluk verisini kaydet"""
-        conn = self._conn()
-        cursor = conn.cursor()
-        
         try:
             # Check if record exists
-            cursor.execute("SELECT id FROM ungc_compliance WHERE company_id = ? AND principle_id = ?", (company_id, principle_id))
-            row = cursor.fetchone()
+            rows = self.execute_query("SELECT id FROM ungc_compliance WHERE company_id = ? AND principle_id = ?", (company_id, principle_id))
+            row = rows[0] if rows else None
             
             # Calculate score based on level
             score = 0.0
@@ -338,26 +310,22 @@ class UNGCManager:
             
             if row:
                 # Update
-                cursor.execute("""
+                self.execute_update("""
                     UPDATE ungc_compliance 
                     SET compliance_level = ?, score = ?, notes = ?, last_assessed = CURRENT_TIMESTAMP
                     WHERE id = ?
-                """, (compliance_level, score, notes, row[0]))
+                """, (compliance_level, score, notes, row['id']))
             else:
                 # Insert
-                cursor.execute("""
+                self.execute_update("""
                     INSERT INTO ungc_compliance (company_id, principle_id, compliance_level, score, notes)
                     VALUES (?, ?, ?, ?, ?)
                 """, (company_id, principle_id, compliance_level, score, notes))
                 
-            conn.commit()
             return True
         except Exception as e:
             logging.error(f"UNGC veri kaydetme hatası: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
 if __name__ == '__main__':
     # Basit manuel test

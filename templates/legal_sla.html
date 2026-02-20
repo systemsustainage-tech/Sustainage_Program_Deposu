@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}{{ lang('service_level_agreement', 'Hizmet Seviyesi Anlaşması (SLA)') }} - Sustainage{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <h1>{{ lang('service_level_agreement', 'Hizmet Seviyesi Anlaşması (SLA)') }}</h1>
+    <p class="lead">Sustainage hizmet sürekliliği ve destek taahhütleri.</p>
+    
+    <div class="card shadow-sm p-4">
+        <h4>1. Hizmet Sürekliliği</h4>
+        <p>%99.9 Uptime garantisi...</p>
+        
+        <h4>2. Destek Yanıt Süreleri</h4>
+        <p>Kritik hatalar için 4 saat...</p>
+    </div>
+</div>
+{% endblock %}

@@ -1,17 +1,14 @@
-import sqlite3
 import time
 import logging
 import json
 from datetime import datetime, timedelta
 from typing import Tuple, Optional
 from core.audit_manager import AuditManager
+from backend.core.database_manager import DatabaseManager
 
 # Configuration
 APPROVAL_WINDOW_SECONDS = 120  # 2 minutes to confirm
 SUPER_ADMIN_USERNAME = "__super__"
-
-def _get_connection(db_path: str):
-    return sqlite3.connect(db_path)
 
 def _ensure_approval_table(conn):
     """Ensures the approval table exists."""
@@ -45,9 +42,8 @@ def _is_super_admin(conn, username: str) -> bool:
             WHERE u.username = ?
         """, (username,))
         roles = [row[0] for row in cursor.fetchall()]
-        if 'Super Admin' in roles or 'Admin' in roles: # Treating Admin as protected too if needed, but sticking to Super Admin as per prompt
-             if 'Super Admin' in roles:
-                 return True
+        if 'Super Admin' in roles:
+             return True
     except Exception as e:
         logging.error(f"Error checking super admin status: {e}")
     
@@ -60,8 +56,8 @@ def _check_two_stage_approval(db_path: str, actor_id: int, target_username: str,
     2. If exists -> Consumes it and returns True.
     3. If not -> Creates it and returns False (requiring confirmation).
     """
-    conn = _get_connection(db_path)
-    try:
+    db = DatabaseManager(db_path)
+    with db.get_connection() as conn:
         _ensure_approval_table(conn)
         cursor = conn.cursor()
         now = time.time()
@@ -120,12 +116,6 @@ def _check_two_stage_approval(db_path: str, actor_id: int, target_username: str,
             )
             
             return False, f"⚠️ GÜVENLİK UYARISI: Süper Yönetici ({target_username}) üzerinde işlem yapmak üzeresiniz. İşlemi onaylamak için lütfen 2 dakika içinde tekrar deneyin."
-            
-    except Exception as e:
-        logging.error(f"Approval check error: {e}")
-        return False, f"System error during approval check: {e}"
-    finally:
-        conn.close()
 
 def check_delete_protection(db_path: str, username: str, actor_id: Optional[int] = None) -> Tuple[bool, str]:
     """
@@ -135,33 +125,27 @@ def check_delete_protection(db_path: str, username: str, actor_id: Optional[int]
     if username == SUPER_ADMIN_USERNAME:
         return False, "Root Super Admin cannot be deleted."
     
-    conn = _get_connection(db_path)
-    try:
-        # 2. Check if target is a Super Admin
+    db = DatabaseManager(db_path)
+    # Check if target is a Super Admin
+    with db.get_connection() as conn:
         if not _is_super_admin(conn, username):
             return True, "User is not a super admin, deletion allowed."
             
-        # 3. If target IS Super Admin, enforce 2-stage approval
-        if actor_id is None:
-            return False, "Security check failed: Actor ID is required for Super Admin operations."
-            
-        # Check authorization (Actor must also be powerful, but we assume the caller checks basic permissions. 
-        # Here we enforce the 2-step process.)
+    # 3. If target IS Super Admin, enforce 2-stage approval
+    if actor_id is None:
+        return False, "Security check failed: Actor ID is required for Super Admin operations."
         
-        return _check_two_stage_approval(db_path, actor_id, username, "DELETE")
-        
-    except Exception as e:
-        logging.error(f"Delete protection error: {e}")
-        return False, "Error checking delete protection."
-    finally:
-        conn.close()
+    # Check authorization (Actor must also be powerful, but we assume the caller checks basic permissions. 
+    # Here we enforce the 2-step process.)
+    
+    return _check_two_stage_approval(db_path, actor_id, username, "DELETE")
 
 def check_password_change_protection(db_path: str, username: str, new_password: str, actor_id: Optional[int] = None) -> Tuple[bool, str]:
     """
     Checks if a user's password can be changed. Enforces 2-stage approval for Super Admins.
     """
-    conn = _get_connection(db_path)
-    try:
+    db = DatabaseManager(db_path)
+    with db.get_connection() as conn:
         if not _is_super_admin(conn, username):
             return True, "User is not a super admin, modification allowed."
             
@@ -175,10 +159,4 @@ def check_password_change_protection(db_path: str, username: str, new_password: 
              # We will assume secure usage requiring actor_id.
              return False, "Security check failed: Actor ID required."
 
-        return _check_two_stage_approval(db_path, actor_id, username, "PASSWORD_CHANGE")
-        
-    except Exception as e:
-        logging.error(f"Password change protection error: {e}")
-        return False, "Error checking protection."
-    finally:
-        conn.close()
+    return _check_two_stage_approval(db_path, actor_id, username, "PASSWORD_CHANGE")

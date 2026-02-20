@@ -8,12 +8,17 @@ Kaynak belgeleme, metodoloji, varsayımlar, data owner, audit trail
 import logging
 import json
 import os
-import sqlite3
-from typing import Dict, List
-from config.database import DB_PATH
+from datetime import datetime, date
+from typing import Dict, List, Optional
+try:
+    from backend.core.base_manager import BaseTenantManager
+    from config.database import DB_PATH
+except ImportError:
+    from backend.core.base_manager import BaseTenantManager
+    from backend.config.database import DB_PATH
 
 
-class DataProvenanceManager:
+class DataProvenanceManager(BaseTenantManager):
     """Veri kaynağı ve izlenebilirlik yöneticisi"""
 
     # Veri kaynak tipleri
@@ -50,21 +55,18 @@ class DataProvenanceManager:
         "unverified": "Doğrulanmamış"
     }
 
-    def __init__(self, db_path: str = DB_PATH) -> None:
+    def __init__(self, db_path: str = DB_PATH, company_id: Optional[int] = None) -> None:
         if not os.path.isabs(db_path):
             base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
             db_path = os.path.join(base_dir, db_path)
-        self.db_path = db_path
+        super().__init__(db_path, company_id)
         self._init_provenance_tables()
 
     def _init_provenance_tables(self) -> None:
         """Data provenance tablolarını oluştur"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
             # Veri kaynağı kayıtları
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS data_sources (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -82,12 +84,13 @@ class DataProvenanceManager:
                     FOREIGN KEY (company_id) REFERENCES companies(id),
                     FOREIGN KEY (data_owner_id) REFERENCES users(id)
                 )
-            """)
+            """, skip_tenant_filter=True)
 
             # Veri toplama metodolojisi
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS data_collection_methodology (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    company_id INTEGER NOT NULL,
                     data_source_id INTEGER NOT NULL,
                     method_type TEXT NOT NULL,
                     method_description TEXT NOT NULL,
@@ -97,14 +100,16 @@ class DataProvenanceManager:
                     confidence_level REAL,
                     limitations TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (company_id) REFERENCES companies(id),
                     FOREIGN KEY (data_source_id) REFERENCES data_sources(id)
                 )
-            """)
+            """, skip_tenant_filter=True)
 
             # Varsayımlar ve hesaplamalar
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS data_assumptions (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    company_id INTEGER NOT NULL,
                     data_source_id INTEGER NOT NULL,
                     assumption_type TEXT NOT NULL,
                     assumption_description TEXT NOT NULL,
@@ -113,14 +118,16 @@ class DataProvenanceManager:
                     alternative_scenarios TEXT,
                     created_by INTEGER,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (company_id) REFERENCES companies(id),
                     FOREIGN KEY (data_source_id) REFERENCES data_sources(id)
                 )
-            """)
+            """, skip_tenant_filter=True)
 
             # Hesaplama detayları
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS calculation_details (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    company_id INTEGER NOT NULL,
                     data_source_id INTEGER NOT NULL,
                     calculation_formula TEXT NOT NULL,
                     input_parameters TEXT NOT NULL,
@@ -130,12 +137,13 @@ class DataProvenanceManager:
                     result_unit TEXT,
                     calculation_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     calculated_by INTEGER,
+                    FOREIGN KEY (company_id) REFERENCES companies(id),
                     FOREIGN KEY (data_source_id) REFERENCES data_sources(id)
                 )
-            """)
+            """, skip_tenant_filter=True)
 
             # Veri sahipleri (data owners)
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS data_ownership (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -150,12 +158,13 @@ class DataProvenanceManager:
                     FOREIGN KEY (primary_owner_id) REFERENCES users(id),
                     FOREIGN KEY (backup_owner_id) REFERENCES users(id)
                 )
-            """)
+            """, skip_tenant_filter=True)
 
             # Detaylı değişiklik geçmişi (audit trail)
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS data_change_audit_trail (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    company_id INTEGER NOT NULL,
                     table_name TEXT NOT NULL,
                     record_id INTEGER NOT NULL,
                     field_name TEXT NOT NULL,
@@ -167,14 +176,16 @@ class DataProvenanceManager:
                     changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     ip_address TEXT,
                     session_id TEXT,
+                    FOREIGN KEY (company_id) REFERENCES companies(id),
                     FOREIGN KEY (changed_by) REFERENCES users(id)
                 )
-            """)
+            """, skip_tenant_filter=True)
 
             # Veri doğrulama kayıtları
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS data_verification_records (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    company_id INTEGER NOT NULL,
                     data_source_id INTEGER NOT NULL,
                     verified_by INTEGER NOT NULL,
                     verification_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -182,18 +193,16 @@ class DataProvenanceManager:
                     verification_result TEXT DEFAULT 'approved',
                     verification_notes TEXT,
                     evidence_document_path TEXT,
+                    FOREIGN KEY (company_id) REFERENCES companies(id),
                     FOREIGN KEY (data_source_id) REFERENCES data_sources(id),
                     FOREIGN KEY (verified_by) REFERENCES users(id)
                 )
-            """)
+            """, skip_tenant_filter=True)
 
-            conn.commit()
             logging.info("[OK] Data provenance tablolari olusturuldu")
 
         except Exception as e:
             logging.error(f"[ERROR] Provenance tablolari olusturulurken hata: {e}")
-        finally:
-            conn.close()
 
     # =====================================================
     # 1. KAYNAK BELGELEME
@@ -208,43 +217,35 @@ class DataProvenanceManager:
                             notes: str = "") -> int:
         """
         Veri kaynağını belgele
-        
-        Args:
-            data_type: "carbon_emission", "energy_consumption", "water_usage", vb.
-            data_identifier: Verinin benzersiz tanımlayıcısı (örn: "scope1_2024")
-            source_type: "manual_entry", "excel_import", "api_integration", vb.
-            source_name: Kaynak adı (örn: "Fatura No: 12345", "Sensör ID: S001")
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
-                INSERT INTO data_sources
-                (company_id, data_type, data_identifier, source_type, source_name,
-                 source_url, source_document_path, collection_date, data_owner_id,
-                 data_quality_level, notes)
-                VALUES (?, ?, ?, ?, ?, ?, ?, DATE('now'), ?, ?, ?)
-            """, (company_id, data_type, data_identifier, source_type, source_name,
-                  source_url, source_document, data_owner_id, quality_level, notes))
-
-            source_id = cursor.lastrowid
-            conn.commit()
-
+            cid = self._ensure_context(company_id)
+            data = {
+                'data_type': data_type,
+                'data_identifier': data_identifier,
+                'source_type': source_type,
+                'source_name': source_name,
+                'source_url': source_url,
+                'source_document_path': source_document,
+                'data_owner_id': data_owner_id,
+                'data_quality_level': quality_level,
+                'notes': notes,
+                'collection_date': date.today().isoformat()
+            }
+            
+            source_id = self.insert('data_sources', data, company_id=cid)
             logging.info(f"[OK] Veri kaynagi belgelendi: {data_identifier}")
             return source_id
 
         except Exception as e:
             logging.error(f"Kaynak belgeleme hatasi: {e}")
             return 0
-        finally:
-            conn.close()
 
     # =====================================================
     # 2. METODOLOJİ KAYDI
     # =====================================================
 
-    def record_collection_methodology(self, data_source_id: int,
+    def record_collection_methodology(self, company_id: int, data_source_id: int,
                                      method_type: str, description: str,
                                      unit: str = "", frequency: str = "",
                                      sample_size: int = None,
@@ -252,117 +253,82 @@ class DataProvenanceManager:
                                      limitations: str = "") -> int:
         """
         Veri toplama metodolojisini kaydet
-        
-        Args:
-            method_type: "direct_measurement", "estimation", "emission_factor", vb.
-            description: Metodoloji açıklaması
-            unit: Ölçüm birimi
-            frequency: Toplama sıklığı (günlük, aylık, vb.)
-            confidence: Güven seviyesi (0.0-1.0)
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            cid = self._ensure_context(company_id)
+            query = """
                 INSERT INTO data_collection_methodology
-                (data_source_id, method_type, method_description, measurement_unit,
+                (company_id, data_source_id, method_type, method_description, measurement_unit,
                  frequency, sample_size, confidence_level, limitations)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """, (data_source_id, method_type, description, unit, frequency,
-                  sample_size, confidence, limitations))
-
-            method_id = cursor.lastrowid
-            conn.commit()
-
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """
+            params = (cid, data_source_id, method_type, description, unit, frequency,
+                      sample_size, confidence, limitations)
+            
+            method_id = self.execute_update(query, params, company_id=cid)
             logging.info(f"[OK] Metodoloji kaydedildi: {method_type}")
             return method_id
 
         except Exception as e:
             logging.error(f"Metodoloji kayit hatasi: {e}")
             return 0
-        finally:
-            conn.close()
 
     # =====================================================
     # 3. VARSAYIMLAR VE HESAPLAMALAR
     # =====================================================
 
-    def record_assumption(self, data_source_id: int, assumption_type: str,
+    def record_assumption(self, company_id: int, data_source_id: int, assumption_type: str,
                          description: str, justification: str = "",
                          impact: str = "medium", created_by: int = None) -> int:
         """
         Varsayımı kaydet
-        
-        Args:
-            assumption_type: "emission_factor", "conversion_rate", "estimation_basis", vb.
-            description: Varsayım açıklaması
-            justification: Gerekçe
-            impact: "low", "medium", "high"
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            cid = self._ensure_context(company_id)
+            query = """
                 INSERT INTO data_assumptions
-                (data_source_id, assumption_type, assumption_description,
+                (company_id, data_source_id, assumption_type, assumption_description,
                  justification, impact_level, created_by)
-                VALUES (?, ?, ?, ?, ?, ?)
-            """, (data_source_id, assumption_type, description, justification,
-                  impact, created_by))
-
-            assumption_id = cursor.lastrowid
-            conn.commit()
-
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """
+            params = (cid, data_source_id, assumption_type, description, justification,
+                      impact, created_by)
+            
+            assumption_id = self.execute_update(query, params, company_id=cid)
             logging.info(f"[OK] Varsayim kaydedildi: {assumption_type}")
             return assumption_id
 
         except Exception as e:
             logging.error(f"Varsayim kayit hatasi: {e}")
             return 0
-        finally:
-            conn.close()
 
-    def record_calculation(self, data_source_id: int, formula: str,
+    def record_calculation(self, company_id: int, data_source_id: int, formula: str,
                           inputs: Dict, constants: Dict = None,
                           steps: str = "", result: float = None,
                           unit: str = "", calculated_by: int = None) -> int:
         """
         Hesaplama detaylarını kaydet
-        
-        Args:
-            formula: Hesaplama formülü (örn: "Scope 1 = Fuel * Emission Factor")
-            inputs: Girdi parametreleri {"fuel_amount": 1000, "emission_factor": 2.5}
-            constants: Sabitler {"conversion_factor": 3.6}
-            steps: Hesaplama adımları
-            result: Sonuç değeri
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            cid = self._ensure_context(company_id)
+            query = """
                 INSERT INTO calculation_details
-                (data_source_id, calculation_formula, input_parameters,
+                (company_id, data_source_id, calculation_formula, input_parameters,
                  constants_used, calculation_steps, result_value, result_unit,
                  calculated_by)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """, (data_source_id, formula, json.dumps(inputs),
-                  json.dumps(constants) if constants else None, steps,
-                  str(result) if result else None, unit, calculated_by))
-
-            calc_id = cursor.lastrowid
-            conn.commit()
-
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """
+            params = (cid, data_source_id, formula, json.dumps(inputs),
+                      json.dumps(constants) if constants else None, steps,
+                      str(result) if result else None, unit, calculated_by)
+            
+            calc_id = self.execute_update(query, params, company_id=cid)
             logging.info("[OK] Hesaplama kaydedildi")
             return calc_id
 
         except Exception as e:
             logging.error(f"Hesaplama kayit hatasi: {e}")
             return 0
-        finally:
-            conn.close()
 
     # =====================================================
     # 4. VERİ SAHİBİ (DATA OWNER) ATAMA
@@ -373,107 +339,76 @@ class DataProvenanceManager:
                          responsibilities: str = "") -> int:
         """
         Veri sahibi ata
-        
-        Args:
-            data_category: "carbon_data", "water_data", "hr_data", vb.
-            primary_owner_id: Ana veri sahibi (user ID)
-            backup_owner_id: Yedek veri sahibi (user ID)
-            responsibilities: Sorumluluklar
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
-                INSERT INTO data_ownership
-                (company_id, data_category, primary_owner_id, backup_owner_id,
-                 responsibilities)
-                VALUES (?, ?, ?, ?, ?)
-            """, (company_id, data_category, primary_owner_id, backup_owner_id,
-                  responsibilities))
-
-            ownership_id = cursor.lastrowid
-            conn.commit()
-
+            cid = self._ensure_context(company_id)
+            data = {
+                'data_category': data_category,
+                'primary_owner_id': primary_owner_id,
+                'backup_owner_id': backup_owner_id,
+                'responsibilities': responsibilities
+            }
+            ownership_id = self.insert('data_ownership', data, company_id=cid)
             logging.info(f"[OK] Veri sahibi atandi: {data_category}")
             return ownership_id
 
         except Exception as e:
             logging.error(f"Veri sahibi atama hatasi: {e}")
             return 0
-        finally:
-            conn.close()
 
     # =====================================================
     # 5. DEĞİŞİKLİK GEÇMİŞİ (AUDIT TRAIL)
     # =====================================================
 
-    def log_data_change(self, table_name: str, record_id: int,
+    def log_data_change(self, company_id: int, table_name: str, record_id: int,
                        field_name: str, old_value: str, new_value: str,
                        change_type: str, reason: str = "",
                        changed_by: int = None, ip_address: str = None) -> int:
         """
         Veri değişikliğini kaydet
-        
-        Args:
-            table_name: Tablo adı
-            record_id: Kayıt ID
-            field_name: Alan adı
-            old_value: Eski değer
-            new_value: Yeni değer
-            change_type: "insert", "update", "delete"
-            reason: Değişiklik nedeni
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            cid = self._ensure_context(company_id)
+            query = """
                 INSERT INTO data_change_audit_trail
-                (table_name, record_id, field_name, old_value, new_value,
+                (company_id, table_name, record_id, field_name, old_value, new_value,
                  change_type, change_reason, changed_by, ip_address)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (table_name, record_id, field_name, old_value, new_value,
-                  change_type, reason, changed_by, ip_address))
-
-            trail_id = cursor.lastrowid
-            conn.commit()
-
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """
+            params = (cid, table_name, record_id, field_name, old_value, new_value,
+                      change_type, reason, changed_by, ip_address)
+            
+            trail_id = self.execute_update(query, params, company_id=cid)
             return trail_id
 
         except Exception as e:
             logging.error(f"Audit trail kayit hatasi: {e}")
             return 0
-        finally:
-            conn.close()
 
-    def get_change_history(self, table_name: str, record_id: int) -> List[Dict]:
+    def get_change_history(self, company_id: int, table_name: str, record_id: int) -> List[Dict]:
         """Bir kaydın değişiklik geçmişini getir"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            cid = self._ensure_context(company_id)
+            query = """
                 SELECT field_name, old_value, new_value, change_type,
                        change_reason, changed_by, changed_at
                 FROM data_change_audit_trail
-                WHERE table_name = ? AND record_id = ?
+                WHERE table_name = ? AND record_id = ? AND company_id = ?
                 ORDER BY changed_at DESC
-            """, (table_name, record_id))
+            """
+            rows = self.execute_query(query, (table_name, record_id, cid), company_id=cid)
 
             changes = []
-            for row in cursor.fetchall():
+            for row in rows:
                 changes.append({
-                    "field": row[0],
-                    "old_value": row[1],
-                    "new_value": row[2],
-                    "type": row[3],
-                    "reason": row[4],
-                    "changed_by": row[5],
-                    "changed_at": row[6]
+                    "field": row['field_name'],
+                    "old_value": row['old_value'],
+                    "new_value": row['new_value'],
+                    "type": row['change_type'],
+                    "reason": row['change_reason'],
+                    "changed_by": row['changed_by'],
+                    "changed_at": row['changed_at']
                 })
-
-            conn.close()
             return changes
 
         except Exception as e:
@@ -484,37 +419,32 @@ class DataProvenanceManager:
     # 6. VERİ DOĞRULAMA
     # =====================================================
 
-    def verify_data(self, data_source_id: int, verified_by: int,
+    def verify_data(self, company_id: int, data_source_id: int, verified_by: int,
                    method: str, result: str = "approved",
                    notes: str = "", evidence_path: str = None) -> int:
         """
         Veriyi doğrula
-        
-        Args:
-            method: Doğrulama yöntemi
-            result: "approved", "rejected", "conditional"
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            cid = self._ensure_context(company_id)
+            # 1. Verification kaydı
+            query1 = """
                 INSERT INTO data_verification_records
-                (data_source_id, verified_by, verification_method,
+                (company_id, data_source_id, verified_by, verification_method,
                  verification_result, verification_notes, evidence_document_path)
-                VALUES (?, ?, ?, ?, ?, ?)
-            """, (data_source_id, verified_by, method, result, notes, evidence_path))
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """
+            params1 = (cid, data_source_id, verified_by, method, result, notes, evidence_path)
+            verification_id = self.execute_update(query1, params1, company_id=cid)
 
-            verification_id = cursor.lastrowid
-
-            # Veri kalite seviyesini güncelle
-            cursor.execute("""
+            # 2. Kalite seviyesi güncellemesi
+            query2 = """
                 UPDATE data_sources
                 SET data_quality_level = ?
-                WHERE id = ?
-            """, ("verified" if result == "approved" else "unverified", data_source_id))
-
-            conn.commit()
+                WHERE id = ? AND company_id = ?
+            """
+            quality_level = "verified" if result == "approved" else "unverified"
+            self.execute_update(query2, (quality_level, data_source_id, cid), company_id=cid)
 
             logging.info(f"[OK] Veri dogrulandi: {result}")
             return verification_id
@@ -522,93 +452,3 @@ class DataProvenanceManager:
         except Exception as e:
             logging.error(f"Dogrulama hatasi: {e}")
             return 0
-        finally:
-            conn.close()
-
-    # =====================================================
-    # 7. RAPOR VE SORGULAR
-    # =====================================================
-
-    def get_data_provenance_report(self, data_source_id: int) -> Dict:
-        """Bir veri için tam provenance raporu"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
-        try:
-            report = {}
-
-            # Kaynak bilgileri
-            cursor.execute("""
-                SELECT data_type, data_identifier, source_type, source_name,
-                       source_url, collection_date, data_quality_level, notes
-                FROM data_sources WHERE id = ?
-            """, (data_source_id,))
-
-            row = cursor.fetchone()
-            if row:
-                report["source"] = {
-                    "type": row[0],
-                    "identifier": row[1],
-                    "source_type": row[2],
-                    "source_name": row[3],
-                    "url": row[4],
-                    "collection_date": row[5],
-                    "quality": row[6],
-                    "notes": row[7]
-                }
-
-            # Metodoloji
-            cursor.execute("""
-                SELECT method_type, method_description, measurement_unit
-                FROM data_collection_methodology WHERE data_source_id = ?
-            """, (data_source_id,))
-
-            row = cursor.fetchone()
-            if row:
-                report["methodology"] = {
-                    "type": row[0],
-                    "description": row[1],
-                    "unit": row[2]
-                }
-
-            # Varsayımlar
-            cursor.execute("""
-                SELECT COUNT(*) FROM data_assumptions WHERE data_source_id = ?
-            """, (data_source_id,))
-
-            report["assumptions_count"] = cursor.fetchone()[0]
-
-            # Hesaplamalar
-            cursor.execute("""
-                SELECT calculation_formula, result_value
-                FROM calculation_details WHERE data_source_id = ?
-                ORDER BY calculation_date DESC LIMIT 1
-            """, (data_source_id,))
-
-            row = cursor.fetchone()
-            if row:
-                report["calculation"] = {
-                    "formula": row[0],
-                    "result": row[1]
-                }
-
-            # Doğrulama
-            cursor.execute("""
-                SELECT verification_result, verification_date
-                FROM data_verification_records WHERE data_source_id = ?
-                ORDER BY verification_date DESC LIMIT 1
-            """, (data_source_id,))
-
-            row = cursor.fetchone()
-            if row:
-                report["verification"] = {
-                    "status": row[0],
-                    "date": row[1]
-                }
-
-            conn.close()
-            return report
-
-        except Exception as e:
-            logging.error(f"Rapor olusturma hatasi: {e}")
-            return {}

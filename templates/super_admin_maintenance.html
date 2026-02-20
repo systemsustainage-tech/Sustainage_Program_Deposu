@@ -12,7 +12,7 @@
 </div>
 <div class="btn-toolbar mb-2 mb-md-0">
 
-<button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}</button></div>
+<a class="btn btn-sm btn-outline-secondary ms-2" href="{{ url_for('super_admin_panel') }}"><i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}</a></div>
 </div>
 <div class="row g-4 mb-4">
 <div class="col-md-3">
@@ -57,22 +57,54 @@
 <div class="row g-4">
 <div class="col-lg-6">
 <div class="card border-0 shadow-sm mb-4">
-<div class="card-header">
-<h5 class="mb-0">Bakım Özeti</h5>
-</div>
-<div class="card-body">
-<p class="mb-2">
-                    Masaüstü sürümdeki bakım araçlarının tamamı bu bölüme
-                    taşınacaktır. Şu anda bu sayfa, sistemin genel durumunu ve
-                    yedekleme istatistiklerini özetlemek için kullanılmaktadır.
-                </p>
-<ul class="mb-0">
-<li>Veritabanı bütünlük kontrolleri</li>
-<li>İndeks ve performans analizleri</li>
-<li>Log ve geçici dosya temizliği</li>
-<li>Disk alanı ve yedekleme durumu</li>
-</ul>
-</div>
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Sistem Kontrolleri</h5>
+        <form method="post" action="{{ url_for('super_admin_maintenance') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-play-fill"></i> Kontrolleri Başlat</button>
+        </form>
+    </div>
+    <div class="card-body">
+        {% if results %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Kontrol Adı</th>
+                        <th>Durum</th>
+                        <th>Mesaj</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for result in results %}
+                    <tr>
+                        <td>{{ result.name }}</td>
+                        <td>
+                            {% if result.status == 'OK' %}
+                                <span class="badge bg-success">BAŞARILI</span>
+                            {% elif result.status == 'WARN' %}
+                                <span class="badge bg-warning text-dark">UYARI</span>
+                            {% else %}
+                                <span class="badge bg-danger">HATA</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ result.message }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="mb-2">
+            Otomatik bakım kontrollerini başlatmak için yukarıdaki butonu kullanın.
+        </p>
+        <ul class="mb-0">
+            <li>Veritabanı bağlantı ve tablo kontrolü</li>
+            <li>Dil dosyası bütünlüğü</li>
+            <li>Kritik dizin yapısı kontrolü</li>
+        </ul>
+        {% endif %}
+    </div>
 </div>
 </div>
 <div class="col-lg-6">

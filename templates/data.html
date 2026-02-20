@@ -15,6 +15,15 @@
     <button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}</button></div>
 </div>
 
+<div class="alert alert-info border-0 shadow-sm mb-4">
+<h5 class="mb-2"><i class="bi bi-info-circle me-2"></i>{{ lang('data_flow_title', 'Veri Girişi Akışı') }}</h5>
+<ol class="mb-0 ps-3">
+<li>{{ lang('data_flow_step1', 'Üstteki sekmelerden görmek istediğiniz veri türünü seçin.') }}</li>
+<li>{{ lang('data_flow_step2', 'Yeni kayıt eklemek için \"Yeni Veri Girişi\" butonuna tıklayın.') }}</li>
+<li>{{ lang('data_flow_step3', 'Kaydedilen kayıtlar ilgili sekmede listelenir ve raporlamada kullanılır.') }}</li>
+</ol>
+</div>
+
 <ul class="nav nav-tabs mb-4" id="dataTab" role="tablist">
 <li class="nav-item" role="presentation">
 <a class="nav-link {% if active_tab == 'carbon' %}active{% endif %}" href="{{ url_for('data', tab='carbon') }}">{{ lang('tab_carbon') }}</a>
@@ -34,8 +43,13 @@
 <!-- Carbon Tab -->
 {% if active_tab == 'carbon' %}
 <div class="tab-pane fade show active" id="carbon" role="tabpanel">
+<div class="alert alert-light border rounded-3 p-3 mb-3">
+<strong>Karbon Emisyonu Verileri</strong>
+<p class="mb-1">Scope 1, 2 ve 3 kapsamındaki yakıt, elektrik ve diğer faaliyetlerden kaynaklanan emisyon kayıtlarını burada görürsünüz.</p>
+<p class="mb-0 text-muted">Yeni kayıt eklerken dönem, kapsam, kategori ve miktar alanlarını eksiksiz doldurmanız, raporların doğruluğu için kritik önemdedir.</p>
+</div>
 <div class="table-responsive">
-<table class="table table-sm table-hover">
+<table class="table table-sm table-hover no-datatable">
 <thead>
 <tr>
 <th>{{ lang('col_scope') }}</th>
@@ -57,7 +71,14 @@
 <td>{{ item['period'] or item['created_at'] }}</td>
 </tr>
                     {% else %}
-                    <tr><td class="text-center" colspan="6">{{ lang('no_data') }}</td></tr>
+                    <tr><td class="text-center text-muted" colspan="6">
+                        {{ lang('no_data', 'Kayıt bulunamadı.') }}
+                        {% if session.role|lower in ['admin', 'super_admin', 'test admin'] %}
+                            {{ lang('no_data_admin_hint', 'Yeni kayıt eklemek için yukarıdaki \"Yeni Veri Girişi\" butonunu kullanabilirsiniz.') }}
+                        {% else %}
+                            {{ lang('no_data_user_hint', 'Veri girişi için sistem yöneticinizle iletişime geçebilirsiniz.') }}
+                        {% endif %}
+                    </td></tr>
                     {% endfor %}
                 </tbody>
 </table>
@@ -69,8 +90,13 @@
 <!-- Energy Tab -->
 {% if active_tab == 'energy' %}
 <div class="tab-pane fade show active" id="energy" role="tabpanel">
+<div class="alert alert-light border rounded-3 p-3 mb-3">
+<strong>Enerji Tüketimi Verileri</strong>
+<p class="mb-1">Elektrik, doğalgaz ve diğer enerji kaynaklarına ait tüketim ve maliyet kayıtları bu tabloda listelenir.</p>
+<p class="mb-0 text-muted">Tüketim miktarı, birim ve maliyet alanlarını doğru doldurmanız enerji performansı ve karbon hesaplamaları için gereklidir.</p>
+</div>
 <div class="table-responsive">
-<table class="table table-sm table-hover">
+<table class="table table-sm table-hover no-datatable">
 <thead>
 <tr>
 <th>{{ lang('col_year_month') }}</th>
@@ -90,7 +116,14 @@
 <td>{{ item['cost'] }}</td>
 </tr>
                     {% else %}
-                    <tr><td class="text-center" colspan="5">{{ lang('no_data') }}</td></tr>
+                    <tr><td class="text-center text-muted" colspan="5">
+                        {{ lang('no_data', 'Kayıt bulunamadı.') }}
+                        {% if session.role|lower in ['admin', 'super_admin', 'test admin'] %}
+                            {{ lang('no_data_admin_hint', 'Yeni kayıt eklemek için yukarıdaki \"Yeni Veri Girişi\" butonunu kullanabilirsiniz.') }}
+                        {% else %}
+                            {{ lang('no_data_user_hint', 'Veri girişi için sistem yöneticinizle iletişime geçebilirsiniz.') }}
+                        {% endif %}
+                    </td></tr>
                     {% endfor %}
                 </tbody>
 </table>
@@ -102,8 +135,13 @@
 <!-- Water Tab -->
 {% if active_tab == 'water' %}
 <div class="tab-pane fade show active" id="water" role="tabpanel">
+<div class="alert alert-light border rounded-3 p-3 mb-3">
+<strong>Su Tüketimi Verileri</strong>
+<p class="mb-1">Şebeke, kuyu vb. kaynaklardan sağlanan su tüketim kayıtları bu tabloda yer alır.</p>
+<p class="mb-0 text-muted">Su kaynağı, tüketim miktarı ve birim bilgilerini girerken dönem seçimiyle tutarlı olmanız raporlama kalitesi için önemlidir.</p>
+</div>
 <div class="table-responsive">
-<table class="table table-sm table-hover">
+<table class="table table-sm table-hover no-datatable">
 <thead>
 <tr>
 <th>{{ lang('col_year_month') }}</th>
@@ -121,7 +159,14 @@
 <td>{{ item['unit'] }}</td>
 </tr>
                     {% else %}
-                    <tr><td class="text-center" colspan="4">{{ lang('no_data') }}</td></tr>
+                    <tr><td class="text-center text-muted" colspan="4">
+                        {{ lang('no_data', 'Kayıt bulunamadı.') }}
+                        {% if session.role|lower in ['admin', 'super_admin', 'test admin'] %}
+                            {{ lang('no_data_admin_hint', 'Yeni kayıt eklemek için yukarıdaki \"Yeni Veri Girişi\" butonunu kullanabilirsiniz.') }}
+                        {% else %}
+                            {{ lang('no_data_user_hint', 'Veri girişi için sistem yöneticinizle iletişime geçebilirsiniz.') }}
+                        {% endif %}
+                    </td></tr>
                     {% endfor %}
                 </tbody>
 </table>
@@ -133,8 +178,13 @@
 <!-- Waste Tab -->
 {% if active_tab == 'waste' %}
 <div class="tab-pane fade show active" id="waste" role="tabpanel">
+<div class="alert alert-light border rounded-3 p-3 mb-3">
+<strong>Atık Üretimi Verileri</strong>
+<p class="mb-1">Tehlikeli ve tehlikesiz tüm atık türlerine ait miktar ve bertaraf yöntemi kayıtları burada gösterilir.</p>
+<p class="mb-0 text-muted">Atık türü, miktar, birim ve bertaraf yöntemi alanlarını doğru doldurmanız, mevzuat uyumu ve raporlama için gereklidir.</p>
+</div>
 <div class="table-responsive">
-<table class="table table-sm table-hover">
+<table class="table table-sm table-hover no-datatable">
 <thead>
 <tr>
 <th>{{ lang('col_year_month') }}</th>
@@ -154,7 +204,14 @@
 <td>{{ item['hazardous_status'] }}</td>
 </tr>
                     {% else %}
-                    <tr><td class="text-center" colspan="5">{{ lang('no_data') }}</td></tr>
+                    <tr><td class="text-center text-muted" colspan="5">
+                        {{ lang('no_data', 'Kayıt bulunamadı.') }}
+                        {% if session.role|lower in ['admin', 'super_admin', 'test admin'] %}
+                            {{ lang('no_data_admin_hint', 'Yeni kayıt eklemek için yukarıdaki \"Yeni Veri Girişi\" butonunu kullanabilirsiniz.') }}
+                        {% else %}
+                            {{ lang('no_data_user_hint', 'Veri girişi için sistem yöneticinizle iletişime geçebilirsiniz.') }}
+                        {% endif %}
+                    </td></tr>
                     {% endfor %}
                 </tbody>
 </table>
@@ -216,11 +273,11 @@
 </div>
 <div class="mb-3">
 <label class="form-label">{{ lang('consumption', 'Tüketim Miktarı') }}</label>
-<input class="form-control" name="consumption_amount" step="0.01" type="number"/>
+<input class="form-control" min="0" name="consumption_amount" placeholder="Örn: 1000" step="0.01" type="number"/>
 </div>
 <div class="mb-3">
 <label class="form-label">{{ lang('cost', 'Maliyet') }}</label>
-<input class="form-control" name="cost" step="0.01" type="number"/>
+<input class="form-control" min="0" name="cost" placeholder="Örn: 25000" step="0.01" type="number"/>
 </div>
 </div>
 <!-- Water Fields -->
@@ -231,7 +288,7 @@
 </div>
 <div class="mb-3">
 <label class="form-label">{{ lang('consumption', 'Tüketim Miktarı') }}</label>
-<input class="form-control" name="consumption_amount" step="0.01" type="number"/> <!-- Shared name with Energy if simpler, but backend uses different keys? Check backend -->
+<input class="form-control" min="0" name="consumption_amount" placeholder="Örn: 500" step="0.01" type="number"/>
 <!-- Backend: energy -> consumption_amount, water -> consumption_amount. Wait. 
                                  Web App Data Add: 
                                  Energy: consumption = request.form.get('consumption_amount')
@@ -285,7 +342,7 @@
 </div>
 <div class="mb-3">
 <label class="form-label">{{ lang('amount', 'Miktar') }}</label>
-<input class="form-control" name="waste_amount" step="0.01" type="number"/>
+<input class="form-control" min="0" name="waste_amount" placeholder="Örn: 200" step="0.01" type="number"/>
 </div>
 <div class="mb-3">
 <label class="form-label">{{ lang('disposal_method', 'Bertaraf Yöntemi') }}</label>

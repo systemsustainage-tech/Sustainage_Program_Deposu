@@ -9,7 +9,6 @@ import logging
 import json
 import os
 import shutil
-import sqlite3
 import threading
 import time
 import zipfile
@@ -17,6 +16,12 @@ from datetime import datetime
 from typing import Dict, List, Tuple
 
 import schedule
+try:
+    from backend.core.database_manager import DatabaseManager
+    from backend.core.base_manager import BaseTenantManager
+except ImportError:
+    from core.database_manager import DatabaseManager
+    from core.base_manager import BaseTenantManager
 
 try:
     from backend.modules.integration.cloud_storage_manager import CloudStorageManager
@@ -27,20 +32,21 @@ except ImportError:
     except ImportError:
         CloudStorageManager = None
 
-class BackupRecoveryManager:
+class BackupRecoveryManager(BaseTenantManager):
     """Yedekleme ve kurtarma yöneticisi"""
     
-    def __init__(self, db_path: str, backup_dir: str = "data/backups") -> None:
+    def __init__(self, db_path: str, backup_dir: str = "data/backups", company_id: int = None) -> None:
         """
         Args:
             db_path: Ana veritabanı yolu
             backup_dir: Yedekleme klasörü
         """
-        self.db_path = db_path
+        super().__init__(db_path, company_id)
         self.backup_dir = backup_dir
         self.backup_config_file = os.path.join(backup_dir, 'backup_config.json')
         
         os.makedirs(backup_dir, exist_ok=True)
+        # self.db is already initialized in super()
         self._init_backup_config()
         self._init_backup_tables()
         
@@ -65,11 +71,8 @@ class BackupRecoveryManager:
     
     def _init_backup_tables(self) -> None:
         """Yedekleme log tablosu"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
         try:
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS backup_history (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     backup_name TEXT NOT NULL,
@@ -82,9 +85,9 @@ class BackupRecoveryManager:
                     created_by TEXT,
                     created_at TEXT DEFAULT CURRENT_TIMESTAMP
                 )
-            """)
+            """, skip_tenant_filter=True)
             
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS recovery_history (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     backup_id INTEGER NOT NULL,
@@ -95,16 +98,12 @@ class BackupRecoveryManager:
                     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (backup_id) REFERENCES backup_history(id)
                 )
-            """)
+            """, skip_tenant_filter=True)
             
-            conn.commit()
             logging.info("[OK] Backup tabloları hazır")
             
         except Exception as e:
             logging.error(f"[HATA] Backup tablo oluşturma: {e}")
-            conn.rollback()
-        finally:
-            conn.close()
     
     def create_backup(self, backup_type: str = 'full', 
                      created_by: str = 'system',
@@ -230,24 +229,16 @@ class BackupRecoveryManager:
                    backup_size: int, backup_path: str, status: str,
                    error_message: str = None, created_by: str = 'system'):
         """Yedekleme logunu kaydet"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
         try:
-            cursor.execute("""
+            self.db.execute_update("""
                 INSERT INTO backup_history 
                 (backup_name, backup_type, backup_size, backup_path, backup_date,
                  status, error_message, created_by)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """, (backup_name, backup_type, backup_size, backup_path,
                   datetime.now().isoformat(), status, error_message, created_by))
-            
-            conn.commit()
         except Exception as e:
             logging.error(f"Log kayıt hatası: {e}")
-            conn.rollback()
-        finally:
-            conn.close()
     
     def verify_backup(self, backup_path: str) -> Tuple[bool, str]:
         """
@@ -287,22 +278,29 @@ class BackupRecoveryManager:
                 if not os.path.exists(temp_db_path):
                     return False, "Veritabanı çıkarılamadı"
                     
-                verify_conn = sqlite3.connect(temp_db_path)
+                # DatabaseManager kullanarak kontrol et (Standardizasyon için)
+                verify_db = DatabaseManager(temp_db_path)
                 try:
-                    cursor = verify_conn.cursor()
-                    cursor.execute("PRAGMA integrity_check")
-                    result = cursor.fetchone()
-                    if result[0] != "ok":
-                        return False, f"Veritabanı integrity check başarısız: {result[0]}"
+                    # Integrity check
+                    result = verify_db.execute_query("PRAGMA integrity_check")
+                    # result[0] bir Row objesidir, integrity_check sütunu genellikle "integrity_check" adındadır
+                    # Ancak ilk sütun olduğu için index ile de erişilebilir
+                    if not result:
+                        return False, "Integrity check sonuç döndürmedi"
+                        
+                    integrity_val = result[0][0] # İlk satır, ilk sütun
+                    if integrity_val != "ok":
+                        return False, f"Veritabanı integrity check başarısız: {integrity_val}"
                         
                     # Tablo sayısını kontrol et (basit bir kontrol)
-                    cursor.execute("SELECT count(*) FROM sqlite_master WHERE type='table'")
-                    table_count = cursor.fetchone()[0]
+                    count_res = verify_db.execute_query("SELECT count(*) FROM sqlite_master WHERE type='table'")
+                    table_count = count_res[0][0]
                     if table_count == 0:
                         return False, "Veritabanı boş (tablo yok)"
                         
                 finally:
-                    verify_conn.close()
+                    # Multiton instance'ı temizle ve dosyayı serbest bırak
+                    verify_db.close()
                     
             return True, "Yedek başarıyla doğrulandı (Integrity Check OK)"
             
@@ -401,35 +399,24 @@ class BackupRecoveryManager:
     def _log_recovery(self, backup_path: str, status: str, 
                      restored_by: str, notes: str = None):
         """Kurtarma logunu kaydet"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
         try:
             # Backup ID bul
-            cursor.execute("SELECT id FROM backup_history WHERE backup_path = ?", (backup_path,))
-            result = cursor.fetchone()
-            backup_id = result[0] if result else 0
+            rows = self.db.execute_query("SELECT id FROM backup_history WHERE backup_path = ?", (backup_path,))
+            backup_id = rows[0][0] if rows else 0
             
-            cursor.execute("""
+            self.db.execute_update("""
                 INSERT INTO recovery_history 
                 (backup_id, recovery_date, recovery_status, recovered_by, notes)
                 VALUES (?, ?, ?, ?, ?)
             """, (backup_id, datetime.now().isoformat(), status, restored_by, notes))
             
-            conn.commit()
         except Exception as e:
             logging.error(f"Recovery log hatası: {e}")
-            conn.rollback()
-        finally:
-            conn.close()
     
     def get_backup_list(self, limit: int = 50) -> List[Dict]:
         """Yedek listesini getir"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
         try:
-            cursor.execute("""
+            rows = self.db.execute_query("""
                 SELECT id, backup_name, backup_type, backup_size, backup_path,
                        backup_date, status, created_by
                 FROM backup_history
@@ -438,7 +425,7 @@ class BackupRecoveryManager:
             """, (limit,))
             
             backups = []
-            for row in cursor.fetchall():
+            for row in rows:
                 backups.append({
                     'id': row[0],
                     'name': row[1],
@@ -452,8 +439,9 @@ class BackupRecoveryManager:
             
             return backups
             
-        finally:
-            conn.close()
+        except Exception as e:
+            logging.error(f"Backup listesi alma hatası: {e}")
+            return []
     
     def cleanup_old_backups(self) -> None:
         """Eski yedekleri temizle"""
@@ -555,29 +543,26 @@ class BackupRecoveryManager:
     
     def get_backup_statistics(self) -> Dict:
         """Yedekleme istatistikleri"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
         try:
             # Toplam yedek sayısı
-            cursor.execute("SELECT COUNT(*) FROM backup_history")
-            total_backups = cursor.fetchone()[0]
+            rows = self.db.execute_query("SELECT COUNT(*) FROM backup_history")
+            total_backups = rows[0][0] if rows else 0
             
             # Başarılı yedekler
-            cursor.execute("SELECT COUNT(*) FROM backup_history WHERE status = 'completed'")
-            successful_backups = cursor.fetchone()[0]
+            rows = self.db.execute_query("SELECT COUNT(*) FROM backup_history WHERE status = 'completed'")
+            successful_backups = rows[0][0] if rows else 0
             
             # Toplam yedek boyutu
-            cursor.execute("SELECT SUM(backup_size) FROM backup_history WHERE status = 'completed'")
-            total_size = cursor.fetchone()[0] or 0
+            rows = self.db.execute_query("SELECT SUM(backup_size) FROM backup_history WHERE status = 'completed'")
+            total_size = rows[0][0] if rows and rows[0][0] is not None else 0
             
             # Son yedek
-            cursor.execute("""
+            rows = self.db.execute_query("""
                 SELECT backup_name, backup_date FROM backup_history 
                 WHERE status = 'completed'
                 ORDER BY id DESC LIMIT 1
             """)
-            last_backup = cursor.fetchone()
+            last_backup = rows[0] if rows else None
             
             return {
                 'total_backups': total_backups,
@@ -588,8 +573,12 @@ class BackupRecoveryManager:
                 'last_backup_date': last_backup[1] if last_backup else 'N/A'
             }
             
-        finally:
-            conn.close()
+        except Exception as e:
+            logging.error(f"Backup istatistik hatası: {e}")
+            return {
+                'total_backups': 0, 'successful_backups': 0, 'failed_backups': 0,
+                'total_size_mb': 0, 'last_backup_name': 'N/A', 'last_backup_date': 'N/A'
+            }
     
     # Removed duplicate verify_backup method
     

@@ -7,104 +7,37 @@ Biyoçeşitlilik koruma, habitat yönetimi ve ekosistem hizmetleri
 
 import logging
 import os
-import sqlite3
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 try:
-    from utils.language_manager import LanguageManager
-    from config.database import DB_PATH
-except ImportError:
     from backend.utils.language_manager import LanguageManager
     from backend.config.database import DB_PATH
+    from backend.core.base_manager import BaseTenantManager
+except ImportError:
+    from utils.language_manager import LanguageManager
+    from config.database import DB_PATH
+    from core.base_manager import BaseTenantManager
 
 
-class BiodiversityManager:
+class BiodiversityManager(BaseTenantManager):
     """Biyoçeşitlilik yönetimi ve koruma"""
 
-    def __init__(self, db_path: str = DB_PATH) -> None:
+    def __init__(self, db_path: str = None, company_id: Optional[int] = None) -> None:
         self.lm = LanguageManager()
-        if not os.path.isabs(db_path):
+        final_db_path = db_path or DB_PATH
+        if final_db_path and not os.path.isabs(final_db_path):
             base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
-            db_path = os.path.join(base_dir, db_path)
-        self.db_path = db_path
+            final_db_path = os.path.join(base_dir, final_db_path)
+        
+        super().__init__(final_db_path, company_id)
         self._init_db_tables()
-
-    def get_dashboard_stats(self, company_id: int) -> Dict:
-        """Dashboard için özet istatistikleri getir"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        stats = {
-            'habitat_count': 0, 'species_count': 0, 'project_count': 0,
-            'total_count': 0, 'total_area': 0
-        }
-
-        try:
-            cursor.execute("SELECT COUNT(*) FROM habitat_areas WHERE company_id = ?", (company_id,))
-            stats['habitat_count'] = cursor.fetchone()[0] or 0
-
-            cursor.execute("SELECT COUNT(*) FROM biodiversity_species WHERE company_id = ?", (company_id,))
-            stats['species_count'] = cursor.fetchone()[0] or 0
-
-            cursor.execute("SELECT COUNT(*) FROM biodiversity_projects WHERE company_id = ?", (company_id,))
-            stats['project_count'] = cursor.fetchone()[0] or 0
-            
-            cursor.execute("SELECT SUM(area_size) FROM habitat_areas WHERE company_id = ?", (company_id,))
-            stats['total_area'] = cursor.fetchone()[0] or 0
-            
-            stats['total_count'] = stats['habitat_count'] + stats['species_count'] + stats['project_count']
-
-            return stats
-        except Exception as e:
-            logging.error(f"Biodiversity dashboard stats error: {e}")
-            return stats
-        finally:
-            conn.close()
-
-    def get_recent_records(self, company_id: int, limit: int = 10) -> List[Dict]:
-        """Son eklenen kayıtları getir"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        records = []
-
-        try:
-            # Habitat, Species ve Projects tablolarından birleştirilmiş veri
-            query = """
-                SELECT 'Habitat' as type, habitat_name as name, area_size || ' ' || area_unit as area, protection_status as status, created_at 
-                FROM habitat_areas WHERE company_id = ?
-                UNION ALL
-                SELECT 'Tür' as type, species_name as name, '-' as area, conservation_status as status, created_at 
-                FROM biodiversity_species WHERE company_id = ?
-                UNION ALL
-                SELECT 'Proje' as type, project_name as name, '-' as area, status as status, created_at 
-                FROM biodiversity_projects WHERE company_id = ?
-                ORDER BY created_at DESC LIMIT ?
-            """
-            cursor.execute(query, (company_id, company_id, company_id, limit))
-            
-            for row in cursor.fetchall():
-                records.append({
-                    'category': row[0],
-                    'description': row[1],
-                    'area': row[2],
-                    'status': row[3],
-                    'date': row[4]
-                })
-            
-            return records
-        except Exception as e:
-            logging.error(f"Biodiversity recent records error: {e}")
-            return []
-        finally:
-            conn.close()
+        self._migrate_tables()
 
     def _init_db_tables(self) -> None:
         """Biyoçeşitlilik yönetimi tablolarını oluştur"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
             # Habitat alanları
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS habitat_areas (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -123,7 +56,7 @@ class BiodiversityManager:
             """)
 
             # Biyoçeşitlilik türleri
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS biodiversity_species (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -141,7 +74,7 @@ class BiodiversityManager:
             """)
 
             # Biyoçeşitlilik projeleri
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS biodiversity_projects (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -161,7 +94,7 @@ class BiodiversityManager:
             """)
 
             # Ekosistem hizmetleri
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS ecosystem_services (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -178,7 +111,7 @@ class BiodiversityManager:
             """)
 
             # Biyoçeşitlilik etki değerlendirmesi
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS biodiversity_impact_assessment (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -195,7 +128,7 @@ class BiodiversityManager:
             """)
 
             # Biyoçeşitlilik hedefleri
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS biodiversity_targets (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -212,41 +145,98 @@ class BiodiversityManager:
                 )
             """)
 
-            conn.commit()
             logging.info(f"[OK] {self.lm.tr('biodiversity_module_tables_created', 'Biyoçeşitlilik yönetimi modülü tabloları başarıyla oluşturuldu')}")
 
         except Exception as e:
             logging.error(f"[{self.lm.tr('error', 'HATA')}] {self.lm.tr('biodiversity_module_table_error', 'Biyoçeşitlilik yönetimi modülü tablo oluşturma')}: {e}")
-            conn.rollback()
-        finally:
-            conn.close()
+
+    def _migrate_tables(self) -> None:
+        """Tablo şemalarını güncelle"""
+        # Gelecekteki şema değişiklikleri için placeholder
+        pass
+
+    def get_dashboard_stats(self, company_id: int) -> Dict:
+        """Dashboard için özet istatistikleri getir"""
+        cid = self._ensure_context(company_id)
+        stats = {
+            'habitat_count': 0, 'species_count': 0, 'project_count': 0,
+            'total_count': 0, 'total_area': 0
+        }
+
+        try:
+            res_habitat = self.execute_query("SELECT COUNT(*) as count FROM habitat_areas WHERE company_id = ?", (cid,))
+            stats['habitat_count'] = res_habitat[0]['count'] if res_habitat else 0
+
+            res_species = self.execute_query("SELECT COUNT(*) as count FROM biodiversity_species WHERE company_id = ?", (cid,))
+            stats['species_count'] = res_species[0]['count'] if res_species else 0
+
+            res_projects = self.execute_query("SELECT COUNT(*) as count FROM biodiversity_projects WHERE company_id = ?", (cid,))
+            stats['project_count'] = res_projects[0]['count'] if res_projects else 0
+            
+            res_area = self.execute_query("SELECT SUM(area_size) as total FROM habitat_areas WHERE company_id = ?", (cid,))
+            stats['total_area'] = res_area[0]['total'] if res_area and res_area[0]['total'] else 0
+            
+            stats['total_count'] = stats['habitat_count'] + stats['species_count'] + stats['project_count']
+
+            return stats
+        except Exception as e:
+            logging.error(f"Biodiversity dashboard stats error: {e}")
+            return stats
+
+    def get_recent_records(self, company_id: int, limit: int = 10) -> List[Dict]:
+        """Son eklenen kayıtları getir"""
+        cid = self._ensure_context(company_id)
+        records = []
+
+        try:
+            # Habitat, Species ve Projects tablolarından birleştirilmiş veri
+            query = """
+                SELECT 'Habitat' as type, habitat_name as name, area_size || ' ' || area_unit as area, protection_status as status, created_at 
+                FROM habitat_areas WHERE company_id = ?
+                UNION ALL
+                SELECT 'Tür' as type, species_name as name, '-' as area, conservation_status as status, created_at 
+                FROM biodiversity_species WHERE company_id = ?
+                UNION ALL
+                SELECT 'Proje' as type, project_name as name, '-' as area, status as status, created_at 
+                FROM biodiversity_projects WHERE company_id = ?
+                ORDER BY created_at DESC LIMIT ?
+            """
+            rows = self.execute_query(query, (cid, cid, cid, limit))
+            
+            for row in rows:
+                records.append({
+                    'category': row['type'],
+                    'description': row['name'],
+                    'area': row['area'],
+                    'status': row['status'],
+                    'date': row['created_at']
+                })
+            
+            return records
+        except Exception as e:
+            logging.error(f"Biodiversity recent records error: {e}")
+            return []
 
     def add_habitat_area(self, company_id: int, habitat_name: str, habitat_type: str,
                         area_size: float, area_unit: str, location: str = None,
                         coordinates: str = None, biodiversity_value: str = None,
                         protection_status: str = None, management_plan: str = None) -> bool:
         """Habitat alanı ekle"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        cid = self._ensure_context(company_id)
 
         try:
-            cursor.execute("""
+            self.execute_update("""
                 INSERT INTO habitat_areas 
                 (company_id, habitat_name, habitat_type, area_size, area_unit,
                  location, coordinates, biodiversity_value, protection_status, management_plan)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (company_id, habitat_name, habitat_type, area_size, area_unit,
+            """, (cid, habitat_name, habitat_type, area_size, area_unit,
                   location, coordinates, biodiversity_value, protection_status, management_plan))
-
-            conn.commit()
             return True
 
         except Exception as e:
             logging.error(f"{self.lm.tr('habitat_area_add_error', 'Habitat alanı ekleme hatası')}: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
     def add_biodiversity_species(self, company_id: int, species_name: str,
                                species_type: str, conservation_status: str = None,
@@ -254,29 +244,23 @@ class BiodiversityManager:
                                last_survey_date: str = None, threat_factors: str = None,
                                protection_measures: str = None) -> bool:
         """Biyoçeşitlilik türü ekle"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        cid = self._ensure_context(company_id)
 
         try:
-            cursor.execute("""
+            self.execute_update("""
                 INSERT INTO biodiversity_species 
                 (company_id, species_name, species_type, conservation_status,
                  habitat_requirements, population_count, last_survey_date,
                  threat_factors, protection_measures)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (company_id, species_name, species_type, conservation_status,
+            """, (cid, species_name, species_type, conservation_status,
                   habitat_requirements, population_count, last_survey_date,
                   threat_factors, protection_measures))
-
-            conn.commit()
             return True
 
         except Exception as e:
             logging.error(f"{self.lm.tr('biodiversity_species_add_error', 'Biyoçeşitlilik türü ekleme hatası')}: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
     def add_biodiversity_project(self, company_id: int, project_name: str,
                                project_type: str, start_date: str, end_date: str,
@@ -284,125 +268,104 @@ class BiodiversityManager:
                                area_unit: str = None, target_species: str = None,
                                expected_benefits: str = None) -> bool:
         """Biyoçeşitlilik projesi ekle"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        cid = self._ensure_context(company_id)
 
         try:
-            cursor.execute("""
+            self.execute_update("""
                 INSERT INTO biodiversity_projects 
                 (company_id, project_name, project_type, start_date, end_date,
                  investment_cost, project_area, area_unit, target_species, expected_benefits)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (company_id, project_name, project_type, start_date, end_date,
+            """, (cid, project_name, project_type, start_date, end_date,
                   investment_cost, project_area, area_unit, target_species, expected_benefits))
-
-            conn.commit()
             return True
 
         except Exception as e:
             logging.error(f"{self.lm.tr('biodiversity_project_add_error', 'Biyoçeşitlilik projesi ekleme hatası')}: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
     def add_ecosystem_service(self, company_id: int, year: int, service_type: str,
                             service_value: float, value_unit: str, measurement_method: str = None,
                             beneficiary: str = None, location: str = None) -> bool:
         """Ekosistem hizmeti ekle"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        cid = self._ensure_context(company_id)
 
         try:
-            cursor.execute("""
+            self.execute_update("""
                 INSERT INTO ecosystem_services 
                 (company_id, year, service_type, service_value, value_unit,
                  measurement_method, beneficiary, location)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """, (company_id, year, service_type, service_value, value_unit,
+            """, (cid, year, service_type, service_value, value_unit,
                   measurement_method, beneficiary, location))
-
-            conn.commit()
             return True
 
         except Exception as e:
             logging.error(f"{self.lm.tr('ecosystem_service_add_error', 'Ekosistem hizmeti ekleme hatası')}: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
     def add_biodiversity_impact_assessment(self, company_id: int, assessment_date: str,
                                          impact_type: str, impact_level: str,
                                          affected_species: str = None, mitigation_measures: str = None,
                                          monitoring_plan: str = None, compliance_status: str = None) -> bool:
         """Biyoçeşitlilik etki değerlendirmesi ekle"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        cid = self._ensure_context(company_id)
 
         try:
-            cursor.execute("""
+            self.execute_update("""
                 INSERT INTO biodiversity_impact_assessment 
                 (company_id, assessment_date, impact_type, impact_level,
                  affected_species, mitigation_measures, monitoring_plan, compliance_status)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """, (company_id, assessment_date, impact_type, impact_level,
+            """, (cid, assessment_date, impact_type, impact_level,
                   affected_species, mitigation_measures, monitoring_plan, compliance_status))
-
-            conn.commit()
             return True
 
         except Exception as e:
             logging.error(f"{self.lm.tr('biodiversity_impact_assessment_add_error', 'Biyoçeşitlilik etki değerlendirmesi ekleme hatası')}: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
     def set_biodiversity_target(self, company_id: int, target_year: int, target_type: str,
                               baseline_value: float, baseline_unit: str, target_value: float,
                               target_unit: str, target_description: str = None) -> bool:
         """Biyoçeşitlilik hedefi belirle"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        cid = self._ensure_context(company_id)
 
         try:
-            cursor.execute("""
+            self.execute_update("""
                 INSERT OR REPLACE INTO biodiversity_targets 
                 (company_id, target_year, target_type, baseline_value, baseline_unit,
                  target_value, target_unit, target_description)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """, (company_id, target_year, target_type, baseline_value, baseline_unit,
+            """, (cid, target_year, target_type, baseline_value, baseline_unit,
                   target_value, target_unit, target_description))
-
-            conn.commit()
             return True
 
         except Exception as e:
             logging.error(f"{self.lm.tr('biodiversity_target_set_error', 'Biyoçeşitlilik hedefi belirleme hatası')}: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
     def get_biodiversity_summary(self, company_id: int) -> Dict:
         """Biyoçeşitlilik özeti getir"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        cid = self._ensure_context(company_id)
 
         try:
             # Habitat alanları
-            cursor.execute("""
-                SELECT habitat_type, SUM(area_size), area_unit, COUNT(*)
+            rows_habitat = self.execute_query("""
+                SELECT habitat_type, SUM(area_size) as total_area, area_unit, COUNT(*) as count
                 FROM habitat_areas 
                 WHERE company_id = ?
                 GROUP BY habitat_type, area_unit
-            """, (company_id,))
+            """, (cid,))
 
             habitat_summary = {}
             total_area = 0
-            for row in cursor.fetchall():
-                habitat_type, area, unit, count = row
+            for row in rows_habitat:
+                habitat_type = row['habitat_type']
+                area = row['total_area']
+                unit = row['area_unit']
+                count = row['count']
+                
                 habitat_summary[habitat_type] = {
                     'area': area,
                     'unit': unit,
@@ -417,33 +380,36 @@ class BiodiversityManager:
                     total_area += area * 1000000
 
             # Biyoçeşitlilik türleri
-            cursor.execute("""
-                SELECT species_type, conservation_status, COUNT(*)
+            rows_species = self.execute_query("""
+                SELECT species_type, conservation_status, COUNT(*) as count
                 FROM biodiversity_species 
                 WHERE company_id = ?
                 GROUP BY species_type, conservation_status
-            """, (company_id,))
+            """, (cid,))
 
             species_summary = {}
             total_species = 0
-            for row in cursor.fetchall():
-                species_type, conservation_status, count = row
+            for row in rows_species:
+                species_type = row['species_type']
+                conservation_status = row['conservation_status']
+                count = row['count']
+                
                 if species_type not in species_summary:
                     species_summary[species_type] = {}
                 species_summary[species_type][conservation_status] = count
                 total_species += count
 
             # Aktif projeler
-            cursor.execute("""
-                SELECT COUNT(*), SUM(investment_cost), SUM(project_area)
+            res_projects = self.execute_query("""
+                SELECT COUNT(*) as count, SUM(investment_cost) as total_cost, SUM(project_area) as total_area
                 FROM biodiversity_projects 
                 WHERE company_id = ? AND status = 'active'
-            """, (company_id,))
+            """, (cid,))
 
-            project_result = cursor.fetchone()
-            active_projects = project_result[0] or 0
-            total_investment = project_result[1] or 0
-            total_project_area = project_result[2] or 0
+            project_result = res_projects[0] if res_projects else {}
+            active_projects = project_result.get('count', 0) or 0
+            total_investment = project_result.get('total_cost', 0) or 0
+            total_project_area = project_result.get('total_area', 0) or 0
 
             return {
                 'habitat_summary': habitat_summary,
@@ -453,40 +419,37 @@ class BiodiversityManager:
                 'active_projects': active_projects,
                 'total_investment': total_investment,
                 'total_project_area': total_project_area,
-                'company_id': company_id
+                'company_id': cid
             }
 
         except Exception as e:
             logging.error(f"Biyoçeşitlilik özeti getirme hatası: {e}")
             return {}
-        finally:
-            conn.close()
 
     def get_biodiversity_targets(self, company_id: int) -> List[Dict]:
         """Biyoçeşitlilik hedeflerini getir"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        cid = self._ensure_context(company_id)
 
         try:
-            cursor.execute("""
+            rows = self.execute_query("""
                 SELECT target_year, target_type, baseline_value, baseline_unit,
                        target_value, target_unit, target_description, status
                 FROM biodiversity_targets 
                 WHERE company_id = ? AND status = 'active'
                 ORDER BY target_year
-            """, (company_id,))
+            """, (cid,))
 
             targets = []
-            for row in cursor.fetchall():
+            for row in rows:
                 targets.append({
-                    'target_year': row[0],
-                    'target_type': row[1],
-                    'baseline_value': row[2],
-                    'baseline_unit': row[3],
-                    'target_value': row[4],
-                    'target_unit': row[5],
-                    'target_description': row[6],
-                    'status': row[7]
+                    'target_year': row['target_year'],
+                    'target_type': row['target_type'],
+                    'baseline_value': row['baseline_value'],
+                    'baseline_unit': row['baseline_unit'],
+                    'target_value': row['target_value'],
+                    'target_unit': row['target_unit'],
+                    'target_description': row['target_description'],
+                    'status': row['status']
                 })
 
             return targets
@@ -494,66 +457,3 @@ class BiodiversityManager:
         except Exception as e:
             logging.error(f"Biyoçeşitlilik hedefleri getirme hatası: {e}")
             return []
-        finally:
-            conn.close()
-
-    def get_ecosystem_services(self, company_id: int, year: int) -> List[Dict]:
-        """Ekosistem hizmetlerini getir"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
-        try:
-            cursor.execute("""
-                SELECT service_type, SUM(service_value), value_unit, measurement_method,
-                       beneficiary, location
-                FROM ecosystem_services 
-                WHERE company_id = ? AND year = ?
-                GROUP BY service_type, value_unit, measurement_method, beneficiary, location
-            """, (company_id, year))
-
-            services = []
-            for row in cursor.fetchall():
-                services.append({
-                    'service_type': row[0],
-                    'total_value': row[1],
-                    'value_unit': row[2],
-                    'measurement_method': row[3],
-                    'beneficiary': row[4],
-                    'location': row[5]
-                })
-
-            return services
-
-        except Exception as e:
-            logging.error(f"{self.lm.tr('ecosystem_services_get_error', 'Ekosistem hizmetleri getirme hatası')}: {e}")
-            return []
-        finally:
-            conn.close()
-
-    def calculate_biodiversity_kpis(self, company_id: int) -> Dict:
-        """Biyoçeşitlilik KPI'larını hesapla"""
-        summary = self.get_biodiversity_summary(company_id)
-
-        if not summary:
-            return {}
-
-        # Biyoçeşitlilik yoğunluğu (tür/m²)
-        biodiversity_density = (summary['total_species_count'] / summary['total_habitat_area']) if summary['total_habitat_area'] > 0 else 0
-
-        # Habitat koruma oranı
-        protected_area = 0
-        for habitat_data in summary['habitat_summary'].values():
-            # Korumalı alan varsayımı - gerçekte protection_status'a göre hesaplanmalı
-            protected_area += habitat_data['area']
-
-        protection_ratio = (protected_area / summary['total_habitat_area'] * 100) if summary['total_habitat_area'] > 0 else 0
-
-        return {
-            'total_habitat_area': summary['total_habitat_area'],
-            'total_species_count': summary['total_species_count'],
-            'biodiversity_density': biodiversity_density,
-            'protection_ratio': protection_ratio,
-            'active_projects': summary['active_projects'],
-            'investment_per_hectare': (summary['total_investment'] / (summary['total_habitat_area'] / 10000)) if summary['total_habitat_area'] > 0 else 0,
-            'company_id': company_id
-        }

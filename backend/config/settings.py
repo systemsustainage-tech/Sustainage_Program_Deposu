@@ -99,19 +99,8 @@ PHONE_FORMAT = 'TR'  # Türkiye formatı
 VALIDATE_EMAIL = True
 VALIDATE_TAX_ID = True
 
-# Export ayarları
-EXCEL_ENGINE = 'openpyxl'
-PDF_ENGINE = 'reportlab'
-WORD_ENGINE = 'python-docx'
-PPTX_ENGINE = 'python-pptx'
-
-# Debug modu
-DEBUG = False
-
-# Version
-APP_VERSION = '2.0.0'
-APP_NAME = 'SUSTAINAGE SDG'
-APP_DESCRIPTION = 'Sürdürülebilir Kalkınma Yönetim Sistemi'
+# Uygulama Tanımı
+APP_DESCRIPTION = "Sustainage Sürdürülebilirlik Yönetim Platformu"
 
 def get_db_path() -> str:
     """Database yolunu döndür"""

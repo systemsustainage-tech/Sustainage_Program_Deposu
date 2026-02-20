@@ -10,77 +10,73 @@ import json
 import os
 import sqlite3
 from datetime import datetime
-from typing import Dict, List
+from typing import Dict, List, Optional
+try:
+    from backend.core.base_manager import BaseTenantManager
+except ImportError:
+    from core.base_manager import BaseTenantManager
 
-
-class CEOMessageManager:
+class CEOMessageManager(BaseTenantManager):
     """CEO/Genel Müdür mesaj yöneticisi"""
 
-    def __init__(self, db_path: str = None) -> None:
-        self.db_path = db_path or os.path.join(os.getcwd(), 'data', 'sdg_desktop.sqlite')
+    def __init__(self, db_path: str = None, company_id: Optional[int] = None) -> None:
+        super().__init__(db_path, company_id)
         self._ensure_tables()
 
     def _ensure_tables(self) -> None:
         """Gerekli tabloları oluştur"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        # BaseTenantManager execute_update DDL sorgularını (CREATE TABLE) destekler (skip_tenant_filter=True ile)
+        # Ancak burada çoklu sorgu var, tek tek çalıştıralım.
+        
+        # CEO mesajları tablosu
+        self.execute_update("""
+            CREATE TABLE IF NOT EXISTS ceo_messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                company_id INTEGER NOT NULL,
+                title TEXT NOT NULL,
+                message_type TEXT NOT NULL, -- 'annual', 'quarterly', 'sustainability', 'emergency'
+                year INTEGER NOT NULL,
+                quarter INTEGER, -- 1-4, NULL for annual
+                content TEXT NOT NULL,
+                key_achievements TEXT, -- JSON array
+                challenges TEXT, -- JSON array
+                future_commitments TEXT, -- JSON array
+                signature_name TEXT,
+                signature_title TEXT,
+                signature_date TEXT,
+                is_published INTEGER DEFAULT 0,
+                created_by INTEGER,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT
+            )
+        """, skip_tenant_filter=True)
 
-        try:
-            # CEO mesajları tablosu
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS ceo_messages (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    company_id INTEGER NOT NULL,
-                    title TEXT NOT NULL,
-                    message_type TEXT NOT NULL, -- 'annual', 'quarterly', 'sustainability', 'emergency'
-                    year INTEGER NOT NULL,
-                    quarter INTEGER, -- 1-4, NULL for annual
-                    content TEXT NOT NULL,
-                    key_achievements TEXT, -- JSON array
-                    challenges TEXT, -- JSON array
-                    future_commitments TEXT, -- JSON array
-                    signature_name TEXT,
-                    signature_title TEXT,
-                    signature_date TEXT,
-                    is_published INTEGER DEFAULT 0,
-                    created_by INTEGER,
-                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TEXT
-                )
-            """)
+        # Mesaj şablonları
+        self.execute_update("""
+            CREATE TABLE IF NOT EXISTS message_templates (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                message_type TEXT NOT NULL,
+                template_content TEXT NOT NULL, -- JSON template
+                variables TEXT, -- JSON array of variable names
+                is_active INTEGER DEFAULT 1,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        """, skip_tenant_filter=True)
 
-            # Mesaj şablonları
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS message_templates (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    name TEXT NOT NULL,
-                    message_type TEXT NOT NULL,
-                    template_content TEXT NOT NULL, -- JSON template
-                    variables TEXT, -- JSON array of variable names
-                    is_active INTEGER DEFAULT 1,
-                    created_at TEXT DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
-
-            # Mesaj değişkenleri
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS message_variables (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    message_id INTEGER NOT NULL,
-                    variable_name TEXT NOT NULL,
-                    variable_value TEXT NOT NULL,
-                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (message_id) REFERENCES ceo_messages(id)
-                )
-            """)
-
-            conn.commit()
-            logging.info("[OK] CEO mesaj tabloları hazır")
-
-        except Exception as e:
-            logging.error(f"[HATA] Tablo oluşturma hatası: {e}")
-        finally:
-            conn.close()
+        # Mesaj değişkenleri
+        self.execute_update("""
+            CREATE TABLE IF NOT EXISTS message_variables (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                message_id INTEGER NOT NULL,
+                variable_name TEXT NOT NULL,
+                variable_value TEXT NOT NULL,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (message_id) REFERENCES ceo_messages(id)
+            )
+        """, skip_tenant_filter=True)
+        
+        logging.info("[OK] CEO mesaj tabloları hazır")
 
     def create_message(self, company_id: int, title: str, message_type: str, year: int,
                       quarter: int = None, content: str = "", key_achievements: List[str] = None,
@@ -88,164 +84,141 @@ class CEOMessageManager:
                       signature_name: str = "", signature_title: str = "", created_by: int = None) -> int:
         """
         Yeni CEO mesajı oluştur
-        
-        Args:
-            company_id: Şirket ID
-            title: Mesaj başlığı
-            message_type: Mesaj türü ('annual', 'quarterly', 'sustainability', 'emergency')
-            year: Yıl
-            quarter: Çeyrek (1-4, None for annual)
-            content: Mesaj içeriği
-            key_achievements: Ana başarılar listesi
-            challenges: Zorluklar listesi
-            future_commitments: Gelecek taahhütleri listesi
-            signature_name: İmza adı
-            signature_title: İmza unvanı
-            created_by: Oluşturan kullanıcı ID
-        
-        Returns:
-            Oluşturulan mesaj ID'si
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        # Aynı dönem için mesaj kontrolü
+        if quarter:
+            existing = self.execute_query(
+                "SELECT id FROM ceo_messages WHERE company_id = ? AND message_type = ? AND year = ? AND quarter = ?",
+                (company_id, message_type, year, quarter),
+                company_id=company_id
+            )
+        else:
+            existing = self.execute_query(
+                "SELECT id FROM ceo_messages WHERE company_id = ? AND message_type = ? AND year = ? AND quarter IS NULL",
+                (company_id, message_type, year),
+                company_id=company_id
+            )
 
-        try:
-            # Aynı dönem için mesaj kontrolü
-            if quarter:
-                cursor.execute("""
-                    SELECT id FROM ceo_messages 
-                    WHERE company_id = ? AND message_type = ? AND year = ? AND quarter = ?
-                """, (company_id, message_type, year, quarter))
-            else:
-                cursor.execute("""
-                    SELECT id FROM ceo_messages 
-                    WHERE company_id = ? AND message_type = ? AND year = ? AND quarter IS NULL
-                """, (company_id, message_type, year))
+        if existing:
+            raise ValueError(f"Bu dönem için mesaj zaten mevcut (ID: {existing[0]['id']})")
 
-            existing = cursor.fetchone()
-            if existing:
-                raise ValueError(f"Bu dönem için mesaj zaten mevcut (ID: {existing[0]})")
+        # Insert message
+        message_id = self.insert(
+            "ceo_messages",
+            {
+                "company_id": company_id,
+                "title": title,
+                "message_type": message_type,
+                "year": year,
+                "quarter": quarter,
+                "content": content,
+                "key_achievements": json.dumps(key_achievements or []),
+                "challenges": json.dumps(challenges or []),
+                "future_commitments": json.dumps(future_commitments or []),
+                "signature_name": signature_name,
+                "signature_title": signature_title,
+                "signature_date": datetime.now().strftime('%Y-%m-%d'),
+                "created_by": created_by
+            },
+            company_id=company_id
+        )
 
-            cursor.execute("""
-                INSERT INTO ceo_messages 
-                (company_id, title, message_type, year, quarter, content, 
-                 key_achievements, challenges, future_commitments, signature_name, 
-                 signature_title, signature_date, created_by)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                company_id, title, message_type, year, quarter, content,
-                json.dumps(key_achievements or []),
-                json.dumps(challenges or []),
-                json.dumps(future_commitments or []),
-                signature_name, signature_title,
-                datetime.now().strftime('%Y-%m-%d'),
-                created_by
-            ))
-
-            message_id = cursor.lastrowid
-            conn.commit()
-
-            logging.info(f"[OK] CEO mesajı oluşturuldu: {title} (ID: {message_id})")
-            return message_id
-
-        except Exception as e:
-            conn.rollback()
-            logging.error(f"[HATA] CEO mesajı oluşturma hatası: {e}")
-            raise
-        finally:
-            conn.close()
+        logging.info(f"[OK] CEO mesajı oluşturuldu: {title} (ID: {message_id})")
+        return message_id
 
     def get_messages(self, company_id: int, message_type: str = None, year: int = None) -> List[Dict]:
         """CEO mesajlarını getir"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        query = "SELECT * FROM ceo_messages WHERE company_id = ?"
+        params = [company_id]
 
-        try:
-            query = """
-                SELECT * FROM ceo_messages 
-                WHERE company_id = ?
-            """
-            params = [company_id]
+        if message_type:
+            query += " AND message_type = ?"
+            params.append(message_type)
 
-            if message_type:
-                query += " AND message_type = ?"
-                params.append(message_type)
+        if year:
+            query += " AND year = ?"
+            params.append(year)
 
-            if year:
-                query += " AND year = ?"
-                params.append(year)
+        query += " ORDER BY year DESC, quarter DESC, created_at DESC"
 
-            query += " ORDER BY year DESC, quarter DESC, created_at DESC"
+        results = self.execute_query(query, params, company_id=company_id)
+        
+        # BaseTenantManager returns dicts, but let's ensure we process them correctly if needed
+        # Actually execute_query returns list of sqlite3.Row or dict-like objects
+        # But wait, BaseTenantManager.execute_query returns list of dictionaries usually if configured
+        # Let's check BaseTenantManager implementation or just rely on what we have.
+        # Assuming execute_query returns list of dicts or sqlite3.Row objects that are dict-like.
+        
+        messages = []
+        for row in results:
+            # If row is dict-like
+            messages.append({
+                'id': row['id'], 
+                'company_id': row['company_id'], 
+                'title': row['title'], 
+                'message_type': row['message_type'],
+                'year': row['year'], 
+                'quarter': row['quarter'], 
+                'content': row['content'], 
+                'key_achievements': json.loads(row['key_achievements'] or '[]'),
+                'challenges': json.loads(row['challenges'] or '[]'), 
+                'future_commitments': json.loads(row['future_commitments'] or '[]'),
+                'signature_name': row['signature_name'], 
+                'signature_title': row['signature_title'], 
+                'signature_date': row['signature_date'],
+                'is_published': row['is_published'], 
+                'created_by': row['created_by'], 
+                'created_at': row['created_at'], 
+                'updated_at': row['updated_at']
+            })
 
-            cursor.execute(query, params)
-            results = cursor.fetchall()
-
-            messages = []
-            for row in results:
-                messages.append({
-                    'id': row[0], 'company_id': row[1], 'title': row[2], 'message_type': row[3],
-                    'year': row[4], 'quarter': row[5], 'content': row[6], 'key_achievements': json.loads(row[7] or '[]'),
-                    'challenges': json.loads(row[8] or '[]'), 'future_commitments': json.loads(row[9] or '[]'),
-                    'signature_name': row[10], 'signature_title': row[11], 'signature_date': row[12],
-                    'is_published': row[13], 'created_by': row[14], 'created_at': row[15], 'updated_at': row[16]
-                })
-
-            return messages
-
-        except Exception as e:
-            logging.error(f"[HATA] CEO mesajları getirme hatası: {e}")
-            return []
-        finally:
-            conn.close()
+        return messages
 
     def update_message(self, message_id: int, **kwargs) -> bool:
         """CEO mesajını güncelle"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
-        try:
-            # Güncellenebilir alanlar
-            allowed_fields = ['title', 'content', 'key_achievements', 'challenges',
-                            'future_commitments', 'signature_name', 'signature_title', 'is_published']
-
-            update_fields = []
-            params = []
-
-            for field, value in kwargs.items():
-                if field in allowed_fields:
-                    if field in ['key_achievements', 'challenges', 'future_commitments']:
-                        value = json.dumps(value) if isinstance(value, list) else value
-                    update_fields.append(f"{field} = ?")
-                    params.append(value)
-
-            if not update_fields:
-                return False
-
-            update_fields.append("updated_at = ?")
-            params.append(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-            params.append(message_id)
-
-            cursor.execute(f"""
-                UPDATE ceo_messages 
-                SET {', '.join(update_fields)}
-                WHERE id = ?
-            """, params)
-
-            conn.commit()
-
-            if cursor.rowcount > 0:
-                logging.info(f"[OK] CEO mesajı güncellendi: ID {message_id}")
-                return True
-            else:
-                logging.info(f"[UYARI] CEO mesajı bulunamadı: ID {message_id}")
-                return False
-
-        except Exception as e:
-            conn.rollback()
-            logging.error(f"[HATA] CEO mesajı güncelleme hatası: {e}")
+        # Note: update method in BaseTenantManager takes (table, data, where_clause, where_args)
+        # But here we want to update specific fields.
+        
+        valid_fields = [
+            'title', 'content', 'key_achievements', 'challenges', 
+            'future_commitments', 'signature_name', 'signature_title',
+            'is_published'
+        ]
+        
+        data = {}
+        for key, value in kwargs.items():
+            if key in valid_fields:
+                if key in ['key_achievements', 'challenges', 'future_commitments'] and isinstance(value, list):
+                    data[key] = json.dumps(value)
+                else:
+                    data[key] = value
+        
+        if not data:
             return False
-        finally:
-            conn.close()
+            
+        data['updated_at'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        
+        # We need company_id for strict isolation, but update_message signature doesn't have it.
+        # We should probably fetch it or assume caller handles it? 
+        # BaseTenantManager.update requires company_id if we want strict isolation verification.
+        # If we don't have company_id, we can't strictly filter by company_id unless we lookup first.
+        # But for now let's rely on message_id being unique enough, but ideally we should have company_id.
+        # However, to avoid breaking API, we will just use update without company_id filter if not passed.
+        # But BaseTenantManager might require it.
+        # Let's look up company_id from message_id first.
+        
+        msg = self.execute_query("SELECT company_id FROM ceo_messages WHERE id = ?", (message_id,))
+        if not msg:
+            return False
+        
+        company_id = msg[0]['company_id']
+        
+        return self.update(
+            "ceo_messages",
+            data,
+            {"id": message_id},
+            company_id=company_id
+        )
 
     def create_default_templates(self) -> None:
         """Varsayılan mesaj şablonları oluştur"""

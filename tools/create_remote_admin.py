@@ -1,93 +1,66 @@
-import os
-import sys
+
 import sqlite3
-import datetime
-
-# Add project root to path to import backend modules
-sys.path.append('/var/www/sustainage')
-
-try:
-    from backend.security.core.secure_password import hash_password
-    print("Successfully imported hash_password from backend.")
-except ImportError as e:
-    print(f"Could not import hash_password: {e}")
-    print("Falling back to local implementation or standard generation.")
-    # Fallback if module not found, though it should be there
-    try:
-        from argon2 import PasswordHasher
-        ph = PasswordHasher()
-        def hash_password(password):
-            return f"argon2${ph.hash(password)}"
-    except ImportError:
-        print("Argon2 not installed. Please install argon2-cffi.")
-        sys.exit(1)
+import os
+from werkzeug.security import generate_password_hash
 
 DB_PATH = '/var/www/sustainage/backend/data/sdg_desktop.sqlite'
 
 def create_admin():
     if not os.path.exists(DB_PATH):
-        print(f"Database not found at {DB_PATH}")
+        print(f"Error: Database not found at {DB_PATH}")
         return
 
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-
-    username = "admin"
-    email = "admin@sustainage.com"
-    # Default password: Admin123!
-    password_plain = "Admin123!"
-    
-    # Check if user exists
-    cursor.execute("SELECT id FROM users WHERE username = ?", (username,))
-    existing = cursor.fetchone()
-    
-    if existing:
-        print(f"User '{username}' already exists.")
-        conn.close()
-        return
-
-    print(f"Creating user '{username}'...")
-    
     try:
-        password_hash = hash_password(password_plain)
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
         
-        # Ensure company 1 exists (we did this in init_remote_data.py, but safe to check)
-        cursor.execute("SELECT id FROM companies WHERE id = 1")
-        if not cursor.fetchone():
-            print("Company ID 1 not found. Creating default company...")
-            cursor.execute("INSERT INTO companies (id, name, sector, employee_count) VALUES (1, 'Sustainage HQ', 'Tech', 10)")
+        username = "super.admin"
+        password = "SuperPassword123!"
+        email = "super.admin@sustainage.app"
         
-        now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        # Check if user exists
+        cursor.execute("SELECT id FROM users WHERE username = ?", (username,))
+        user = cursor.fetchone()
         
-        cursor.execute("""
-            INSERT INTO users (
-                username, password, email, role, company_id, is_active, 
-                created_at, failed_attempts, must_change_password
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            username, 
-            password_hash, 
-            email, 
-            'super_admin', 
-            1, 
-            1, 
-            now, 
-            0, 
-            1  # Force password change on first login for security
-        ))
+        password_hash = generate_password_hash(password)
         
+        if user:
+            print(f"User {username} exists (ID: {user['id']}). Updating password...")
+            cursor.execute("""
+                UPDATE users 
+                SET password_hash = ?, failed_attempts = 0, locked_until = NULL, is_active = 1
+                WHERE id = ?
+            """, (password_hash, user['id']))
+        else:
+            print(f"User {username} does not exist. Creating...")
+            cursor.execute("""
+                INSERT INTO users (username, email, password_hash, first_name, last_name, is_active, is_verified)
+                VALUES (?, ?, ?, 'Super', 'Admin', 1, 1)
+            """, (username, email, password_hash))
+            user_id = cursor.lastrowid
+            print(f"User created with ID: {user_id}")
+            
+            # Ensure company exists
+            cursor.execute("SELECT id FROM companies LIMIT 1")
+            company = cursor.fetchone()
+            if not company:
+                print("No company found. Creating Default Company...")
+                cursor.execute("INSERT INTO companies (name) VALUES ('Default Company')")
+                company_id = cursor.lastrowid
+            else:
+                company_id = company['id']
+            
+            # Assign to company
+            cursor.execute("INSERT OR IGNORE INTO user_companies (user_id, company_id, is_primary) VALUES (?, ?, 1)", (user_id, company_id))
+            print(f"Assigned to Company ID: {company_id}")
+
         conn.commit()
-        print(f"Super Admin created successfully.")
-        print(f"Username: {username}")
-        print(f"Password: {password_plain}")
-        print("NOTE: 'must_change_password' is set to 1.")
-        
-    except Exception as e:
-        print(f"Error creating user: {e}")
-        import traceback
-        traceback.print_exc()
-    finally:
         conn.close()
+        print("Done.")
+
+    except Exception as e:
+        print(f"Error: {e}")
 
 if __name__ == "__main__":
     create_admin()

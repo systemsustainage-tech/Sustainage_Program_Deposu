@@ -1,0 +1,28 @@
+[Unit]
+Description=SUSTAINAGE SDG Web Application
+After=network.target
+
+[Service]
+Type=notify
+User=root
+# ONEMLI: Guvenlik icin bu servisi 'www-data' kullanicisi ile calistirmaniz onerilir.
+# Eger dosya izinlerini ayarladiysaniz asagidaki satiri aktif edin:
+# User=www-data
+# Group=www-data
+
+# Calisma dizini: /var/www/sustainage
+WorkingDirectory=/var/www/sustainage
+Environment="PATH=/var/www/sustainage/venv/bin"
+Environment="FLASK_ENV=production"
+Environment="PYTHONUNBUFFERED=1"
+Environment="PYTHONPATH=/var/www/sustainage"
+
+# Gunicorn ile başlatma (Config dosyasını kullan)
+ExecStart=/var/www/sustainage/venv/bin/gunicorn -c /var/www/sustainage/gunicorn_config.py web_app:app
+
+# Otomatik yeniden başlatma
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

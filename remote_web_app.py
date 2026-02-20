@@ -7,20 +7,73 @@ from datetime import datetime
 from functools import wraps
 from typing import Optional, Dict
 from types import SimpleNamespace
-from flask import Flask, render_template, redirect, url_for, session, request, flash, send_file, g, jsonify, has_request_context
+from flask import Flask, render_template, redirect, url_for, session, request, flash, send_file, g, jsonify, has_request_context, abort
 import time
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from prometheus_flask_exporter import PrometheusMetrics
+import psutil
+import threading
+from flask_wtf.csrf import CSRFProtect
+from backend.config.database import DB_PATH
+from backend.core.database_manager import DatabaseManager
+
+try:
+    from security.alert_system import report_violation
+except ImportError:
+    # Fallback if security module is not found
+    def report_violation(type, ip, details=None):
+        logging.error(f"Security Alert (Fallback): {type} from {ip} - {details}")
+
+# --- SYSTEM MONITOR FOR ALERTING ---
+def run_system_monitor(app):
+    """Background thread to monitor system resources and send alerts."""
+    logging.info("Starting System Monitor Thread...")
+    while True:
+        try:
+            # Check CPU and Memory
+            cpu_percent = psutil.cpu_percent(interval=1)
+            mem = psutil.virtual_memory()
+            mem_percent = mem.percent
+            
+            # Log metrics (optional, for debug)
+            # logging.debug(f"System Check: CPU={cpu_percent}%, MEM={mem_percent}%")
+            
+            # Thresholds
+            if cpu_percent > 90:
+                report_violation('SYSTEM_OVERLOAD', 'localhost', 
+                               details={'metric': 'CPU', 'value': f"{cpu_percent}%"})
+                logging.warning(f"HIGH CPU USAGE: {cpu_percent}% - Alert sent.")
+                
+            if mem_percent > 90:
+                report_violation('SYSTEM_OVERLOAD', 'localhost', 
+                               details={'metric': 'MEMORY', 'value': f"{mem_percent}%"})
+                logging.warning(f"HIGH MEMORY USAGE: {mem_percent}% - Alert sent.")
+                
+        except Exception as e:
+            logging.error(f"SystemMonitor Error: {e}")
+            
+        # Check every 60 seconds
+        time.sleep(60)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 BACKEND_DIR = os.path.join(BASE_DIR, 'backend')
 sys.path.insert(0, BACKEND_DIR)
 
 from modules.sdg.sdg_manager import SDGManager
+from modules.reporting.report_generator import ReportGenerator
 from core.language_manager import LanguageManager
+from core.database import TenantAwareDB
+from yonetim.license_manager import LicenseManager
 
 # Initialize Language Manager
 language_manager = LanguageManager()
 
-DB_PATH = os.path.join(BACKEND_DIR, 'data', 'sdg_desktop.sqlite')
+# Initialize License Manager
+license_manager = LicenseManager(DB_PATH)
+
+# DB_PATH is now imported from backend.config.database
+# DB_PATH = os.path.join(BACKEND_DIR, 'data', 'sdg_desktop.sqlite')
 
 COMPANY_INFO_FIELDS = [
     "name",
@@ -69,24 +122,24 @@ COMPANY_INFO_FIELDS = [
 
 
 def ensure_company_info_table() -> None:
-    conn = sqlite3.connect(DB_PATH)
-    cur = conn.cursor()
-    cur.execute(
-        """
-        CREATE TABLE IF NOT EXISTS company_info (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            company_id INTEGER UNIQUE
+    # Use sqlite3 directly to avoid circular imports or missing dependencies
+    with sqlite3.connect(DB_PATH) as conn:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS company_info (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                company_id INTEGER UNIQUE
+            )
+            """
         )
-        """
-    )
-    cur.execute("PRAGMA table_info(company_info)")
-    existing = {row[1] for row in cur.fetchall()}
-    for col in COMPANY_INFO_FIELDS + ["updated_at"]:
-        if col in existing or col in ("id", "company_id"):
-            continue
-        cur.execute(f"ALTER TABLE company_info ADD COLUMN {col} TEXT")
-    conn.commit()
-    conn.close()
+        cur.execute("PRAGMA table_info(company_info)")
+        existing = {row[1] for row in cur.fetchall()}
+        for col in COMPANY_INFO_FIELDS + ["updated_at"]:
+            if col in existing or col in ("id", "company_id"):
+                continue
+            cur.execute(f"ALTER TABLE company_info ADD COLUMN {col} TEXT")
+        conn.commit()
 
 
 ensure_company_info_table()
@@ -113,6 +166,43 @@ app = Flask(__name__)
 # Fix for login loop: Use a stable secret key if environment variable is not set
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'sustainage_secret_key_fixed_2024_xyz_987')
 
+# CSRF Protection
+csrf = CSRFProtect(app)
+
+# Prometheus Metrics
+metrics = PrometheusMetrics(app)
+# Add default static info
+metrics.info('app_info', 'Application info', version='1.0.3')
+
+# Start System Monitor Thread
+if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+    monitor_thread = threading.Thread(target=run_system_monitor, args=(app,), daemon=True)
+    monitor_thread.start()
+
+# Rate Limiter Initialization
+limiter = Limiter(
+    key_func=get_remote_address,
+    app=app,
+    default_limits=["60 per minute"],
+    storage_uri="memory://"
+)
+
+@app.errorhandler(429)
+def rate_limit_error(e):
+    client_ip = get_remote_address()
+    # Log the violation using the alert system
+    try:
+        report_violation('RATE_LIMIT', client_ip, details={'limit': str(e.description)})
+    except Exception as log_err:
+        logging.error(f"Error reporting rate limit: {log_err}")
+        
+    if request.accept_mimetypes.accept_json and not request.accept_mimetypes.accept_html:
+        error_msg = language_manager.get_text('rate_limit_exceeded', session.get('lang_code', 'tr'), 'Rate limit exceeded')
+        return jsonify({'error': error_msg, 'message': str(e.description)}), 429
+    
+    user_msg = language_manager.get_text('too_many_requests', session.get('lang_code', 'tr'), 'Too Many Requests. Please try again later.')
+    return user_msg, 429
+
 # Translation Setup (Replaced with LanguageManager)
 def gettext(key, default=None):
     lang = 'tr'
@@ -122,7 +212,7 @@ def gettext(key, default=None):
     # language_manager is initialized at the top
     return language_manager.get_text(key, lang=lang, default=default)
 
-app.jinja_env.globals.update(_=gettext)
+app.jinja_env.globals.update(_=gettext, lang=gettext)
 _ = gettext
 
 from modules.environmental.carbon_manager import CarbonManager
@@ -148,10 +238,35 @@ MANAGERS = {
     'water': None,
     'waste': None,
     'social': None,
-    'governance': None
+    'governance': None,
+    'advanced_report': None,
+    'strategy': None
 }
 def _init_managers():
     global MANAGERS
+    try:
+        from backend.modules.reporting.advanced_report_manager import AdvancedReportManager
+        MANAGERS['advanced_report'] = AdvancedReportManager(DB_PATH)
+    except Exception as e:
+        logging.error(f"AdvancedReportManager init: {e}")
+        # Try alternate import path
+        try:
+            from modules.reporting.advanced_report_manager import AdvancedReportManager
+            MANAGERS['advanced_report'] = AdvancedReportManager(DB_PATH)
+        except Exception as e2:
+            logging.error(f"AdvancedReportManager init retry: {e2}")
+
+    try:
+        from backend.modules.strategic.sustainability_strategy_manager import SustainabilityStrategyManager
+        MANAGERS['strategy'] = SustainabilityStrategyManager(DB_PATH)
+    except Exception as e:
+        logging.error(f"SustainabilityStrategyManager init: {e}")
+        try:
+            from modules.strategic.sustainability_strategy_manager import SustainabilityStrategyManager
+            MANAGERS['strategy'] = SustainabilityStrategyManager(DB_PATH)
+        except Exception as e2:
+            logging.error(f"SustainabilityStrategyManager init retry: {e2}")
+
     try:
         from modules.sdg.sdg_manager import SDGManager
         MANAGERS['sdg'] = SDGManager(DB_PATH)
@@ -218,12 +333,12 @@ def _init_managers():
     except Exception as e:
         logging.error(f"BiodiversityManager init: {e}")
     try:
-        from modules.economic.economic_value_manager import EconomicValueManager
-        MANAGERS['economic'] = EconomicValueManager(DB_PATH)
+        from modules.economic.economic_manager import EconomicManager
+        MANAGERS['economic'] = EconomicManager(DB_PATH)
     except Exception as e:
-        logging.error(f"EconomicValueManager init: {e}")
+        logging.error(f"EconomicManager init: {e}")
     try:
-        from modules.economic.supply_chain_manager import SupplyChainManager
+        from modules.supply_chain.supply_chain_manager import SupplyChainManager
         MANAGERS['supply_chain'] = SupplyChainManager(DB_PATH)
     except Exception as e:
         logging.error(f"SupplyChainManager init: {e}")
@@ -257,6 +372,33 @@ def _init_managers():
         MANAGERS['tnfd'] = TNFDManager(DB_PATH)
     except Exception as e:
         logging.error(f"TNFDManager init: {e}")
+    try:
+        from modules.file_manager.advanced_file_manager import AdvancedFileManager
+        MANAGERS['file_manager'] = AdvancedFileManager(DB_PATH)
+    except Exception as e:
+        logging.error(f"AdvancedFileManager init: {e}")
+    try:
+        from modules.auto_tasks.auto_task_manager import AutoTaskManager
+        MANAGERS['auto_tasks'] = AutoTaskManager(DB_PATH)
+    except Exception as e:
+        logging.error(f"AutoTaskManager init: {e}")
+    try:
+        from modules.visualization.visualization_manager import VisualizationManager
+        MANAGERS['visualization'] = VisualizationManager(DB_PATH)
+    except Exception as e:
+        logging.error(f"VisualizationManager init: {e}")
+
+    try:
+        from modules.advanced_inventory.inventory_manager import InventoryManager
+        MANAGERS['inventory'] = InventoryManager(DB_PATH)
+    except Exception as e:
+        logging.error(f"InventoryManager init: {e}")
+
+    try:
+        from modules.advanced_calculation.calculation_manager import CalculationManager
+        MANAGERS['calculation'] = CalculationManager(DB_PATH)
+    except Exception as e:
+        logging.error(f"CalculationManager init: {e}")
 _init_managers()
 
 def _get_system_setting(key, default=None):
@@ -330,10 +472,8 @@ def enforce_session_timeout():
     except Exception as e:
         logging.error(f"Session timeout enforcement error: {e}")
 
-def get_db() -> sqlite3.Connection:
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+def get_db():
+    return TenantAwareDB(DB_PATH)
 
 user_manager: Optional[UserManager] = None
 if USER_MANAGER_AVAILABLE:
@@ -394,6 +534,59 @@ def require_company_context(f):
             return redirect(url_for('login'))
             
         g.company_id = int(company_id) # Ensure int
+        
+        # --- LICENSE RESTRICTION CHECK ---
+        try:
+            # Get active license for this company
+            license_key = license_manager.get_active_license(g.company_id)
+            if license_key:
+                # Verify and get payload (IP/Domain rules)
+                verify_result = license_manager.verify_license_key(license_key)
+                if not verify_result or len(verify_result) != 3:
+                     logging.error(f"Invalid verify_license_key return: {verify_result}")
+                     is_valid, msg, payload = False, "Internal Error", {}
+                else:
+                     is_valid, msg, payload = verify_result
+                     
+                if is_valid:
+                    allowed_ips = payload.get('allowed_ips')
+                    allowed_domains = payload.get('allowed_domains')
+                    
+                    # IP Check
+                    if allowed_ips:
+                        # Normalize list if string (comma separated)
+                        if isinstance(allowed_ips, str): 
+                            allowed_ips = [ip.strip() for ip in allowed_ips.split(',')]
+                        
+                        client_ip = get_remote_address()
+                        # Handle potential localhost mapping
+                        if client_ip == '127.0.0.1' and 'localhost' in allowed_ips:
+                            pass # Allowed
+                        elif client_ip not in allowed_ips:
+                            logging.warning(f"License Violation: IP {client_ip} not in {allowed_ips}")
+                            report_violation('LICENSE_VIOLATION', client_ip, details={'reason': 'IP_MISMATCH', 'expected': allowed_ips})
+                            if request.path.startswith('/api/'):
+                                return jsonify({'error': f"IP '{client_ip}' not authorized by license"}), 403
+                            abort(403, description=f"IP Adresi ({client_ip}) lisans kapsamında yetkilendirilmemiş.")
+                            
+                    # Domain Check (if referrer/host is available)
+                    if allowed_domains:
+                        if isinstance(allowed_domains, str):
+                            allowed_domains = [d.strip() for d in allowed_domains.split(',')]
+                        
+                        host = request.host.split(':')[0]
+                        if host not in allowed_domains:
+                            logging.warning(f"License Violation: Domain {host} not in {allowed_domains}")
+                            report_violation('LICENSE_VIOLATION', get_remote_address(), details={'reason': 'DOMAIN_MISMATCH', 'expected': allowed_domains})
+                            if request.path.startswith('/api/'):
+                                return jsonify({'error': f"Domain '{host}' not authorized by license"}), 403
+                            abort(403, description=f"Domain ({host}) lisans kapsamında yetkilendirilmemiş.")
+                
+        except Exception as e:
+            logging.error(f"License restriction check error: {e}")
+            # Do not block on error, just log
+        # ---------------------------------
+        
         return f(*args, **kwargs)
     return decorated_function
 
@@ -463,6 +656,105 @@ def dashboard_stats_api():
         
     return jsonify(stats)
 
+@app.route('/api/v1/dashboard-stats')
+@require_company_context
+def api_dashboard_stats_v1():
+    """
+    New API for Vue.js Dashboard.
+    Returns module performance and status.
+    """
+    module_data = []
+    completed_reports = 0
+    carbon_data = {'Scope 1': 0, 'Scope 2': 0, 'Scope 3': 0}
+    survey_status = {'Completed': 0, 'Pending': 0, 'Not Started': 0}
+
+    try:
+        from modules.dashboard_stats import DashboardStatsManager
+        dsm = DashboardStatsManager(DB_PATH)
+        stats = dsm.get_module_stats(g.company_id)
+        
+        # Transform to list of objects and calculate survey status
+        for name, score in stats.items():
+            status = 'Pending'
+            if score >= 100:
+                status = 'Completed'
+                survey_status['Completed'] += 1
+            elif score > 0:
+                status = 'Active'
+                survey_status['Pending'] += 1
+            else:
+                survey_status['Not Started'] += 1
+
+            module_data.append({
+                'key': name,
+                'name': name.replace('_', ' ').title(),
+                'score': score,
+                'status': 'Active' if score > 0 else 'Pending'
+            })
+            
+        # Get completed reports count
+        try:
+            conn = get_db()
+            row = conn.execute("SELECT COUNT(*) FROM report_registry WHERE company_id = ?", (g.company_id,)).fetchone()
+            if row:
+                completed_reports = row[0]
+            
+            # Get real Carbon Data
+            try:
+                # Try to fetch carbon data summing up emissions by scope
+                # Using co2e_kg column as per schema
+                c_rows = []
+                try:
+                    c_rows = conn.execute("SELECT scope, SUM(co2e_kg) FROM carbon_emissions WHERE company_id = ? GROUP BY scope", (g.company_id,)).fetchall()
+                except Exception as ex:
+                    logging.warning(f"Could not fetch carbon data with co2e_kg: {ex}")
+                    # Fallback to co2e_emissions just in case of schema drift
+                    try:
+                        c_rows = conn.execute("SELECT scope, SUM(co2e_emissions) FROM carbon_emissions WHERE company_id = ? GROUP BY scope", (g.company_id,)).fetchall()
+                    except:
+                        pass
+                
+                for r in c_rows:
+                    scope_val = str(r[0])
+                    emission_val = r[1] or 0
+                    if '1' in scope_val: carbon_data['Scope 1'] += emission_val
+                    elif '2' in scope_val: carbon_data['Scope 2'] += emission_val
+                    elif '3' in scope_val: carbon_data['Scope 3'] += emission_val
+            except Exception as e:
+                logging.error(f"Error fetching carbon stats: {e}")
+
+            # Get Next Deadline from auto_tasks or audit_assignments
+            next_deadline = '2025-12-31' # Default
+            try:
+                # Check for nearest due date in active tasks
+                task_date = conn.execute("SELECT MIN(due_date) FROM auto_tasks WHERE company_id = ? AND status != 'Tamamlandı' AND due_date >= DATE('now')", (g.company_id,)).fetchone()
+                if task_date and task_date[0]:
+                    next_deadline = task_date[0]
+                else:
+                    # Check audit assignments
+                    audit_date = conn.execute("SELECT MIN(deadline) FROM audit_assignments WHERE company_id = ? AND status = 'assigned' AND deadline >= DATE('now')", (g.company_id,)).fetchone()
+                    if audit_date and audit_date[0]:
+                        next_deadline = audit_date[0]
+            except Exception as e:
+                logging.error(f"Error fetching deadline: {e}")
+
+            conn.close()
+        except Exception as e:
+            logging.error(f"Error fetching extra stats: {e}")
+
+    except Exception as e:
+        logging.error(f"API Dashboard stats v1 error: {e}")
+        return jsonify({'error': str(e)}), 500
+        
+    return jsonify({
+        'alerts': 0, 
+        'next_deadline': next_deadline, 
+        'completed_reports': completed_reports,
+        'carbon_data': carbon_data,
+        'survey_status': survey_status,
+        'modules': module_data
+    })
+
 @app.route('/')
 @require_company_context
 def index():
@@ -471,6 +763,7 @@ def index():
     return redirect(url_for('login'))
 
 @app.route('/login', methods=['GET', 'POST'])
+@limiter.exempt
 def login():
     client_ip = request.remote_addr or 'unknown'
 
@@ -559,10 +852,12 @@ def set_language(lang):
 @app.route('/reporting_journey')
 @require_company_context
 def reporting_journey():
-    if 'user' not in session: return redirect(url_for('login'))
-    return render_template('reporting.html')
+    if 'user' not in session:
+        return redirect(url_for('login'))
+    return render_template('reporting_journey.html')
 
 @app.route('/forgot_password', methods=['GET', 'POST'])
+@limiter.exempt
 def forgot_password():
     if request.method == 'POST':
         username = (request.form.get('username') or '').strip()
@@ -590,6 +885,7 @@ def forgot_password():
 
 
 @app.route('/verify_reset_code', methods=['GET', 'POST'])
+@limiter.exempt
 def verify_reset_code():
     username = session.get('pw_reset_username')
     if not username:
@@ -606,6 +902,7 @@ def verify_reset_code():
 
 
 @app.route('/reset_password', methods=['GET', 'POST'])
+@limiter.exempt
 def reset_password_web():
     username = session.get('pw_reset_username')
     code = session.get('pw_reset_code')
@@ -788,13 +1085,12 @@ def data():
 
 @app.route('/data/add', methods=['GET', 'POST'])
 @require_company_context
+@limiter.limit("10 per minute")
 def data_add():
     if 'user' not in session: return redirect(url_for('login'))
     
-    data_type = request.args.get('type')
-    if not data_type:
-        data_type = request.args.get('data_type')
-        
+    data_type = request.args.get('type') or request.args.get('data_type')
+    
     module = request.args.get('module')
     
     if request.method == 'POST':
@@ -802,21 +1098,51 @@ def data_add():
             dtype = request.form.get('data_type')
             date_str = request.form.get('date', '')
             company_id = g.company_id
+            
+            if not dtype:
+                flash('Lütfen veri türünü seçin.', 'danger')
+                return render_template('data_edit.html', title='Yeni Veri Girişi', data_type=data_type, module=module, date=date_str)
+            
+            if not date_str:
+                flash('Lütfen tarih veya dönemi girin.', 'danger')
+                return render_template('data_edit.html', title='Yeni Veri Girişi', data_type=dtype, module=module, date=date_str)
+            
             conn = get_db()
             
             if dtype == 'carbon':
-                scope = request.form.get('scope')
-                category = request.form.get('category')
-                quantity = request.form.get('amount')
-                unit = request.form.get('unit')
-                co2e = request.form.get('co2e')
+                scope = request.form.get('scope') or ''
+                category = request.form.get('category') or ''
+                quantity = request.form.get('amount') or ''
+                unit = request.form.get('unit') or ''
+                co2e = request.form.get('co2e') or ''
+                
+                missing = []
+                if not scope: missing.append('Kapsam')
+                if not category: missing.append('Kategori')
+                if not quantity: missing.append('Miktar')
+                if not unit: missing.append('Birim')
+                
+                if missing:
+                    flash('Lütfen zorunlu alanları doldurun: ' + ', '.join(missing), 'danger')
+                    return render_template('data_edit.html', title='Yeni Veri Girişi', data_type=dtype, module=module, date=date_str, scope=scope, category=category, amount=quantity, unit=unit, co2e=co2e)
+                
                 conn.execute("INSERT INTO carbon_emissions (company_id, scope, category, quantity, unit, co2e_emissions, period, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)", (company_id, scope, category, quantity, unit, co2e, date_str))
             
             elif dtype == 'energy':
-                etype = request.form.get('energy_type')
-                cons = request.form.get('energy_consumption')
-                unit = request.form.get('energy_unit')
-                cost = request.form.get('cost')
+                etype = request.form.get('energy_type') or ''
+                cons = request.form.get('energy_consumption') or ''
+                unit = request.form.get('energy_unit') or ''
+                cost = request.form.get('cost') or ''
+                
+                missing = []
+                if not etype: missing.append('Enerji Türü')
+                if not cons: missing.append('Tüketim Miktarı')
+                if not unit: missing.append('Birim')
+                
+                if missing:
+                    flash('Lütfen zorunlu alanları doldurun: ' + ', '.join(missing), 'danger')
+                    return render_template('data_edit.html', title='Yeni Veri Girişi', data_type=dtype, module=module, date=date_str, energy_type=etype, energy_consumption=cons, energy_unit=unit, cost=cost)
+                
                 year, month = 2024, 1
                 if '-' in date_str:
                      parts = date_str.split('-')
@@ -826,16 +1152,37 @@ def data_add():
                 conn.execute("INSERT INTO energy_consumption (company_id, energy_type, consumption_amount, unit, cost, year, month, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)", (company_id, etype, cons, unit, cost, year, month))
                 
             elif dtype == 'water':
-                wtype = request.form.get('water_type')
-                cons = request.form.get('water_consumption')
-                unit = request.form.get('water_unit')
+                wtype = request.form.get('water_type') or ''
+                cons = request.form.get('water_consumption') or ''
+                unit = request.form.get('water_unit') or ''
+                
+                missing = []
+                if not wtype: missing.append('Su Kaynağı')
+                if not cons: missing.append('Tüketim Miktarı')
+                if not unit: missing.append('Birim')
+                
+                if missing:
+                    flash('Lütfen zorunlu alanları doldurun: ' + ', '.join(missing), 'danger')
+                    return render_template('data_edit.html', title='Yeni Veri Girişi', data_type=dtype, module=module, date=date_str, water_type=wtype, water_consumption=cons, water_unit=unit)
+                
                 conn.execute("INSERT INTO water_consumption (company_id, source_type, consumption_amount, unit, year, month, created_at) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)", (company_id, wtype, cons, unit, 2024, 1))
                 
             elif dtype == 'waste':
-                wtype = request.form.get('waste_type')
-                amount = request.form.get('waste_amount')
-                unit = request.form.get('waste_unit')
-                method = request.form.get('disposal_method')
+                wtype = request.form.get('waste_type') or ''
+                amount = request.form.get('waste_amount') or ''
+                unit = request.form.get('waste_unit') or ''
+                method = request.form.get('disposal_method') or ''
+                
+                missing = []
+                if not wtype: missing.append('Atık Türü')
+                if not amount: missing.append('Miktar')
+                if not unit: missing.append('Birim')
+                if not method: missing.append('Bertaraf Yöntemi')
+                
+                if missing:
+                    flash('Lütfen zorunlu alanları doldurun: ' + ', '.join(missing), 'danger')
+                    return render_template('data_edit.html', title='Yeni Veri Girişi', data_type=dtype, module=module, date=date_str, waste_type=wtype, waste_amount=amount, waste_unit=unit, disposal_method=method)
+                
                 conn.execute("INSERT INTO waste_generation (company_id, waste_type, amount, unit, disposal_method, date, created_at) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)", (company_id, wtype, amount, unit, method, date_str))
 
             elif dtype == 'biodiversity':
@@ -1239,8 +1586,322 @@ def reports():
         logging.error(f"Error fetching reports: {e}")
     return render_template('reports.html', title='Raporlar', reports=reports, pagination=pagination)
 
+
+@app.route('/reports/sustainability_ai', methods=['POST'])
+@require_company_context
+def generate_sustainability_md_report():
+    if 'user' not in session:
+        return redirect(url_for('login'))
+
+    try:
+        company_id = g.company_id
+        reporting_period = request.form.get('reporting_period') or str(datetime.now().year)
+        report_name = request.form.get('report_name') or f"Sürdürülebilirlik Raporu {reporting_period}"
+        report_format = (request.form.get('format') or 'docx').lower()
+
+        generator = ReportGenerator(DB_PATH)
+
+        output_dir = os.path.join(BACKEND_DIR, 'uploads', 'reports', f"company_{company_id}")
+        os.makedirs(output_dir, exist_ok=True)
+        safe_period = str(reporting_period).replace("/", "-").replace("\\", "-").replace(" ", "_")
+        base_name = f"sustainability_report_{company_id}_{safe_period}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
+        file_path = None
+        report_type = ""
+
+        if report_format == "pdf":
+            target_path = os.path.join(output_dir, f"{base_name}.pdf")
+            file_path = generator.generate_sustainability_pdf(company_id, reporting_period, target_path)
+            report_type = "PDF"
+        elif report_format in ("docx", "word"):
+            target_path = os.path.join(output_dir, f"{base_name}.docx")
+            file_path = generator.generate_sustainability_docx(company_id, reporting_period, target_path)
+            report_type = "DOCX"
+        else:
+            md_content = generator.generate_sustainability_report(company_id, reporting_period)
+            target_path = os.path.join(output_dir, f"{base_name}.md")
+            with open(target_path, "w", encoding="utf-8") as f:
+                f.write(md_content)
+            file_path = target_path
+            report_type = "MD"
+
+        if not file_path or not os.path.exists(file_path):
+            flash("Rapor oluşturulamadı.", "danger")
+            return redirect(url_for('reports'))
+
+        try:
+            manager = MANAGERS.get('advanced_report')
+            if manager:
+                manager.register_existing_file(
+                    company_id=company_id,
+                    module_code="esg",
+                    report_name=report_name,
+                    report_type=report_type,
+                    file_path=file_path,
+                    reporting_period=reporting_period,
+                    tags=["sustainability", "ai", report_type.lower()],
+                    description=f"AI destekli sürdürülebilirlik raporu ({report_type})"
+                )
+        except Exception as reg_e:
+            logging.error(f"Sustainability report registry error: {reg_e}")
+
+        flash(f"AI destekli sürdürülebilirlik {report_type} raporu oluşturuldu.", 'success')
+        return redirect(url_for('reports'))
+    except Exception as e:
+        logging.error(f"Sustainability report error: {e}")
+        flash(f"Hata: {e}", "danger")
+        return redirect(url_for('reports'))
+
+@app.route('/reports/wizard')
+@app.route('/report_wizard')
+@require_company_context
+def report_wizard():
+    if 'user' not in session: return redirect(url_for('login'))
+    return render_template('report_wizard.html', title='Rapor Oluşturma Sihirbazı')
+
+@app.route('/reports/wizard/generate', methods=['POST'])
+@require_company_context
+def report_wizard_generate():
+    if 'user' not in session: return redirect(url_for('login'))
+    
+    try:
+        module_code = request.form.get('module')
+        report_name = request.form.get('report_name')
+        period = request.form.get('period')
+        fmt = request.form.get('format', 'pdf')
+        include_ai = request.form.get('include_ai') == 'on'
+        
+        company_id = g.company_id
+        
+        # Unified Report Handling
+        if module_code == 'unified':
+            return redirect(url_for('unified_report'))
+            
+        # Standard Modules
+        formats = [fmt]
+        generated = {}
+        
+        if module_code == 'carbon':
+            cm = CarbonManager(DB_PATH)
+            cr = CarbonReporting(cm)
+            generated = cr.generate_carbon_report(company_id, period, formats=formats)
+        elif module_code == 'energy':
+            em = EnergyManager(DB_PATH)
+            er = EnergyReporting(em)
+            generated = er.generate_energy_report(company_id, period, formats=formats)
+        elif module_code == 'water':
+            wm = WaterManager(DB_PATH)
+            wr = WaterReporting(wm)
+            generated = wr.generate_water_report(company_id, period, formats=formats)
+        elif module_code == 'waste':
+            wm = WasteManager(DB_PATH)
+            wr = WasteReporting(wm)
+            generated = wr.generate_waste_report(company_id, period, formats=formats)
+        elif module_code == 'social':
+            sr = SocialReporting(DB_PATH)
+            generated = sr.generate_social_report(company_id, period, formats=formats)
+        elif module_code == 'governance':
+            gm = CorporateGovernanceManager(DB_PATH)
+            gr = GovernanceReporting(gm)
+            generated = gr.generate_governance_report(company_id, period, formats=formats)
+        else:
+            flash('Seçilen modül henüz desteklenmiyor.', 'warning')
+            return redirect(url_for('report_wizard'))
+            
+        if generated:
+            flash(f'{report_name} başarıyla oluşturuldu.', 'success')
+            # If AI summary requested and supported, we could trigger it here
+            # For now, we rely on the managers doing their job
+        else:
+            flash('Rapor oluşturulamadı.', 'danger')
+            
+        return redirect(url_for('reports'))
+        
+    except Exception as e:
+        logging.error(f"Wizard Error: {e}")
+        flash(f'Hata: {e}', 'danger')
+        return redirect(url_for('report_wizard'))
+
+
+@app.route('/reports/unified', methods=['GET', 'POST'])
+@require_company_context
+def unified_report():
+    if 'user' not in session:
+        return redirect(url_for('login'))
+    company_id = g.company_id
+    if request.method == 'POST':
+        try:
+            report_name = request.form.get('report_name') or 'Birleşik Sürdürülebilirlik Raporu'
+            reporting_period = request.form.get('reporting_period') or str(datetime.now().year)
+            description = request.form.get('description') or ''
+            selected_modules = request.form.getlist('modules')
+            include_ai = request.form.get('include_ai') in ['on', '1', 'true', 'True']
+            if not selected_modules:
+                flash('En az bir modül seçmelisiniz.', 'warning')
+                return redirect(url_for('unified_report'))
+            context_for_ai = {
+                'company_id': company_id,
+                'reporting_period': reporting_period,
+                'modules': selected_modules,
+                'module_reports': [],
+                'metrics': {}
+            }
+            try:
+                conn = get_db()
+                for m in selected_modules:
+                    rows = conn.execute(
+                        """
+                        SELECT id, module_code, report_name, report_type, reporting_period, created_at
+                        FROM report_registry
+                        WHERE company_id = ? AND module_code = ?
+                        ORDER BY created_at DESC
+                        LIMIT 1
+                        """,
+                        (company_id, m),
+                    ).fetchall()
+                    for r in rows:
+                        context_for_ai['module_reports'].append(
+                            {
+                                'module_code': r['module_code'],
+                                'report_name': r['report_name'],
+                                'report_type': r['report_type'],
+                                'reporting_period': r['reporting_period'],
+                                'created_at': r['created_at'],
+                            }
+                        )
+                metrics = {}
+                taxonomy_mappings = []
+                try:
+                    rows = conn.execute(
+                        """
+                        SELECT scope, SUM(co2e_emissions) AS total_co2e
+                        FROM carbon_emissions
+                        WHERE company_id = ? AND period LIKE ?
+                        GROUP BY scope
+                        """,
+                        (company_id, f"{reporting_period}%"),
+                    ).fetchall()
+                    metrics['carbon'] = {
+                        'total_co2e': sum((r['total_co2e'] or 0) for r in rows),
+                        'scope_breakdown': [
+                            {'scope': r['scope'], 'co2e': r['total_co2e'] or 0}
+                            for r in rows
+                        ],
+                    }
+                except Exception as e:
+                    logging.error(f"Unified AI carbon metrics error: {e}")
+                try:
+                    rows = conn.execute(
+                        """
+                        SELECT energy_type, SUM(consumption_amount) AS total_consumption
+                        FROM energy_consumption
+                        WHERE company_id = ? AND year = ?
+                        GROUP BY energy_type
+                        """,
+                        (company_id, reporting_period),
+                    ).fetchall()
+                    metrics['energy'] = {
+                        'total_consumption': sum((r['total_consumption'] or 0) for r in rows),
+                        'type_breakdown': [
+                            {'energy_type': r['energy_type'], 'consumption': r['total_consumption'] or 0}
+                            for r in rows
+                        ],
+                    }
+                except Exception as e:
+                    logging.error(f"Unified AI energy metrics error: {e}")
+                try:
+                    rows = conn.execute(
+                        """
+                        SELECT source, SUM(consumption_amount) AS total_consumption
+                        FROM water_consumption
+                        WHERE company_id = ? AND year = ?
+                        GROUP BY source
+                        """,
+                        (company_id, reporting_period),
+                    ).fetchall()
+                    metrics['water'] = {
+                        'total_consumption': sum((r['total_consumption'] or 0) for r in rows),
+                        'source_breakdown': [
+                            {'water_source': r['source'], 'consumption': r['total_consumption'] or 0}
+                            for r in rows
+                        ],
+                    }
+                except Exception as e:
+                    logging.error(f"Unified AI water metrics error: {e}")
+                try:
+                    rows = conn.execute(
+                        """
+                        SELECT waste_type, SUM(waste_amount) AS total_waste
+                        FROM waste_generation
+                        WHERE company_id = ? AND year = ?
+                        GROUP BY waste_type
+                        """,
+                        (company_id, reporting_period),
+                    ).fetchall()
+                    metrics['waste'] = {
+                        'total_waste': sum((r['total_waste'] or 0) for r in rows),
+                        'type_breakdown': [
+                            {'waste_type': r['waste_type'], 'amount': r['total_waste'] or 0}
+                            for r in rows
+                        ],
+                    }
+                except Exception as e:
+                    logging.error(f"Unified AI waste metrics error: {e}")
+                try:
+                    rows = conn.execute(
+                        """
+                        SELECT mapping.standard, mapping.reference_code, mapping.section_code
+                        FROM taxonomy_mappings AS mapping
+                        WHERE mapping.company_id = ?
+                        """,
+                        (company_id,),
+                    ).fetchall()
+                    taxonomy_mappings = [
+                        {
+                            'standard': r['standard'],
+                            'reference_code': r['reference_code'],
+                            'section_code': r['section_code'],
+                        }
+                        for r in rows
+                    ]
+                except Exception as e:
+                    logging.error(f"Unified AI taxonomy mappings error: {e}")
+                context_for_ai['metrics'] = metrics
+                context_for_ai['taxonomy_mappings'] = taxonomy_mappings
+                conn.close()
+            except Exception as e:
+                logging.error(f"Unified AI context error: {e}")
+            try:
+                manager = MANAGERS.get('advanced_report')
+                if manager:
+                    result = manager.generate_unified_report_with_ai(
+                        company_id=company_id,
+                        report_name=report_name,
+                        reporting_period=reporting_period,
+                        description=description,
+                        selected_modules=selected_modules,
+                        include_ai=include_ai,
+                        ai_context=context_for_ai,
+                    )
+                    if result and result.get('success'):
+                        flash('Birleşik rapor başarıyla oluşturuldu.', 'success')
+                    else:
+                        flash('Birleşik rapor oluşturulurken bir hata oluştu.', 'danger')
+                else:
+                    flash('Raporlama altyapısı hazır değil.', 'danger')
+            except Exception as e:
+                logging.error(f"Unified AI generation error: {e}")
+                flash(f'Hata: {e}', 'danger')
+            return redirect(url_for('reports'))
+        except Exception as e:
+            logging.error(f"Unified report error: {e}")
+            flash(f'Hata: {e}', 'danger')
+            return redirect(url_for('reports'))
+    return render_template('unified_report.html', title='Birleşik Rapor')
+
 @app.route('/reports/add', methods=['GET', 'POST'])
 @require_company_context
+@limiter.limit("5 per minute")
 def report_add():
     if 'user' not in session:
         return redirect(url_for('login'))
@@ -1390,33 +2051,185 @@ def report_delete(report_id):
 
     try:
         conn = get_db()
-        # Enforce company isolation
         report = conn.execute(
-            "SELECT file_path FROM report_registry WHERE id=? AND company_id=?", 
+            "SELECT file_path FROM report_registry WHERE id=? AND company_id=?",
             (report_id, g.company_id)
         ).fetchone()
 
         if report:
-            if report['file_path'] and os.path.exists(report['file_path']):
-                try:
-                    os.remove(report['file_path'])
-                except Exception as e:
-                    logging.error(f"Error deleting file: {e}")
-            
-            # Only delete if it belongs to the company (already checked by SELECT, but good for WHERE clause in DELETE too)
-            conn.execute("DELETE FROM report_registry WHERE id=? AND company_id=?", (report_id, g.company_id))
+            file_path = report['file_path']
+            if file_path:
+                path_candidate = file_path
+                if '\\' in path_candidate and os.name != 'nt':
+                    path_candidate = path_candidate.replace('\\', '/')
+                if not os.path.exists(path_candidate) and 'reports' in path_candidate:
+                    normalized = path_candidate.replace('\\', '/')
+                    idx = normalized.rfind('reports')
+                    if idx != -1:
+                        rel_path = normalized[idx:]
+                        if os.path.exists(rel_path):
+                            path_candidate = rel_path
+                if not os.path.exists(path_candidate):
+                    basename = os.path.basename(path_candidate)
+                    candidate = os.path.join('reports', basename)
+                    if os.path.exists(candidate):
+                        path_candidate = candidate
+                if os.path.exists(path_candidate):
+                    try:
+                        os.remove(path_candidate)
+                    except Exception as e:
+                        logging.error(f"Error deleting report file {path_candidate}: {e}")
+
+            conn.execute(
+                "DELETE FROM report_registry WHERE id=? AND company_id=?",
+                (report_id, g.company_id)
+            )
             conn.commit()
-            conn.close()
             flash('Rapor silindi.', 'success')
         else:
-            conn.close()
             flash('Rapor bulunamadı veya silme yetkiniz yok.', 'warning')
 
+        conn.close()
     except Exception as e:
         logging.error(f"Error deleting report: {e}")
         flash(f'Hata: {e}', 'danger')
 
     return redirect(url_for('reports'))
+
+@app.route('/reports/view/<int:report_id>')
+@require_company_context
+def view_report(report_id):
+    if 'user' not in session:
+        return redirect(url_for('login'))
+
+    try:
+        conn = get_db()
+        report = conn.execute("SELECT * FROM report_registry WHERE id=? AND company_id=?", (report_id, g.company_id)).fetchone()
+        conn.close()
+
+        if not report:
+            flash('Rapor bulunamadı.', 'warning')
+            return redirect(url_for('reports'))
+
+        file_path = report['file_path']
+        if not file_path or not os.path.exists(file_path):
+            flash('Dosya sunucuda bulunamadı.', 'danger')
+            return redirect(url_for('reports'))
+
+        download_name = report['report_name'] if report['report_name'] else 'report'
+        _, ext = os.path.splitext(file_path)
+        ext_lower = ext.lower()
+        mimetype = None
+        if ext_lower == '.pdf':
+            mimetype = 'application/pdf'
+        elif ext_lower == '.docx':
+            mimetype = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        elif ext_lower == '.doc':
+            mimetype = 'application/msword'
+        elif ext_lower == '.xlsx':
+            mimetype = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+
+        return send_file(file_path, mimetype=mimetype, as_attachment=False, download_name=download_name + ext)
+
+    except Exception as e:
+        logging.error(f"Error viewing report: {e}")
+        flash(f'Hata: {e}', 'danger')
+        return redirect(url_for('reports'))
+
+
+@app.route('/reports/bulk_delete', methods=['POST'])
+@require_company_context
+def reports_bulk_delete():
+    if 'user' not in session:
+        return redirect(url_for('login'))
+
+    try:
+        report_ids = request.form.getlist('report_ids')
+        if not report_ids:
+            flash('Hiçbir rapor seçilmedi.', 'warning')
+            return redirect(url_for('reports'))
+
+        conn = get_db()
+        deleted_count = 0
+
+        for report_id in report_ids:
+            try:
+                report = conn.execute("SELECT file_path FROM report_registry WHERE id=? AND company_id=?", (report_id, g.company_id)).fetchone()
+                if report:
+                    file_path = report['file_path']
+                    if file_path and '\\' in file_path and os.name != 'nt':
+                        file_path = file_path.replace('\\', '/')
+                    if file_path and not os.path.exists(file_path):
+                        if 'reports' in file_path:
+                            normalized_path = file_path.replace('\\', '/')
+                            idx = normalized_path.rfind('reports')
+                            if idx != -1:
+                                rel_path = normalized_path[idx:]
+                                if os.path.exists(rel_path):
+                                    file_path = rel_path
+                        if not os.path.exists(file_path):
+                            basename = os.path.basename(file_path)
+                            candidate = os.path.join('reports', basename)
+                            if os.path.exists(candidate):
+                                file_path = candidate
+
+                    if file_path and os.path.exists(file_path):
+                        try:
+                            os.remove(file_path)
+                        except Exception as e:
+                            logging.error(f"Error deleting file {file_path}: {e}")
+
+                    conn.execute("DELETE FROM report_registry WHERE id=? AND company_id=?", (report_id, g.company_id))
+                    deleted_count += 1
+            except Exception as e:
+                logging.error(f"Error processing bulk delete for id {report_id}: {e}")
+
+        conn.commit()
+        conn.close()
+
+        if deleted_count > 0:
+            flash(f'{deleted_count} rapor başarıyla silindi.', 'success')
+        else:
+            flash('Silinecek rapor bulunamadı veya yetki hatası.', 'warning')
+
+    except Exception as e:
+        logging.error(f"Error in bulk delete: {e}")
+        flash(f'Hata: {e}', 'danger')
+
+    return redirect(url_for('reports'))
+
+
+@app.route('/api/ai/feedback', methods=['POST'])
+@require_company_context
+def save_ai_feedback():
+    if 'user' not in session:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+    try:
+        data = request.get_json()
+        report_id = data.get('report_id')
+        rating = data.get('rating')
+        comment = data.get('comment', '')
+        if not report_id or not rating:
+            return jsonify({'success': False, 'message': 'Missing required fields'}), 400
+        conn = get_db()
+        report = conn.execute("SELECT id FROM report_registry WHERE id=? AND company_id=?", (report_id, g.company_id)).fetchone()
+        if not report:
+            conn.close()
+            return jsonify({'success': False, 'message': 'Report not found'}), 404
+        conn.execute(
+            """
+            INSERT INTO ai_feedback (report_id, user_id, company_id, rating, comment)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (report_id, session.get('user_id'), g.company_id, rating, comment)
+        )
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True, 'message': 'Feedback saved'})
+    except Exception as e:
+        logging.error(f"Error saving feedback: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 
 # --- Module Routes ---
 
@@ -2027,6 +2840,61 @@ def esg_module():
         history = []
 
     return render_template('esg.html', title='ESG Skorlama', manager_available=True, stats=stats, history=history)
+
+@app.route('/auto_tasks')
+@require_company_context
+def auto_tasks_module():
+    if 'user' not in session: return redirect(url_for('login'))
+    
+    company_id = g.company_id
+    manager = MANAGERS.get('auto_tasks')
+    
+    stats = {'total_tasks': 0, 'active_tasks': 0, 'completed_tasks': 0}
+    records = []
+    
+    if manager:
+        try:
+            stats = manager.get_stats(company_id)
+            records = manager.get_records(company_id)
+        except Exception as e:
+            logging.error(f"AutoTasks module error: {e}")
+            
+    columns = list(records[0].keys()) if records else []
+            
+    return render_template('auto_tasks.html', 
+                         title='Otomatik Görevler',
+                         manager_available=bool(manager),
+                         stats=stats,
+                         records=records,
+                         columns=columns)
+
+@app.route('/visualization')
+@require_company_context
+def visualization_module():
+    if 'user' not in session: return redirect(url_for('login'))
+    
+    company_id = g.company_id
+    manager = MANAGERS.get('visualization')
+    
+    stats = {'total_charts': 0, 'dashboards': 0}
+    records = []
+    
+    if manager:
+        try:
+            stats = manager.get_stats(company_id)
+            records = manager.get_records(company_id)
+        except Exception as e:
+            logging.error(f"Visualization module error: {e}")
+            
+    columns = list(records[0].keys()) if records else []
+            
+    return render_template('visualization.html', 
+                         title='Görselleştirme',
+                         manager_available=bool(manager),
+                         stats=stats,
+                         records=records,
+                         columns=columns)
+
 
 @app.route('/esg/add', methods=['GET', 'POST'])
 @require_company_context
@@ -4257,6 +5125,22 @@ def check_and_migrate_schema():
         conn.close()
     except Exception as e:
         logging.error(f"Database connection error during migration: {e}")
+
+@app.route('/legal/privacy')
+def legal_privacy():
+    return render_template('legal_privacy.html', title='Gizlilik Politikası')
+
+@app.route('/legal/terms')
+def legal_terms():
+    return render_template('legal_terms.html', title='Kullanım Koşulları')
+
+@app.route('/legal/sla')
+def legal_sla():
+    return render_template('legal_sla.html', title='Hizmet Seviyesi (SLA)')
+
+@app.route('/legal/dpa')
+def legal_dpa():
+    return render_template('legal_dpa.html', title='Veri İşleme (DPA)')
 
 if __name__ == '__main__':
     # Run schema checks

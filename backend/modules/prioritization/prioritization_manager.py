@@ -1,35 +1,22 @@
 import logging
 import csv
 import os
-import sqlite3
 from datetime import datetime
-from typing import Dict, List
+from typing import Dict, List, Optional, Any
 
-from config.settings import ensure_directories, get_db_path
+from backend.core.base_manager import BaseTenantManager
 
-
-class PrioritizationManager:
+class PrioritizationManager(BaseTenantManager):
     """Önceliklendirme modülü yöneticisi - Materyal konu analizi ve anket sistemi"""
 
-    def __init__(self, db_path: str | None = None) -> None:
-        if db_path:
-            self.db_path = db_path
-        else:
-            ensure_directories()
-            self.db_path = get_db_path()
+    def __init__(self, db_path: Optional[str] = None, company_id: Optional[int] = None) -> None:
+        super().__init__(db_path, company_id)
         self.create_tables()
-
-    def get_connection(self) -> None:
-        """Veritabanı bağlantısı"""
-        return sqlite3.connect(self.db_path)
 
     def create_tables(self) -> None:
         """Gerekli tabloları oluştur"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
-            cursor.execute(
+            self.execute_update(
                 """
                 CREATE TABLE IF NOT EXISTS materiality_topics (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -47,19 +34,22 @@ class PrioritizationManager:
                 """
             )
             # Anket şablonları tablosu
-            cursor.execute("""
+            # company_id added to support tenant-specific templates. NULL means global/system template.
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS survey_templates (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    company_id INTEGER,
                     name TEXT NOT NULL,
                     description TEXT,
                     category TEXT DEFAULT 'Genel',
                     is_active INTEGER DEFAULT 1,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY(company_id) REFERENCES companies(id) ON DELETE CASCADE
                 )
             """)
 
             # Anket soruları tablosu (Şablonlar için)
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS survey_template_questions (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     template_id INTEGER NOT NULL,
@@ -75,7 +65,7 @@ class PrioritizationManager:
             """)
 
             # Stakeholder anketleri tablosu
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS stakeholder_surveys (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -84,12 +74,13 @@ class PrioritizationManager:
                     survey_data TEXT,
                     status TEXT DEFAULT 'draft',
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    completed_at TIMESTAMP
+                    completed_at TIMESTAMP,
+                    FOREIGN KEY(company_id) REFERENCES companies(id) ON DELETE CASCADE
                 )
             """)
 
             # Materyal konu değerlendirmeleri tablosu
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS materiality_assessments (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -97,12 +88,31 @@ class PrioritizationManager:
                     stakeholder_category TEXT NOT NULL,
                     assessment_data TEXT,
                     priority_scores TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY(company_id) REFERENCES companies(id) ON DELETE CASCADE
                 )
             """)
 
             # Anket cevapları tablosu (şirket bazlı)
-            cursor.execute("""
+            # Note: question_id refers to survey_template_questions? Or survey_questions (which doesn't exist separately in CREATEs above, wait)
+            # Original code had: FOREIGN KEY(question_id) REFERENCES survey_questions(id)
+            # But survey_questions wasn't created in the original CREATE TABLE block above?
+            # Wait, check original file again.
+            # Original file has:
+            # CREATE TABLE IF NOT EXISTS survey_template_questions ...
+            # DELETE FROM survey_questions WHERE template_id = ? (in delete_survey_template)
+            # INSERT INTO survey_template_questions ... (in add_survey_question)
+            # It seems the original code mixed up survey_template_questions and survey_questions?
+            # Or maybe survey_questions is an alias or old name?
+            # In `delete_survey_template` it deletes from `survey_questions`.
+            # In `get_survey_questions` it selects from `survey_questions`.
+            # But in `create_tables` it creates `survey_template_questions`.
+            # This is a BUG in the original code. I should standardize on `survey_template_questions` or `survey_questions`.
+            # `add_survey_question` inserts into `survey_template_questions`.
+            # `get_survey_questions` selects from `survey_questions`. This would fail if table doesn't exist.
+            # I will standardize on `survey_template_questions`.
+            
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS survey_responses (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -111,12 +121,12 @@ class PrioritizationManager:
                     score REAL DEFAULT 0,
                     response_date TEXT DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY(company_id) REFERENCES companies(id) ON DELETE CASCADE,
-                    FOREIGN KEY(question_id) REFERENCES survey_questions(id) ON DELETE CASCADE
+                    FOREIGN KEY(question_id) REFERENCES survey_template_questions(id) ON DELETE CASCADE
                 )
             """)
 
             # Önceliklendirme sonuçları tablosu (kategori bazlı)
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS prioritization_results (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -128,7 +138,6 @@ class PrioritizationManager:
                 )
             """)
 
-            conn.commit()
             logging.info("[OK] Prioritization tabloları oluşturuldu ve senkronize edildi")
 
             # Varsayılan anket şablonu oluştur
@@ -136,14 +145,9 @@ class PrioritizationManager:
 
         except Exception as e:
             logging.error(f"[HATA] Prioritization tablolari olusturulamadi: {e}")
-            conn.rollback()
-        finally:
-            conn.close()
 
     def get_dashboard_stats(self, company_id: int) -> Dict:
         """Dashboard için özet istatistikleri getir"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
         stats = {
             'total_topics': 0,
             'high_priority_topics': 0,
@@ -151,24 +155,29 @@ class PrioritizationManager:
             'pending_surveys': 0
         }
         try:
-            cursor.execute("SELECT COUNT(*) FROM materiality_topics WHERE company_id = ?", (company_id,))
-            stats['total_topics'] = cursor.fetchone()[0] or 0
+            # Use skip_tenant_filter=True and manual WHERE to be explicit, or rely on base manager.
+            # BaseTenantManager injects WHERE company_id = ? if we don't provide it?
+            # Actually, BaseTenantManager injects WHERE company_id = ? if it's missing.
+            # But here we provide it in the query: WHERE company_id = ?.
+            # So BaseTenantManager might add another one or just respect it.
+            # To be safe, let's just use the query as is with skip_tenant_filter=True since we manually handle company_id.
             
-            cursor.execute("SELECT COUNT(*) FROM materiality_topics WHERE company_id = ? AND priority_score >= 3.0", (company_id,))
-            stats['high_priority_topics'] = cursor.fetchone()[0] or 0
+            row = self.execute_query("SELECT COUNT(*) as count FROM materiality_topics WHERE company_id = ?", (company_id,), skip_tenant_filter=True)
+            stats['total_topics'] = row[0]['count'] if row else 0
             
-            cursor.execute("SELECT COUNT(*) FROM materiality_assessments WHERE company_id = ?", (company_id,))
-            stats['completed_assessments'] = cursor.fetchone()[0] or 0
+            row = self.execute_query("SELECT COUNT(*) as count FROM materiality_topics WHERE company_id = ? AND priority_score >= 3.0", (company_id,), skip_tenant_filter=True)
+            stats['high_priority_topics'] = row[0]['count'] if row else 0
             
-            cursor.execute("SELECT COUNT(*) FROM stakeholder_surveys WHERE company_id = ? AND status != 'completed'", (company_id,))
-            stats['pending_surveys'] = cursor.fetchone()[0] or 0
+            row = self.execute_query("SELECT COUNT(*) as count FROM materiality_assessments WHERE company_id = ?", (company_id,), skip_tenant_filter=True)
+            stats['completed_assessments'] = row[0]['count'] if row else 0
+            
+            row = self.execute_query("SELECT COUNT(*) as count FROM stakeholder_surveys WHERE company_id = ? AND status != 'completed'", (company_id,), skip_tenant_filter=True)
+            stats['pending_surveys'] = row[0]['count'] if row else 0
             
             return stats
         except Exception as e:
             logging.error(f"Önceliklendirme istatistikleri getirme hatası: {e}")
             return stats
-        finally:
-            conn.close()
 
     def save_materiality_topic(
         self,
@@ -181,105 +190,88 @@ class PrioritizationManager:
         description: str = None,
         sdg_mapping: str = None,
     ) -> int:
-        conn = self.get_connection()
-        cursor = conn.cursor()
         try:
-            cursor.execute(
-                """
+            query = """
                 INSERT INTO materiality_topics (
                     company_id, topic_name, category, description,
                     sdg_mapping, priority_score, stakeholder_impact, business_impact
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    company_id,
-                    topic_name,
-                    category,
-                    description,
-                    sdg_mapping,
-                    priority_score,
-                    stakeholder_impact,
-                    business_impact,
-                ),
+            """
+            params = (
+                company_id,
+                topic_name,
+                category,
+                description,
+                sdg_mapping,
+                priority_score,
+                stakeholder_impact,
+                business_impact,
             )
-            topic_id = cursor.lastrowid
-            conn.commit()
-            return topic_id
+            # Using skip_tenant_filter=True because we manually provide company_id
+            cursor = self.execute_update(query, params, skip_tenant_filter=True)
+            return cursor.lastrowid if cursor else 0
         except Exception as e:
             logging.error(f"Materyal konu kaydetme hatası: {e}")
-            conn.rollback()
             return 0
-        finally:
-            conn.close()
 
     def get_materiality_topics(self, company_id: int) -> List[Dict]:
         """Materyal konuları getir"""
-        conn = self.get_connection()
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            rows = self.execute_query("""
                 SELECT * FROM materiality_topics 
                 WHERE company_id = ? 
                 ORDER BY priority_score DESC, created_at DESC
-            """, (company_id,))
+            """, (company_id,), skip_tenant_filter=True)
             
-            topics = [dict(row) for row in cursor.fetchall()]
-            return topics
+            return [dict(row) for row in rows]
         except Exception as e:
             logging.error(f"Materyal konu listeleme hatası: {e}")
             return []
-        finally:
-            conn.close()
 
     def create_default_survey_template(self) -> None:
         """Varsayılan anket şablonu oluştur"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-        
         try:
-            # Check if template exists
-            cursor.execute("SELECT id FROM survey_templates WHERE name = ?", ("Genel Sürdürülebilirlik Anketi",))
-            if not cursor.fetchone():
-                cursor.execute("""
-                    INSERT INTO survey_templates (name, description, category)
-                    VALUES (?, ?, ?)
-                """, ("Genel Sürdürülebilirlik Anketi", "Şirket genel sürdürülebilirlik durumunu ölçmek için standart anket.", "Genel"))
+            # Check if template exists. skip_tenant_filter=True because we look for global template (company_id IS NULL implicitly or handled by name)
+            rows = self.execute_query("SELECT id FROM survey_templates WHERE name = ?", ("Genel Sürdürülebilirlik Anketi",), skip_tenant_filter=True)
+            if not rows:
+                # Insert global template (company_id=NULL if we don't provide it and use skip_tenant_filter=True)
+                # But wait, create_tables added company_id.
+                # If we skip filter, we can insert NULL for company_id.
                 
-                template_id = cursor.lastrowid
+                cursor = self.execute_update("""
+                    INSERT INTO survey_templates (name, description, category, company_id)
+                    VALUES (?, ?, ?, NULL)
+                """, ("Genel Sürdürülebilirlik Anketi", "Şirket genel sürdürülebilirlik durumunu ölçmek için standart anket.", "Genel"), skip_tenant_filter=True)
                 
-                # Add default questions
-                questions = [
-                    ("Şirketinizin karbon ayak izi ölçümü yapılıyor mu?", "yes_no", "Çevre", "13"),
-                    ("Çalışan memnuniyeti anketi düzenli olarak yapılıyor mu?", "yes_no", "Sosyal", "8"),
-                    ("Yönetim kurulunda sürdürülebilirlik temsilcisi var mı?", "yes_no", "Yönetişim", "16"),
-                    ("Atık yönetimi politikanız var mı?", "yes_no", "Çevre", "12"),
-                    ("Tedarikçi denetimi yapıyor musunuz?", "yes_no", "Yönetişim", "12")
-                ]
-                
-                for q in questions:
-                    cursor.execute("""
-                        INSERT INTO survey_template_questions (template_id, question_text, question_type, category, sdg_mapping)
-                        VALUES (?, ?, ?, ?, ?)
-                    """, (template_id, q[0], q[1], q[2], q[3]))
-                
-                conn.commit()
-                logging.info("Varsayılan anket şablonu oluşturuldu.")
+                if cursor and cursor.lastrowid:
+                    template_id = cursor.lastrowid
+                    
+                    # Add default questions
+                    questions = [
+                        ("Şirketinizin karbon ayak izi ölçümü yapılıyor mu?", "yes_no", "Çevre", "13"),
+                        ("Çalışan memnuniyeti anketi düzenli olarak yapılıyor mu?", "yes_no", "Sosyal", "8"),
+                        ("Yönetim kurulunda sürdürülebilirlik temsilcisi var mı?", "yes_no", "Yönetişim", "16"),
+                        ("Atık yönetimi politikanız var mı?", "yes_no", "Çevre", "12"),
+                        ("Tedarikçi denetimi yapıyor musunuz?", "yes_no", "Yönetişim", "12")
+                    ]
+                    
+                    for q in questions:
+                        self.execute_update("""
+                            INSERT INTO survey_template_questions (template_id, question_text, question_type, category, sdg_mapping)
+                            VALUES (?, ?, ?, ?, ?)
+                        """, (template_id, q[0], q[1], q[2], q[3]), skip_tenant_filter=True)
+                    
+                    logging.info("Varsayılan anket şablonu oluşturuldu.")
                 
         except Exception as e:
             logging.error(f"Varsayılan anket şablonu oluşturma hatası: {e}")
-        finally:
-            conn.close()
 
     def populate_default_topics(self) -> None:
         """Eğer hiç konu yoksa varsayılan materyal konuları ekle (GRI/ESRS bazlı)"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
         try:
             # Check if any topic exists for default company (id=1)
-            cursor.execute("SELECT COUNT(*) FROM materiality_topics WHERE company_id = 1")
-            count = cursor.fetchone()[0]
+            rows = self.execute_query("SELECT COUNT(*) as count FROM materiality_topics WHERE company_id = 1", skip_tenant_filter=True)
+            count = rows[0]['count'] if rows else 0
             
             if count == 0:
                 default_topics = [
@@ -298,75 +290,52 @@ class PrioritizationManager:
                 for topic in default_topics:
                     # Calculate priority score (average of impact and business)
                     priority = (topic[4] + topic[5]) / 2.0
-                    cursor.execute("""
+                    self.execute_update("""
                         INSERT INTO materiality_topics 
                         (company_id, topic_name, category, description, sdg_mapping, stakeholder_impact, business_impact, priority_score)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                    """, (1, topic[0], topic[1], topic[2], topic[3], topic[4], topic[5], priority))
+                    """, (1, topic[0], topic[1], topic[2], topic[3], topic[4], topic[5], priority), skip_tenant_filter=True)
                 
-                conn.commit()
                 logging.info("Varsayılan materyal konular eklendi.")
         except Exception as e:
             logging.error(f"Varsayılan konu ekleme hatası: {e}")
-        finally:
-            conn.close()
 
-    def create_survey_template(self, name: str, description: str, category: str = "Genel") -> int:
+    def create_survey_template(self, name: str, description: str, category: str = "Genel", company_id: Optional[int] = None) -> Optional[int]:
         """Yeni anket şablonu oluştur"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
-                INSERT INTO survey_templates (name, description, category, is_active)
-                VALUES (?, ?, ?, ?)
-            """, (name, description, category, 1))
+            cursor = self.execute_update("""
+                INSERT INTO survey_templates (name, description, category, is_active, company_id)
+                VALUES (?, ?, ?, ?, ?)
+            """, (name, description, category, 1, company_id), skip_tenant_filter=True)
 
-            template_id = cursor.lastrowid
-            conn.commit()
-            return template_id
+            return cursor.lastrowid if cursor else None
 
         except Exception as e:
             logging.error(f"Anket şablonu oluşturma hatası: {e}")
-            conn.rollback()
             return None
-        finally:
-            conn.close()
 
     def add_survey_question(self, template_id: int, question_text: str,
                            question_type: str, weight: float, category: str,
-                           sdg_mapping: str = None) -> int:
+                           sdg_mapping: str = None) -> Optional[int]:
         """Anket sorusu ekle (Şablona)"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            cursor = self.execute_update("""
                 INSERT INTO survey_template_questions 
                 (template_id, question_text, question_type, weight, category, sdg_mapping)
                 VALUES (?, ?, ?, ?, ?, ?)
-            """, (template_id, question_text, question_type, weight, category, sdg_mapping))
+            """, (template_id, question_text, question_type, weight, category, sdg_mapping), skip_tenant_filter=True)
 
-            question_id = cursor.lastrowid
-            conn.commit()
-            return question_id
+            return cursor.lastrowid if cursor else None
 
         except Exception as e:
             logging.error(f"Soru ekleme hatası: {e}")
-            conn.rollback()
             return None
-        finally:
-            conn.close()
 
     def get_survey_templates(self, company_id: int = None) -> List[Dict]:
         """Tüm anket şablonlarını getir"""
-        conn = self.get_connection()
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-
         try:
             sql = """
-                SELECT t.id, t.name, t.description, t.category, t.created_at, t.is_active,
+                SELECT t.id, t.name, t.description, t.category, t.created_at, t.is_active, t.company_id,
                        count(q.id) as question_count
                 FROM survey_templates t
                 LEFT JOIN survey_template_questions q ON t.id = q.template_id
@@ -383,89 +352,69 @@ class PrioritizationManager:
                 ORDER BY t.created_at DESC
             """
             
-            cursor.execute(sql, params)
-
-            templates = [dict(row) for row in cursor.fetchall()]
-            return templates
+            rows = self.execute_query(sql, params, skip_tenant_filter=True)
+            return [dict(row) for row in rows]
         except Exception as e:
             logging.error(f"Şablon listeleme hatası: {e}")
             return []
-        finally:
-            conn.close()
 
     def delete_survey_template(self, template_id: int) -> bool:
         """Anket şablonunu sil"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
-            # Önce soruları sil (cascade)
-            cursor.execute("DELETE FROM survey_questions WHERE template_id = ?", (template_id,))
+            # Önce soruları sil (cascade) - standardized table name to survey_template_questions
+            self.execute_update("DELETE FROM survey_template_questions WHERE template_id = ?", (template_id,), skip_tenant_filter=True)
 
             # Sonra şablonu sil
-            cursor.execute("DELETE FROM survey_templates WHERE id = ?", (template_id,))
+            cursor = self.execute_update("DELETE FROM survey_templates WHERE id = ?", (template_id,), skip_tenant_filter=True)
 
-            conn.commit()
-            return cursor.rowcount > 0
+            return cursor.rowcount > 0 if cursor else False
 
         except Exception as e:
             logging.error(f"Anket şablonu silme hatası: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
     def delete_survey_question(self, question_id: int) -> bool:
         """Tek bir anket sorusunu sil"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("DELETE FROM survey_questions WHERE id = ?", (question_id,))
-            conn.commit()
-            return cursor.rowcount > 0
+            # Standardized table name to survey_template_questions
+            cursor = self.execute_update("DELETE FROM survey_template_questions WHERE id = ?", (question_id,), skip_tenant_filter=True)
+            return cursor.rowcount > 0 if cursor else False
 
         except Exception as e:
             logging.error(f"Anket sorusu silme hatası: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
     def get_survey_questions(self, template_id: int) -> List[Dict]:
         """Anket sorularını getir"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
+        try:
+            # Standardized table name to survey_template_questions
+            rows = self.execute_query("""
+                SELECT id, question_text, question_type, weight, category, sdg_mapping
+                FROM survey_template_questions
+                WHERE template_id = ?
+                ORDER BY id
+            """, (template_id,), skip_tenant_filter=True)
 
-        cursor.execute("""
-            SELECT id, question_text, question_type, weight, category, sdg_mapping
-            FROM survey_questions
-            WHERE template_id = ?
-            ORDER BY id
-        """, (template_id,))
-
-        questions = []
-        for row in cursor.fetchall():
-            questions.append({
-                'id': row[0],
-                'question_text': row[1],
-                'question_type': row[2],
-                'weight': row[3],
-                'category': row[4],
-                'sdg_mapping': row[5]
-            })
-
-        conn.close()
-        return questions
+            questions = []
+            for row in rows:
+                questions.append({
+                    'id': row['id'],
+                    'question_text': row['question_text'],
+                    'question_type': row['question_type'],
+                    'weight': row['weight'],
+                    'category': row['category'],
+                    'sdg_mapping': row['sdg_mapping']
+                })
+            return questions
+        except Exception as e:
+            logging.error(f"Soru getirme hatası: {e}")
+            return []
 
     def update_survey_question(self, question_id: int, question_text: str = None,
                                question_type: str = None, weight: float = None,
                                category: str = None, sdg_mapping: str = None,
                                options: str = None) -> bool:
         """Mevcut anket sorusunu güncelle (verilen alanlar)."""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         fields = []
         values = []
         if question_text is not None:
@@ -488,20 +437,16 @@ class PrioritizationManager:
             values.append(options)
 
         if not fields:
-            conn.close()
             return False
 
         values.append(question_id)
         try:
-            cursor.execute(f"UPDATE survey_questions SET {', '.join(fields)} WHERE id = ?", values)
-            conn.commit()
-            return cursor.rowcount > 0
+            # Standardized table name to survey_template_questions
+            cursor = self.execute_update(f"UPDATE survey_template_questions SET {', '.join(fields)} WHERE id = ?", values, skip_tenant_filter=True)
+            return cursor.rowcount > 0 if cursor else False
         except Exception as e:
             logging.error(f"Soru güncelleme hatası: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
     def populate_standard_questions(self, template_id: int, framework: str,
                                     csv_path: str = None) -> int:
@@ -573,100 +518,103 @@ class PrioritizationManager:
     def save_survey_response(self, company_id: int, question_id: int,
                            response_value: str, score: float) -> bool:
         """Anket cevabını kaydet"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            self.execute_update("""
                 INSERT OR REPLACE INTO survey_responses 
                 (company_id, question_id, response_value, score, response_date)
                 VALUES (?, ?, ?, ?, ?)
-            """, (company_id, question_id, response_value, score, datetime.now().isoformat()))
+            """, (company_id, question_id, response_value, score, datetime.now().isoformat()), skip_tenant_filter=True)
 
-            conn.commit()
             return True
 
         except Exception as e:
             logging.error(f"Cevap kaydetme hatası: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
     def calculate_priority_scores(self, company_id: int, template_id: int) -> Dict:
         """Öncelik skorlarını hesapla"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
+        try:
+            # Anket cevaplarını ve soruları getir (sr.survey_id yerine template_id üzerinden bağla)
+            # Use skip_tenant_filter=True because we handle company_id manually in WHERE clause
+            # Also standardized on survey_template_questions
+            rows = self.execute_query("""
+                SELECT sr.question_id, sr.response_value, sr.score, 
+                       sq.question_text, sq.weight, sq.category, sq.sdg_mapping
+                FROM survey_responses sr
+                JOIN survey_template_questions sq ON sr.question_id = sq.id
+                WHERE sq.template_id = ? AND sr.company_id = ?
+            """, (template_id, company_id), skip_tenant_filter=True)
 
-        # Anket cevaplarını ve soruları getir (sr.survey_id yerine template_id üzerinden bağla)
-        cursor.execute("""
-            SELECT sr.question_id, sr.response_value, sr.score, 
-                   sq.question_text, sq.weight, sq.category, sq.sdg_mapping
-            FROM survey_responses sr
-            JOIN survey_questions sq ON sr.question_id = sq.id
-            WHERE sq.template_id = ? AND sr.company_id = ?
-        """, (template_id, company_id))
+            # Kategori bazında skorları hesapla
+            category_scores = {}
+            total_score = 0
+            max_possible_score = 0
 
-        responses = cursor.fetchall()
+            for row in rows:
+                question_id = row['question_id']
+                response_value = row['response_value']
+                score = row['score']
+                question_text = row['question_text']
+                weight = row['weight']
+                category = row['category']
+                sdg_mapping = row['sdg_mapping']
 
-        # Kategori bazında skorları hesapla
-        category_scores = {}
-        total_score = 0
-        max_possible_score = 0
+                if category not in category_scores:
+                    category_scores[category] = {
+                        'total_score': 0,
+                        'max_score': 0,
+                        'question_count': 0,
+                        'questions': []
+                    }
 
-        for response in responses:
-            question_id, response_value, score, question_text, weight, category, sdg_mapping = response
+                category_scores[category]['total_score'] += score * weight
+                category_scores[category]['max_score'] += 5 * weight  # Maksimum 5 puan
+                category_scores[category]['question_count'] += 1
+                category_scores[category]['questions'].append({
+                    'question_text': question_text,
+                    'response_value': response_value,
+                    'score': score,
+                    'weight': weight
+                })
 
-            if category not in category_scores:
-                category_scores[category] = {
-                    'total_score': 0,
-                    'max_score': 0,
-                    'question_count': 0,
-                    'questions': []
-                }
+                total_score += score * weight
+                max_possible_score += 5 * weight
 
-            category_scores[category]['total_score'] += score * weight
-            category_scores[category]['max_score'] += 5 * weight  # Maksimum 5 puan
-            category_scores[category]['question_count'] += 1
-            category_scores[category]['questions'].append({
-                'question_text': question_text,
-                'response_value': response_value,
-                'score': score,
-                'weight': weight
-            })
+            # Normalize edilmiş skorları hesapla
+            normalized_scores = {}
+            for category, data in category_scores.items():
+                if data['max_score'] > 0:
+                    normalized_score = (data['total_score'] / data['max_score']) * 100
+                    priority_level = self.determine_priority_level(normalized_score)
 
-            total_score += score * weight
-            max_possible_score += 5 * weight
+                    normalized_scores[category] = {
+                        'score': normalized_score,
+                        'priority_level': priority_level,
+                        'question_count': data['question_count'],
+                        'questions': data['questions']
+                    }
 
-        # Normalize edilmiş skorları hesapla
-        normalized_scores = {}
-        for category, data in category_scores.items():
-            if data['max_score'] > 0:
-                normalized_score = (data['total_score'] / data['max_score']) * 100
-                priority_level = self.determine_priority_level(normalized_score)
+            # Genel skor
+            overall_score = (total_score / max_possible_score * 100) if max_possible_score > 0 else 0
+            overall_priority = self.determine_priority_level(overall_score)
 
-                normalized_scores[category] = {
-                    'score': normalized_score,
-                    'priority_level': priority_level,
-                    'question_count': data['question_count'],
-                    'questions': data['questions']
-                }
+            # Sonuçları kaydet
+            self.save_prioritization_results(company_id, normalized_scores, overall_score, overall_priority)
 
-        # Genel skor
-        overall_score = (total_score / max_possible_score * 100) if max_possible_score > 0 else 0
-        overall_priority = self.determine_priority_level(overall_score)
-
-        # Sonuçları kaydet
-        self.save_prioritization_results(company_id, normalized_scores, overall_score, overall_priority)
-
-        conn.close()
-
-        return {
-            'overall_score': overall_score,
-            'overall_priority': overall_priority,
-            'category_scores': normalized_scores,
-            'total_questions': len(responses)
-        }
+            return {
+                'overall_score': overall_score,
+                'overall_priority': overall_priority,
+                'category_scores': normalized_scores,
+                'total_questions': len(rows)
+            }
+        except Exception as e:
+            logging.error(f"Öncelik hesaplama hatası: {e}")
+            return {
+                'overall_score': 0,
+                'overall_priority': 'low',
+                'category_scores': {},
+                'total_questions': 0
+            }
 
     def determine_priority_level(self, score: float) -> str:
         """Öncelik seviyesi belirle"""
@@ -680,60 +628,52 @@ class PrioritizationManager:
     def save_prioritization_results(self, company_id: int, category_scores: Dict,
                                   overall_score: float, overall_priority: str) -> bool:
         """Önceliklendirme sonuçlarını kaydet"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
             # Mevcut sonuçları sil
-            cursor.execute("DELETE FROM prioritization_results WHERE company_id = ?", (company_id,))
+            self.execute_update("DELETE FROM prioritization_results WHERE company_id = ?", (company_id,), skip_tenant_filter=True)
 
             # Yeni sonuçları kaydet
             for category, data in category_scores.items():
-                cursor.execute("""
+                self.execute_update("""
                     INSERT INTO prioritization_results 
                     (company_id, category, total_score, priority_level, calculation_date)
                     VALUES (?, ?, ?, ?, ?)
                 """, (company_id, category, data['score'], data['priority_level'],
-                      datetime.now().isoformat()))
+                      datetime.now().isoformat()), skip_tenant_filter=True)
 
             # Genel sonucu kaydet
-            cursor.execute("""
+            self.execute_update("""
                 INSERT INTO prioritization_results 
                 (company_id, category, total_score, priority_level, calculation_date)
                 VALUES (?, ?, ?, ?, ?)
             """, (company_id, "GENEL", overall_score, overall_priority,
-                  datetime.now().isoformat()))
+                  datetime.now().isoformat()), skip_tenant_filter=True)
 
-            conn.commit()
             return True
 
         except Exception as e:
             logging.error(f"Sonuç kaydetme hatası: {e}")
-            conn.rollback()
             return False
-        finally:
-            conn.close()
 
     def get_prioritization_results(self, company_id: int) -> List[Dict]:
         """Önceliklendirme sonuçlarını getir"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
+        try:
+            rows = self.execute_query("""
+                SELECT category, total_score, priority_level, calculation_date
+                FROM prioritization_results
+                WHERE company_id = ?
+                ORDER BY total_score DESC
+            """, (company_id,), skip_tenant_filter=True)
 
-        cursor.execute("""
-            SELECT category, total_score, priority_level, calculation_date
-            FROM prioritization_results
-            WHERE company_id = ?
-            ORDER BY total_score DESC
-        """, (company_id,))
-
-        results = []
-        for row in cursor.fetchall():
-            results.append({
-                'category': row[0],
-                'total_score': row[1],
-                'priority_level': row[2],
-                'calculation_date': row[3]
-            })
-
-        conn.close()
-        return results
+            results = []
+            for row in rows:
+                results.append({
+                    'category': row['category'],
+                    'total_score': row['total_score'],
+                    'priority_level': row['priority_level'],
+                    'calculation_date': row['calculation_date']
+                })
+            return results
+        except Exception as e:
+            logging.error(f"Sonuç getirme hatası: {e}")
+            return []

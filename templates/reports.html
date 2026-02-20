@@ -10,6 +10,9 @@
         <a class="btn btn-sm btn-primary me-2" href="{{ url_for('report_add') }}">
             <i class="bi bi-file-earmark-plus"></i> {{ lang('btn_create_report') }}
         </a>
+        <a class="btn btn-sm btn-success me-2" href="{{ url_for('report_wizard') }}">
+            <i class="bi bi-magic"></i> Rapor Sihirbazı
+        </a>
         <a class="btn btn-sm btn-outline-primary me-2" href="{{ url_for('unified_report') }}">
             <i class="bi bi-layers"></i> {{ lang('btn_unified_report') }}
         </a>
@@ -64,12 +67,13 @@
 
 <div class="table-responsive">
     <form id="bulkDeleteForm" action="{{ url_for('reports_bulk_delete') }}" method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="mb-2" id="bulkActions" style="display:none;">
         <button type="submit" class="btn btn-sm btn-danger" class="btn-delete-selected" data-confirm-message="{{ lang('confirm_delete_selected', 'Seçilenleri silmek istediğinize emin misiniz?') }}">
             <i class="bi bi-trash"></i> {{ lang('delete_selected', 'Seçilenleri Sil') }}
         </button>
     </div>
-    <table class="table table-striped table-hover">
+    <table class="table table-striped table-hover no-datatable">
         <thead>
             <tr>
                 <th style="width: 40px;"><input type="checkbox" id="selectAll" class="form-check-input"></th>
@@ -91,6 +95,7 @@
                     <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('report_download', report_id=report['id']) }}" title="{{ lang('download') }}"><i class="bi bi-download"></i></a>
                     {% if session.role|lower in ['admin', 'super_admin', 'test admin'] %}
                     <form action="{{ url_for('report_delete', report_id=report['id']) }}" method="POST" class="d-inline form-delete-report" data-confirm-message="{{ lang('confirm_delete_report') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button class="btn btn-sm btn-outline-danger" title="{{ lang('delete') }}" type="submit"><i class="bi bi-trash"></i></button>
                     </form>
                     {% endif %}

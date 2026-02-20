@@ -4,10 +4,10 @@ GRI Modülü
 Global Reporting Initiative Standards
 """
 
-from modules.gri.gri_manager import GRIManager
+from .gri_manager import GRIManager
 
 try:
-    from modules.gri.gri_gui import GRIGUI
+    from .gri_gui import GRIGUI
 except ImportError:
     GRIGUI = None
 

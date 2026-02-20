@@ -30,6 +30,10 @@ class LanguageManager:
         self.locales_dir = os.path.join(self.base_dir, 'locales')
         self.current_lang = 'tr'
         self.translations = {}
+        self.file_mtimes = {}  # Track file modification times
+        self.last_check_time = 0
+        self.check_interval = 5  # Check every 5 seconds at most
+        
         self.debug_log_path = os.path.join(self.base_dir, 'debug_lang.txt')
         
         # Google Cloud Translate Client init
@@ -81,8 +85,10 @@ class LanguageManager:
         
         if os.path.exists(file_path):
             try:
+                mtime = os.path.getmtime(file_path)
                 with open(file_path, 'r', encoding='utf-8') as f:
                     self.translations = json.load(f)
+                self.file_mtimes[lang_code] = mtime
             except Exception as e:
                 logging.error(f"Error loading language {lang_code}: {e}")
                 self.translations = {}
@@ -111,8 +117,42 @@ class LanguageManager:
         except Exception as e:
             logging.error(f"Background generation failed for {lang_code}: {e}")
             
+    def _check_for_updates(self):
+        """Check if the current language file has changed and reload if necessary."""
+        now = time.time()
+        if now - self.last_check_time < self.check_interval:
+            return
+
+        self.last_check_time = now
+        lang_code = self.current_lang
+        file_path = os.path.join(self.locales_dir, f"{lang_code}.json")
+        
+        if os.path.exists(file_path):
+            try:
+                current_mtime = os.path.getmtime(file_path)
+                last_mtime = self.file_mtimes.get(lang_code, 0)
+                
+                if current_mtime > last_mtime:
+                    logging.info(f"Language file {lang_code}.json changed. Reloading...")
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        self.translations = json.load(f)
+                    self.file_mtimes[lang_code] = current_mtime
+            except Exception as e:
+                logging.error(f"Error checking/reloading language {lang_code}: {e}")
+
+    def _get_readable_fallback(self, key):
+        """Convert 'active_surveys' to 'Active surveys'."""
+        if not key:
+            return ""
+        # Replace underscores and dashes with spaces
+        text = key.replace('_', ' ').replace('-', ' ')
+        # Capitalize first letter
+        return text.strip().capitalize()
+
     def tr(self, key, default=None):
         """Translate a key. If key is missing and default is provided, add to tr.json."""
+        self._check_for_updates()
+        
         # If key is not in translations
         if key not in self.translations:
             if default:
@@ -120,7 +160,10 @@ class LanguageManager:
                 # we might want to record it in tr.json for future translations
                 self._add_missing_key(key, default)
                 return default
-            return key
+            
+            # Readable fallback if no default provided
+            return self._get_readable_fallback(key)
+            
         return self.translations[key]
 
     def _add_missing_key(self, key, value):

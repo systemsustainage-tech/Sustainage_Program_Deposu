@@ -1,9 +1,9 @@
-import sqlite3
 import logging
+from backend.core.base_manager import BaseTenantManager
 
-class DashboardStatsManager:
+class DashboardStatsManager(BaseTenantManager):
     def __init__(self, db_path):
-        self.db_path = db_path
+        super().__init__(db_path)
 
     def get_module_stats(self, company_id):
         """
@@ -36,19 +36,21 @@ class DashboardStatsManager:
             'esrs': ('esrs_assessments', 5),
             
             'prioritization': ('materiality_topics', 5), # Top 5 topics
-            'ifrs': ('issb_reporting_status', 1),
+            'issb': ('issb_reporting_status', 1),    # Renamed from ifrs
             'tcfd': ('tcfd_disclosures', 4),         # 4 pillars
             'tnfd': ('tnfd_disclosures', 4),
-            'cdp': ('cdp_scoring', 1)
+            'cdp': ('cdp_scoring', 1),
+            'product_technology': ('innovation_metrics', 1),
+            'regulation': ('regulation_compliance', 1),
+            'unified_report': ('unified_reports', 1), # Assuming table exists
+            'benchmark': ('sector_averages', 1)       # System data
         }
         
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-            
             # Check which tables exist to avoid errors
-            cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
-            existing_tables = {row[0] for row in cursor.fetchall()}
+            # Using direct DB query for sqlite_master (global)
+            rows = self.db.execute_query("SELECT name FROM sqlite_master WHERE type='table'")
+            existing_tables = {row['name'] for row in rows}
             
             for key, (table, target) in module_config.items():
                 if table not in existing_tables:
@@ -56,16 +58,10 @@ class DashboardStatsManager:
                     continue
                     
                 try:
-                    # Try to filter by company_id if possible
-                    # We first check if company_id column exists by selecting 1 row
-                    # Or simpler: try/except the query with company_id
-                    try:
-                        cursor.execute(f"SELECT COUNT(*) FROM {table} WHERE company_id=?", (company_id,))
-                        count = cursor.fetchone()[0]
-                    except sqlite3.OperationalError:
-                        # Column company_id might not exist
-                        cursor.execute(f"SELECT COUNT(*) FROM {table}")
-                        count = cursor.fetchone()[0]
+                    # BaseTenantManager.execute_query will automatically inject company_id filter
+                    # We just provide the base query
+                    rows = self.execute_query(f"SELECT COUNT(*) FROM {table}", company_id=company_id)
+                    count = rows[0][0] if rows else 0
                     
                     if target is None:
                         percentage = 100 if count > 0 else 0
@@ -77,8 +73,6 @@ class DashboardStatsManager:
                 except Exception as e:
                     logging.error(f"Error calculating stats for {key} ({table}): {e}")
                     stats[key] = 0
-            
-            conn.close()
             
         except Exception as e:
             logging.error(f"DashboardStatsManager error: {e}")

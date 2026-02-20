@@ -1,79 +1,195 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard - SDG{% endblock %}
+{% block title %}{{ lang('dashboard_page_title', 'Kontrol Paneli') }} - SDG{% endblock %}
 
 {% block content %}
-<div class="row mb-4">
-    <div class="col-md-12">
-        <div class="card shadow-sm border-0">
-            <div class="card-body d-flex justify-content-between align-items-center">
-                <div>
-                    <h2 class="mb-0">{{ lang('dashboard_welcome') }}, <span class="text-primary">{{ session.user }}</span></h2>
-                    <p class="text-muted mb-0">
-                        <i class="bi bi-shield-lock-fill"></i> {{ lang('dashboard_role') }}: {{ session.get('role', 'Kullanıcı') }}
+<div class="mb-4">
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+        <div class="card-body p-4 p-lg-5 position-relative" style="background: radial-gradient(circle at top left, #198754 0, #0d6efd 40%, #0b1727 100%);">
+            <div class="row align-items-center">
+                <div class="col-lg-8">
+                    <p class="text-light text-uppercase small mb-2">
+                        <i class="bi bi-speedometer2 me-1"></i> {{ lang('dashboard_page_title', 'Kontrol Paneli') }}
                     </p>
+                    <h1 class="text-white mb-2">
+                        {{ lang('dashboard_welcome', 'Hoşgeldiniz') }}, 
+                        <span class="fw-bold">{{ session.user }}</span>
+                    </h1>
+                    <p class="text-light mb-3">
+                        {{ lang('getting_started_title', 'Başlarken: Önerilen İlk Adımlar') }}
+                    </p>
+                    <div class="d-flex flex-wrap gap-2">
+                        <span class="badge bg-light text-dark">
+                            <i class="bi bi-shield-lock-fill me-1"></i> {{ lang('dashboard_role', 'Rol') }}: {{ session.get('role', 'Kullanıcı') }}
+                        </span>
+                        <a href="{{ url_for('reporting_journey') }}" class="btn btn-sm btn-primary">
+                            <i class="bi bi-flag me-1"></i> {{ lang('reporting_flow_title', 'Raporlama Yolculuğu') }}
+                        </a>
+                        <a href="{{ url_for('data') }}" class="btn btn-sm btn-outline-light">
+                            <i class="bi bi-table me-1"></i> {{ lang('getting_started_step3_link_data', 'Veri Girişi Ekranına Git') }}
+                        </a>
+                    </div>
                 </div>
-                <div class="btn-toolbar gap-2">
-                    <span class="badge bg-success rounded-pill p-2">
-                        <i class="bi bi-wifi"></i> {{ lang('system_online') }}
-                    </span>
-                    <button class="btn btn-sm btn-outline-secondary" onclick="history.back()">
-                        <i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}
-                    </button>
+                <div class="col-lg-4 d-none d-lg-block">
+                    <div class="text-end">
+                        <div class="rounded-circle bg-white bg-opacity-25 d-inline-flex align-items-center justify-content-center" style="width: 120px; height: 120px;">
+                            <i class="bi bi-globe2 text-white" style="font-size: 3rem;"></i>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Hızlı Erişim Menüsü Kaldırıldı -->
-<!--
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span class="text-muted small text-uppercase">{{ lang('dashboard_role_user', 'Kullanıcılar') }}</span>
+                    <i class="bi bi-people-fill fs-4 text-primary"></i>
+                </div>
+                <h3 class="mb-0 fw-bold">{{ stats.get('user_count', 0) }}</h3>
+                <small class="text-muted">{{ lang('dashboard_role_help_desc', 'Rolünüze göre erişebileceğiniz menüler ve modüller değişir.') }}</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span class="text-muted small text-uppercase">{{ lang('reports', 'Raporlar') }}</span>
+                    <i class="bi bi-file-earmark-bar-graph fs-4 text-success"></i>
+                </div>
+                <h3 class="mb-0 fw-bold">{{ stats.get('report_count', 0) }}</h3>
+                <small class="text-muted">{{ lang('top_material_topics', 'Öncelikli Konular') }}</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span class="text-muted small text-uppercase">{{ lang('data', 'Veri Kayıtları') }}</span>
+                    <i class="bi bi-database-fill-check fs-4 text-info"></i>
+                </div>
+                <h3 class="mb-0 fw-bold">{{ stats.get('data_count', 0) }}</h3>
+                <small class="text-muted">{{ lang('no_data_user_hint', 'Veri girişi için sistem yöneticinizle iletişime geçebilirsiniz.') }}</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span class="text-muted small text-uppercase">{{ lang('sustainability_modules', 'Sürdürülebilirlik Modülleri') }}</span>
+                    <i class="bi bi-grid-3x3-gap-fill fs-4 text-warning"></i>
+                </div>
+                <h3 class="mb-0 fw-bold">{{ module_stats|length }}</h3>
+                <small class="text-muted">{{ lang('module_status_beta', 'Modüllerin ilerleme durumunu aşağıdan takip edebilirsiniz.') }}</small>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="row mb-4">
+    <div class="col-md-8">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title mb-3"><i class="bi bi-flag me-2"></i>{{ lang('getting_started_title', 'Başlarken: Önerilen İlk Adımlar') }}</h5>
+                <ol class="mb-0">
+                    <li class="mb-2">
+                        <strong>{{ lang('getting_started_step1_title', 'Şirket bilgilerinizi tamamlayın') }}</strong>
+                        <div class="text-muted small">
+                            {{ lang('getting_started_step1_desc', 'Raporlama için kullanılacak temel şirket ve iletişim bilgilerini doldurun.') }}
+                            {% if session.role|lower in ['admin', 'super_admin', 'test admin'] %}
+                                <a href="{{ url_for('company_info_edit', company_id=g.company_id) }}" class="ms-1">{{ lang('getting_started_step1_link', 'Firma Bilgilerine Git') }}</a>
+                            {% endif %}
+                        </div>
+                    </li>
+                    <li class="mb-2">
+                        <strong>{{ lang('getting_started_step2_title', 'Öncelikli konuları ve SDG hedeflerini belirleyin') }}</strong>
+                        <div class="text-muted small">
+                            {{ lang('getting_started_step2_desc', 'Sürdürülebilirlik önceliklerinizi ve ilgili SDG/ESG konularını seçin.') }}
+                            <a href="{{ url_for('sdg_module') }}" class="ms-1">{{ lang('getting_started_step2_link', 'SDG Modülüne Git') }}</a>
+                        </div>
+                    </li>
+                    <li>
+                        <strong>{{ lang('getting_started_step3_title', 'Veri girin ve ilk raporunuzu oluşturun') }}</strong>
+                        <div class="text-muted small">
+                            {{ lang('getting_started_step3_desc', 'Karbon, enerji, su ve diğer verileri girdikten sonra standartlara uygun rapor üretin.') }}
+                            <a href="{{ url_for('data') }}" class="ms-1">{{ lang('getting_started_step3_link_data', 'Veri Girişi Ekranına Git') }}</a>
+                            <span class="mx-1">•</span>
+                            <a href="{{ url_for('reporting_journey') }}">{{ lang('getting_started_step3_link_reports', 'Raporlama Yol Haritasını Aç') }}</a>
+                        </div>
+                    </li>
+                </ol>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title mb-3"><i class="bi bi-info-circle me-2"></i>{{ lang('dashboard_role_help_title', 'Rolünüz ve Yetkileriniz') }}</h5>
+                <p class="text-muted small mb-1">
+                    {{ lang('dashboard_role_help_desc', 'Rolünüze göre erişebileceğiniz menüler ve modüller değişir.') }}
+                </p>
+                <ul class="text-muted small mb-0">
+                    <li>{{ lang('dashboard_role_user', 'Kullanıcılar veri girişi yapabilir ve raporları görüntüleyebilir.') }}</li>
+                    <li>{{ lang('dashboard_role_admin', 'Adminler kullanıcı, şirket ve sistem ayarlarını yönetebilir.') }}</li>
+                    <li>{{ lang('dashboard_role_super_admin', 'Süper admin tüm ayar ve lisans yönetimine erişebilir.') }}</li>
+                </ul>
+            </div>
+        </div>
+    </div>
 </div>
--->
 
-<!-- Özet İstatistikler
-<div class="row g-4 mb-4">
-    <div class="col-md-3">
-        <div class="card h-100 border-0 shadow-sm text-center">
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="card h-100 border-0 shadow-sm">
             <div class="card-body">
-                <div class="display-4 text-primary mb-2"><i class="bi bi-people-fill"></i></div>
-                <h5 class="card-title">{{ lang('users_title') }}</h5>
-                <h2 class="fw-bold">{{ stats.user_count if stats.user_count is not none else '-' }}</h2>
-                <a href="{{ url_for('users') }}" class="stretched-link"></a>
+                <h5 class="card-title mb-3">
+                    <i class="bi bi-diagram-3 me-2"></i>{{ lang('reporting_flow_title', 'Raporlama Yol Haritası') }}
+                </h5>
+                <ol class="mb-3 text-muted small">
+                    <li>{{ lang('reporting_flow_step1') }}</li>
+                    <li>{{ lang('reporting_flow_step2') }}</li>
+                    <li>{{ lang('reporting_flow_step3') }}</li>
+                </ol>
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="{{ url_for('reporting_journey') }}" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-flag-fill me-1"></i>{{ lang('reporting_flow_btn_journey', 'Raporlama Yolculuğunu Aç') }}
+                    </a>
+                    <a href="{{ url_for('unified_report') }}" class="btn btn-sm btn-success">
+                        <i class="bi bi-layers me-1"></i>{{ lang('reporting_flow_btn_unified', 'Birleşik Rapor Oluştur') }}
+                    </a>
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card h-100 border-0 shadow-sm text-center">
+    <div class="col-md-4 mt-3 mt-md-0">
+        <div class="card h-100 border-0 shadow-sm">
             <div class="card-body">
-                <div class="display-4 text-success mb-2"><i class="bi bi-building"></i></div>
-                <h5 class="card-title">{{ lang('companies_title') }}</h5>
-                <h2 class="fw-bold">{{ stats.company_count }}</h2>
-                <a href="{{ url_for('companies') }}" class="stretched-link"></a>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card h-100 border-0 shadow-sm text-center">
-            <div class="card-body">
-                <div class="display-4 text-info mb-2"><i class="bi bi-file-earmark-text-fill"></i></div>
-                <h5 class="card-title">{{ lang('reports_title') }}</h5>
-                <h2 class="fw-bold">{{ stats.report_count }}</h2>
-                <a href="{{ url_for('reports') }}" class="stretched-link"></a>
+                <h5 class="card-title mb-3">
+                    <i class="bi bi-bar-chart-steps me-2"></i>{{ lang('data_flow_title', 'Veri Girişi Akışı') }}
+                </h5>
+                <ul class="text-muted small mb-0">
+                    <li>{{ lang('data_flow_step1') }}</li>
+                    <li>{{ lang('data_flow_step2') }}</li>
+                    <li>{{ lang('data_flow_step3') }}</li>
+                </ul>
             </div>
         </div>
     </div>
 </div>
--->
 
-<!-- Anket İstatistikleri -->
 <div class="row mb-4">
     <div class="col-md-3">
         <div class="card h-100 border-0 shadow-sm text-center">
             <div class="card-body">
                 <i class="bi bi-clipboard-data fs-1 text-primary mb-2"></i>
-                <h5 class="card-title">{{ lang('active_surveys') }}</h5>
+                <h5 class="card-title">{{ lang('active_surveys', 'Aktif Anketler') }}</h5>
                 <h2 class="fw-bold">{{ stats.active_surveys }}</h2>
                 <a href="{{ url_for('surveys_module') }}" class="stretched-link"></a>
             </div>
@@ -91,406 +207,410 @@
     </div>
 </div>
 
-<!-- Widgets: Recent Activities & Pending Actions -->
-<div class="row mb-4">
-    <!-- Recent Activities -->
-    <div class="col-lg-8 mb-3">
-        <div class="card h-100 shadow-sm border-0">
-            <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0"><i class="bi bi-clock-history text-primary me-2"></i>{{ lang('recent_activities', 'Son Aktiviteler') }}</h5>
-                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#activityFilters" aria-expanded="false" aria-controls="activityFilters">
-                    <i class="bi bi-filter"></i> {{ lang('filter', 'Filtrele') }}
-                </button>
-            </div>
-            <div class="collapse {% if start_date or end_date or module_filter %}show{% endif %}" id="activityFilters">
-                <div class="card-body bg-light border-bottom">
-                    <form action="{{ url_for('dashboard') }}" method="get" class="row g-2 align-items-end">
-                        <div class="col-md-3">
-                            <label class="form-label small text-muted mb-1">{{ lang('start_date', 'Başlangıç') }}</label>
-                            <input type="date" class="form-control form-control-sm" name="start_date" value="{{ start_date }}">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label small text-muted mb-1">{{ lang('end_date', 'Bitiş') }}</label>
-                            <input type="date" class="form-control form-control-sm" name="end_date" value="{{ end_date }}">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label small text-muted mb-1">{{ lang('module_action', 'Modül / İşlem') }}</label>
-                            <input type="text" class="form-control form-control-sm" name="module" value="{{ module_filter or '' }}" placeholder="{{ lang('search_placeholder', 'Ara...') }}">
-                        </div>
-                        <div class="col-md-2">
-                            <button type="submit" class="btn btn-sm btn-primary w-100"><i class="bi bi-search"></i></button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0 no-datatable">
-                        <thead class="table-light">
-                            <tr>
-                                <th scope="col" class="ps-4">{{ lang('user', 'Kullanıcı') }}</th>
-                                <th scope="col">{{ lang('action', 'İşlem') }}</th>
-                                <th scope="col">{{ lang('date', 'Tarih') }}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% if recent_activities %}
-                                {% for activity in recent_activities %}
-                                <tr>
-                                    <td class="ps-4">
-                                        <div class="d-flex align-items-center">
-                                            <div class="rounded-circle bg-light text-primary d-flex align-items-center justify-content-center me-2" style="width: 35px; height: 35px; font-weight: bold;">
-                                                {{ activity.username[0] | upper if activity.username else '?' }}
-                                            </div>
-                                            <span class="fw-bold text-dark">{{ activity.username }}</span>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-light text-dark border">{{ activity.action }}</span>
-                                        <small class="text-muted d-block mt-1">{{ activity.details }}</small>
-                                    </td>
-                                    <td class="text-muted small">{{ activity.timestamp }}</td>
-                                </tr>
-                                {% endfor %}
-                            {% else %}
-                            <tr>
-                                <td colspan="3" class="text-center py-4 text-muted">
-                                    {{ lang('no_recent_activity', 'Henüz aktivite yok.') }}
-                                </td>
-                            </tr>
-                            {% endif %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <!-- Pending Actions -->
-    <div class="col-lg-4 mb-3">
-        <div class="card h-100 shadow-sm border-0">
-            <div class="card-header bg-white border-0 py-3">
-                <h5 class="card-title mb-0"><i class="bi bi-exclamation-circle text-warning me-2"></i>{{ lang('pending_actions', 'Bekleyen İşler') }}</h5>
-            </div>
-            <div class="card-body">
-                {% if pending_actions %}
-                <div class="list-group list-group-flush">
-                    {% for action in pending_actions %}
-                    <a href="{{ action.link }}" class="list-group-item list-group-item-action d-flex align-items-center p-3 border-0 mb-2 rounded bg-light" style="transition: all 0.2s;">
-                        <div class="rounded bg-{{ action.type }} text-white d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px; min-width: 40px;">
-                            <i class="bi bi-bell-fill"></i>
-                        </div>
-                        <div class="flex-fill">
-                            <h6 class="mb-0 fw-bold text-dark">{{ action.title }}</h6>
-                            <small class="text-muted">{{ action.desc }}</small>
-                        </div>
-                        <i class="bi bi-chevron-right text-muted"></i>
-                    </a>
-                    {% endfor %}
-                </div>
-                {% else %}
-                <div class="text-center py-5">
-                    <i class="bi bi-check-circle fs-1 text-success mb-3"></i>
-                    <p class="text-muted">{{ lang('all_caught_up', 'Harika! Bekleyen işiniz yok.') }}</p>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-</div>
+<style>
+    .module-section-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .module-section-title .badge {
+        letter-spacing: .06em;
+        font-size: .72rem;
+    }
+    .module-card {
+        border-radius: 1rem;
+        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+        transition: transform .15s ease, box-shadow .15s ease;
+    }
+    .module-card .card-body {
+        padding: 1rem .85rem 1rem;
+    }
+    .module-card-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 999px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto .5rem auto;
+        background: rgba(15, 23, 42, 0.04);
+    }
+    .module-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 1.25rem 2.5rem rgba(15, 23, 42, 0.14);
+    }
+    .module-card small {
+        font-size: .7rem;
+        letter-spacing: .05em;
+        text-transform: uppercase;
+    }
+</style>
 
-<!-- SÜRDÜRÜLEBİLİRLİK MODÜLLERİ (19 MODÜL) -->
 <div class="row mb-4" id="modules-section">
     <div class="col-12 mb-3">
-        <h4 class="text-muted border-bottom pb-2"><i class="bi bi-grid-fill me-2"></i>{{ lang('sustainability_modules', 'Sürdürülebilirlik Modülleri') }}</h4>
+        <div class="d-flex justify-content-between align-items-center">
+            <h4 class="text-muted border-bottom pb-2 mb-0">
+                <i class="bi bi-grid-fill me-2"></i>{{ lang('sustainability_modules', 'Sürdürülebilirlik Modülleri') }}
+            </h4>
+        </div>
     </div>
     
-    <!-- Çevresel (Environmental) -->
-    <div class="col-12"><h6 class="text-success mb-3">{{ lang('module_environmental', 'Çevresel') }}</h6></div>
+    <div class="col-12">
+        <div class="module-section-title mb-2">
+            <h6 class="mb-0 text-success">
+                <span class="badge rounded-pill bg-light text-success border px-3 py-2">
+                    <i class="bi bi-tree-fill me-2"></i>{{ lang('category_environmental', 'Çevresel') }}
+                </span>
+            </h6>
+        </div>
+    </div>
     
     <div class="col-md-2 mb-3">
-        <div class="card h-100 text-center border-0 shadow-sm hover-card">
+        <div class="card h-100 text-center border-0 shadow-sm hover-card module-card">
             <div class="card-body">
-                <i class="bi bi-cloud-haze2 fs-1 text-success mb-2"></i>
+                <div class="module-card-icon">
+                    <i class="bi bi-cloud-haze2 fs-3 text-success"></i>
+                </div>
                 <h6 class="card-title">{{ lang('module_carbon', 'Karbon Ayak İzi') }}</h6>
                 <div class="progress mt-2 mb-1" style="height: 5px;">
                     <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('carbon', 0) }}" aria-valuenow="{{ module_stats.get('carbon', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
-                <small class="text-muted">%{{ module_stats.get('carbon', 0) }}</small>
+                <small class="text-muted d-block mt-1">%{{ module_stats.get('carbon', 0) }}</small>
                 <a href="{{ url_for('carbon_module') }}" class="stretched-link"></a>
             </div>
         </div>
     </div>
     <div class="col-md-2 mb-3">
-        <div class="card h-100 text-center border-0 shadow-sm hover-card">
+        <div class="card h-100 text-center border-0 shadow-sm hover-card module-card">
             <div class="card-body">
-                <i class="bi bi-lightning-charge fs-1 text-warning mb-2"></i>
+                <div class="module-card-icon">
+                    <i class="bi bi-lightning-charge fs-3 text-warning"></i>
+                </div>
                 <h6 class="card-title">{{ lang('module_energy', 'Enerji Yönetimi') }}</h6>
                 <div class="progress mt-2 mb-1" style="height: 5px;">
                     <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('energy', 0) }}" aria-valuenow="{{ module_stats.get('energy', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
-                <small class="text-muted">%{{ module_stats.get('energy', 0) }}</small>
+                <small class="text-muted d-block mt-1">%{{ module_stats.get('energy', 0) }}</small>
                 <a href="{{ url_for('energy_module') }}" class="stretched-link"></a>
             </div>
         </div>
     </div>
     <div class="col-md-2 mb-3">
-        <div class="card h-100 text-center border-0 shadow-sm hover-card">
+        <div class="card h-100 text-center border-0 shadow-sm hover-card module-card">
             <div class="card-body">
-                <i class="bi bi-recycle fs-1 text-secondary mb-2"></i>
+                <div class="module-card-icon">
+                    <i class="bi bi-recycle fs-3 text-secondary"></i>
+                </div>
                 <h6 class="card-title">{{ lang('module_waste', 'Atık Yönetimi') }}</h6>
                 <div class="progress mt-2 mb-1" style="height: 5px;">
                     <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('waste', 0) }}" aria-valuenow="{{ module_stats.get('waste', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
-                <small class="text-muted">%{{ module_stats.get('waste', 0) }}</small>
+                <small class="text-muted d-block mt-1">%{{ module_stats.get('waste', 0) }}</small>
                 <a href="{{ url_for('waste_module') }}" class="stretched-link"></a>
             </div>
         </div>
     </div>
     <div class="col-md-2 mb-3">
-        <div class="card h-100 text-center border-0 shadow-sm hover-card">
+        <div class="card h-100 text-center border-0 shadow-sm hover-card module-card">
             <div class="card-body">
-                <i class="bi bi-droplet fs-1 text-info mb-2"></i>
+                <div class="module-card-icon">
+                    <i class="bi bi-droplet fs-3 text-info"></i>
+                </div>
                 <h6 class="card-title">{{ lang('module_water', 'Su Yönetimi') }}</h6>
                 <div class="progress mt-2 mb-1" style="height: 5px;">
                     <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('water', 0) }}" aria-valuenow="{{ module_stats.get('water', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
-                <small class="text-muted">%{{ module_stats.get('water', 0) }}</small>
+                <small class="text-muted d-block mt-1">%{{ module_stats.get('water', 0) }}</small>
                 <a href="{{ url_for('water_module') }}" class="stretched-link"></a>
             </div>
         </div>
     </div>
     <div class="col-md-2 mb-3">
-        <div class="card h-100 text-center border-0 shadow-sm hover-card">
+        <div class="card h-100 text-center border-0 shadow-sm hover-card module-card">
             <div class="card-body">
-                <i class="bi bi-tree fs-1 text-success mb-2"></i>
+                <div class="module-card-icon">
+                    <i class="bi bi-tree fs-3 text-success"></i>
+                </div>
                 <h6 class="card-title">{{ lang('module_biodiversity', 'Biyoçeşitlilik') }}</h6>
                 <div class="progress mt-2 mb-1" style="height: 5px;">
                     <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('biodiversity', 0) }}" aria-valuenow="{{ module_stats.get('biodiversity', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
-                <small class="text-muted">%{{ module_stats.get('biodiversity', 0) }}</small>
+                <small class="text-muted d-block mt-1">%{{ module_stats.get('biodiversity', 0) }}</small>
                 <a href="{{ url_for('biodiversity_module') }}" class="stretched-link"></a>
             </div>
         </div>
     </div>
-
-    <!-- Sosyal & Yönetişim (Social & Governance) -->
-    <div class="col-12 mt-3"><h6 class="text-primary mb-3">{{ lang('module_social_governance', 'Sosyal & Yönetişim') }}</h6></div>
-    
     <div class="col-md-2 mb-3">
-        <div class="card h-100 text-center border-0 shadow-sm hover-card">
+        <div class="card h-100 text-center border-0 shadow-sm hover-card module-card">
             <div class="card-body">
-                <i class="bi bi-people fs-1 text-info mb-2"></i>
-                <h6 class="card-title">{{ lang('module_social_impact', 'Sosyal Etki') }}</h6>
-                <div class="progress mt-2 mb-1" style="height: 5px;">
-                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('social', 0) }}" aria-valuenow="{{ module_stats.get('social', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
+                <div class="module-card-icon">
+                    <i class="bi bi-cloud-sun fs-3 text-warning"></i>
                 </div>
-                <small class="text-muted">%{{ module_stats.get('social', 0) }}</small>
-                <a href="{{ url_for('social_module') }}" class="stretched-link"></a>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-2 mb-3">
-        <div class="card h-100 text-center border-0 shadow-sm hover-card">
-            <div class="card-body">
-                <i class="bi bi-bank fs-1 text-secondary mb-2"></i>
-                <h6 class="card-title">{{ lang('module_corporate_governance', 'Kurumsal Yönetişim') }}</h6>
-                <div class="progress mt-2 mb-1" style="height: 5px;">
-                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('governance', 0) }}" aria-valuenow="{{ module_stats.get('governance', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
-                </div>
-                <small class="text-muted">%{{ module_stats.get('governance', 0) }}</small>
-                <a href="{{ url_for('governance_module') }}" class="stretched-link"></a>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-2 mb-3">
-        <div class="card h-100 text-center border-0 shadow-sm hover-card">
-            <div class="card-body">
-                <i class="bi bi-truck fs-1 text-warning mb-2"></i>
-                <h6 class="card-title">{{ lang('module_supply_chain', 'Tedarik Zinciri') }}</h6>
-                <div class="progress mt-2 mb-1" style="height: 5px;">
-                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('supply_chain', 0) }}" aria-valuenow="{{ module_stats.get('supply_chain', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
-                </div>
-                <small class="text-muted">%{{ module_stats.get('supply_chain', 0) }}</small>
-                <a href="{{ url_for('supply_chain_module') }}" class="stretched-link"></a>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-2 mb-3">
-        <div class="card h-100 text-center border-0 shadow-sm hover-card">
-            <div class="card-body">
-                <i class="bi bi-cash-coin fs-1 text-success mb-2"></i>
-                <h6 class="card-title">{{ lang('module_economic_value', 'Ekonomik Değer') }}</h6>
-                <div class="progress mt-2 mb-1" style="height: 5px;">
-                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('economic', 0) }}" aria-valuenow="{{ module_stats.get('economic', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
-                </div>
-                <small class="text-muted">%{{ module_stats.get('economic', 0) }}</small>
-                <a href="{{ url_for('economic_module') }}" class="stretched-link"></a>
-            </div>
-        </div>
-    </div>
-
-    <!-- Çerçeveler & Standartlar (Frameworks & Standards) -->
-    <div class="col-12 mt-3"><h6 class="text-danger mb-3">{{ lang('module_frameworks', 'Çerçeveler & Standartlar') }}</h6></div>
-    
-    <div class="col-md-2 mb-3">
-        <div class="card h-100 text-center border-0 shadow-sm hover-card">
-            <div class="card-body">
-                <i class="bi bi-bar-chart-steps fs-1 text-primary mb-2"></i>
-                <h6 class="card-title">{{ lang('module_esg_score', 'ESG Skoru') }}</h6>
-                <div class="progress mt-2 mb-1" style="height: 5px;">
-                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('esg', 0) }}" aria-valuenow="{{ module_stats.get('esg', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
-                </div>
-                <small class="text-muted">%{{ module_stats.get('esg', 0) }}</small>
-                <a href="{{ url_for('esg_module') }}" class="stretched-link"></a>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-2 mb-3">
-        <div class="card h-100 text-center border-0 shadow-sm hover-card">
-            <div class="card-body">
-                <i class="bi bi-globe-europe-africa fs-1 text-danger mb-2"></i>
-                <h6 class="card-title">{{ lang('module_cbam', 'CBAM') }}</h6>
-                <div class="progress mt-2 mb-1" style="height: 5px;">
-                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('cbam', 0) }}" aria-valuenow="{{ module_stats.get('cbam', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
-                </div>
-                <small class="text-muted">%{{ module_stats.get('cbam', 0) }}</small>
-                <a href="{{ url_for('cbam_module') }}" class="stretched-link"></a>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-2 mb-3">
-        <div class="card h-100 text-center border-0 shadow-sm hover-card">
-            <div class="card-body">
-                <i class="bi bi-file-earmark-check fs-1 text-primary mb-2"></i>
-                <h6 class="card-title">{{ lang('module_csrd', 'CSRD') }}</h6>
-                <div class="progress mt-2 mb-1" style="height: 5px;">
-                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('csrd', 0) }}" aria-valuenow="{{ module_stats.get('csrd', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
-                </div>
-                <small class="text-muted">%{{ module_stats.get('csrd', 0) }}</small>
-                <a href="{{ url_for('csrd_module') }}" class="stretched-link"></a>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-2 mb-3">
-        <div class="card h-100 text-center border-0 shadow-sm hover-card">
-            <div class="card-body">
-                <i class="bi bi-diagram-3 fs-1 text-success mb-2"></i>
-                <h6 class="card-title">{{ lang('module_eu_taxonomy', 'AB Taksonomisi') }}</h6>
-                <div class="progress mt-2 mb-1" style="height: 5px;">
-                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('taxonomy', 0) }}" aria-valuenow="{{ module_stats.get('taxonomy', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
-                </div>
-                <small class="text-muted">%{{ module_stats.get('taxonomy', 0) }}</small>
-                <a href="{{ url_for('taxonomy_module') }}" class="stretched-link"></a>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-2 mb-3">
-        <div class="card h-100 text-center border-0 shadow-sm hover-card">
-            <div class="card-body">
-                <i class="bi bi-journal-text fs-1 text-info mb-2"></i>
-                <h6 class="card-title">{{ lang('module_gri', 'GRI') }}</h6>
-                <div class="progress mt-2 mb-1" style="height: 5px;">
-                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('gri', 0) }}" aria-valuenow="{{ module_stats.get('gri', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
-                </div>
-                <small class="text-muted">%{{ module_stats.get('gri', 0) }}</small>
-                <a href="{{ url_for('gri_module') }}" class="stretched-link"></a>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-2 mb-3">
-        <div class="card h-100 text-center border-0 shadow-sm hover-card">
-            <div class="card-body">
-                <i class="bi bi-bullseye fs-1 text-danger mb-2"></i>
-                <h6 class="card-title">{{ lang('module_sdg', 'SDG') }}</h6>
-                <div class="progress mt-2 mb-1" style="height: 5px;">
-                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('sdg', 0) }}" aria-valuenow="{{ module_stats.get('sdg', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
-                </div>
-                <small class="text-muted">%{{ module_stats.get('sdg', 0) }}</small>
-                <a href="{{ url_for('sdg_module') }}" class="stretched-link"></a>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-2 mb-3">
-        <div class="card h-100 text-center border-0 shadow-sm hover-card">
-            <div class="card-body">
-                <i class="bi bi-file-earmark-richtext fs-1 text-primary mb-2"></i>
-                <h6 class="card-title">{{ lang('module_esrs', 'ESRS') }}</h6>
-                <div class="progress mt-2 mb-1" style="height: 5px;">
-                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('esrs', 0) }}" aria-valuenow="{{ module_stats.get('esrs', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
-                </div>
-                <small class="text-muted">%{{ module_stats.get('esrs', 0) }}</small>
-                <a href="{{ url_for('esrs_module') }}" class="stretched-link"></a>
-            </div>
-        </div>
-    </div>
-    
-    <!-- İleri Raporlama (Advanced Reporting) -->
-    <div class="col-12 mt-3"><h6 class="text-secondary mb-3">{{ lang('module_advanced_reporting', 'İleri Raporlama') }}</h6></div>
-    
-    <div class="col-md-2 mb-3">
-        <div class="card h-100 text-center border-0 shadow-sm hover-card">
-            <div class="card-body">
-                <i class="bi bi-sort-numeric-down fs-1 text-warning mb-2"></i>
-                <h6 class="card-title">{{ lang('module_prioritization', 'Önceliklendirme') }}</h6>
-                <div class="progress mt-2 mb-1" style="height: 5px;">
-                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('prioritization', 0) }}" aria-valuenow="{{ module_stats.get('prioritization', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
-                </div>
-                <small class="text-muted">%{{ module_stats.get('prioritization', 0) }}</small>
-                <a href="{{ url_for('prioritization_module') }}" class="stretched-link"></a>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-md-2 mb-3">
-        <div class="card h-100 text-center border-0 shadow-sm hover-card">
-            <div class="card-body">
-                <i class="bi bi-file-earmark-spreadsheet fs-1 text-primary mb-2"></i>
-                <h6 class="card-title">{{ lang('module_ifrs', 'IFRS') }}</h6>
-                <div class="progress mt-2 mb-1" style="height: 5px;">
-                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('ifrs', 0) }}" aria-valuenow="{{ module_stats.get('ifrs', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
-                </div>
-                <small class="text-muted">%{{ module_stats.get('ifrs', 0) }}</small>
-                <a href="{{ url_for('ifrs_module') }}" class="stretched-link"></a>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-2 mb-3">
-        <div class="card h-100 text-center border-0 shadow-sm hover-card">
-            <div class="card-body">
-                <i class="bi bi-cloud-sun fs-1 text-warning mb-2"></i>
                 <h6 class="card-title">{{ lang('module_tcfd', 'TCFD') }}</h6>
                 <div class="progress mt-2 mb-1" style="height: 5px;">
                     <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('tcfd', 0) }}" aria-valuenow="{{ module_stats.get('tcfd', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
-                <small class="text-muted">%{{ module_stats.get('tcfd', 0) }}</small>
+                <small class="text-muted d-block mt-1">%{{ module_stats.get('tcfd', 0) }}</small>
                 <a href="{{ url_for('tcfd_module') }}" class="stretched-link"></a>
             </div>
         </div>
     </div>
     <div class="col-md-2 mb-3">
-        <div class="card h-100 text-center border-0 shadow-sm hover-card">
+        <div class="card h-100 text-center border-0 shadow-sm hover-card module-card">
             <div class="card-body">
-                <i class="bi bi-flower1 fs-1 text-success mb-2"></i>
+                <div class="module-card-icon">
+                    <i class="bi bi-flower1 fs-3 text-success"></i>
+                </div>
                 <h6 class="card-title">{{ lang('module_tnfd', 'TNFD') }}</h6>
                 <div class="progress mt-2 mb-1" style="height: 5px;">
                     <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('tnfd', 0) }}" aria-valuenow="{{ module_stats.get('tnfd', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
-                <small class="text-muted">%{{ module_stats.get('tnfd', 0) }}</small>
+                <small class="text-muted d-block mt-1">%{{ module_stats.get('tnfd', 0) }}</small>
                 <a href="{{ url_for('tnfd_module') }}" class="stretched-link"></a>
             </div>
         </div>
     </div>
     <div class="col-md-2 mb-3">
-        <div class="card h-100 text-center border-0 shadow-sm hover-card">
+        <div class="card h-100 text-center border-0 shadow-sm hover-card module-card">
             <div class="card-body">
-                <i class="bi bi-building-check fs-1 text-dark mb-2"></i>
+                <div class="module-card-icon">
+                    <i class="bi bi-building-check fs-3 text-dark"></i>
+                </div>
                 <h6 class="card-title">{{ lang('module_cdp', 'CDP') }}</h6>
                 <div class="progress mt-2 mb-1" style="height: 5px;">
                     <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('cdp', 0) }}" aria-valuenow="{{ module_stats.get('cdp', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
-                <small class="text-muted">%{{ module_stats.get('cdp', 0) }}</small>
+                <small class="text-muted d-block mt-1">%{{ module_stats.get('cdp', 0) }}</small>
                 <a href="{{ url_for('cdp_module') }}" class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 mt-3">
+        <div class="module-section-title mb-2">
+            <h6 class="mb-0 text-info">
+                <span class="badge rounded-pill bg-light text-info border px-3 py-2">
+                    <i class="bi bi-people-fill me-2"></i>{{ lang('category_social', 'Sosyal') }}
+                </span>
+            </h6>
+        </div>
+    </div>
+    
+    <div class="col-md-2 mb-3">
+        <div class="card h-100 text-center border-0 shadow-sm hover-card module-card">
+            <div class="card-body">
+                <div class="module-card-icon">
+                    <i class="bi bi-people fs-3 text-info"></i>
+                </div>
+                <h6 class="card-title">{{ lang('module_social_impact', 'Sosyal Etki') }}</h6>
+                <div class="progress mt-2 mb-1" style="height: 5px;">
+                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('social', 0) }}" aria-valuenow="{{ module_stats.get('social', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+                <small class="text-muted d-block mt-1">%{{ module_stats.get('social', 0) }}</small>
+                <a href="{{ url_for('social_module') }}" class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 mb-3">
+        <div class="card h-100 text-center border-0 shadow-sm hover-card module-card">
+            <div class="card-body">
+                <div class="module-card-icon">
+                    <i class="bi bi-truck fs-3 text-warning"></i>
+                </div>
+                <h6 class="card-title">{{ lang('module_supply_chain', 'Tedarik Zinciri') }}</h6>
+                <div class="progress mt-2 mb-1" style="height: 5px;">
+                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('supply_chain', 0) }}" aria-valuenow="{{ module_stats.get('supply_chain', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+                <small class="text-muted d-block mt-1">%{{ module_stats.get('supply_chain', 0) }}</small>
+                <a href="{{ url_for('supply_chain_module') }}" class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 mt-3">
+        <div class="module-section-title mb-2">
+            <h6 class="mb-0 text-warning">
+                <span class="badge rounded-pill bg-light text-warning border px-3 py-2">
+                    <i class="bi bi-bank2 me-2"></i>{{ lang('category_governance', 'Yönetişim') }}
+                </span>
+            </h6>
+        </div>
+    </div>
+    
+    <div class="col-md-2 mb-3">
+        <div class="card h-100 text-center border-0 shadow-sm hover-card module-card">
+            <div class="card-body">
+                <div class="module-card-icon">
+                    <i class="bi bi-bank fs-3 text-secondary"></i>
+                </div>
+                <h6 class="card-title">{{ lang('module_corporate_governance', 'Kurumsal Yönetişim') }}</h6>
+                <div class="progress mt-2 mb-1" style="height: 5px;">
+                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('governance', 0) }}" aria-valuenow="{{ module_stats.get('governance', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+                <small class="text-muted d-block mt-1">%{{ module_stats.get('governance', 0) }}</small>
+                <a href="{{ url_for('governance_module') }}" class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 mb-3">
+        <div class="card h-100 text-center border-0 shadow-sm hover-card module-card">
+            <div class="card-body">
+                <div class="module-card-icon">
+                    <i class="bi bi-cash-coin fs-3 text-success"></i>
+                </div>
+                <h6 class="card-title">{{ lang('module_economic_value', 'Ekonomik Değer') }}</h6>
+                <div class="progress mt-2 mb-1" style="height: 5px;">
+                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('economic', 0) }}" aria-valuenow="{{ module_stats.get('economic', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+                <small class="text-muted d-block mt-1">%{{ module_stats.get('economic', 0) }}</small>
+                <a href="{{ url_for('economic_module') }}" class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 mb-3">
+        <div class="card h-100 text-center border-0 shadow-sm hover-card module-card">
+            <div class="card-body">
+                <div class="module-card-icon">
+                    <i class="bi bi-sort-numeric-down fs-3 text-warning"></i>
+                </div>
+                <h6 class="card-title">{{ lang('module_prioritization', 'Önceliklendirme') }}</h6>
+                <div class="progress mt-2 mb-1" style="height: 5px;">
+                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('prioritization', 0) }}" aria-valuenow="{{ module_stats.get('prioritization', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+                <small class="text-muted d-block mt-1">%{{ module_stats.get('prioritization', 0) }}</small>
+                <a href="{{ url_for('prioritization_module') }}" class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 mt-3">
+        <div class="module-section-title mb-2">
+            <h6 class="mb-0 text-danger">
+                <span class="badge rounded-pill bg-light text-danger border px-3 py-2">
+                    <i class="bi bi-shield-check me-2"></i>{{ lang('category_compliance', 'Uyum & Raporlama') }}
+                </span>
+            </h6>
+        </div>
+    </div>
+
+    <div class="col-md-2 mb-3">
+        <div class="card h-100 text-center border-0 shadow-sm hover-card module-card">
+            <div class="card-body">
+                <div class="module-card-icon">
+                    <i class="bi bi-bar-chart-steps fs-3 text-primary"></i>
+                </div>
+                <h6 class="card-title">{{ lang('module_esg_score', 'ESG Skoru') }}</h6>
+                <div class="progress mt-2 mb-1" style="height: 5px;">
+                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('esg', 0) }}" aria-valuenow="{{ module_stats.get('esg', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+                <small class="text-muted d-block mt-1">%{{ module_stats.get('esg', 0) }}</small>
+                <a href="{{ url_for('esg_module') }}" class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 mb-3">
+        <div class="card h-100 text-center border-0 shadow-sm hover-card module-card">
+            <div class="card-body">
+                <div class="module-card-icon">
+                    <i class="bi bi-globe-europe-africa fs-3 text-danger"></i>
+                </div>
+                <h6 class="card-title">{{ lang('module_cbam', 'CBAM') }}</h6>
+                <div class="progress mt-2 mb-1" style="height: 5px;">
+                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('cbam', 0) }}" aria-valuenow="{{ module_stats.get('cbam', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+                <small class="text-muted d-block mt-1">%{{ module_stats.get('cbam', 0) }}</small>
+                <a href="{{ url_for('cbam_module') }}" class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 mb-3">
+        <div class="card h-100 text-center border-0 shadow-sm hover-card module-card">
+            <div class="card-body">
+                <div class="module-card-icon">
+                    <i class="bi bi-file-earmark-check fs-3 text-primary"></i>
+                </div>
+                <h6 class="card-title">{{ lang('module_csrd', 'CSRD') }}</h6>
+                <div class="progress mt-2 mb-1" style="height: 5px;">
+                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('csrd', 0) }}" aria-valuenow="{{ module_stats.get('csrd', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+                <small class="text-muted d-block mt-1">%{{ module_stats.get('csrd', 0) }}</small>
+                <a href="{{ url_for('csrd_module') }}" class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 mb-3">
+        <div class="card h-100 text-center border-0 shadow-sm hover-card module-card">
+            <div class="card-body">
+                <div class="module-card-icon">
+                    <i class="bi bi-diagram-3 fs-3 text-success"></i>
+                </div>
+                <h6 class="card-title">{{ lang('module_eu_taxonomy', 'AB Taksonomisi') }}</h6>
+                <div class="progress mt-2 mb-1" style="height: 5px;">
+                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('taxonomy', 0) }}" aria-valuenow="{{ module_stats.get('taxonomy', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+                <small class="text-muted d-block mt-1">%{{ module_stats.get('taxonomy', 0) }}</small>
+                <a href="{{ url_for('taxonomy_module') }}" class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 mb-3">
+        <div class="card h-100 text-center border-0 shadow-sm hover-card module-card">
+            <div class="card-body">
+                <div class="module-card-icon">
+                    <i class="bi bi-journal-text fs-3 text-info"></i>
+                </div>
+                <h6 class="card-title">{{ lang('module_gri', 'GRI') }}</h6>
+                <div class="progress mt-2 mb-1" style="height: 5px;">
+                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('gri', 0) }}" aria-valuenow="{{ module_stats.get('gri', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+                <small class="text-muted d-block mt-1">%{{ module_stats.get('gri', 0) }}</small>
+                <a href="{{ url_for('gri_module') }}" class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 mb-3">
+        <div class="card h-100 text-center border-0 shadow-sm hover-card module-card">
+            <div class="card-body">
+                <div class="module-card-icon">
+                    <i class="bi bi-bullseye fs-3 text-danger"></i>
+                </div>
+                <h6 class="card-title">{{ lang('module_sdg', 'SDG') }}</h6>
+                <div class="progress mt-2 mb-1" style="height: 5px;">
+                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('sdg', 0) }}" aria-valuenow="{{ module_stats.get('sdg', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+                <small class="text-muted d-block mt-1">%{{ module_stats.get('sdg', 0) }}</small>
+                <a href="{{ url_for('sdg_module') }}" class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 mb-3">
+        <div class="card h-100 text-center border-0 shadow-sm hover-card module-card">
+            <div class="card-body">
+                <div class="module-card-icon">
+                    <i class="bi bi-file-earmark-richtext fs-3 text-primary"></i>
+                </div>
+                <h6 class="card-title">{{ lang('module_esrs', 'ESRS') }}</h6>
+                <div class="progress mt-2 mb-1" style="height: 5px;">
+                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('esrs', 0) }}" aria-valuenow="{{ module_stats.get('esrs', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+                <small class="text-muted d-block mt-1">%{{ module_stats.get('esrs', 0) }}</small>
+                <a href="{{ url_for('esrs_module') }}" class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 mb-3">
+        <div class="card h-100 text-center border-0 shadow-sm hover-card module-card">
+            <div class="card-body">
+                <div class="module-card-icon">
+                    <i class="bi bi-file-earmark-spreadsheet fs-3 text-primary"></i>
+                </div>
+                <h6 class="card-title">{{ lang('module_ifrs', 'IFRS') }}</h6>
+                <div class="progress mt-2 mb-1" style="height: 5px;">
+                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%" data-width="{{ module_stats.get('ifrs', 0) }}" aria-valuenow="{{ module_stats.get('ifrs', 0) }}" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+                <small class="text-muted d-block mt-1">%{{ module_stats.get('ifrs', 0) }}</small>
+                <a href="{{ url_for('ifrs_module') }}" class="stretched-link"></a>
             </div>
         </div>
     </div>
@@ -681,7 +801,132 @@ document.addEventListener("DOMContentLoaded", function() {
             bar.setAttribute('aria-valuenow', width);
         }, 300);
     });
+
+    // Date Formatting
+    const localDates = document.querySelectorAll('.local-date');
+    const currentLang = document.documentElement.lang || 'tr';
+    localDates.forEach(el => {
+        const rawDate = el.getAttribute('data-date');
+        if (rawDate) {
+            const date = new Date(rawDate);
+            if (!isNaN(date.getTime())) {
+                el.textContent = date.toLocaleDateString(currentLang, { 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            }
+        }
+    });
 });
 </script>
+
+<div class="row mb-4">
+    <div class="col-lg-8 mb-3">
+        <div class="card h-100 shadow-sm border-0">
+            <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0"><i class="bi bi-clock-history text-primary me-2"></i>{{ lang('recent_activities', 'Son Aktiviteler') }}</h5>
+                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#activityFilters" aria-expanded="false" aria-controls="activityFilters">
+                    <i class="bi bi-filter"></i> {{ lang('filter', 'Filtrele') }}
+                </button>
+            </div>
+            <div class="collapse {% if start_date or end_date or module_filter %}show{% endif %}" id="activityFilters">
+                <div class="card-body bg-light border-bottom">
+                    <form action="{{ url_for('dashboard') }}" method="get" class="row g-2 align-items-end">
+                        <div class="col-md-3">
+                            <label class="form-label small text-muted mb-1">{{ lang('start_date', 'Başlangıç') }}</label>
+                            <input type="date" class="form-control form-control-sm" name="start_date" value="{{ start_date }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small text-muted mb-1">{{ lang('end_date', 'Bitiş') }}</label>
+                            <input type="date" class="form-control form-control-sm" name="end_date" value="{{ end_date }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small text-muted mb-1">{{ lang('module_action', 'Modül / İşlem') }}</label>
+                            <input type="text" class="form-control form-control-sm" name="module" value="{{ module_filter or '' }}" placeholder="{{ lang('search_placeholder', 'Ara...') }}">
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-sm btn-primary w-100"><i class="bi bi-search"></i></button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 no-datatable">
+                        <thead class="table-light">
+                            <tr>
+                                <th scope="col" class="ps-4">{{ lang('user', 'Kullanıcı') }}</th>
+                                <th scope="col">{{ lang('action', 'İşlem') }}</th>
+                                <th scope="col">{{ lang('date', 'Tarih') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if recent_activities %}
+                                {% for activity in recent_activities %}
+                                <tr>
+                                    <td class="ps-4">
+                                        <div class="d-flex align-items-center">
+                                            <div class="rounded-circle bg-light text-primary d-flex align-items-center justify-content-center me-2" style="width: 35px; height: 35px; font-weight: bold;">
+                                                {{ activity.username[0] | upper if activity.username else '?' }}
+                                            </div>
+                                            <span class="fw-bold text-dark">{{ activity.username }}</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-light text-dark border">{{ activity.action }}</span>
+                                        <small class="text-muted d-block mt-1">{{ activity.details }}</small>
+                                    </td>
+                                    <td class="text-muted small">
+                                        <span class="local-date" data-date="{{ activity.timestamp }}">{{ activity.timestamp }}</span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                            <tr>
+                                <td colspan="3" class="text-center py-4 text-muted">
+                                    {{ lang('no_recent_activity', 'Henüz aktivite yok.') }}
+                                </td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4 mb-3">
+        <div class="card h-100 shadow-sm border-0">
+            <div class="card-header bg-white border-0 py-3">
+                <h5 class="card-title mb-0"><i class="bi bi-exclamation-circle text-warning me-2"></i>{{ lang('pending_actions', 'Bekleyen İşler') }}</h5>
+            </div>
+            <div class="card-body">
+                {% if pending_actions %}
+                <div class="list-group list-group-flush">
+                    {% for action in pending_actions %}
+                    <a href="{{ action.link }}" class="list-group-item list-group-item-action d-flex align-items-center p-3 border-0 mb-2 rounded bg-light" style="transition: all 0.2s;">
+                        <div class="rounded bg-{{ action.type }} text-white d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px; min-width: 40px;">
+                            <i class="bi bi-bell-fill"></i>
+                        </div>
+                        <div class="flex-fill">
+                            <h6 class="mb-0 fw-bold text-dark">{{ action.title }}</h6>
+                            <small class="text-muted">{{ action.desc }}</small>
+                        </div>
+                        <i class="bi bi-chevron-right text-muted"></i>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-check-circle fs-1 text-success mb-3"></i>
+                    <p class="text-muted">{{ lang('all_caught_up', 'Harika! Bekleyen işiniz yok.') }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
 
 {% endblock %}

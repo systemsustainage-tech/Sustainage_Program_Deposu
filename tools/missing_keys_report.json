@@ -1,10 +1,8 @@
 [
-    "scope_environmental",
-    "period",
-    "generate",
-    "scope_full",
-    "scope_governance",
-    "process_status",
-    "new_report",
-    "scope_social"
+    "...",
+    "data",
+    "data_flow_step1",
+    "data_flow_step2",
+    "data_flow_step3",
+    "data_flow_title"
 ]

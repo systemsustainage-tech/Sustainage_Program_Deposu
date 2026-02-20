@@ -7,42 +7,26 @@ GRI Content Index template 2021 ile uyumlu Excel export
 """
 
 import os
-import sqlite3
 from datetime import datetime
 from typing import Dict, Optional
 
 import pandas as pd
 from config.database import DB_PATH
+from backend.core.base_manager import BaseTenantManager
 
-
-class GRIContentIndex:
+class GRIContentIndex(BaseTenantManager):
     """GRI Content Index sınıfı"""
 
     def __init__(self, db_path: str = DB_PATH) -> None:
-        if not os.path.isabs(db_path):
-            project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-            self.db_path = os.path.join(project_root, db_path)
-        else:
-            self.db_path = db_path
-        try:
-            os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
-        except Exception as e:
-            logging.error(f"Silent error caught: {str(e)}")
-
-    def get_connection(self) -> None:
-        """Veritabanı bağlantısı"""
-        return sqlite3.connect(self.db_path)
+        super().__init__(db_path)
 
     def generate_content_index(self, company_id: int = 1) -> Dict:
         """GRI Content Index oluştur"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
             logging.info("GRI Content Index oluşturuluyor...")
 
             # Tüm göstergeleri al
-            cursor.execute("""
+            indicators = self.execute_query("""
                 SELECT 
                     gi.id,
                     gi.code as disclosure_code,
@@ -84,8 +68,6 @@ class GRIContentIndex:
                 ORDER BY gs.category, gs.code, gi.code
             """)
 
-            indicators = cursor.fetchall()
-
             # Kategori bazında organize et
             content_index = {
                 'universal': [],
@@ -96,7 +78,7 @@ class GRIContentIndex:
             }
 
             for indicator in indicators:
-                category = indicator[31]  # gs.category
+                category = indicator['category']
                 if category == 'Universal':
                     content_index['universal'].append(indicator)
                 elif category == 'Economic':
@@ -127,16 +109,11 @@ class GRIContentIndex:
         except Exception as e:
             logging.error(f"Content Index oluşturma hatası: {e}")
             return {}
-        finally:
-            conn.close()
 
     def get_company_responses(self, company_id: int) -> Dict:
         """Şirket yanıtlarını al"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
+            responses = self.execute_query("""
                 SELECT 
                     gr.indicator_id,
                     gr.period,
@@ -154,22 +131,20 @@ class GRIContentIndex:
                 ORDER BY gi.code
             """, (company_id,))
 
-            responses = cursor.fetchall()
-
             # Response'ları indicator_id bazında organize et
             response_dict = {}
             for response in responses:
-                indicator_id = response[0]
+                indicator_id = response['indicator_id']
                 response_dict[indicator_id] = {
-                    'period': response[1],
-                    'response_value': response[2],
-                    'numerical_value': response[3],
-                    'unit': response[4],
-                    'methodology': response[5],
-                    'reporting_status': response[6],
-                    'evidence_url': response[7],
-                    'notes': response[8],
-                    'disclosure_code': response[9]
+                    'period': response['period'],
+                    'response_value': response['response_value'],
+                    'numerical_value': response['numerical_value'],
+                    'unit': response['unit'],
+                    'methodology': response['methodology'],
+                    'reporting_status': response['reporting_status'],
+                    'evidence_url': response['evidence_url'],
+                    'notes': response['notes'],
+                    'disclosure_code': response['disclosure_code']
                 }
 
             return response_dict
@@ -177,16 +152,12 @@ class GRIContentIndex:
         except Exception as e:
             logging.error(f"Company responses alma hatası: {e}")
             return {}
-        finally:
-            conn.close()
 
     def get_omission_map(self, company_id: int) -> Dict:
-        conn = self.get_connection()
-        cursor = conn.cursor()
         try:
             result = {}
             # GRI 3 omissions
-            cursor.execute(
+            gri_3_omissions = self.execute_query(
                 """
                 SELECT disclosure_number, omission_reason
                 FROM gri_3_content_index
@@ -194,11 +165,11 @@ class GRIContentIndex:
                 """,
                 (company_id,),
             )
-            for disclosure, reason in cursor.fetchall():
-                result[str(disclosure)] = reason or ''
+            for row in gri_3_omissions:
+                result[str(row['disclosure_number'])] = row['omission_reason'] or ''
 
             # GRI 2 omissions
-            cursor.execute(
+            gri_2_omissions = self.execute_query(
                 """
                 SELECT disclosure_number, omission_reason
                 FROM gri_2_general_disclosures
@@ -206,7 +177,9 @@ class GRIContentIndex:
                 """,
                 (company_id,),
             )
-            for disclosure, reason in cursor.fetchall():
+            for row in gri_2_omissions:
+                disclosure = row['disclosure_number']
+                reason = row['omission_reason']
                 # Prefer non-empty reason; otherwise keep existing
                 if str(disclosure) not in result or (reason and str(reason).strip()):
                     result[str(disclosure)] = reason or ''
@@ -214,16 +187,12 @@ class GRIContentIndex:
             return result
         except Exception:
             return {}
-        finally:
-            conn.close()
 
     def get_disclosure_status_map(self, company_id: int) -> Dict:
-        conn = self.get_connection()
-        cursor = conn.cursor()
         try:
             status_map: Dict[str, str] = {}
             # GRI 3 statuses
-            cursor.execute(
+            gri_3_statuses = self.execute_query(
                 """
                 SELECT disclosure_number, reporting_status
                 FROM gri_3_content_index
@@ -231,11 +200,11 @@ class GRIContentIndex:
                 """,
                 (company_id,),
             )
-            for disclosure, status in cursor.fetchall():
-                status_map[str(disclosure)] = status or ''
+            for row in gri_3_statuses:
+                status_map[str(row['disclosure_number'])] = row['reporting_status'] or ''
 
             # GRI 2 statuses
-            cursor.execute(
+            gri_2_statuses = self.execute_query(
                 """
                 SELECT disclosure_number, reporting_status
                 FROM gri_2_general_disclosures
@@ -243,22 +212,20 @@ class GRIContentIndex:
                 """,
                 (company_id,),
             )
-            for disclosure, status in cursor.fetchall():
+            for row in gri_2_statuses:
+                disclosure = row['disclosure_number']
+                status = row['reporting_status']
                 status_map[str(disclosure)] = status or status_map.get(str(disclosure), '')
 
             return status_map
         except Exception:
             return {}
-        finally:
-            conn.close()
 
     def get_disclosure_page_map(self, company_id: int) -> Dict:
-        conn = self.get_connection()
-        cursor = conn.cursor()
         try:
             page_map: Dict[str, Optional[int]] = {}
             # GRI 3 pages
-            cursor.execute(
+            gri_3_pages = self.execute_query(
                 """
                 SELECT disclosure_number, page_number
                 FROM gri_3_content_index
@@ -266,11 +233,11 @@ class GRIContentIndex:
                 """,
                 (company_id,),
             )
-            for disclosure, page in cursor.fetchall():
-                page_map[str(disclosure)] = page
+            for row in gri_3_pages:
+                page_map[str(row['disclosure_number'])] = row['page_number']
 
             # GRI 2 pages
-            cursor.execute(
+            gri_2_pages = self.execute_query(
                 """
                 SELECT disclosure_number, page_number
                 FROM gri_2_general_disclosures
@@ -278,14 +245,14 @@ class GRIContentIndex:
                 """,
                 (company_id,),
             )
-            for disclosure, page in cursor.fetchall():
+            for row in gri_2_pages:
+                disclosure = row['disclosure_number']
+                page = row['page_number']
                 page_map[str(disclosure)] = page if page is not None else page_map.get(str(disclosure))
 
             return page_map
         except Exception:
             return {}
-        finally:
-            conn.close()
 
     def export_to_excel(self, output_path: str, company_id: int = 1) -> bool:
         """Content Index'i Excel'e export et"""
@@ -399,44 +366,44 @@ class GRIContentIndex:
         sheet_data = []
 
         for indicator in indicators:
-            indicator_id = indicator[0]
+            indicator_id = indicator['id']
             response = responses.get(indicator_id, {})
-            disclosure_code = indicator[1]
+            disclosure_code = indicator['disclosure_code']
             omission_reason = omissions.get(str(disclosure_code), '')
             status = status_map.get(str(disclosure_code), response.get('reporting_status', ''))
             page_ref = page_map.get(str(disclosure_code))
 
             sheet_data.append({
-                'GRI Standard': indicator[30],  # standard_code
-                'Disclosure': indicator[1],     # disclosure_code
-                'Disclosure Title': indicator[2],  # disclosure_title
-                'Description': indicator[3],    # description
-                'Unit': indicator[4],          # unit
-                'Methodology': indicator[5],    # methodology
-                'Reporting Requirement': indicator[6],  # reporting_requirement
-                'Priority': indicator[7],       # priority
-                'Requirement Level': indicator[8],  # requirement_level
-                'Reporting Frequency': indicator[9],  # reporting_frequency
-                'Data Quality': indicator[10],   # data_quality
-                'Audit Required': indicator[11], # audit_required
-                'Validation Required': indicator[12],  # validation_required
-                'Digitalization Status': indicator[13],  # digitalization_status
-                'Cost Level': indicator[14],    # cost_level
-                'Time Requirement': indicator[15],  # time_requirement
-                'Expertise Requirement': indicator[16],  # expertise_requirement
-                'Sustainability Impact': indicator[17],  # sustainability_impact
-                'Legal Compliance': indicator[18],  # legal_compliance
-                'Sector Specific': indicator[19],  # sector_specific
-                'International Standard': indicator[20],  # international_standard
-                'Metric Type': indicator[21],   # metric_type
-                'Scale Unit': indicator[22],    # scale_unit
-                'Data Source System': indicator[23],  # data_source_system
-                'Reporting Format': indicator[24],  # reporting_format
-                'TSRS ESRS Mapping': indicator[25],  # tsrs_esrs_mapping
-                'UN SDG Mapping': indicator[26],  # un_sdg_mapping
-                'GRI 3-3 Reference': indicator[27],  # gri_3_3_reference
-                'Impact Area': indicator[28],   # impact_area
-                'Stakeholder Group': indicator[29],  # stakeholder_group
+                'GRI Standard': indicator['standard_code'],
+                'Disclosure': indicator['disclosure_code'],
+                'Disclosure Title': indicator['disclosure_title'],
+                'Description': indicator['description'],
+                'Unit': indicator['unit'],
+                'Methodology': indicator['methodology'],
+                'Reporting Requirement': indicator['reporting_requirement'],
+                'Priority': indicator['priority'],
+                'Requirement Level': indicator['requirement_level'],
+                'Reporting Frequency': indicator['reporting_frequency'],
+                'Data Quality': indicator['data_quality'],
+                'Audit Required': indicator['audit_required'],
+                'Validation Required': indicator['validation_required'],
+                'Digitalization Status': indicator['digitalization_status'],
+                'Cost Level': indicator['cost_level'],
+                'Time Requirement': indicator['time_requirement'],
+                'Expertise Requirement': indicator['expertise_requirement'],
+                'Sustainability Impact': indicator['sustainability_impact'],
+                'Legal Compliance': indicator['legal_compliance'],
+                'Sector Specific': indicator['sector_specific'],
+                'International Standard': indicator['international_standard'],
+                'Metric Type': indicator['metric_type'],
+                'Scale Unit': indicator['scale_unit'],
+                'Data Source System': indicator['data_source_system'],
+                'Reporting Format': indicator['reporting_format'],
+                'TSRS ESRS Mapping': indicator['tsrs_esrs_mapping'],
+                'UN SDG Mapping': indicator['un_sdg_mapping'],
+                'GRI 3-3 Reference': indicator['gri_3_3_reference'],
+                'Impact Area': indicator['impact_area'],
+                'Stakeholder Group': indicator['stakeholder_group'],
                 'Response Value': response.get('response_value', ''),
                 'Numerical Value': response.get('numerical_value', ''),
                 'Response Unit': response.get('unit', ''),

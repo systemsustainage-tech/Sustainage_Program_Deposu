@@ -2,36 +2,37 @@
 # -*- coding: utf-8 -*-
 """
 Survey Builder - Anket Oluşturma ve Yönetim Sistemi
+Refactored for Multi-tenancy using BaseTenantManager
 """
 
 import logging
 import json
-import sqlite3
 from typing import Dict, List, Optional
+from backend.core.base_manager import BaseTenantManager
 
+class SurveyBuilder(BaseTenantManager):
+    """
+    Anket oluşturma ve yönetim sınıfı.
+    Multi-tenant yapıya uygundur.
+    """
 
-class SurveyBuilder:
-    """Anket oluşturma ve yönetim sınıfı"""
-
-    def __init__(self, db_path: str = None) -> None:
+    def __init__(self, db_path: str = None, company_id: Optional[int] = None) -> None:
         import os
-        self.db_path = db_path or os.path.join(os.getcwd(), 'data', 'sdg_desktop.sqlite')
+        # db_path verilmezse varsayılanı kullan
+        final_db_path = db_path or os.path.join(os.getcwd(), 'data', 'sdg_desktop.sqlite')
+        super().__init__(final_db_path, company_id)
         self.create_tables()
-
-    def get_connection(self) -> None:
-        """Veritabanı bağlantısı"""
-        return sqlite3.connect(self.db_path)
 
     def create_tables(self) -> None:
         """Gerekli tabloları oluştur"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
             # Anket şablonları
-            cursor.execute("""
+            # Not: company_id ensure_multitenancy_schema.py tarafından ekleniyor, 
+            # ancak burada yeni kurulumlar için ekleyebiliriz.
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS survey_templates (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    company_id INTEGER DEFAULT 1,
                     name TEXT NOT NULL,
                     description TEXT,
                     category TEXT DEFAULT 'Genel',
@@ -41,10 +42,12 @@ class SurveyBuilder:
             """)
 
             # Anket soruları
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS survey_questions (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    company_id INTEGER DEFAULT 1,
                     template_id INTEGER,
+                    survey_id INTEGER,
                     question_text TEXT NOT NULL,
                     question_type TEXT DEFAULT 'text',
                     options TEXT, -- JSON format
@@ -56,9 +59,10 @@ class SurveyBuilder:
             """)
 
             # Kullanıcı anketleri
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS user_surveys (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    company_id INTEGER DEFAULT 1,
                     user_id INTEGER NOT NULL,
                     template_id INTEGER NOT NULL,
                     assigned_by INTEGER,
@@ -70,10 +74,12 @@ class SurveyBuilder:
                 )
             """)
 
-            # Anket cevapları
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS survey_responses (
+            # Anket cevapları (User Survey Responses)
+            # survey_responses tablosu Materiality Survey ile çakıştığı için user_survey_responses kullanıyoruz
+            self.execute_update("""
+                CREATE TABLE IF NOT EXISTS user_survey_responses (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    company_id INTEGER DEFAULT 1,
                     user_survey_id INTEGER NOT NULL,
                     question_id INTEGER NOT NULL,
                     response_value TEXT,
@@ -82,23 +88,21 @@ class SurveyBuilder:
                     FOREIGN KEY (question_id) REFERENCES survey_questions(id)
                 )
             """)
-
-            conn.commit()
-
-            # Örnek veri oluştur - DEVRE DIŞI BIRAKILDI
-            # self.create_sample_data()
+            
+            # Indexler
+            self.execute_update("CREATE INDEX IF NOT EXISTS idx_survey_templates_company_id ON survey_templates (company_id)")
+            self.execute_update("CREATE INDEX IF NOT EXISTS idx_survey_questions_company_id ON survey_questions (company_id)")
+            self.execute_update("CREATE INDEX IF NOT EXISTS idx_user_surveys_company_id ON user_surveys (company_id)")
+            self.execute_update("CREATE INDEX IF NOT EXISTS idx_user_survey_responses_company_id ON user_survey_responses (company_id)")
 
         except Exception as e:
             logging.error(f"Survey tabloları oluşturulurken hata: {e}")
-        finally:
-            conn.close()
 
     def create_sample_data(self) -> None:
-        """Örnek anket verisi oluştur"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
+        """Örnek anket verisi oluştur (Mevcut company için)"""
         try:
+            cid = self._ensure_context(None)
+            
             # Örnek anket şablonları
             sample_templates = [
                 ("Sürdürülebilirlik Anketi", "SDG ve çevresel sürdürülebilirlik değerlendirmesi", "SDG"),
@@ -109,13 +113,19 @@ class SurveyBuilder:
             ]
 
             for name, desc, category in sample_templates:
-                cursor.execute("""
-                    INSERT OR IGNORE INTO survey_templates (name, description, category)
-                    VALUES (?, ?, ?)
-                """, (name, desc, category))
+                self.insert('survey_templates', {
+                    'name': name,
+                    'description': desc,
+                    'category': category,
+                    'is_active': 1
+                }, company_id=cid)
 
-            # Örnek sorular
-            template_id = 1  # Sürdürülebilirlik anketi
+            # Basitçe ilk şablonu alalım
+            template = self.select_one('survey_templates', company_id=cid, order_by='id ASC')
+            if not template:
+                return
+            
+            template_id = template['id']
 
             sample_questions = [
                 ("Şirketinizin çevresel sürdürülebilirlik hedefleri hakkında ne düşünüyorsunuz?", "scale", '{"min": 1, "max": 5, "labels": ["Çok Kötü", "Kötü", "Orta", "İyi", "Çok İyi"]}', 1.0, 1),
@@ -126,55 +136,46 @@ class SurveyBuilder:
             ]
 
             for question_text, question_type, options, weight, is_required in sample_questions:
-                cursor.execute("""
-                    INSERT OR IGNORE INTO survey_questions 
-                    (template_id, question_text, question_type, options, weight, is_required)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                """, (template_id, question_text, question_type, options, weight, is_required))
+                self.insert('survey_questions', {
+                    'template_id': template_id,
+                    'question_text': question_text,
+                    'question_type': question_type,
+                    'options': options,
+                    'weight': weight,
+                    'is_required': is_required
+                }, company_id=cid)
 
-            # Örnek kullanıcı anketleri
-            sample_user_surveys = [
-                (1, 1, 1, "assigned"),  # user_id=1, template_id=1, assigned_by=1
-                (1, 2, 1, "completed"), # user_id=1, template_id=2, assigned_by=1
-                (1, 3, 1, "assigned"),  # user_id=1, template_id=3, assigned_by=1
-            ]
-
-            for user_id, template_id, assigned_by, status in sample_user_surveys:
-                cursor.execute("""
-                    INSERT OR IGNORE INTO user_surveys (user_id, template_id, assigned_by, status)
-                    VALUES (?, ?, ?, ?)
-                """, (user_id, template_id, assigned_by, status))
-
-            conn.commit()
-
+            # Not: Kullanıcı anketleri oluşturmuyoruz çünkü user_id bilmemiz lazım.
+            
         except Exception as e:
             logging.error(f"Örnek anket verisi oluşturulurken hata: {e}")
-        finally:
-            conn.close()
 
     def get_user_surveys(self, user_id: int) -> List[Dict]:
-        """Kullanıcının anketlerini getir"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
+        """Kullanıcının anketlerini getir (Company context içinde)"""
         try:
-            cursor.execute("""
+            cid = self._ensure_context(None)
+            
+            # Join query olduğu için execute_query kullanıyoruz ve company_id'yi elle ekliyoruz
+            query = """
                 SELECT us.id, st.name, st.description, st.category, us.status, us.assigned_at
                 FROM user_surveys us
                 JOIN survey_templates st ON us.template_id = st.id
-                WHERE us.user_id = ?
+                WHERE us.user_id = ? AND us.company_id = ?
                 ORDER BY us.assigned_at DESC
-            """, (user_id,))
-
+            """
+            
+            results = self.execute_query(query, (user_id, cid))
+            
             surveys = []
-            for row in cursor.fetchall():
+            for row in results:
+                # execute_query dictionary listesi döner
                 surveys.append({
-                    'id': row[0],
-                    'title': row[1],
-                    'description': row[2],
-                    'category': row[3],
-                    'status': row[4],
-                    'assigned_at': row[5]
+                    'id': row['id'],
+                    'title': row['name'],
+                    'description': row['description'],
+                    'category': row['category'],
+                    'status': row['status'],
+                    'assigned_at': row['assigned_at']
                 })
 
             return surveys
@@ -182,32 +183,28 @@ class SurveyBuilder:
         except Exception as e:
             logging.error(f"Kullanıcı anketleri getirilirken hata: {e}")
             return []
-        finally:
-            conn.close()
 
     def get_survey_questions(self, template_id: int) -> List[Dict]:
         """Anket sorularını getir"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
-                SELECT id, question_text, question_type, options, weight, is_required
-                FROM survey_questions
-                WHERE template_id = ?
-                ORDER BY id
-            """, (template_id,))
+            # BaseTenantManager.select otomatik company_id filtresi ekler
+            rows = self.select(
+                'survey_questions', 
+                where='template_id = ?', 
+                params=(template_id,),
+                order_by='id'
+            )
 
             questions = []
-            for row in cursor.fetchall():
-                options = json.loads(row[3]) if row[3] else None
+            for row in rows:
+                options = json.loads(row['options']) if row.get('options') else None
                 questions.append({
-                    'id': row[0],
-                    'text': row[1],
-                    'type': row[2],
+                    'id': row['id'],
+                    'text': row['question_text'],
+                    'type': row['question_type'],
                     'options': options,
-                    'weight': row[4],
-                    'required': bool(row[5])
+                    'weight': row['weight'],
+                    'required': bool(row['is_required'])
                 })
 
             return questions
@@ -215,108 +212,104 @@ class SurveyBuilder:
         except Exception as e:
             logging.error(f"Anket soruları getirilirken hata: {e}")
             return []
-        finally:
-            conn.close()
 
     def get_user_survey_detail(self, user_survey_id: int) -> Optional[Dict]:
         """user_surveys kaydı ve şablon bilgilerini getirir"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
-            cursor.execute(
-                """
+            cid = self._ensure_context(None)
+            
+            query = """
                 SELECT us.id, us.user_id, us.template_id, us.status, us.assigned_at, us.completed_at,
                        st.name, st.description, st.category
                 FROM user_surveys us
                 JOIN survey_templates st ON us.template_id = st.id
-                WHERE us.id = ?
-                """,
-                (user_survey_id,)
-            )
-
-            row = cursor.fetchone()
-            if not row:
+                WHERE us.id = ? AND us.company_id = ?
+            """
+            
+            results = self.execute_query(query, (user_survey_id, cid))
+            
+            if not results:
                 return None
+                
+            row = results[0]
             return {
-                'id': row[0],
-                'user_id': row[1],
-                'template_id': row[2],
-                'status': row[3],
-                'assigned_at': row[4],
-                'completed_at': row[5],
-                'template_name': row[6],
-                'template_description': row[7],
-                'template_category': row[8],
+                'id': row['id'],
+                'user_id': row['user_id'],
+                'template_id': row['template_id'],
+                'status': row['status'],
+                'assigned_at': row['assigned_at'],
+                'completed_at': row['completed_at'],
+                'template_name': row['name'],
+                'template_description': row['description'],
+                'template_category': row['category'],
             }
         except Exception as e:
             logging.error(f"Kullanıcı anket detayı getirilirken hata: {e}")
             return None
-        finally:
-            conn.close()
 
     def get_existing_responses(self, user_survey_id: int) -> Dict[int, str]:
         """Önceden kaydedilmiş yanıtları sözlük olarak döndür (question_id -> response_value)"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
-            cursor.execute(
-                """
-                SELECT question_id, response_value
-                FROM survey_responses
-                WHERE user_survey_id = ?
-                """,
-                (user_survey_id,)
+            # BaseTenantManager.select otomatik company_id filtresi ekler
+            rows = self.select(
+                'user_survey_responses',
+                columns=['question_id', 'response_value'],
+                where='user_survey_id = ?',
+                params=(user_survey_id,)
             )
+            
             responses = {}
-            for qid, value in cursor.fetchall():
-                responses[int(qid)] = value
+            for row in rows:
+                responses[int(row['question_id'])] = row['response_value']
             return responses
         except Exception as e:
             logging.error(f"Önceki anket cevapları getirilirken hata: {e}")
             return {}
-        finally:
-            conn.close()
 
     def submit_survey_response(self, user_survey_id: int, question_id: int, response_value: str) -> bool:
         """Anket cevabını kaydet"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
-                INSERT OR REPLACE INTO survey_responses 
-                (user_survey_id, question_id, response_value)
-                VALUES (?, ?, ?)
-            """, (user_survey_id, question_id, response_value))
-
-            conn.commit()
+            cid = self._ensure_context(None)
+            
+            # INSERT OR REPLACE için execute_update kullanıyoruz
+            query = """
+                INSERT OR REPLACE INTO user_survey_responses 
+                (company_id, user_survey_id, question_id, response_value)
+                VALUES (?, ?, ?, ?)
+            """
+            self.execute_update(query, (cid, user_survey_id, question_id, response_value))
             return True
 
         except Exception as e:
             logging.error(f"Anket cevabı kaydedilirken hata: {e}")
             return False
-        finally:
-            conn.close()
 
     def complete_survey(self, user_survey_id: int) -> bool:
         """Anketi tamamlandı olarak işaretle"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
-                UPDATE user_surveys 
-                SET status = 'completed', completed_at = CURRENT_TIMESTAMP
-                WHERE id = ?
-            """, (user_survey_id,))
-
-            conn.commit()
+            # BaseTenantManager.update otomatik company_id filtresi ekler
+            self.update(
+                'user_surveys',
+                {'status': 'completed', 'completed_at': 'CURRENT_TIMESTAMP'}, # CURRENT_TIMESTAMP string olarak gider, DB'de string olur.
+                # SQLite CURRENT_TIMESTAMP'i literal olarak kullanmak için raw SQL gerekir.
+                # Ancak update metodumuz parametre olarak alıyor.
+                # Bu yüzden Python tarafında zamanı almak daha iyi.
+                where='id = ?',
+                params=(user_survey_id,)
+            )
+            # Fix: CURRENT_TIMESTAMP'i düzeltelim
+            from datetime import datetime
+            now = datetime.now().isoformat()
+            
+            self.update(
+                'user_surveys',
+                {'status': 'completed', 'completed_at': now},
+                where='id = ?',
+                params=(user_survey_id,)
+            )
+            
             return True
 
         except Exception as e:
             logging.error(f"Anket tamamlanırken hata: {e}")
             return False
-        finally:
-            conn.close()

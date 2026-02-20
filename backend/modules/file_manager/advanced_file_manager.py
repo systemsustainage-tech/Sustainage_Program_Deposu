@@ -10,21 +10,22 @@ import hashlib
 import mimetypes
 import os
 import shutil
-import sqlite3
 from datetime import datetime
 from typing import Dict, List, Optional
+from backend.core.base_manager import BaseTenantManager
 
 
-class AdvancedFileManager:
+class AdvancedFileManager(BaseTenantManager):
     """Gelişmiş dosya yönetimi sınıfı"""
 
-    def __init__(self, db_path: str, base_upload_dir: str = None) -> None:
+    def __init__(self, db_path: str, base_upload_dir: str = None, company_id: Optional[int] = None) -> None:
         """
         Args:
             db_path: Veritabanı yolu
             base_upload_dir: Dosya yükleme klasörü
+            company_id: Şirket ID (Tenant Isolation)
         """
-        self.db_path = db_path
+        super().__init__(db_path, company_id)
         if base_upload_dir:
              self.base_upload_dir = base_upload_dir
         else:
@@ -33,15 +34,42 @@ class AdvancedFileManager:
              self.base_upload_dir = os.path.join(root_dir, 'uploads')
              
         self._init_database()
+        self._ensure_table_schema()
         self._ensure_upload_directory()
+
+    def _ensure_table_schema(self) -> None:
+        """Mevcut tabloların şemasını kontrol et ve eksik kolonları ekle (Migration)"""
+        try:
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
+                
+                # Check tables for company_id
+                tables_to_check = ['file_shares', 'file_folders', 'file_tags', 'files', 'file_tag_relations', 'file_metadata']
+                
+                for table in tables_to_check:
+                    cursor.execute(f"PRAGMA table_info({table})")
+                    columns = [row[1] for row in cursor.fetchall()]
+                    
+                    # If table exists (columns not empty) and company_id is missing
+                    if columns and 'company_id' not in columns:
+                        logging.info(f"Migrating {table} table: Adding company_id column")
+                        try:
+                            # company_id is required, defaulting to 1 for migration
+                            cursor.execute(f"ALTER TABLE {table} ADD COLUMN company_id INTEGER NOT NULL DEFAULT 1 REFERENCES companies(id)")
+                            conn.commit()
+                        except Exception as migration_error:
+                             if "duplicate column name" in str(migration_error).lower():
+                                 logging.warning(f"Column company_id already exists in {table} (race condition ignored)")
+                             else:
+                                 raise migration_error
+                    
+        except Exception as e:
+            logging.error(f"Error migrating tables: {e}")
 
     def _init_database(self) -> None:
         """Veritabanı tablolarını oluştur"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         # Dosyalar tablosu
-        cursor.execute("""
+        self.execute_update("""
             CREATE TABLE IF NOT EXISTS files (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 company_id INTEGER NOT NULL,
@@ -67,7 +95,7 @@ class AdvancedFileManager:
         """)
 
         # Klasörler tablosu
-        cursor.execute("""
+        self.execute_update("""
             CREATE TABLE IF NOT EXISTS file_folders (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 company_id INTEGER NOT NULL,
@@ -85,71 +113,77 @@ class AdvancedFileManager:
         """)
 
         # Dosya etiketleri tablosu
-        cursor.execute("""
+        self.execute_update("""
             CREATE TABLE IF NOT EXISTS file_tags (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                tag_name TEXT UNIQUE NOT NULL,
+                company_id INTEGER NOT NULL,
+                tag_name TEXT NOT NULL,
                 tag_color TEXT DEFAULT '#3498db',
-                created_at TEXT
+                created_at TEXT,
+                UNIQUE(company_id, tag_name),
+                FOREIGN KEY (company_id) REFERENCES companies(id)
             )
         """)
 
         # Dosya-etiket ilişkileri tablosu
-        cursor.execute("""
+        self.execute_update("""
             CREATE TABLE IF NOT EXISTS file_tag_relations (
                 file_id INTEGER NOT NULL,
                 tag_id INTEGER NOT NULL,
+                company_id INTEGER NOT NULL,
                 created_at TEXT,
                 PRIMARY KEY (file_id, tag_id),
                 FOREIGN KEY (file_id) REFERENCES files(id),
-                FOREIGN KEY (tag_id) REFERENCES file_tags(id)
+                FOREIGN KEY (tag_id) REFERENCES file_tags(id),
+                FOREIGN KEY (company_id) REFERENCES companies(id)
             )
         """)
 
         # Dosya metadata tablosu (ek bilgiler için)
-        cursor.execute("""
+        self.execute_update("""
             CREATE TABLE IF NOT EXISTS file_metadata (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 file_id INTEGER NOT NULL,
+                company_id INTEGER NOT NULL,
                 meta_key TEXT NOT NULL,
                 meta_value TEXT,
-                FOREIGN KEY (file_id) REFERENCES files(id)
+                FOREIGN KEY (file_id) REFERENCES files(id),
+                FOREIGN KEY (company_id) REFERENCES companies(id)
             )
         """)
 
         # Dosya paylaşım tablosu
-        cursor.execute("""
+        self.execute_update("""
             CREATE TABLE IF NOT EXISTS file_shares (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 file_id INTEGER NOT NULL,
+                company_id INTEGER NOT NULL,
                 shared_with_user_id INTEGER,
                 shared_with_company_id INTEGER,
                 permission TEXT DEFAULT 'view',
                 shared_by INTEGER,
                 shared_at TEXT,
                 expires_at TEXT,
-                FOREIGN KEY (file_id) REFERENCES files(id)
+                FOREIGN KEY (file_id) REFERENCES files(id),
+                FOREIGN KEY (company_id) REFERENCES companies(id)
             )
         """)
 
         # İndeksler
-        cursor.execute("""
+        self.execute_update("""
             CREATE INDEX IF NOT EXISTS idx_files_company 
             ON files(company_id, is_deleted)
         """)
 
-        cursor.execute("""
+        self.execute_update("""
             CREATE INDEX IF NOT EXISTS idx_files_folder 
             ON files(folder_id, is_deleted)
         """)
 
-        cursor.execute("""
+        self.execute_update("""
             CREATE INDEX IF NOT EXISTS idx_files_version 
             ON files(parent_version_id)
         """)
-
-        conn.commit()
-        conn.close()
 
     def _ensure_upload_directory(self) -> None:
         """Yükleme klasörünü oluştur"""
@@ -162,6 +196,15 @@ class AdvancedFileManager:
             for chunk in iter(lambda: f.read(4096), b""):
                 sha256.update(chunk)
         return sha256.hexdigest()
+
+    def _verify_file_ownership(self, file_id: int, company_id: Optional[int] = None) -> bool:
+        """Dosyanın şirkete ait olduğunu doğrula"""
+        try:
+            # execute_query will enforce company_id if provided or from context
+            rows = self.execute_query("SELECT id FROM files WHERE id = ?", (file_id,), company_id=company_id)
+            return len(rows) > 0
+        except Exception:
+            return False
 
     # ============================================
     # KLASÖR YÖNETİMİ
@@ -187,7 +230,14 @@ class AdvancedFileManager:
             # Klasör yolunu oluştur
             if parent_folder_id:
                 parent_path = self.get_folder_path(parent_folder_id)
-                folder_path = os.path.join(parent_path, folder_name)
+                folder_path = os.path.join(parent_path, folder_name) if parent_path else None
+                if not folder_path:
+                    # Fallback
+                     folder_path = os.path.join(
+                        self.base_upload_dir,
+                        f"company_{company_id}",
+                        folder_name
+                    )
             else:
                 folder_path = os.path.join(
                     self.base_upload_dir,
@@ -199,10 +249,7 @@ class AdvancedFileManager:
             os.makedirs(folder_path, exist_ok=True)
 
             # Veritabanına kaydet
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-
-            cursor.execute("""
+            folder_id = self.execute_update("""
                 INSERT INTO file_folders 
                 (company_id, parent_folder_id, folder_name, folder_path, description, created_by, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -215,11 +262,7 @@ class AdvancedFileManager:
                 created_by,
                 datetime.now().isoformat(),
                 datetime.now().isoformat()
-            ))
-
-            folder_id = cursor.lastrowid
-            conn.commit()
-            conn.close()
+            ), company_id=company_id)
 
             return folder_id
 
@@ -227,17 +270,19 @@ class AdvancedFileManager:
             logging.error(f"Klasör oluşturma hatası: {e}")
             return None
 
-    def get_folder_path(self, folder_id: int) -> Optional[str]:
+    def get_folder_path(self, folder_id: int, company_id: Optional[int] = None) -> Optional[str]:
         """Klasör yolunu al"""
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-
-            cursor.execute("SELECT folder_path FROM file_folders WHERE id = ?", (folder_id,))
-            result = cursor.fetchone()
-            conn.close()
-
-            return result[0] if result else None
+            # company_id opsiyonel, eğer verilirse tenant isolation sağlar
+            query = "SELECT folder_path FROM file_folders WHERE id = ?"
+            params = [folder_id]
+            
+            kwargs = {}
+            if company_id is not None:
+                kwargs['company_id'] = company_id
+            
+            rows = self.execute_query(query, tuple(params), **kwargs)
+            return rows[0]['folder_path'] if rows else None
 
         except Exception as e:
             logging.error(f"Klasör yolu alma hatası: {e}")
@@ -255,73 +300,78 @@ class AdvancedFileManager:
             Klasör listesi
         """
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-
             if parent_folder_id is None:
-                cursor.execute("""
+                rows = self.execute_query("""
                     SELECT id, folder_name, description, created_at, 
                            (SELECT COUNT(*) FROM files WHERE folder_id = file_folders.id AND is_deleted = 0) as file_count
                     FROM file_folders
                     WHERE company_id = ? AND parent_folder_id IS NULL AND is_deleted = 0
                     ORDER BY folder_name
-                """, (company_id,))
+                """, (company_id,), company_id=company_id)
             else:
-                cursor.execute("""
+                rows = self.execute_query("""
                     SELECT id, folder_name, description, created_at,
                            (SELECT COUNT(*) FROM files WHERE folder_id = file_folders.id AND is_deleted = 0) as file_count
                     FROM file_folders
                     WHERE company_id = ? AND parent_folder_id = ? AND is_deleted = 0
                     ORDER BY folder_name
-                """, (company_id, parent_folder_id))
+                """, (company_id, parent_folder_id), company_id=company_id)
 
             folders = []
-            for row in cursor.fetchall():
+            for row in rows:
                 folders.append({
-                    'id': row[0],
-                    'name': row[1],
-                    'description': row[2],
-                    'created_at': row[3],
-                    'file_count': row[4]
+                    'id': row['id'],
+                    'name': row['folder_name'],
+                    'description': row['description'],
+                    'created_at': row['created_at'],
+                    'file_count': row['file_count']
                 })
 
-            conn.close()
             return folders
 
         except Exception as e:
             logging.error(f"Klasör listeleme hatası: {e}")
             return []
 
-    def delete_folder(self, folder_id: int) -> bool:
+    def delete_folder(self, folder_id: int, company_id: int) -> bool:
         """
         Klasörü sil (soft delete)
         
         Args:
             folder_id: Klasör ID
+            company_id: Şirket ID (Güvenlik için zorunlu)
         
         Returns:
             Başarılı ise True
         """
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
+            # Klasörün şirkete ait olduğunu doğrula
+            rows = self.execute_query(
+                "SELECT id FROM file_folders WHERE id = ? AND company_id = ?", 
+                (folder_id, company_id),
+                company_id=company_id
+            )
+            
+            if not rows:
+                logging.warning(f"Delete Folder: Folder {folder_id} not found or access denied for company {company_id}")
+                return False
 
-            # Soft delete
-            cursor.execute("""
+            timestamp = datetime.now().isoformat()
+
+            # Soft delete folder
+            self.execute_update("""
                 UPDATE file_folders 
                 SET is_deleted = 1, updated_at = ?
-                WHERE id = ?
-            """, (datetime.now().isoformat(), folder_id))
+                WHERE id = ? AND company_id = ?
+            """, (timestamp, folder_id, company_id), company_id=company_id)
 
             # İçindeki dosyaları da sil
-            cursor.execute("""
+            self.execute_update("""
                 UPDATE files 
                 SET is_deleted = 1, updated_at = ?
-                WHERE folder_id = ?
-            """, (datetime.now().isoformat(), folder_id))
+                WHERE folder_id = ? AND company_id = ?
+            """, (timestamp, folder_id, company_id), company_id=company_id)
 
-            conn.commit()
-            conn.close()
             return True
 
         except Exception as e:
@@ -366,8 +416,12 @@ class AdvancedFileManager:
 
             # Hedef yolu belirle
             if folder_id:
-                folder_path = self.get_folder_path(folder_id)
+                folder_path = self.get_folder_path(folder_id, company_id=company_id)
                 if not folder_path:
+                    # Fallback if get_folder_path fails or returns None
+                    # But get_folder_path might fail if context is missing.
+                    # We should probably trust get_folder_path or handle None.
+                    logging.warning(f"Upload: Folder path not found for id {folder_id}")
                     return None
                 dest_path = os.path.join(folder_path, unique_name)
             else:
@@ -382,10 +436,8 @@ class AdvancedFileManager:
             checksum = self._calculate_checksum(dest_path)
 
             # Veritabanına kaydet
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-
-            cursor.execute("""
+            # Use execute_update with company_id context
+            file_id = self.execute_update("""
                 INSERT INTO files 
                 (company_id, folder_id, file_name, original_name, file_path, 
                  file_size, file_type, mime_type, checksum, description, 
@@ -405,29 +457,26 @@ class AdvancedFileManager:
                 uploaded_by,
                 datetime.now().isoformat(),
                 datetime.now().isoformat()
-            ))
-
-            file_id = cursor.lastrowid
+            ), company_id=company_id)
 
             # Etiketleri ekle
             if tags:
                 for tag_name in tags:
-                    tag_id = self._ensure_tag(cursor, tag_name)
-                    cursor.execute("""
-                        INSERT INTO file_tag_relations (file_id, tag_id, created_at)
-                        VALUES (?, ?, ?)
-                    """, (file_id, tag_id, datetime.now().isoformat()))
+                    tag_id = self._ensure_tag(tag_name, company_id)
+                    # file_tag_relations now has company_id
+                    self.execute_update("""
+                        INSERT INTO file_tag_relations (file_id, tag_id, company_id, created_at)
+                        VALUES (?, ?, ?, ?)
+                    """, (file_id, tag_id, company_id, datetime.now().isoformat()), company_id=company_id)
 
             # Metadata ekle
             if metadata:
                 for key, value in metadata.items():
-                    cursor.execute("""
-                        INSERT INTO file_metadata (file_id, meta_key, meta_value)
-                        VALUES (?, ?, ?)
-                    """, (file_id, key, value))
-
-            conn.commit()
-            conn.close()
+                    # file_metadata now has company_id
+                    self.execute_update("""
+                        INSERT INTO file_metadata (file_id, company_id, meta_key, meta_value)
+                        VALUES (?, ?, ?, ?)
+                    """, (file_id, company_id, key, value), company_id=company_id)
 
             return file_id
 
@@ -463,12 +512,13 @@ class AdvancedFileManager:
 
         return file_ids
 
-    def create_new_version(self, original_file_id: int, new_file_path: str,
+    def create_new_version(self, company_id: int, original_file_id: int, new_file_path: str,
                           uploaded_by: Optional[int] = None) -> Optional[int]:
         """
         Dosyanın yeni versiyonunu oluştur
         
         Args:
+            company_id: Şirket ID
             original_file_id: Orijinal dosya ID
             new_file_path: Yeni dosya yolu
             uploaded_by: Yükleyen kullanıcı ID
@@ -478,22 +528,24 @@ class AdvancedFileManager:
         """
         try:
             # Orijinal dosya bilgilerini al
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-
-            cursor.execute("""
+            # Uses execute_query which enforces company_id context
+            rows = self.execute_query("""
                 SELECT company_id, folder_id, original_name, description, version
                 FROM files
                 WHERE id = ? AND is_deleted = 0
-            """, (original_file_id,))
+            """, (original_file_id,), company_id=company_id)
 
-            result = cursor.fetchone()
-            if not result:
-                conn.close()
+            if not rows:
                 return None
 
-            company_id, folder_id, original_name, description, current_version = result
-            conn.close()
+            result = rows[0]
+            # Verify company_id matches (redundant if filtered, but safe)
+            if result['company_id'] != company_id:
+                return None
+                
+            folder_id = result['folder_id']
+            description = result['description']
+            current_version = result['version']
 
             # Yeni versiyon numarası
             new_version = current_version + 1
@@ -509,17 +561,11 @@ class AdvancedFileManager:
 
             if file_id:
                 # Versiyon bilgisini güncelle
-                conn = sqlite3.connect(self.db_path)
-                cursor = conn.cursor()
-
-                cursor.execute("""
+                self.execute_update("""
                     UPDATE files 
                     SET version = ?, parent_version_id = ?
                     WHERE id = ?
-                """, (new_version, original_file_id, file_id))
-
-                conn.commit()
-                conn.close()
+                """, (new_version, original_file_id, file_id), company_id=company_id)
 
             return file_id
 
@@ -527,55 +573,50 @@ class AdvancedFileManager:
             logging.error(f"Versiyon oluşturma hatası: {e}")
             return None
 
-    def get_file_versions(self, file_id: int) -> List[Dict]:
+    def get_file_versions(self, file_id: int, company_id: Optional[int] = None) -> List[Dict]:
         """
         Dosyanın tüm versiyonlarını al
         
         Args:
             file_id: Dosya ID
+            company_id: Şirket ID (opsiyonel ama önerilen)
         
         Returns:
             Versiyon listesi
         """
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-
             # Dosya ID'nin kök versiyonunu bul
-            cursor.execute("""
+            rows = self.execute_query("""
                 SELECT COALESCE(parent_version_id, id) as root_id
                 FROM files
                 WHERE id = ?
-            """, (file_id,))
+            """, (file_id,), company_id=company_id)
 
-            result = cursor.fetchone()
-            if not result:
-                conn.close()
+            if not rows:
                 return []
 
-            root_id = result[0]
+            root_id = rows[0]['root_id']
 
             # Tüm versiyonları getir
-            cursor.execute("""
+            version_rows = self.execute_query("""
                 SELECT id, file_name, original_name, version, file_size, uploaded_at, uploaded_by
                 FROM files
                 WHERE (id = ? OR parent_version_id = ?) AND is_deleted = 0
                 ORDER BY version ASC
-            """, (root_id, root_id))
+            """, (root_id, root_id), company_id=company_id)
 
             versions = []
-            for row in cursor.fetchall():
+            for row in version_rows:
                 versions.append({
-                    'id': row[0],
-                    'file_name': row[1],
-                    'original_name': row[2],
-                    'version': row[3],
-                    'file_size': row[4],
-                    'uploaded_at': row[5],
-                    'uploaded_by': row[6]
+                    'id': row['id'],
+                    'file_name': row['file_name'],
+                    'original_name': row['original_name'],
+                    'version': row['version'],
+                    'file_size': row['file_size'],
+                    'uploaded_at': row['uploaded_at'],
+                    'uploaded_by': row['uploaded_by']
                 })
 
-            conn.close()
             return versions
 
         except Exception as e:
@@ -597,9 +638,6 @@ class AdvancedFileManager:
             Dosya listesi
         """
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-
             # Temel sorgu
             query = """
                 SELECT DISTINCT f.id, f.original_name, f.file_size, f.file_type, 
@@ -636,61 +674,65 @@ class AdvancedFileManager:
 
             query += " ORDER BY f.uploaded_at DESC"
 
-            cursor.execute(query, params)
+            # Use execute_query with company_id context
+            # Note: We manually built the query with company_id filter, 
+            # so we could pass company_id=None to avoid double injection, 
+            # OR rely on BaseTenantManager to detect existing filter.
+            # inject_tenant_filter checks "if 'company_id' in sql_lower".
+            # Our query has "f.company_id = ?", so it should detect it and NOT inject another one.
+            rows = self.execute_query(query, tuple(params), company_id=company_id)
 
             files = []
-            for row in cursor.fetchall():
+            for row in rows:
                 # Etiketleri al
-                cursor.execute("""
+                # Direct DB access for tags (global)
+                tag_rows = self.db.execute_query("""
                     SELECT ft.tag_name, ft.tag_color
                     FROM file_tag_relations ftr
                     JOIN file_tags ft ON ftr.tag_id = ft.id
                     WHERE ftr.file_id = ?
-                """, (row[0],))
+                """, (row['id'],))
 
-                tags_list = [{'name': t[0], 'color': t[1]} for t in cursor.fetchall()]
+                tags_list = [{'name': t['tag_name'], 'color': t['tag_color']} for t in tag_rows]
 
                 files.append({
-                    'id': row[0],
-                    'name': row[1],
-                    'size': row[2],
-                    'type': row[3],
-                    'description': row[4],
-                    'uploaded_at': row[5],
-                    'version': row[6],
-                    'version_count': row[7],
+                    'id': row['id'],
+                    'name': row['original_name'],
+                    'size': row['file_size'],
+                    'type': row['file_type'],
+                    'description': row['description'],
+                    'uploaded_at': row['uploaded_at'],
+                    'version': row['version'],
+                    'version_count': row['version_count'],
                     'tags': tags_list
                 })
 
-            conn.close()
             return files
 
         except Exception as e:
             logging.error(f"Dosya listeleme hatası: {e}")
             return []
 
-    def delete_file(self, file_id: int) -> bool:
+    def delete_file(self, file_id: int, company_id: Optional[int] = None) -> bool:
         """
         Dosyayı sil (soft delete)
         
         Args:
             file_id: Dosya ID
+            company_id: Şirket ID (opsiyonel, güvenlik için önerilir)
         
         Returns:
             Başarılı ise True
         """
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-
-            cursor.execute("""
+            # Soft delete
+            # Use execute_update with company_id context
+            self.execute_update("""
                 UPDATE files 
                 SET is_deleted = 1, updated_at = ?
                 WHERE id = ?
-            """, (datetime.now().isoformat(), file_id))
+            """, (datetime.now().isoformat(), file_id), company_id=company_id)
 
-            conn.commit()
-            conn.close()
             return True
 
         except Exception as e:
@@ -701,107 +743,114 @@ class AdvancedFileManager:
     # ETİKET YÖNETİMİ
     # ============================================
 
-    def _ensure_tag(self, cursor, tag_name: str) -> int:
+    def _ensure_tag(self, tag_name: str, company_id: int) -> int:
         """Etiketin var olduğundan emin ol, yoksa oluştur"""
-        cursor.execute("SELECT id FROM file_tags WHERE tag_name = ?", (tag_name,))
-        result = cursor.fetchone()
-
-        if result:
-            return result[0]
+        # Using direct db access, but now filtering by company_id
+        rows = self.db.execute_query("SELECT id FROM file_tags WHERE tag_name = ? AND company_id = ?", (tag_name, company_id))
+        
+        if rows:
+            return rows[0]['id']
         else:
-            cursor.execute("""
-                INSERT INTO file_tags (tag_name, created_at)
-                VALUES (?, ?)
-            """, (tag_name, datetime.now().isoformat()))
-            return cursor.lastrowid
+            tag_id = self.db.execute_update("""
+                INSERT INTO file_tags (company_id, tag_name, created_at)
+                VALUES (?, ?, ?)
+            """, (company_id, tag_name, datetime.now().isoformat()))
+            return tag_id
 
-    def add_tags_to_file(self, file_id: int, tags: List[str]) -> bool:
+    def add_tags_to_file(self, file_id: int, tags: List[str], company_id: Optional[int] = None) -> bool:
         """
         Dosyaya etiket ekle
         
         Args:
             file_id: Dosya ID
             tags: Etiketler listesi
+            company_id: Şirket ID (opsiyonel)
         
         Returns:
             Başarılı ise True
         """
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
+            if not self._verify_file_ownership(file_id, company_id):
+                logging.warning(f"Add Tags: File {file_id} not found or access denied")
+                return False
+
+            # If company_id is None (but ownership verified), we need the company_id from the file
+            # to create tags for the correct company.
+            if company_id is None:
+                 rows = self.execute_query("SELECT company_id FROM files WHERE id = ?", (file_id,))
+                 if not rows:
+                     return False
+                 company_id = rows[0]['company_id']
 
             for tag_name in tags:
-                tag_id = self._ensure_tag(cursor, tag_name)
+                tag_id = self._ensure_tag(tag_name, company_id)
 
                 # İlişkiyi ekle (varsa ignore et)
-                cursor.execute("""
-                    INSERT OR IGNORE INTO file_tag_relations (file_id, tag_id, created_at)
-                    VALUES (?, ?, ?)
-                """, (file_id, tag_id, datetime.now().isoformat()))
+                self.db.execute_update("""
+                    INSERT OR IGNORE INTO file_tag_relations (file_id, tag_id, company_id, created_at)
+                    VALUES (?, ?, ?, ?)
+                """, (file_id, tag_id, company_id, datetime.now().isoformat()))
 
-            conn.commit()
-            conn.close()
             return True
 
         except Exception as e:
             logging.error(f"Etiket ekleme hatası: {e}")
             return False
 
-    def remove_tags_from_file(self, file_id: int, tags: List[str]) -> bool:
+    def remove_tags_from_file(self, file_id: int, tags: List[str], company_id: Optional[int] = None) -> bool:
         """
         Dosyadan etiket kaldır
         
         Args:
             file_id: Dosya ID
             tags: Kaldırılacak etiketler
+            company_id: Şirket ID (opsiyonel)
         
         Returns:
             Başarılı ise True
         """
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
+            if not self._verify_file_ownership(file_id, company_id):
+                logging.warning(f"Remove Tags: File {file_id} not found or access denied")
+                return False
 
             placeholders = ','.join('?' * len(tags))
-            cursor.execute(f"""
+            # Use direct execution as tags are global
+            self.db.execute_update(f"""
                 DELETE FROM file_tag_relations
                 WHERE file_id = ? AND tag_id IN (
                     SELECT id FROM file_tags WHERE tag_name IN ({placeholders})
                 )
             """, [file_id] + tags)
 
-            conn.commit()
-            conn.close()
             return True
 
         except Exception as e:
             logging.error(f"Etiket kaldırma hatası: {e}")
             return False
 
-    def get_all_tags(self) -> List[Dict]:
+    def get_all_tags(self, company_id: int) -> List[Dict]:
         """Tüm etiketleri listele"""
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-
-            cursor.execute("""
+            # Use direct execution, filter by company_id
+            rows = self.db.execute_query("""
                 SELECT ft.id, ft.tag_name, ft.tag_color, COUNT(ftr.file_id) as usage_count
                 FROM file_tags ft
                 LEFT JOIN file_tag_relations ftr ON ft.id = ftr.tag_id
+                WHERE ft.company_id = ?
                 GROUP BY ft.id
                 ORDER BY usage_count DESC, ft.tag_name
-            """)
+            """, (company_id,))
 
             tags = []
-            for row in cursor.fetchall():
+            for row in rows:
                 tags.append({
-                    'id': row[0],
-                    'name': row[1],
-                    'color': row[2],
-                    'usage_count': row[3]
+                    'id': row['id'],
+                    'name': row['tag_name'],
+                    'color': row['tag_color'],
+                    'usage_count': row['usage_count']
                 })
 
-            conn.close()
             return tags
 
         except Exception as e:
@@ -812,40 +861,47 @@ class AdvancedFileManager:
     # METADATA YÖNETİMİ
     # ============================================
 
-    def add_metadata(self, file_id: int, key: str, value: str) -> bool:
+    def add_metadata(self, file_id: int, key: str, value: str, company_id: Optional[int] = None) -> bool:
         """Dosyaya metadata ekle"""
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
+            if not self._verify_file_ownership(file_id, company_id):
+                logging.warning(f"Add Metadata: File {file_id} not found or access denied")
+                return False
 
-            cursor.execute("""
-                INSERT INTO file_metadata (file_id, meta_key, meta_value)
-                VALUES (?, ?, ?)
-            """, (file_id, key, value))
+            if company_id is None:
+                rows = self.execute_query("SELECT company_id FROM files WHERE id = ?", (file_id,))
+                if not rows:
+                    return False
+                company_id = rows[0]['company_id']
 
-            conn.commit()
-            conn.close()
+            # Direct execution for metadata
+            self.db.execute_update("""
+                INSERT INTO file_metadata (file_id, company_id, meta_key, meta_value)
+                VALUES (?, ?, ?, ?)
+            """, (file_id, company_id, key, value))
+
             return True
 
         except Exception as e:
             logging.error(f"Metadata ekleme hatası: {e}")
             return False
 
-    def get_metadata(self, file_id: int) -> Dict[str, str]:
+    def get_metadata(self, file_id: int, company_id: Optional[int] = None) -> Dict[str, str]:
         """Dosya metadata'sını al"""
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
+            if not self._verify_file_ownership(file_id, company_id):
+                logging.warning(f"Get Metadata: File {file_id} not found or access denied")
+                return {}
 
-            cursor.execute("""
+            # Direct execution for metadata
+            rows = self.db.execute_query("""
                 SELECT meta_key, meta_value
                 FROM file_metadata
                 WHERE file_id = ?
             """, (file_id,))
 
-            metadata = {row[0]: row[1] for row in cursor.fetchall()}
+            metadata = {row['meta_key']: row['meta_value'] for row in rows}
 
-            conn.close()
             return metadata
 
         except Exception as e:
@@ -859,18 +915,25 @@ class AdvancedFileManager:
     def share_file(self, file_id: int, shared_with_user_id: Optional[int] = None,
                   shared_with_company_id: Optional[int] = None,
                   permission: str = 'view', shared_by: Optional[int] = None,
-                  expires_at: Optional[str] = None) -> bool:
+                  expires_at: Optional[str] = None, company_id: Optional[int] = None) -> bool:
         """Dosyayı paylaş"""
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
+            # Verify ownership and get company_id
+            rows = self.execute_query("SELECT company_id FROM files WHERE id = ?", (file_id,), company_id=company_id)
+            if not rows:
+                logging.warning(f"Share File: File {file_id} not found or access denied")
+                return False
+            
+            file_company_id = rows[0]['company_id']
 
-            cursor.execute("""
+            # Direct execution for shares
+            self.db.execute_update("""
                 INSERT INTO file_shares 
-                (file_id, shared_with_user_id, shared_with_company_id, permission, shared_by, shared_at, expires_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                (file_id, company_id, shared_with_user_id, shared_with_company_id, permission, shared_by, shared_at, expires_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 file_id,
+                file_company_id,
                 shared_with_user_id,
                 shared_with_company_id,
                 permission,
@@ -879,45 +942,39 @@ class AdvancedFileManager:
                 expires_at
             ))
 
-            conn.commit()
-            conn.close()
             return True
 
         except Exception as e:
             logging.error(f"Dosya paylaşma hatası: {e}")
             return False
 
-    def get_file_info(self, file_id: int) -> Optional[Dict]:
+    def get_file_info(self, file_id: int, company_id: Optional[int] = None) -> Optional[Dict]:
         """Dosya bilgilerini al"""
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-
-            cursor.execute("""
+            # Uses execute_query which enforces company_id context
+            rows = self.execute_query("""
                 SELECT id, original_name, file_path, file_size, file_type, 
                        description, version, uploaded_at, checksum
                 FROM files
                 WHERE id = ? AND is_deleted = 0
-            """, (file_id,))
+            """, (file_id,), company_id=company_id)
 
-            result = cursor.fetchone()
-            if not result:
-                conn.close()
+            if not rows:
                 return None
 
+            result = rows[0]
             file_info = {
-                'id': result[0],
-                'name': result[1],
-                'path': result[2],
-                'size': result[3],
-                'type': result[4],
-                'description': result[5],
-                'version': result[6],
-                'uploaded_at': result[7],
-                'checksum': result[8]
+                'id': result['id'],
+                'name': result['original_name'],
+                'path': result['file_path'],
+                'size': result['file_size'],
+                'type': result['file_type'],
+                'description': result['description'],
+                'version': result['version'],
+                'uploaded_at': result['uploaded_at'],
+                'checksum': result['checksum']
             }
 
-            conn.close()
             return file_info
 
         except Exception as e:

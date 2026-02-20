@@ -9,28 +9,29 @@ Politika şablonları ve modül eşleştirme sistemi
 
 import os
 import sqlite3
-from typing import Dict, List
+from typing import Dict, List, Optional
+try:
+    from backend.core.base_manager import BaseTenantManager
+except ImportError:
+    from core.base_manager import BaseTenantManager
 from config.icons import Icons
 from config.database import DB_PATH
 
 
-class PolicyLibraryManager:
+class PolicyLibraryManager(BaseTenantManager):
     """Politika kütüphanesi yöneticisi"""
 
-    def __init__(self, db_path: str, templates_dir: str = 'data/policy_templates') -> None:
-        self.db_path = db_path
+    def __init__(self, db_path: str = DB_PATH, company_id: Optional[int] = None, templates_dir: str = 'data/policy_templates') -> None:
+        super().__init__(db_path, company_id)
         self.templates_dir = templates_dir
         self._ensure_schema()
         self._ensure_templates_dir()
 
     def _ensure_schema(self) -> None:
         """Veritabanı şemasını oluştur"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
             # Politika kategorileri tablosu
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS policy_categories (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     category_code VARCHAR(50) UNIQUE NOT NULL,
@@ -40,10 +41,10 @@ class PolicyLibraryManager:
                     icon VARCHAR(20),
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
-            """)
+            """, skip_tenant_filter=True)
 
             # Politika şablonları tablosu
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS policy_templates (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     template_code VARCHAR(50) UNIQUE NOT NULL,
@@ -60,10 +61,10 @@ class PolicyLibraryManager:
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (category_id) REFERENCES policy_categories(id)
                 )
-            """)
+            """, skip_tenant_filter=True)
 
             # Şirket politikaları tablosu
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS company_policies (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company_id INTEGER NOT NULL,
@@ -85,10 +86,10 @@ class PolicyLibraryManager:
                     FOREIGN KEY (template_id) REFERENCES policy_templates(id),
                     FOREIGN KEY (category_id) REFERENCES policy_categories(id)
                 )
-            """)
+            """, skip_tenant_filter=True)
 
             # Politika-Modül eşleştirme tablosu
-            cursor.execute("""
+            self.execute_update("""
                 CREATE TABLE IF NOT EXISTS policy_module_mapping (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     policy_id INTEGER NOT NULL,
@@ -100,7 +101,10 @@ class PolicyLibraryManager:
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (policy_id) REFERENCES company_policies(id)
                 )
-            """)
+            """, skip_tenant_filter=True)
+            
+        except Exception as e:
+            logging.error(f"[HATA] Politika tablolari olusturma: {e}")
 
             # Politika-Framework eşleştirme tablosu
             cursor.execute("""

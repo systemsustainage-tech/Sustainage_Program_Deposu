@@ -11,38 +11,47 @@ import statistics
 from typing import Dict, List, Optional
 
 
-class TrendAnalyzer:
+from backend.core.base_manager import BaseTenantManager
+
+class TrendAnalyzer(BaseTenantManager):
     """Trend analizi ve tahminleme"""
 
-    def __init__(self, db_path: str) -> None:
-        self.db_path = db_path
+    def __init__(self, db_path: str, company_id: Optional[int] = None) -> None:
+        super().__init__(db_path, company_id)
 
     def get_metric_trend(self, company_id: int, table_name: str,
-                        metric_name: str, years: List[int]) -> List[Dict]:
+                        metric_name: str, years: List[int], date_column: str = 'year') -> List[Dict]:
         """Metrik trendini al"""
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-
             placeholders = ','.join('?' * len(years))
+            
+            # Tarih kolonu 'year' değilse (örn: period_start), yıl çıkartma işlemi yap
+            if date_column != 'year':
+                year_expression = f"CAST(strftime('%Y', {date_column}) AS INTEGER)"
+                where_clause = f"AND {year_expression} IN ({placeholders})"
+            else:
+                year_expression = "year"
+                where_clause = f"AND year IN ({placeholders})"
+
             query = f"""
-                SELECT year, {metric_name}
+                SELECT {year_expression} as year, {metric_name}
                 FROM {table_name}
-                WHERE company_id = ? AND year IN ({placeholders})
+                WHERE company_id = ? {where_clause}
                 AND {metric_name} IS NOT NULL
                 ORDER BY year
             """
-
-            cursor.execute(query, [company_id] + years)
+            
+            # BaseTenantManager execute_query kullanıyoruz (injection check dahil)
+            params = [company_id] + years
+            rows = self.db.execute_query(query, params)
 
             trend_data = []
-            for row in cursor.fetchall():
+            for row in rows:
                 trend_data.append({
-                    'year': row[0],
-                    'value': row[1]
+                    'year': row['year'],
+                    'value': row[metric_name]
                 })
 
-            conn.close()
             return trend_data
 
         except Exception as e:
@@ -132,9 +141,6 @@ class TrendAnalyzer:
                      metric_name: str, year1: int, year2: int) -> Dict:
         """İki yılı karşılaştır"""
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-
             query = f"""
                 SELECT year, {metric_name}
                 FROM {table_name}
@@ -143,15 +149,13 @@ class TrendAnalyzer:
                 ORDER BY year
             """
 
-            cursor.execute(query, (company_id, year1, year2))
-            results = cursor.fetchall()
-            conn.close()
+            results = self.db.execute_query(query, (company_id, year1, year2))
 
             if len(results) != 2:
                 return {'error': 'Yetersiz veri'}
 
-            value1 = results[0][1]
-            value2 = results[1][1]
+            value1 = results[0][metric_name]
+            value2 = results[1][metric_name]
 
             change = value2 - value1
             if value1 != 0:

@@ -11,7 +11,7 @@ __description__ = "Su yönetimi modülü - Su ayak izi, tüketim takibi ve verim
 
 from .water_calculator import WaterCalculator
 from .water_factors import WaterFactors
-from .water_gui import WaterGUI
+# from .water_gui import WaterGUI  # Removed legacy GUI dependency
 from .water_manager import WaterManager
 from .water_reporting import WaterReporting
 
@@ -19,6 +19,5 @@ __all__ = [
     'WaterManager',
     'WaterCalculator',
     'WaterFactors',
-    'WaterReporting',
-    'WaterGUI'
+    'WaterReporting'
 ]

@@ -7,22 +7,28 @@ CDP Climate Change, Water Security ve Forests anketleri için yönetim
 
 import logging
 import os
-import sqlite3
 import json
 from datetime import datetime
 from typing import Dict, List
-from utils.language_manager import LanguageManager
-from config.database import DB_PATH
+try:
+    from utils.language_manager import LanguageManager
+    from config.database import DB_PATH
+except ImportError:
+    from backend.utils.language_manager import LanguageManager
+    from backend.config.database import DB_PATH
+
+from backend.core.base_manager import BaseTenantManager
 
 
-class CDPManager:
+class CDPManager(BaseTenantManager):
     """CDP (Carbon Disclosure Project) yöneticisi"""
 
-    def __init__(self, db_path: str = DB_PATH) -> None:
+    def __init__(self, db_path: str = DB_PATH, company_id: int = None) -> None:
         if not os.path.isabs(db_path):
             base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
             db_path = os.path.join(base_dir, db_path)
-        self.db_path = db_path
+        
+        super().__init__(db_path, company_id)
         self.lm = LanguageManager()
         self._init_cdp_tables()
         self._populate_cdp_questionnaires()
@@ -30,11 +36,11 @@ class CDPManager:
 
     def _init_cdp_tables(self) -> None:
         """CDP tablolarını oluştur"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            # CDP Climate Change anketi
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
+
+                # CDP Climate Change anketi
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS cdp_climate_change (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -139,14 +145,9 @@ class CDPManager:
 
         except Exception as e:
             logging.error(f"[ERROR] CDP tabloları oluşturulurken hata: {e}")
-        finally:
-            conn.close()
 
     def _populate_cdp_questionnaires(self) -> None:
         """CDP anketlerini JSON dosyasından doldur"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
         json_path = os.path.join(os.path.dirname(__file__), 'cdp_questions.json')
         
         try:
@@ -157,118 +158,113 @@ class CDPManager:
             with open(json_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
 
-            # Climate Change
-            if 'climate_change' in data:
-                for q in data['climate_change']:
-                    # Tercihen Türkçe metni kullan, yoksa İngilizce
-                    text = q.get('text_tr') if q.get('text_tr') else q.get('text_en')
-                    cursor.execute("""
-                        INSERT OR IGNORE INTO cdp_climate_change 
-                        (company_id, reporting_year, question_id, question_text, question_category, response_type, scoring_weight)
-                        VALUES (?, ?, ?, ?, ?, ?, ?)
-                    """, (0, 2024, q['id'], text, q['category'], q['type'], q.get('weight', 1.0)))
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
 
-            # Water Security
-            if 'water_security' in data:
-                for q in data['water_security']:
-                    text = q.get('text_tr') if q.get('text_tr') else q.get('text_en')
-                    cursor.execute("""
-                        INSERT OR IGNORE INTO cdp_water_security 
-                        (company_id, reporting_year, question_id, question_text, question_category, response_type, scoring_weight)
-                        VALUES (?, ?, ?, ?, ?, ?, ?)
-                    """, (0, 2024, q['id'], text, q['category'], q['type'], q.get('weight', 1.0)))
+                # Climate Change
+                if 'climate_change' in data:
+                    for q in data['climate_change']:
+                        # Tercihen Türkçe metni kullan, yoksa İngilizce
+                        text = q.get('text_tr') if q.get('text_tr') else q.get('text_en')
+                        cursor.execute("""
+                            INSERT OR IGNORE INTO cdp_climate_change 
+                            (company_id, reporting_year, question_id, question_text, question_category, response_type, scoring_weight)
+                            VALUES (?, ?, ?, ?, ?, ?, ?)
+                        """, (0, 2024, q['id'], text, q['category'], q['type'], q.get('weight', 1.0)))
 
-            # Forests
-            if 'forests' in data:
-                for q in data['forests']:
-                    text = q.get('text_tr') if q.get('text_tr') else q.get('text_en')
-                    cursor.execute("""
-                        INSERT OR IGNORE INTO cdp_forests 
-                        (company_id, reporting_year, question_id, question_text, question_category, response_type, scoring_weight)
-                        VALUES (?, ?, ?, ?, ?, ?, ?)
-                    """, (0, 2024, q['id'], text, q['category'], q['type'], q.get('weight', 1.0)))
-            
-            conn.commit()
+                # Water Security
+                if 'water_security' in data:
+                    for q in data['water_security']:
+                        text = q.get('text_tr') if q.get('text_tr') else q.get('text_en')
+                        cursor.execute("""
+                            INSERT OR IGNORE INTO cdp_water_security 
+                            (company_id, reporting_year, question_id, question_text, question_category, response_type, scoring_weight)
+                            VALUES (?, ?, ?, ?, ?, ?, ?)
+                        """, (0, 2024, q['id'], text, q['category'], q['type'], q.get('weight', 1.0)))
+
+                # Forests
+                if 'forests' in data:
+                    for q in data['forests']:
+                        text = q.get('text_tr') if q.get('text_tr') else q.get('text_en')
+                        cursor.execute("""
+                            INSERT OR IGNORE INTO cdp_forests 
+                            (company_id, reporting_year, question_id, question_text, question_category, response_type, scoring_weight)
+                            VALUES (?, ?, ?, ?, ?, ?, ?)
+                        """, (0, 2024, q['id'], text, q['category'], q['type'], q.get('weight', 1.0)))
+                
+                conn.commit()
             logging.info("CDP questionnaires populated from JSON")
             
         except Exception as e:
             logging.error(f"Error populating CDP questionnaires: {e}")
-        finally:
-            conn.close()
 
     def get_weighting_scheme(self, company_id: int, reporting_year: int = 2024) -> str:
         """Şirketin puanlama ağırlıklandırma şemasını getir"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
         try:
-            # Check for any existing record first
-            cursor.execute("""
-                SELECT weighting_scheme FROM cdp_scoring 
-                WHERE company_id = ? AND reporting_year = ?
-                LIMIT 1
-            """, (company_id, reporting_year))
-            row = cursor.fetchone()
-            return row[0] if row else 'Standard'
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
+                # Check for any existing record first
+                cursor.execute("""
+                    SELECT weighting_scheme FROM cdp_scoring 
+                    WHERE company_id = ? AND reporting_year = ?
+                    LIMIT 1
+                """, (company_id, reporting_year))
+                row = cursor.fetchone()
+                return row[0] if row else 'Standard'
         except Exception as e:
             logging.error(f"Error getting weighting scheme: {e}")
             return 'Standard'
-        finally:
-            conn.close()
 
     def update_weighting_scheme(self, company_id: int, scheme: str, reporting_year: int = 2024) -> bool:
         """Puanlama ağırlıklandırma şemasını güncelle"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
         try:
-            # Update all scoring records for this year
-            cursor.execute("""
-                UPDATE cdp_scoring 
-                SET weighting_scheme = ? 
-                WHERE company_id = ? AND reporting_year = ?
-            """, (scheme, company_id, reporting_year))
-            
-            # If no record exists, insert a default one for Climate Change (as a placeholder)
-            if cursor.rowcount == 0:
-                 cursor.execute("""
-                    INSERT INTO cdp_scoring (company_id, reporting_year, questionnaire_type, weighting_scheme)
-                    VALUES (?, ?, 'Climate Change', ?)
-                """, (company_id, reporting_year, scheme))
-            
-            conn.commit()
-            return True
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
+                # Update all scoring records for this year
+                cursor.execute("""
+                    UPDATE cdp_scoring 
+                    SET weighting_scheme = ? 
+                    WHERE company_id = ? AND reporting_year = ?
+                """, (scheme, company_id, reporting_year))
+                
+                # If no record exists, insert a default one for Climate Change (as a placeholder)
+                if cursor.rowcount == 0:
+                        cursor.execute("""
+                        INSERT INTO cdp_scoring (company_id, reporting_year, questionnaire_type, weighting_scheme)
+                        VALUES (?, ?, 'Climate Change', ?)
+                    """, (company_id, reporting_year, scheme))
+                
+                conn.commit()
+                return True
         except Exception as e:
             logging.error(f"Error updating weighting scheme: {e}")
             return False
-        finally:
-            conn.close()
 
     def update_question_weight(self, questionnaire_type: str, company_id: int, question_id: str, weight: float, reporting_year: int = 2024) -> bool:
         """Soru puanlama ağırlığını güncelle"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
         try:
-            table_mapping = {
-                "Climate Change": "cdp_climate_change",
-                "Water Security": "cdp_water_security",
-                "Forests": "cdp_forests"
-            }
-            table_name = table_mapping.get(questionnaire_type)
-            if not table_name:
-                return False
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
+                table_mapping = {
+                    "Climate Change": "cdp_climate_change",
+                    "Water Security": "cdp_water_security",
+                    "Forests": "cdp_forests"
+                }
+                table_name = table_mapping.get(questionnaire_type)
+                if not table_name:
+                    return False
 
-            cursor.execute(f"""
-                UPDATE {table_name} 
-                SET scoring_weight = ? 
-                WHERE company_id = ? AND reporting_year = ? AND question_id = ?
-            """, (weight, company_id, reporting_year, question_id))
-            
-            conn.commit()
-            return cursor.rowcount > 0
+                cursor.execute(f"""
+                    UPDATE {table_name} 
+                    SET scoring_weight = ? 
+                    WHERE company_id = ? AND reporting_year = ? AND question_id = ?
+                """, (weight, company_id, reporting_year, question_id))
+                
+                conn.commit()
+                return cursor.rowcount > 0
         except Exception as e:
             logging.error(f"Error updating question weight: {e}")
             return False
-        finally:
-            conn.close()
 
     def reset_weights_to_standard(self, company_id: int, reporting_year: int = 2024) -> bool:
         """Ağırlıkları standart (JSON) değerlerine sıfırla"""
@@ -277,133 +273,127 @@ class CDPManager:
             return False
             
         # Then reload weights from template (company_id=0)
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
         try:
-            table_mapping = {
-                "Climate Change": "cdp_climate_change",
-                "Water Security": "cdp_water_security",
-                "Forests": "cdp_forests"
-            }
-            
-            for q_type, table_name in table_mapping.items():
-                # Update weights from template questions
-                cursor.execute(f"""
-                    UPDATE {table_name}
-                    SET scoring_weight = (
-                        SELECT t.scoring_weight 
-                        FROM {table_name} t 
-                        WHERE t.company_id = 0 AND t.reporting_year = ? AND t.question_id = {table_name}.question_id
-                    )
-                    WHERE company_id = ? AND reporting_year = ?
-                """, (reporting_year, company_id, reporting_year))
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
+                table_mapping = {
+                    "Climate Change": "cdp_climate_change",
+                    "Water Security": "cdp_water_security",
+                    "Forests": "cdp_forests"
+                }
                 
-            conn.commit()
-            return True
+                for q_type, table_name in table_mapping.items():
+                    # Update weights from template questions
+                    cursor.execute(f"""
+                        UPDATE {table_name}
+                        SET scoring_weight = (
+                            SELECT t.scoring_weight 
+                            FROM {table_name} t 
+                            WHERE t.company_id = 0 AND t.reporting_year = ? AND t.question_id = {table_name}.question_id
+                        )
+                        WHERE company_id = ? AND reporting_year = ?
+                    """, (reporting_year, company_id, reporting_year))
+                    
+                conn.commit()
+                return True
         except Exception as e:
             logging.error(f"Error resetting weights: {e}")
             return False
-        finally:
-            conn.close()
 
     def _populate_cdp_categories(self) -> None:
         """CDP kategorilerini doldur"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
         try:
-            # Kategori tanımları
-            categories = [
-                ("Climate Change", "GOV", "Governance", self.lm.tr('cdp_cat_gov_cc', "Board oversight and management of climate issues"), 1.0),
-                ("Climate Change", "STR", "Strategy", self.lm.tr('cdp_cat_str_cc', "Climate strategy and risk assessment"), 1.0),
-                ("Climate Change", "RISK", "Risk Management", self.lm.tr('cdp_cat_risk_cc', "Climate risk management processes"), 1.0),
-                ("Climate Change", "MET", "Metrics and Targets", self.lm.tr('cdp_cat_met_cc', "Climate metrics, targets and performance"), 1.0),
-                ("Water Security", "GOV", "Governance", self.lm.tr('cdp_cat_gov_ws', "Board oversight and management of water issues"), 1.0),
-                ("Water Security", "STR", "Strategy", self.lm.tr('cdp_cat_str_ws', "Water strategy and risk assessment"), 1.0),
-                ("Water Security", "RISK", "Risk Management", self.lm.tr('cdp_cat_risk_ws', "Water risk management processes"), 1.0),
-                ("Water Security", "MET", "Metrics and Targets", self.lm.tr('cdp_cat_met_ws', "Water metrics, targets and performance"), 1.0),
-                ("Forests", "GOV", "Governance", self.lm.tr('cdp_cat_gov_f', "Board oversight and management of forest issues"), 1.0),
-                ("Forests", "STR", "Strategy", self.lm.tr('cdp_cat_str_f', "Forest strategy and risk assessment"), 1.0),
-                ("Forests", "RISK", "Risk Management", self.lm.tr('cdp_cat_risk_f', "Forest risk management processes"), 1.0),
-                ("Forests", "MET", "Metrics and Targets", self.lm.tr('cdp_cat_met_f', "Forest metrics, targets and performance"), 1.0),
-            ]
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
+                # Kategori tanımları
+                categories = [
+                    ("Climate Change", "GOV", "Governance", self.lm.tr('cdp_cat_gov_cc', "Board oversight and management of climate issues"), 1.0),
+                    ("Climate Change", "STR", "Strategy", self.lm.tr('cdp_cat_str_cc', "Climate strategy and risk assessment"), 1.0),
+                    ("Climate Change", "RISK", "Risk Management", self.lm.tr('cdp_cat_risk_cc', "Climate risk management processes"), 1.0),
+                    ("Climate Change", "MET", "Metrics and Targets", self.lm.tr('cdp_cat_met_cc', "Climate metrics, targets and performance"), 1.0),
+                    ("Water Security", "GOV", "Governance", self.lm.tr('cdp_cat_gov_ws', "Board oversight and management of water issues"), 1.0),
+                    ("Water Security", "STR", "Strategy", self.lm.tr('cdp_cat_str_ws', "Water strategy and risk assessment"), 1.0),
+                    ("Water Security", "RISK", "Risk Management", self.lm.tr('cdp_cat_risk_ws', "Water risk management processes"), 1.0),
+                    ("Water Security", "MET", "Metrics and Targets", self.lm.tr('cdp_cat_met_ws', "Water metrics, targets and performance"), 1.0),
+                    ("Forests", "GOV", "Governance", self.lm.tr('cdp_cat_gov_f', "Board oversight and management of forest issues"), 1.0),
+                    ("Forests", "STR", "Strategy", self.lm.tr('cdp_cat_str_f', "Forest strategy and risk assessment"), 1.0),
+                    ("Forests", "RISK", "Risk Management", self.lm.tr('cdp_cat_risk_f', "Forest risk management processes"), 1.0),
+                    ("Forests", "MET", "Metrics and Targets", self.lm.tr('cdp_cat_met_f', "Forest metrics, targets and performance"), 1.0),
+                ]
 
-            for questionnaire_type, category_code, category_name, description, weight in categories:
-                cursor.execute("""
-                    INSERT OR IGNORE INTO cdp_question_categories 
-                    (questionnaire_type, category_code, category_name, category_description, weight)
-                    VALUES (?, ?, ?, ?, ?)
-                """, (questionnaire_type, category_code, category_name, description, weight))
+                for questionnaire_type, category_code, category_name, description, weight in categories:
+                    cursor.execute("""
+                        INSERT OR IGNORE INTO cdp_question_categories 
+                        (questionnaire_type, category_code, category_name, category_description, weight)
+                        VALUES (?, ?, ?, ?, ?)
+                    """, (questionnaire_type, category_code, category_name, description, weight))
 
-            conn.commit()
+                conn.commit()
             logging.info("[OK] CDP kategorileri dolduruldu")
 
         except Exception as e:
             logging.error(f"[ERROR] CDP kategorileri doldurulurken hata: {e}")
-        finally:
-            conn.close()
 
     def ensure_company_questions(self, company_id: int, reporting_year: int = 2024) -> None:
         """Şirket için soru kayıtlarının oluşturulduğundan emin ol"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            table_mapping = {
-                "Climate Change": "cdp_climate_change",
-                "Water Security": "cdp_water_security",
-                "Forests": "cdp_forests"
-            }
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
 
-            for q_type, table_name in table_mapping.items():
-                # Check if company has questions
-                cursor.execute(f"SELECT COUNT(*) FROM {table_name} WHERE company_id = ? AND reporting_year = ?", (company_id, reporting_year))
-                count = cursor.fetchone()[0]
-                
-                if count == 0:
-                    # Copy from template (company_id=0)
-                    cursor.execute(f"""
-                        INSERT INTO {table_name} 
-                        (company_id, reporting_year, question_id, question_text, question_category, response_type, scoring_weight)
-                        SELECT ?, ?, question_id, question_text, question_category, response_type, scoring_weight
-                        FROM {table_name}
-                        WHERE company_id = 0 AND reporting_year = ?
-                    """, (company_id, reporting_year, reporting_year))
-                    logging.info(f"Initialized {q_type} questions for company {company_id}")
+                table_mapping = {
+                    "Climate Change": "cdp_climate_change",
+                    "Water Security": "cdp_water_security",
+                    "Forests": "cdp_forests"
+                }
 
-            conn.commit()
+                for q_type, table_name in table_mapping.items():
+                    # Check if company has questions
+                    cursor.execute(f"SELECT COUNT(*) FROM {table_name} WHERE company_id = ? AND reporting_year = ?", (company_id, reporting_year))
+                    count = cursor.fetchone()[0]
+                    
+                    if count == 0:
+                        # Copy from template (company_id=0)
+                        cursor.execute(f"""
+                            INSERT INTO {table_name} 
+                            (company_id, reporting_year, question_id, question_text, question_category, response_type, scoring_weight)
+                            SELECT ?, ?, question_id, question_text, question_category, response_type, scoring_weight
+                            FROM {table_name}
+                            WHERE company_id = 0 AND reporting_year = ?
+                        """, (company_id, reporting_year, reporting_year))
+                        logging.info(f"Initialized {q_type} questions for company {company_id}")
+
+                conn.commit()
         except Exception as e:
             logging.error(f"Error ensuring company questions: {e}")
-        finally:
-            conn.close()
 
     def get_questions(self, questionnaire_type: str, company_id: int, reporting_year: int = 2024) -> List[Dict]:
         """Belirli bir anket türü için soruları getir"""
         # Ensure questions exist first
         self.ensure_company_questions(company_id, reporting_year)
         
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            table_mapping = {
-                "Climate Change": "cdp_climate_change",
-                "Water Security": "cdp_water_security",
-                "Forests": "cdp_forests"
-            }
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
 
-            table_name = table_mapping.get(questionnaire_type)
-            if not table_name:
-                return []
+                table_mapping = {
+                    "Climate Change": "cdp_climate_change",
+                    "Water Security": "cdp_water_security",
+                    "Forests": "cdp_forests"
+                }
 
-            # Only fetch company's questions now
-            cursor.execute(f"""
-                SELECT * FROM {table_name}
-                WHERE company_id = ? AND reporting_year = ?
-                ORDER BY question_id
-            """, (company_id, reporting_year))
+                table_name = table_mapping.get(questionnaire_type)
+                if not table_name:
+                    return []
 
-            columns = [col[0] for col in cursor.description]
-            raw_rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
+                # Only fetch company's questions now
+                cursor.execute(f"""
+                    SELECT * FROM {table_name}
+                    WHERE company_id = ? AND reporting_year = ?
+                    ORDER BY question_id
+                """, (company_id, reporting_year))
+
+                columns = [col[0] for col in cursor.description]
+                raw_rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
 
             questions = []
             for q in raw_rows:
@@ -414,8 +404,6 @@ class CDPManager:
         except Exception as e:
             logging.error(f"Sorular getirilirken hata: {e}")
             return []
-        finally:
-            conn.close()
 
     def _get_translation_key(self, questionnaire_type: str, question_id: str) -> str:
         if not question_id:
@@ -457,67 +445,63 @@ class CDPManager:
     def save_response(self, questionnaire_type: str, company_id: int, question_id: str,
                      response: str, evidence: str = "", reporting_year: int = 2024) -> bool:
         """Soru yanıtını kaydet"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            table_mapping = {
-                "Climate Change": "cdp_climate_change",
-                "Water Security": "cdp_water_security",
-                "Forests": "cdp_forests"
-            }
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
 
-            table_name = table_mapping.get(questionnaire_type)
-            if not table_name:
-                return False
+                table_mapping = {
+                    "Climate Change": "cdp_climate_change",
+                    "Water Security": "cdp_water_security",
+                    "Forests": "cdp_forests"
+                }
 
-            cursor.execute(f"""
-                UPDATE {table_name}
-                SET response = ?, evidence = ?, last_updated = CURRENT_TIMESTAMP
-                WHERE company_id = ? AND question_id = ? AND reporting_year = ?
-            """, (response, evidence, company_id, question_id, reporting_year))
+                table_name = table_mapping.get(questionnaire_type)
+                if not table_name:
+                    return False
 
-            conn.commit()
+                cursor.execute(f"""
+                    UPDATE {table_name}
+                    SET response = ?, evidence = ?, last_updated = CURRENT_TIMESTAMP
+                    WHERE company_id = ? AND question_id = ? AND reporting_year = ?
+                """, (response, evidence, company_id, question_id, reporting_year))
+
+                conn.commit()
             return True
 
         except Exception as e:
             logging.error(f"Yanıt kaydedilirken hata: {e}")
             return False
-        finally:
-            conn.close()
 
     def get_company_responses(self, questionnaire_type: str, company_id: int,
                              reporting_year: int = 2024) -> List[Dict]:
         """Şirket yanıtlarını getir"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            table_mapping = {
-                "Climate Change": "cdp_climate_change",
-                "Water Security": "cdp_water_security",
-                "Forests": "cdp_forests"
-            }
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
 
-            table_name = table_mapping.get(questionnaire_type)
-            if not table_name:
-                return []
+                table_mapping = {
+                    "Climate Change": "cdp_climate_change",
+                    "Water Security": "cdp_water_security",
+                    "Forests": "cdp_forests"
+                }
 
-            cursor.execute(f"""
-                SELECT * FROM {table_name}
-                WHERE company_id = ? AND reporting_year = ?
-                ORDER BY question_id
-            """, (company_id, reporting_year))
+                table_name = table_mapping.get(questionnaire_type)
+                if not table_name:
+                    return []
 
-            columns = [col[0] for col in cursor.description]
-            responses = [dict(zip(columns, row)) for row in cursor.fetchall()]
+                cursor.execute(f"""
+                    SELECT * FROM {table_name}
+                    WHERE company_id = ? AND reporting_year = ?
+                    ORDER BY question_id
+                """, (company_id, reporting_year))
+
+                columns = [col[0] for col in cursor.description]
+                responses = [dict(zip(columns, row)) for row in cursor.fetchall()]
             return responses
 
         except Exception as e:
             logging.error(f"Yanıtlar getirilirken hata: {e}")
             return []
-        finally:
-            conn.close()
 
     def calculate_scores(self, questionnaire_type: str, company_id: int,
                         reporting_year: int = 2024) -> Dict:
@@ -616,28 +600,26 @@ class CDPManager:
     def _save_scoring(self, questionnaire_type: str, company_id: int,
                      reporting_year: int, scores: Dict) -> None:
         """Skorları veritabanına kaydet"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
         try:
-            cursor.execute("""
-                INSERT OR REPLACE INTO cdp_scoring 
-                (company_id, reporting_year, questionnaire_type, total_score, grade,
-                 disclosure_score, awareness_score, management_score, leadership_score,
-                 submission_date, status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (company_id, reporting_year, questionnaire_type,
-                  scores['total_score'], scores['grade'],
-                  scores['disclosure_score'], scores['awareness_score'],
-                  scores['management_score'], scores['leadership_score'],
-                  datetime.now().isoformat(), 'Completed'))
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
 
-            conn.commit()
+                cursor.execute("""
+                    INSERT OR REPLACE INTO cdp_scoring 
+                    (company_id, reporting_year, questionnaire_type, total_score, grade,
+                     disclosure_score, awareness_score, management_score, leadership_score,
+                     submission_date, status)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (company_id, reporting_year, questionnaire_type,
+                      scores['total_score'], scores['grade'],
+                      scores['disclosure_score'], scores['awareness_score'],
+                      scores['management_score'], scores['leadership_score'],
+                      datetime.now().isoformat(), 'Completed'))
+
+                conn.commit()
 
         except Exception as e:
             logging.error(f"Skorlar kaydedilirken hata: {e}")
-        finally:
-            conn.close()
 
     def get_company_summary(self, company_id: int, reporting_year: int = 2024) -> Dict:
         """Şirket CDP özeti"""

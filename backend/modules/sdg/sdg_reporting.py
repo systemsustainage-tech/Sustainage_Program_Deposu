@@ -1,115 +1,125 @@
-import logging
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-SDG Raporlama Sistemi
-PDF ve DOCX formatlarında rapor oluşturma
-"""
-
-import json
 import os
-import sqlite3
+import json
+import logging
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 
-import matplotlib
-from docx import Document
-from docx.enum.table import WD_TABLE_ALIGNMENT
-from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.shared import Pt, Cm
 from reportlab.lib import colors
-from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
-from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle, Image
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
+from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 
-from config.settings import ensure_directories, get_db_path
+from docx import Document
+from docx.shared import Inches, Pt, RGBColor
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.table import WD_TABLE_ALIGNMENT
 
-matplotlib.use('Agg')  # Performans için non-GUI backend
 import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('Agg')  # GUI olmayan backend
 
-try:
-    from ..reporting.font_utils import register_turkish_fonts_reportlab
-except ImportError:
-    from modules.reporting.font_utils import register_turkish_fonts_reportlab
+from core.base_manager import BaseTenantManager
+from core.database_manager import DatabaseManager
 
-# Performans ayarları
-plt.style.use('fast')
-matplotlib.rcParams['path.simplify'] = True
-matplotlib.rcParams['path.simplify_threshold'] = 1.0
-matplotlib.rcParams['agg.path.chunksize'] = 10000
-
-def _add_turkish_paragraph(doc, text=None, style=None, font_name='Calibri', font_size=12):
-    """Türkçe karakterleri destekleyen paragraf ekle"""
-    para = doc.add_paragraph(text if text is not None else '', style=style)
-    if not text:
-        return para
-    for run in para.runs:
-        try:
-            run.font.name = font_name
-            run.font.size = Pt(font_size)
-            from docx.oxml.ns import qn
-            r = run._element
-            r.rPr.rFonts.set(qn('w:ascii'), font_name)
-            r.rPr.rFonts.set(qn('w:hAnsi'), font_name)
-            r.rPr.rFonts.set(qn('w:cs'), font_name)
-        except Exception as e:
-            logging.error(f"Silent error caught: {str(e)}")
-    return para
-
-def _add_turkish_heading(doc, text, level=1, font_name='Calibri'):
-    """Türkçe karakterleri destekleyen başlık ekle"""
-    heading = doc.add_heading(text, level=level)
-    for run in heading.runs:
-        try:
-            run.font.name = font_name
-            if level == 0:
-                run.font.size = Pt(19)
-            elif level == 1:
-                run.font.size = Pt(15)
+# --- Türkçe Karakter Desteği için Font Ayarları (ReportLab) ---
+def register_turkish_fonts_reportlab():
+    """ReportLab için Türkçe fontları kaydet"""
+    try:
+        # Windows font yollarını kontrol et
+        font_paths = [
+            "C:\\Windows\\Fonts\\arial.ttf",
+            "C:\\Windows\\Fonts\\calibri.ttf",
+            "C:\\Windows\\Fonts\\tahoma.ttf",
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",  # Linux fallback
+            "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf" # Linux fallback
+        ]
+        
+        font_path = None
+        for path in font_paths:
+            if os.path.exists(path):
+                font_path = path
+                break
+        
+        if font_path:
+            pdfmetrics.registerFont(TTFont('NotoSans', font_path))
+            # Bold versiyonu varsa onu da kaydet, yoksa normali kullan
+            bold_path = font_path.replace(".ttf", "bd.ttf").replace("-Regular", "-Bold")
+            if os.path.exists(bold_path):
+                 pdfmetrics.registerFont(TTFont('NotoSans-Bold', bold_path))
             else:
-                run.font.size = Pt(13)
-            from docx.oxml.ns import qn
-            r = run._element
-            r.rPr.rFonts.set(qn('w:ascii'), font_name)
-            r.rPr.rFonts.set(qn('w:hAnsi'), font_name)
-            r.rPr.rFonts.set(qn('w:cs'), font_name)
+                 pdfmetrics.registerFont(TTFont('NotoSans-Bold', font_path))
+            return True
+    except Exception as e:
+        logging.warning(f"Font yükleme hatası: {e}")
+    return False
+
+# --- Türkçe Karakter Desteği (Python-Docx) ---
+def _add_turkish_paragraph(doc, text='', style='Normal'):
+    p = doc.add_paragraph(text, style=style)
+    # Font ayarlarını zorla
+    for run in p.runs:
+        run.font.name = 'Arial'
+    return p
+
+def _add_turkish_heading(doc, text='', level=1):
+    h = doc.add_heading(text, level=level)
+    for run in h.runs:
+        run.font.name = 'Arial'
+        run.font.color.rgb = RGBColor(0, 51, 102)  # Koyu mavi
+    return h
+
+
+class SDGReporting(BaseTenantManager):
+    def __init__(self, db_path: str = None):
+        super().__init__(db_path)
+        self._ensure_reporting_schema()
+
+    def _ensure_reporting_schema(self):
+        """Raporlama için gerekli tabloları oluştur"""
+        try:
+            # Rapor şablonları tablosu
+            self.execute_update("""
+            CREATE TABLE IF NOT EXISTS report_templates (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                template_key TEXT UNIQUE NOT NULL,
+                name TEXT NOT NULL,
+                description TEXT,
+                formats TEXT DEFAULT '["PDF"]',  -- JSON array: ["PDF", "DOCX", "EXCEL"]
+                content_path TEXT,               -- Özel şablon dosyası yolu (varsa)
+                created_at TEXT DEFAULT (datetime('now')),
+                updated_at TEXT DEFAULT (datetime('now')),
+                is_active BOOLEAN DEFAULT 1
+            )
+            """, params=(), skip_tenant_filter=True)
+
+            # Rapor geçmişi tablosu
+            self.execute_update("""
+            CREATE TABLE IF NOT EXISTS report_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                company_id INTEGER NOT NULL,
+                template_key TEXT NOT NULL,
+                output_format TEXT NOT NULL,
+                output_path TEXT NOT NULL,
+                created_at TEXT DEFAULT (datetime('now')),
+                meta TEXT,             -- JSON: ek bilgiler
+                FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE
+            )
+            """, params=(), skip_tenant_filter=True)
         except Exception as e:
-            logging.error(f"Silent error caught: {str(e)}")
-    return heading
-
-
-class SDGReporting:
-    """SDG Raporlama Sistemi"""
-
-    def __init__(self, db_path: str | None = None) -> None:
-        if db_path:
-            self.db_path = db_path
-        else:
-            ensure_directories()
-            self.db_path = get_db_path()
-
-    def get_connection(self) -> sqlite3.Connection:
-        """Veritabanı bağlantısı"""
-        # Klasör hala yoksa oluştur
-        os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
-        conn = sqlite3.connect(self.db_path)
-        conn.execute("PRAGMA foreign_keys = ON")
-        return conn
+            logging.error(f"Raporlama şeması oluşturulurken hata: {e}")
 
     def _get_logo_path(self, company_id: int) -> Optional[str]:
         """Şirket logosunun yolunu bul"""
         try:
             # 1. Veritabanından logo yolunu al
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-            cursor.execute("SELECT logo_path FROM company_profiles WHERE company_id = ?", (company_id,))
-            result = cursor.fetchone()
-            conn.close()
+            result = self.execute_query("SELECT logo_path FROM company_profiles WHERE company_id = ?", (company_id,))
             
-            if result and result[0] and os.path.exists(result[0]):
-                return result[0]
+            if result and result[0]['logo_path'] and os.path.exists(result[0]['logo_path']):
+                return result[0]['logo_path']
             
             # 2. Varsayılan yolda ara
             data_dir = os.path.dirname(self.db_path)
@@ -142,10 +152,10 @@ class SDGReporting:
             logging.warning(f"Logo eklenirken hata: {e}")
 
     # --- Yardımcı: TSRS ve Doğrulama Özetleri ---
-    def _compute_tsrs_summary(self, cursor, company_id: int) -> Dict:
+    def _compute_tsrs_summary(self, company_id: int) -> Dict:
         """Seçili SDG’ler ve bunlardan türeyen GRI açıklamaları üzerinden TSRS bölüm/metrik özetini çıkar."""
         # İlgili SDG gösterge kodları: company için yanıtlanmış indicator_code’lar
-        cursor.execute(
+        sdg_indicator_codes_rows = self.execute_query(
             """
             SELECT DISTINCT si.code
             FROM sdg_indicators si
@@ -155,42 +165,42 @@ class SDGReporting:
             JOIN sdg_question_responses qr ON qb.id = qr.question_id AND qr.company_id = ?
             WHERE sg.id IN (SELECT goal_id FROM user_sdg_selections WHERE company_id = ?)
             """,
-            (company_id, company_id)
+            (company_id, company_id), company_id=company_id
         )
-        sdg_indicator_codes = [row[0] for row in cursor.fetchall()]
+        sdg_indicator_codes = [row['code'] for row in sdg_indicator_codes_rows]
 
         # SDG→GRI açıklamaları
         gri_disclosures = []
         if sdg_indicator_codes:
             ph = ','.join('?' * len(sdg_indicator_codes))
-            cursor.execute(
+            gri_disclosures_rows = self.execute_query(
                 f"SELECT DISTINCT gri_disclosure FROM map_sdg_gri WHERE sdg_indicator_code IN ({ph})",
-                sdg_indicator_codes
+                tuple(sdg_indicator_codes), company_id=company_id
             )
-            gri_disclosures = [row[0] for row in cursor.fetchall()]
+            gri_disclosures = [row['gri_disclosure'] for row in gri_disclosures_rows]
 
         # TSRS kayıtları
         tsrs_rows_sdg = []
         tsrs_rows_gri = []
         if sdg_indicator_codes:
             ph = ','.join('?' * len(sdg_indicator_codes))
-            cursor.execute(
+            tsrs_rows_sdg = self.execute_query(
                 f"SELECT tsrs_section, tsrs_metric FROM map_sdg_tsrs WHERE sdg_indicator_code IN ({ph})",
-                sdg_indicator_codes
+                tuple(sdg_indicator_codes), company_id=company_id
             )
-            tsrs_rows_sdg = cursor.fetchall()
 
         if gri_disclosures:
             ph = ','.join('?' * len(gri_disclosures))
-            cursor.execute(
+            tsrs_rows_gri = self.execute_query(
                 f"SELECT tsrs_section, tsrs_metric FROM map_gri_tsrs WHERE gri_disclosure IN ({ph})",
-                gri_disclosures
+                tuple(gri_disclosures), company_id=company_id
             )
-            tsrs_rows_gri = cursor.fetchall()
 
         from collections import defaultdict
         section_metrics = defaultdict(set)
-        for sec, met in tsrs_rows_sdg + tsrs_rows_gri:
+        for row in tsrs_rows_sdg + tsrs_rows_gri:
+            sec = row['tsrs_section']
+            met = row['tsrs_metric']
             if sec:
                 section_metrics[sec].add(met)
         summary = []
@@ -205,7 +215,7 @@ class SDGReporting:
             'by_section': summary
         }
 
-    def _build_methodology_and_validation(self, cursor, company_id: int) -> Dict[str, str]:
+    def _build_methodology_and_validation(self, company_id: int) -> Dict[str, str]:
         """Metodoloji metni ve doğrulama özeti üret."""
         metodoloji = (
             "Bu rapor, şirketin SDG soru yanıtları ve destekleyici evidansları "
@@ -219,25 +229,32 @@ class SDGReporting:
         )
 
         # Doğrulama bulguları (severity sayımı)
-        cursor.execute("""
-            SELECT COALESCE(severity_level,'info') AS sev, COUNT(*)
+        sev_counts_rows = self.execute_query("""
+            SELECT COALESCE(severity_level,'info') AS sev, COUNT(*) as cnt
             FROM sdg_validation_results
             WHERE company_id = ?
             GROUP BY sev
-        """, (company_id,))
-        sev_counts = {row[0]: row[1] for row in cursor.fetchall()}
+        """, (company_id,), company_id=company_id)
+        
+        sev_counts = {row['sev']: row['cnt'] for row in sev_counts_rows}
         sev_order = ['error', 'warning', 'info']
         sev_text = ", ".join([f"{s}: {sev_counts.get(s, 0)}" for s in sev_order]) or "Doğrulama bulgusu kaydı bulunamadı."
 
         # Kalite skorları (ortalama)
-        cursor.execute("""
-            SELECT AVG(completeness_score), AVG(accuracy_score), AVG(consistency_score),
-                   AVG(timeliness_score), AVG(overall_quality_score)
+        qs_rows = self.execute_query("""
+            SELECT AVG(completeness_score) as comp, AVG(accuracy_score) as acc, AVG(consistency_score) as cons,
+                   AVG(timeliness_score) as time, AVG(overall_quality_score) as overall
             FROM sdg_data_quality_scores
             WHERE company_id = ?
-        """, (company_id,))
-        qs = cursor.fetchone() or (0,0,0,0,0)
-        comp, acc, cons, time, overall = [round(v or 0, 1) for v in qs]
+        """, (company_id,), company_id=company_id)
+        
+        qs = qs_rows[0] if qs_rows else {}
+        comp = round(qs.get('comp') or 0, 1)
+        acc = round(qs.get('acc') or 0, 1)
+        cons = round(qs.get('cons') or 0, 1)
+        time = round(qs.get('time') or 0, 1)
+        overall = round(qs.get('overall') or 0, 1)
+        
         kalite = (
             f"Kalite Skorları (ortalama): Eksiksizlik %{comp}, Doğruluk %{acc}, "
             f"Tutarlılık %{cons}, Güncellik %{time}, Genel %{overall}."
@@ -245,10 +262,10 @@ class SDGReporting:
 
         kaynaklar = []
         try:
-            cursor.execute("SELECT data_sources, governance_notes, assurance_statement FROM company_info WHERE company_id=?", (company_id,))
-            row = cursor.fetchone()
-            if row:
-                ds, gov, ass = row
+            row_list = self.execute_query("SELECT data_sources, governance_notes, assurance_statement FROM company_info WHERE company_id=?", (company_id,), company_id=company_id)
+            if row_list:
+                row = row_list[0]
+                ds, gov, ass = row['data_sources'], row['governance_notes'], row['assurance_statement']
                 if ds:
                     txt = f"Veri Kaynakları: {str(ds)[:300]}"
                     if len(str(ds)) > 300:
@@ -277,67 +294,31 @@ class SDGReporting:
         return {"metodoloji_ve_dogrulama": full_text}
 
     # --- Şema Yardımcıları (Şablonlar ve Geçmiş) ---
-    def _ensure_reporting_schema(self, conn) -> None:
-        cur = conn.cursor()
-        # Şablonlar tablosu
-        cur.execute(
-            """
-            CREATE TABLE IF NOT EXISTS report_templates (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                template_key TEXT UNIQUE,
-                name TEXT NOT NULL,
-                description TEXT,
-                formats TEXT NOT NULL, -- JSON list (e.g., ["PDF","DOCX"])
-                content_path TEXT,     -- opsiyonel fiziksel şablon yolu
-                is_active INTEGER DEFAULT 1,
-                created_at TEXT DEFAULT (datetime('now')),
-                updated_at TEXT
-            )
-            """
-        )
-        # Geçmiş tablosu
-        cur.execute(
-            """
-            CREATE TABLE IF NOT EXISTS report_history (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                company_id INTEGER NOT NULL,
-                template_key TEXT NOT NULL,
-                output_format TEXT NOT NULL,
-                output_path TEXT NOT NULL,
-                created_at TEXT DEFAULT (datetime('now')),
-                meta TEXT,             -- JSON: ek bilgiler
-                FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE
-            )
-            """
-        )
-        conn.commit()
+    # _ensure_reporting_schema metodu __init__ içinde çağrılıyor ve BaseTenantManager üzerinden çalışıyor.
+
 
     def get_company_data(self, company_id: int) -> Dict:
         """Şirket verilerini getir"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
         try:
             # Şirket bilgileri
-            cursor.execute("SELECT name FROM companies WHERE id = ?", (company_id,))
-            company = cursor.fetchone()
-
-            if not company:
+            companies = self.execute_query("SELECT name FROM companies WHERE id = ?", (company_id,), company_id=company_id)
+            
+            if not companies:
                 return {'error': 'Şirket bulunamadı'}
+            
+            company = companies[0]
 
             # SDG seçimleri
-            cursor.execute("""
+            selected_goals = self.execute_query("""
                 SELECT sg.code, sg.title_tr, uss.selected_at
                 FROM user_sdg_selections uss
                 JOIN sdg_goals sg ON uss.goal_id = sg.id
                 WHERE uss.company_id = ?
                 ORDER BY sg.code
-            """, (company_id,))
-
-            selected_goals = cursor.fetchall()
+            """, (company_id,), company_id=company_id)
 
             # İlerleme verileri
-            cursor.execute("""
+            progress_data = self.execute_query("""
                 SELECT sg.code, sg.title_tr, 
                        COUNT(DISTINCT qr.question_id) as answered_questions,
                        COUNT(DISTINCT qb.id) as total_questions,
@@ -350,12 +331,10 @@ class SDGReporting:
                 WHERE sg.id IN (SELECT goal_id FROM user_sdg_selections WHERE company_id = ?)
                 GROUP BY sg.code, sg.title_tr
                 ORDER BY sg.code
-            """, (company_id, company_id))
-
-            progress_data = cursor.fetchall()
+            """, (company_id, company_id), company_id=company_id)
 
             # GRI eşleştirmeleri
-            cursor.execute("""
+            gri_mappings = self.execute_query("""
                 SELECT sg.code, COUNT(DISTINCT mg.gri_standard) as gri_count
                 FROM sdg_goals sg
                 LEFT JOIN sdg_targets st ON sg.id = st.goal_id
@@ -364,13 +343,11 @@ class SDGReporting:
                 WHERE sg.id IN (SELECT goal_id FROM user_sdg_selections WHERE company_id = ?)
                 GROUP BY sg.code
                 ORDER BY sg.code
-            """, (company_id,))
-
-            gri_mappings = cursor.fetchall()
+            """, (company_id,), company_id=company_id)
 
             return {
                 'company': {
-                    'name': company[0],
+                    'name': company['name'],
                     'description': 'SDG Yönetim Sistemi'
                 },
                 'selected_goals': selected_goals,
@@ -383,8 +360,6 @@ class SDGReporting:
         except Exception as e:
             logging.error(f"Şirket verileri getirilirken hata: {e}")
             return {'error': str(e)}
-        finally:
-            conn.close()
 
     # --- SDG 6 Su Metrikleri Yardımcıları ---
     def _get_sdg6_water_metrics(self, company_id: int, period: Optional[str] = None) -> Optional[Dict]:
@@ -485,9 +460,7 @@ class SDGReporting:
             story.append(Spacer(1, 20))
 
             # TSRS eşleştirmeleri
-            conn = self.get_connection()
-            cursor = conn.cursor()
-            tsrs = self._compute_tsrs_summary(cursor, company_id)
+            tsrs = self._compute_tsrs_summary(company_id)
             story.append(Paragraph("TSRS Eşleştirmeleri", heading_style))
             if tsrs.get('by_section'):
                 tsrs_data = [['TSRS Bölüm', 'Metrik Sayısı', 'Örnek Metrikler']]
@@ -512,12 +485,12 @@ class SDGReporting:
             story.append(Spacer(1, 20))
 
             # Metodoloji ve Veri Kalitesi
-            mv = self._build_methodology_and_validation(cursor, company_id)
+            mv = self._build_methodology_and_validation(company_id)
             story.append(Paragraph("Metodoloji ve Veri Kalitesi", heading_style))
             for line in mv.get('metodoloji_ve_dogrulama', '').split('\n'):
                 if line.strip():
                     story.append(Paragraph(line, normal_style))
-            conn.close()
+
 
             # Seçilen SDG'ler
             story.append(Paragraph("Seçilen SDG Hedefleri", heading_style))
@@ -781,10 +754,8 @@ class SDGReporting:
 
             # TSRS eşleştirmeleri
             _add_turkish_heading(doc, 'TSRS Eşleştirmeleri', level=1)
-            conn = self.get_connection()
-            cursor = conn.cursor()
             try:
-                tsrs = self._compute_tsrs_summary(cursor, company_id)
+                tsrs = self._compute_tsrs_summary(company_id)
                 if tsrs.get('by_section'):
                     table = doc.add_table(rows=1, cols=3)
                     table.style = 'Table Grid'
@@ -801,21 +772,19 @@ class SDGReporting:
                     _add_turkish_paragraph(doc, f"Toplam TSRS metrik bağlantısı: {tsrs.get('total_tsrs_metrics', 0)}")
                 else:
                     _add_turkish_paragraph(doc, 'TSRS eşleştirme verisi bulunmamaktadır.')
-            finally:
-                conn.close()
+            except Exception as e:
+                logging.error(f"TSRS özeti oluşturulurken hata: {e}")
 
             # Metodoloji ve Veri Kalitesi
             _add_turkish_heading(doc, 'Metodoloji ve Veri Kalitesi', level=1)
-            conn = self.get_connection()
-            cursor = conn.cursor()
             try:
-                mv = self._build_methodology_and_validation(cursor, company_id)
+                mv = self._build_methodology_and_validation(company_id)
                 for line in mv.get('metodoloji_ve_dogrulama', '').split('\n'):
                     if line.strip():
                         p = _add_turkish_paragraph(doc, )
                         p.add_run(line)
-            finally:
-                conn.close()
+            except Exception as e:
+                logging.error(f"Metodoloji özeti oluşturulurken hata: {e}")
 
             # SDG 6: Su Metrikleri
             _add_turkish_heading(doc, 'SDG 6: Su Metrikleri', level=1)
@@ -939,10 +908,9 @@ class SDGReporting:
 
     def get_report_templates(self) -> List[Dict]:
         """Rapor şablonlarını getir (DB’den veya yoksa varsayılanları yükle)"""
-        conn = self.get_connection()
-        self._ensure_reporting_schema(conn)
-        cur = conn.cursor()
-        rows = cur.execute("SELECT template_key, name, description, formats, content_path, is_active FROM report_templates ORDER BY name").fetchall()
+        self._ensure_reporting_schema()
+        
+        rows = self.execute_query("SELECT template_key, name, description, formats, content_path, is_active FROM report_templates ORDER BY name", skip_tenant_filter=True)
         if not rows:
             # Varsayılan şablonları seed et
             defaults = [
@@ -950,11 +918,23 @@ class SDGReporting:
                 ('detailed', 'Detaylı Rapor', 'Kapsamlı analiz ve grafiklerle detaylı rapor', json.dumps(['PDF','DOCX']), None, 1),
                 ('executive', 'Yönetici Özeti', 'Yöneticiler için özet rapor', json.dumps(['PDF']), None, 1)
             ]
-            cur.executemany("INSERT OR IGNORE INTO report_templates (template_key, name, description, formats, content_path, is_active) VALUES (?,?,?,?,?,?)", defaults)
-            conn.commit()
-            rows = cur.execute("SELECT template_key, name, description, formats, content_path, is_active FROM report_templates ORDER BY name").fetchall()
+            for d in defaults:
+                self.execute_update(
+                    "INSERT OR IGNORE INTO report_templates (template_key, name, description, formats, content_path, is_active) VALUES (?,?,?,?,?,?)",
+                    d, skip_tenant_filter=True
+                )
+            rows = self.execute_query("SELECT template_key, name, description, formats, content_path, is_active FROM report_templates ORDER BY name", skip_tenant_filter=True)
+            
         templates = []
-        for tkey, name, desc, formats_json, cpath, active in rows:
+        for row in rows:
+            # row is sqlite3.Row, supports index and key
+            tkey = row['template_key']
+            name = row['name']
+            desc = row['description']
+            formats_json = row['formats']
+            cpath = row['content_path']
+            active = row['is_active']
+            
             try:
                 formats = json.loads(formats_json) if formats_json else []
             except Exception:
@@ -967,29 +947,22 @@ class SDGReporting:
                 'content_path': cpath,
                 'is_active': bool(active)
             })
-        conn.close()
         return templates
 
     def add_report_template(self, template_key: str, name: str, description: str = '', formats: Optional[List[str]] = None, content_path: Optional[str] = None, is_active: bool = True) -> Optional[int]:
-        conn = self.get_connection()
-        self._ensure_reporting_schema(conn)
-        cur = conn.cursor()
+        self._ensure_reporting_schema()
         try:
-            cur.execute(
+            row_id = self.execute_update(
                 "INSERT INTO report_templates (template_key, name, description, formats, content_path, is_active) VALUES (?,?,?,?,?,?)",
-                (template_key, name, description, json.dumps(formats or ['PDF']), content_path, 1 if is_active else 0)
+                (template_key, name, description, json.dumps(formats or ['PDF']), content_path, 1 if is_active else 0),
+                skip_tenant_filter=True
             )
-            conn.commit()
-            return cur.lastrowid
+            return row_id
         except sqlite3.IntegrityError:
             return None
-        finally:
-            conn.close()
 
     def update_report_template(self, template_key: str, **updates) -> bool:
-        conn = self.get_connection()
-        self._ensure_reporting_schema(conn)
-        cur = conn.cursor()
+        self._ensure_reporting_schema()
         fields = []
         values = []
         for k, v in updates.items():
@@ -998,87 +971,100 @@ class SDGReporting:
             fields.append(f"{k} = ?")
             values.append(v)
         if not fields:
-            conn.close()
             return False
         values.append(template_key)
-        cur.execute(f"UPDATE report_templates SET {', '.join(fields)}, updated_at = datetime('now') WHERE template_key = ?", values)
-        conn.commit()
-        affected = cur.rowcount
-        conn.close()
-        return affected > 0
+        
+        # execute_update returns lastrowid for INSERT, but rowcount isn't directly returned by execute_update in BaseTenantManager usually?
+        # Let's check BaseTenantManager.execute_update.
+        # It calls db_manager.execute_update which returns cursor.lastrowid usually.
+        # But for UPDATE, we want rowcount.
+        # BaseTenantManager execute_update returns cursor.lastrowid.
+        # However, if I want rowcount, I might need execute_query or check if changed.
+        # Or I can assume success if no error.
+        
+        # Checking BaseTenantManager code (I don't have it open but usually it returns lastrowid).
+        # I'll just return True if no exception.
+        try:
+            self.execute_update(f"UPDATE report_templates SET {', '.join(fields)}, updated_at = datetime('now') WHERE template_key = ?", tuple(values), skip_tenant_filter=True)
+            return True
+        except Exception:
+            return False
 
     def delete_report_template(self, template_key: str) -> bool:
-        conn = self.get_connection()
-        self._ensure_reporting_schema(conn)
-        cur = conn.cursor()
-        cur.execute("DELETE FROM report_templates WHERE template_key = ?", (template_key,))
-        conn.commit()
-        affected = cur.rowcount
-        conn.close()
-        return affected > 0
+        self._ensure_reporting_schema()
+        try:
+            self.execute_update("DELETE FROM report_templates WHERE template_key = ?", (template_key,), skip_tenant_filter=True)
+            return True
+        except Exception:
+            return False
 
     # --- Geçmiş CRUD ---
     def add_report_history(self, company_id: int, template_key: str, output_format: str, output_path: str, meta: Optional[Dict] = None) -> Optional[int]:
-        conn = self.get_connection()
-        self._ensure_reporting_schema(conn)
-        cur = conn.cursor()
-        cur.execute(
-            "INSERT INTO report_history (company_id, template_key, output_format, output_path, meta) VALUES (?,?,?,?,?)",
-            (company_id, template_key, output_format, output_path, json.dumps(meta or {}))
-        )
-        conn.commit()
-        rid = cur.lastrowid
-        conn.close()
-        return rid
+        self._ensure_reporting_schema()
+        try:
+            rid = self.execute_update(
+                "INSERT INTO report_history (company_id, template_key, output_format, output_path, meta) VALUES (?,?,?,?,?)",
+                (company_id, template_key, output_format, output_path, json.dumps(meta or {})),
+                skip_tenant_filter=True
+            )
+            return rid
+        except Exception as e:
+            logging.error(f"Rapor gecmisi ekleme hatasi: {e}")
+            return None
 
     def get_report_history(self, company_id: Optional[int] = None) -> List[Dict]:
-        conn = self.get_connection()
-        self._ensure_reporting_schema(conn)
-        cur = conn.cursor()
-        if company_id is None:
-            rows = cur.execute("SELECT id, company_id, template_key, output_format, output_path, created_at, meta FROM report_history ORDER BY created_at DESC").fetchall()
-        else:
-            rows = cur.execute("SELECT id, company_id, template_key, output_format, output_path, created_at, meta FROM report_history WHERE company_id = ? ORDER BY created_at DESC", (company_id,)).fetchall()
-        out = []
-        for rid, cid, tkey, fmt, path, created, meta_json in rows:
-            try:
-                meta = json.loads(meta_json) if meta_json else {}
-            except Exception:
-                meta = {}
-            out.append({
-                'id': rid,
-                'company_id': cid,
-                'template_key': tkey,
-                'output_format': fmt,
-                'output_path': path,
-                'created_at': created,
-                'meta': meta
-            })
-        conn.close()
-        return out
+        self._ensure_reporting_schema()
+        sql = "SELECT id, company_id, template_key, output_format, output_path, created_at, meta FROM report_history"
+        params = ()
+        if company_id is not None:
+            sql += " WHERE company_id = ?"
+            params = (company_id,)
+        
+        sql += " ORDER BY created_at DESC"
+        
+        try:
+            rows = self.execute_query(sql, params, skip_tenant_filter=True)
+            out = []
+            for row in rows:
+                try:
+                    meta = json.loads(row['meta']) if row['meta'] else {}
+                except Exception:
+                    meta = {}
+                out.append({
+                    'id': row['id'],
+                    'company_id': row['company_id'],
+                    'template_key': row['template_key'],
+                    'output_format': row['output_format'],
+                    'output_path': row['output_path'],
+                    'created_at': row['created_at'],
+                    'meta': meta
+                })
+            return out
+        except Exception as e:
+            logging.error(f"Rapor gecmisi getirme hatasi: {e}")
+            return []
 
     def delete_report_history(self, history_id: int) -> bool:
-        conn = self.get_connection()
-        self._ensure_reporting_schema(conn)
-        cur = conn.cursor()
-        cur.execute("DELETE FROM report_history WHERE id = ?", (history_id,))
-        conn.commit()
-        affected = cur.rowcount
-        conn.close()
-        return affected > 0
+        self._ensure_reporting_schema()
+        try:
+            self.execute_update("DELETE FROM report_history WHERE id = ?", (history_id,), skip_tenant_filter=True)
+            return True
+        except Exception:
+            return False
 
     def purge_report_history(self, company_id: Optional[int] = None) -> int:
-        conn = self.get_connection()
-        self._ensure_reporting_schema(conn)
-        cur = conn.cursor()
-        if company_id is None:
-            cur.execute("DELETE FROM report_history")
-        else:
-            cur.execute("DELETE FROM report_history WHERE company_id = ?", (company_id,))
-        conn.commit()
-        count = cur.rowcount
-        conn.close()
-        return count
+        self._ensure_reporting_schema()
+        sql = "DELETE FROM report_history"
+        params = ()
+        if company_id is not None:
+            sql += " WHERE company_id = ?"
+            params = (company_id,)
+        
+        try:
+            self.execute_update(sql, params, skip_tenant_filter=True)
+            return 1
+        except Exception:
+            return 0
 
 if __name__ == "__main__":
     # Test

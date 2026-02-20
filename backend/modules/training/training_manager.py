@@ -1,19 +1,16 @@
-import sqlite3
-import json
 import logging
 from datetime import datetime
+from typing import List, Dict, Optional
+from backend.core.base_manager import BaseTenantManager
 
-class TrainingManager:
-    def __init__(self, db_path):
-        self.db_path = db_path
+class TrainingManager(BaseTenantManager):
+    def __init__(self, db_path: str = None, company_id: Optional[int] = None) -> None:
+        super().__init__(db_path, company_id)
         self._init_tables()
 
     def _init_tables(self):
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
         # Training Programs table
-        cursor.execute('''
+        self.execute_update('''
             CREATE TABLE IF NOT EXISTS lms_training_programs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 company_id INTEGER NOT NULL,
@@ -27,7 +24,7 @@ class TrainingManager:
         ''')
         
         # Training Participants/Records table
-        cursor.execute('''
+        self.execute_update('''
             CREATE TABLE IF NOT EXISTS lms_training_records (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 company_id INTEGER NOT NULL,
@@ -39,84 +36,40 @@ class TrainingManager:
                 FOREIGN KEY (training_id) REFERENCES lms_training_programs (id)
             )
         ''')
-        
-        conn.commit()
-        conn.close()
 
     def add_training_program(self, company_id, title, description, training_type, content_url, duration_minutes):
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
         try:
-            cursor.execute('''
+            self.execute_update('''
                 INSERT INTO lms_training_programs (company_id, title, description, training_type, content_url, duration_minutes)
                 VALUES (?, ?, ?, ?, ?, ?)
-            ''', (company_id, title, description, training_type, content_url, duration_minutes))
-            conn.commit()
+            ''', (company_id, title, description, training_type, content_url, duration_minutes), company_id=company_id)
             return True
         except Exception as e:
             logging.error(f"Error adding training program: {e}")
             return False
-        finally:
-            conn.close()
 
-    def get_training_programs(self, company_id):
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        cursor.execute('SELECT * FROM lms_training_programs WHERE company_id = ? ORDER BY created_at DESC', (company_id,))
-        rows = cursor.fetchall()
-        conn.close()
-        return [dict(row) for row in rows]
+    def get_training_programs(self, company_id) -> List[Dict]:
+        rows = self.execute_query('SELECT * FROM lms_training_programs WHERE company_id = ? ORDER BY created_at DESC', (company_id,), company_id=company_id)
+        return rows
 
     def add_training_record(self, company_id, training_id, participant_name, status='assigned', score=None):
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
         try:
             completion_date = datetime.now().strftime('%Y-%m-%d') if status == 'completed' else None
-            cursor.execute('''
+            self.execute_update('''
                 INSERT INTO lms_training_records (company_id, training_id, participant_name, status, completion_date, score)
                 VALUES (?, ?, ?, ?, ?, ?)
-            ''', (company_id, training_id, participant_name, status, completion_date, score))
-            conn.commit()
+            ''', (company_id, training_id, participant_name, status, completion_date, score), company_id=company_id)
             return True
         except Exception as e:
             logging.error(f"Error adding training record: {e}")
             return False
-        finally:
-            conn.close()
 
-    def get_training_records(self, company_id):
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        cursor.execute('''
+    def get_training_records(self, company_id) -> List[Dict]:
+        rows = self.execute_query('''
             SELECT r.*, p.title as training_title 
             FROM lms_training_records r
             JOIN lms_training_programs p ON r.training_id = p.id
             WHERE r.company_id = ?
             ORDER BY r.completion_date DESC
-        ''', (company_id,))
-        rows = cursor.fetchall()
-        conn.close()
-        return [dict(row) for row in rows]
-    
-    def get_dashboard_stats(self, company_id):
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        stats = {}
-        
-        # Total Programs
-        cursor.execute('SELECT COUNT(*) FROM lms_training_programs WHERE company_id = ?', (company_id,))
-        stats['total_programs'] = cursor.fetchone()[0]
-        
-        # Total Completed Trainings
-        cursor.execute("SELECT COUNT(*) FROM lms_training_records WHERE company_id = ? AND status = 'completed'", (company_id,))
-        stats['completed_trainings'] = cursor.fetchone()[0]
-        
-        # Total Participants (Unique)
-        cursor.execute("SELECT COUNT(DISTINCT participant_name) FROM lms_training_records WHERE company_id = ?", (company_id,))
-        stats['total_participants'] = cursor.fetchone()[0]
-        
-        conn.close()
-        return stats
+        ''', (company_id,), company_id=company_id)
+        return rows
