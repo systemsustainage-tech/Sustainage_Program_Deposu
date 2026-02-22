@@ -8,7 +8,7 @@ from datetime import datetime
 from functools import wraps
 from typing import Optional, Dict
 from types import SimpleNamespace
-from flask import Flask, render_template, redirect, url_for, session, request, flash, send_file, g, jsonify, has_request_context, abort
+from flask import Flask, render_template, redirect, url_for, session, request, flash, send_file, g, jsonify, has_request_context, abort, make_response
 import time
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -145,6 +145,11 @@ def ensure_company_info_table() -> None:
 ensure_company_info_table()
 
 # Optional integrations
+USER_MANAGER_AVAILABLE = False
+IP_MANAGER_AVAILABLE = False
+MONITORING_AVAILABLE = False
+LICENSE_MANAGER_AVAILABLE = False
+
 try:
     from yonetim.kullanici_yonetimi.models.user_manager import UserManager
     USER_MANAGER_AVAILABLE = True
@@ -161,6 +166,13 @@ except Exception as e:
         def check_rate_limit(self, *args, **kwargs):
             return {'allowed': True, 'current_count': 0, 'limit': 999, 'reset_in': 0, 'blocked': False}
     rate_limiter = _DummyLimiter()
+
+try:
+    from modules.super_admin.components.license_generator import LicenseGenerator
+    LICENSE_MANAGER_AVAILABLE = True
+except Exception as e:
+    logging.error(f"LicenseGenerator import error: {e}")
+    LICENSE_MANAGER_AVAILABLE = False
 
 app = Flask(__name__)
 # Fix for login loop: Use a stable secret key if environment variable is not set
@@ -193,6 +205,12 @@ limiter = Limiter(
     storage_uri="memory://"
 )
 
+def limiter_exempt(f):
+    func = getattr(limiter, 'exempt', None)
+    if callable(func):
+        return func(f)
+    return f
+
 @app.errorhandler(429)
 def rate_limit_error(e):
     client_ip = get_remote_address()
@@ -217,6 +235,21 @@ def gettext(key, default=None):
 
 app.jinja_env.globals.update(_=gettext, lang=gettext)
 _ = gettext
+
+@app.route('/set_language/<lang>', endpoint='set_language')
+@app.route('/set-language/<lang>')
+def set_language(lang):
+    if lang in language_manager.translations:
+        session['lang'] = lang
+        resp = make_response(redirect(request.referrer or url_for('dashboard')))
+        resp.set_cookie('lang', lang, max_age=60 * 60 * 24 * 30)
+        return resp
+    return redirect(request.referrer or url_for('dashboard'))
+
+@app.before_request
+def load_language_preference():
+    if 'lang' not in session:
+        session['lang'] = request.cookies.get('lang', 'tr')
 
 from modules.environmental.carbon_manager import CarbonManager
 from modules.environmental.carbon_reporting import CarbonReporting
@@ -475,6 +508,61 @@ def enforce_session_timeout():
     except Exception as e:
         logging.error(f"Session timeout enforcement error: {e}")
 
+@app.before_request
+def license_check():
+    if not request.path.startswith('/api/'):
+        return
+    if request.endpoint in ['api_login', 'api_register', 'api_logout', 'static']:
+        return
+
+    def check_constraints(payload):
+        allowed_domains = payload.get('allowed_domains')
+        if allowed_domains and isinstance(allowed_domains, list) and len(allowed_domains) > 0:
+            request_domain = request.host.split(':')[0].lower()
+            normalized_allowed = [d.lower() for d in allowed_domains]
+            if request_domain not in normalized_allowed:
+                return False, f"Domain '{request_domain}' not authorized by license."
+
+        allowed_ips = payload.get('allowed_ips')
+        if allowed_ips and isinstance(allowed_ips, list) and len(allowed_ips) > 0:
+            forwarded_for = request.headers.get('X-Forwarded-For')
+            if forwarded_for:
+                client_ip = forwarded_for.split(',')[0].strip()
+            else:
+                try:
+                    client_ip = get_remote_address()
+                except Exception:
+                    client_ip = request.remote_addr or 'unknown'
+            if client_ip not in allowed_ips:
+                return False, f"IP '{client_ip}' not authorized by license."
+        return True, None
+
+    api_key = request.headers.get('X-License-Key')
+    if api_key:
+        is_valid, msg, payload = license_manager.verify_license_key(api_key)
+        if not is_valid:
+            return jsonify({'error': f'License Error: {msg}'}), 403
+        allowed, fail_msg = check_constraints(payload)
+        if not allowed:
+            return jsonify({'error': f'License Access Denied: {fail_msg}'}), 403
+        g.license = payload
+        return
+
+    if 'company_id' in session:
+        active_key = license_manager.get_active_license(session['company_id'])
+        if not active_key:
+            return jsonify({'error': 'No active license found for this company.'}), 403
+        is_valid, msg, payload = license_manager.verify_license_key(active_key)
+        if not is_valid:
+            return jsonify({'error': f'License Expired/Invalid: {msg}'}), 403
+        allowed, fail_msg = check_constraints(payload)
+        if not allowed:
+            return jsonify({'error': f'License Access Denied: {fail_msg}'}), 403
+        g.license = payload
+        return
+
+    return jsonify({'error': 'License verification failed. Please provide X-License-Key or login.'}), 403
+
 def get_db():
     return TenantAwareDB(DB_PATH)
 
@@ -504,7 +592,7 @@ def super_admin_required(f):
         if 'user' not in session:
             return redirect(url_for('login'))
         role = str(session.get('role', 'User')).lower()
-        if role not in ['super_admin', 'admin', 'test admin']:
+        if role not in ['super_admin', 'test admin']:
             flash('Bu sayfaya sadece Süper Admin erişebilir.', 'danger')
             return redirect(url_for('dashboard'))
         return f(*args, **kwargs)
@@ -625,6 +713,18 @@ def saas_demo_api():
         
     return jsonify(stats)
 
+@app.route('/api/v1/translations')
+def api_translations():
+    current_lang = session.get('lang')
+    if not current_lang:
+        current_lang = request.cookies.get('lang', 'tr')
+    translations = language_manager.get_all_translations(current_lang)
+    version = language_manager.get_version(current_lang)
+    response = jsonify({'lang': current_lang, 'translations': translations})
+    response.set_etag(version)
+    response.headers['Cache-Control'] = 'no-cache, must-revalidate'
+    return response.make_conditional(request)
+
 @app.route('/api/dashboard/stats')
 @require_company_context
 def dashboard_stats_api():
@@ -660,7 +760,6 @@ def dashboard_stats_api():
     return jsonify(stats)
 
 @app.route('/api/v1/dashboard-stats')
-@require_company_context
 def api_dashboard_stats_v1():
     """
     New API for Vue.js Dashboard.
@@ -766,7 +865,7 @@ def index():
     return redirect(url_for('login'))
 
 @app.route('/login', methods=['GET', 'POST'])
-@limiter.exempt
+@limiter_exempt
 def login():
     client_ip = request.remote_addr or 'unknown'
 
@@ -854,20 +953,43 @@ def logout():
     session.clear()
     return redirect(url_for('login'))
 
-@app.route('/set_language/<lang>')
-def set_language(lang):
-    session['lang'] = lang
-    return redirect(request.referrer or url_for('dashboard'))
-
 @app.route('/reporting_journey')
 @require_company_context
 def reporting_journey():
     if 'user' not in session:
         return redirect(url_for('login'))
-    return render_template('reporting_journey.html')
+    try:
+        from backend.core.reporting_journey_manager import ReportingJourneyManager
+        company_id = g.company_id
+        manager = ReportingJourneyManager()
+        journey = manager.get_journey_status(company_id)
+    except Exception:
+        logging.exception("Reporting journey error")
+        journey = []
+    return render_template('reporting_journey.html', journey=journey)
+
+@app.route('/journey')
+@require_company_context
+def reporting_journey_alias():
+    return redirect(url_for('reporting_journey'))
+
+@app.route('/journey/complete/<int:step_number>', methods=['POST'])
+@require_company_context
+def complete_journey_step(step_number):
+    if 'user' not in session:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+    try:
+        from backend.core.reporting_journey_manager import ReportingJourneyManager
+        company_id = g.company_id
+        manager = ReportingJourneyManager()
+        success = manager.mark_step_completed(company_id, step_number)
+        return jsonify({'success': success})
+    except Exception as e:
+        logging.error(f"Complete journey step error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/forgot_password', methods=['GET', 'POST'])
-@limiter.exempt
+@limiter_exempt
 def forgot_password():
     if request.method == 'POST':
         username = (request.form.get('username') or '').strip()
@@ -895,7 +1017,7 @@ def forgot_password():
 
 
 @app.route('/verify_reset_code', methods=['GET', 'POST'])
-@limiter.exempt
+@limiter_exempt
 def verify_reset_code():
     username = session.get('pw_reset_username')
     if not username:
@@ -912,7 +1034,7 @@ def verify_reset_code():
 
 
 @app.route('/reset_password', methods=['GET', 'POST'])
-@limiter.exempt
+@limiter_exempt
 def reset_password_web():
     username = session.get('pw_reset_username')
     code = session.get('pw_reset_code')
@@ -5450,11 +5572,6 @@ def targets_add():
         
     return redirect(url_for('targets_module'))
 
-# --- Super Admin Panel ---
-IP_MANAGER_AVAILABLE = False
-MONITORING_AVAILABLE = False
-LICENSE_MANAGER_AVAILABLE = False
-
 @app.route('/super_admin')
 @super_admin_required
 @require_company_context
@@ -5494,6 +5611,130 @@ def super_admin_panel():
         ip_available=IP_MANAGER_AVAILABLE,
         monitoring_available=MONITORING_AVAILABLE,
         license_available=LICENSE_MANAGER_AVAILABLE
+    )
+
+@app.route('/super_admin/rate', methods=['GET', 'POST'])
+@super_admin_required
+@require_company_context
+def super_admin_rate():
+    if 'user' not in session:
+        return redirect(url_for('login'))
+    company_id = g.company_id
+    if not hasattr(rate_limiter, 'get_rate_limit_stats'):
+        flash('Rate limiting bileşeni yüklenemedi.', 'danger')
+        return redirect(url_for('super_admin_panel'))
+    if request.method == 'POST':
+        action = request.form.get('action')
+        if action == 'cleanup':
+            try:
+                deleted = rate_limiter.cleanup_old_records(24)
+                flash(f'{deleted} eski kayıt temizlendi.', 'success')
+            except Exception as e:
+                logging.error(f"Rate cleanup error: {e}")
+                flash('Kayıtlar temizlenirken hata oluştu.', 'danger')
+        elif action == 'save_rules':
+            keys = [
+                'rl_login_limit',
+                'rl_login_window',
+                'rl_api_limit',
+                'rl_api_window',
+                'rl_report_limit',
+                'rl_report_window',
+                'rl_export_limit',
+                'rl_export_window',
+            ]
+            values = {}
+            for k in keys:
+                values[k] = request.form.get(k, '').strip()
+            try:
+                import sqlite3
+                conn = sqlite3.connect(DB_PATH)
+                cur = conn.cursor()
+                cur.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS system_settings (
+                        key TEXT,
+                        value TEXT,
+                        category TEXT,
+                        description TEXT,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        company_id INTEGER,
+                        PRIMARY KEY (key, company_id)
+                    )
+                    """
+                )
+                for k, val in values.items():
+                    if k.endswith('_limit') or k.endswith('_window'):
+                        if val and not str(val).isdigit():
+                            conn.close()
+                            flash(f"Geçersiz sayı: {k} = {val}", 'danger')
+                            return redirect(url_for('super_admin_rate'))
+                    cur.execute(
+                        """
+                        INSERT INTO system_settings (key, value, category, description, company_id)
+                        VALUES (?, ?, 'rate_limit', 'Rate limit ayarı', ?)
+                        ON CONFLICT(key, company_id) DO UPDATE SET value=excluded.value, updated_at=CURRENT_TIMESTAMP
+                        """,
+                        (k, val, company_id),
+                    )
+                conn.commit()
+                conn.close()
+                flash('Rate limit kuralları güncellendi.', 'success')
+            except Exception as e:
+                logging.error(f"Save rate rules error: {e}")
+                flash('Rate limit kuralları kaydedilemedi.', 'danger')
+        return redirect(url_for('super_admin_rate'))
+    stats = []
+    try:
+        stats = rate_limiter.get_rate_limit_stats()
+    except Exception as e:
+        logging.error(f"Get rate stats error: {e}")
+    current_rules = {}
+    try:
+        import sqlite3
+        conn = sqlite3.connect(DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS system_settings (
+                key TEXT,
+                value TEXT,
+                category TEXT,
+                description TEXT,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                company_id INTEGER,
+                PRIMARY KEY (key, company_id)
+            )
+            """
+        )
+        keys = [
+            'rl_login_limit',
+            'rl_login_window',
+            'rl_api_limit',
+            'rl_api_window',
+            'rl_report_limit',
+            'rl_report_window',
+            'rl_export_limit',
+            'rl_export_window',
+        ]
+        for k in keys:
+            cur.execute(
+                "SELECT value FROM system_settings WHERE key=? AND company_id=?",
+                (k, company_id),
+            )
+            row = cur.fetchone()
+            if row and row[0] is not None:
+                current_rules[k] = str(row[0])
+            else:
+                current_rules[k] = ''
+        conn.close()
+    except Exception as e:
+        logging.error(f"Load rate rules error: {e}")
+    return render_template(
+        'super_admin_rate.html',
+        title='Rate Limiting',
+        rate_stats=stats,
+        current_rules=current_rules,
     )
 
 @app.route('/super_admin/system_stats')
@@ -5538,6 +5779,283 @@ def super_admin_system_stats():
         title='Sistem İstatistikleri',
         stats=stats
     )
+
+
+@app.route('/super_admin/modules', methods=['GET', 'POST'])
+@super_admin_required
+def super_admin_modules():
+    if 'user' not in session:
+        return redirect(url_for('login'))
+    conn = get_db()
+    try:
+        companies = conn.execute(
+            "SELECT id, name FROM companies ORDER BY name"
+        ).fetchall()
+    except Exception:
+        companies = []
+    if not companies:
+        conn.close()
+        flash('Sistemde tanımlı firma bulunamadı.', 'warning')
+        return redirect(url_for('super_admin_panel'))
+    selected_company_id = request.values.get('company_id')
+    if selected_company_id:
+        try:
+            selected_company_id = int(selected_company_id)
+        except ValueError:
+            selected_company_id = companies[0]['id']
+    else:
+        selected_company_id = companies[0]['id']
+    modules = []
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT 
+                m.id,
+                m.module_code,
+                m.module_name,
+                m.category,
+                m.is_core,
+                COALESCE(cm.is_enabled, m.default_enabled) AS is_enabled
+            FROM modules m
+            LEFT JOIN company_modules cm 
+                ON m.id = cm.module_id AND cm.company_id = ?
+            ORDER BY m.display_order, m.module_name
+            """,
+            (selected_company_id,),
+        )
+        modules = cur.fetchall()
+        if request.method == 'POST':
+            selected_codes = request.form.getlist('module_codes')
+            cur.execute(
+                """
+                SELECT id, module_code, is_core, default_enabled 
+                FROM modules
+                ORDER BY display_order, module_name
+                """
+            )
+            all_modules = cur.fetchall()
+            cur.execute(
+                """
+                SELECT module_id, is_enabled 
+                FROM company_modules
+                WHERE company_id = ?
+                """,
+                (selected_company_id,),
+            )
+            existing = {row['module_id']: row['is_enabled'] for row in cur.fetchall()}
+            for mod in all_modules:
+                module_id = mod['id']
+                module_code = mod['module_code']
+                is_core = mod['is_core']
+                if is_core:
+                    is_enabled = 1
+                else:
+                    is_enabled = 1 if module_code in selected_codes else 0
+                if module_id in existing:
+                    cur.execute(
+                        """
+                        UPDATE company_modules
+                        SET is_enabled = ?
+                        WHERE company_id = ? AND module_id = ?
+                        """,
+                        (is_enabled, selected_company_id, module_id),
+                    )
+                else:
+                    cur.execute(
+                        """
+                        INSERT INTO company_modules (company_id, module_id, is_enabled)
+                        VALUES (?, ?, ?)
+                        """,
+                        (selected_company_id, module_id, is_enabled),
+                    )
+            conn.commit()
+            flash('Modül ayarları güncellendi.', 'success')
+            return redirect(url_for('super_admin_modules', company_id=selected_company_id))
+    except Exception as e:
+        logging.error(f"Super admin module config error: {e}")
+        flash('Modül ayarları yüklenirken bir hata oluştu.', 'danger')
+    finally:
+        try:
+            conn.close()
+        except Exception:
+            pass
+    return render_template(
+        'super_admin_modules.html',
+        title='Modül Yönetimi',
+        companies=companies,
+        selected_company_id=selected_company_id,
+        modules=modules,
+    )
+
+@app.route('/super_admin/tests')
+@super_admin_required
+@require_company_context
+def super_admin_tests():
+    import os
+
+    if 'user' not in session:
+        return redirect(url_for('login'))
+    test_files = []
+    legacy_tests = {
+        'connectivity': {'path': 'tests/test_connectivity.py', 'name': 'Bağlantı Testi'},
+        'performance': {'path': 'tests/test_database_performance.py', 'name': 'Veritabanı Performans Testi'},
+        'users': {'path': 'tests/test_user_management.py', 'name': 'Kullanıcı Yönetimi Testi'},
+        'reporting': {'path': 'tests/test_reporting.py', 'name': 'Raporlama Testi'},
+        'email': {'path': 'tests/test_email_service.py', 'name': 'E-posta Servis Testi'},
+    }
+    for key, info in legacy_tests.items():
+        if os.path.exists(os.path.join(BASE_DIR, info['path'])):
+            test_files.append(
+                {
+                    'id': key,
+                    'name': info['name'],
+                    'path': info['path'],
+                    'category': 'Sistem Testleri',
+                }
+            )
+    testler_dir = os.path.join(BASE_DIR, 'TESTLER')
+    if os.path.exists(testler_dir):
+        for filename in os.listdir(testler_dir):
+            if filename.endswith('.py'):
+                file_path = os.path.join('TESTLER', filename)
+                test_id = filename
+                test_name = filename.replace('.py', '').replace('_', ' ').title()
+                test_files.append(
+                    {
+                        'id': test_id,
+                        'name': test_name,
+                        'path': file_path,
+                        'category': 'TESTLER',
+                    }
+                )
+    return render_template('super_admin_tests.html', tests=test_files)
+
+@app.route('/super_admin/run_test/<test_id>', methods=['POST'])
+@super_admin_required
+@require_company_context
+def super_admin_run_test(test_id: str):
+    import subprocess
+    import sys
+    import os
+
+    if 'user' not in session:
+        return jsonify({'success': False, 'error': 'Oturum bulunamadı'})
+    test_path = None
+    legacy_tests = {
+        'connectivity': {'path': 'tests/test_connectivity.py', 'name': 'Bağlantı Testi'},
+        'performance': {'path': 'tests/test_database_performance.py', 'name': 'Veritabanı Performans Testi'},
+        'users': {'path': 'tests/test_user_management.py', 'name': 'Kullanıcı Yönetimi Testi'},
+        'reporting': {'path': 'tests/test_reporting.py', 'name': 'Raporlama Testi'},
+        'email': {'path': 'tests/test_email_service.py', 'name': 'E-posta Servis Testi'},
+    }
+    if test_id in legacy_tests:
+        test_path = os.path.join(BASE_DIR, legacy_tests[test_id]['path'])
+    elif test_id.endswith('.py'):
+        potential_path = os.path.join(BASE_DIR, 'TESTLER', test_id)
+        if os.path.exists(potential_path) and os.path.isfile(potential_path):
+            test_path = potential_path
+    if not test_path or not os.path.exists(test_path):
+        return jsonify({'success': False, 'error': f'Test dosyası bulunamadı: {test_id}'})
+    try:
+        cmd = [sys.executable, test_path]
+        proc = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            cwd=BASE_DIR,
+        )
+        out, err = proc.communicate(timeout=300)
+        return jsonify(
+            {
+                'success': proc.returncode == 0,
+                'returncode': proc.returncode,
+                'stdout': out.decode(errors='replace'),
+                'stderr': err.decode(errors='replace'),
+            }
+        )
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/super_admin/ip')
+@super_admin_required
+@require_company_context
+def super_admin_ip():
+    if 'user' not in session:
+        return redirect(url_for('login'))
+    flash('IP yönetimi özelliği henüz aktif değil.', 'warning')
+    return redirect(url_for('super_admin_panel'))
+
+@app.route('/super_admin/monitoring')
+@super_admin_required
+def super_admin_monitoring():
+    if 'user' not in session:
+        return redirect(url_for('login'))
+    flash('Monitoring özelliği henüz aktif değil.', 'warning')
+    return redirect(url_for('super_admin_panel'))
+
+@app.route('/super_admin/system_logs')
+@super_admin_required
+@require_company_context
+def super_admin_system_logs():
+    if 'user' not in session:
+        return redirect(url_for('login'))
+    flash('Sistem logları ekranı henüz aktif değil.', 'warning')
+    return redirect(url_for('super_admin_panel'))
+
+@app.route('/super_admin/twofa')
+@super_admin_required
+@require_company_context
+def super_admin_twofa():
+    if 'user' not in session:
+        return redirect(url_for('login'))
+    flash('2FA yönetimi henüz aktif değil.', 'warning')
+    return redirect(url_for('super_admin_panel'))
+
+@app.route('/super_admin/backup')
+@super_admin_required
+@require_company_context
+def super_admin_backup():
+    if 'user' not in session:
+        return redirect(url_for('login'))
+    flash('Yedekleme ekranı henüz aktif değil.', 'warning')
+    return redirect(url_for('super_admin_panel'))
+
+@app.route('/super_admin/performance', methods=['GET', 'POST'])
+@super_admin_required
+@require_company_context
+def super_admin_performance():
+    if 'user' not in session:
+        return redirect(url_for('login'))
+    flash('Performans ekranı henüz aktif değil.', 'warning')
+    return redirect(url_for('super_admin_panel'))
+
+@app.route('/super_admin/settings')
+@super_admin_required
+@require_company_context
+def super_admin_settings():
+    if 'user' not in session:
+        return redirect(url_for('login'))
+    flash('Sistem ayarları ekranı henüz aktif değil.', 'warning')
+    return redirect(url_for('super_admin_panel'))
+
+@app.route('/super_admin/maintenance')
+@super_admin_required
+@require_company_context
+def super_admin_maintenance():
+    if 'user' not in session:
+        return redirect(url_for('login'))
+    flash('Bakım ve onarım ekranı henüz aktif değil.', 'warning')
+    return redirect(url_for('super_admin_panel'))
+
+@app.route('/super_admin/security')
+@super_admin_required
+@require_company_context
+def super_admin_security():
+    if 'user' not in session:
+        return redirect(url_for('login'))
+    flash('Güvenlik ayarları ekranı henüz aktif değil.', 'warning')
+    return redirect(url_for('super_admin_panel'))
 
 @app.route('/super_admin/audit_logs')
 @super_admin_required
@@ -5610,6 +6128,81 @@ def super_admin_audit_logs():
         'super_admin_audit_logs.html',
         title='Audit Logları',
         logs=logs
+    )
+
+
+@app.route('/super_admin/licenses', methods=['GET', 'POST'])
+@super_admin_required
+def super_admin_licenses():
+    if 'user' not in session:
+        return redirect(url_for('login'))
+    if not LICENSE_MANAGER_AVAILABLE:
+        flash('Lisans bileşeni yüklenemedi.', 'danger')
+        return redirect(url_for('super_admin_panel'))
+    manager = LicenseGenerator(DB_PATH)
+    validation_result = None
+    generated_result = None
+    if request.method == 'POST':
+        action = request.form.get('action')
+        if action == 'generate':
+            company_name = request.form.get('company_name', '').strip()
+            license_type = request.form.get('license_type', '').strip() or 'standard'
+            duration_days = int(request.form.get('duration_days') or 0)
+            max_users = int(request.form.get('max_users') or 0)
+            modules_raw = request.form.get('modules', '').strip()
+            modules = []
+            if modules_raw:
+                modules = [m.strip() for m in modules_raw.split(',') if m.strip()]
+            contact_email = request.form.get('contact_email', '').strip() or None
+            contact_phone = request.form.get('contact_phone', '').strip() or None
+            result = manager.generate_license_key(
+                company_name,
+                license_type,
+                duration_days,
+                max_users,
+                modules,
+                None,
+                contact_email,
+                contact_phone,
+            )
+            generated_result = result
+            if result.get('success'):
+                flash('Lisans anahtarı oluşturuldu.', 'success')
+            else:
+                flash(result.get('message', ''), 'danger')
+        elif action == 'deactivate':
+            license_id = int(request.form.get('license_id') or 0)
+            reason = request.form.get('reason', '').strip()
+            if license_id and manager.deactivate_license(license_id, reason):
+                flash('Lisans devre dışı bırakıldı.', 'success')
+            else:
+                flash('Lisans devre dışı bırakılamadı.', 'danger')
+        elif action == 'renew':
+            license_id = int(request.form.get('license_id') or 0)
+            additional_days = int(request.form.get('additional_days') or 0)
+            if license_id and additional_days > 0 and manager.renew_license(license_id, additional_days):
+                flash('Lisans süresi uzatıldı.', 'success')
+            else:
+                flash('Lisans süresi uzatılamadı.', 'danger')
+        elif action == 'validate':
+            license_key = request.form.get('license_key', '').strip()
+            hw_id = request.form.get('hardware_id', '').strip() or None
+            if license_key:
+                validation_result = manager.validate_license(license_key, hw_id)
+                if validation_result.get('valid'):
+                    flash('Lisans geçerli.', 'success')
+                else:
+                    flash(validation_result.get('message', ''), 'danger')
+        return redirect(url_for('super_admin_licenses'))
+    licenses = manager.get_all_licenses()
+    stats = manager.get_license_statistics()
+    return render_template(
+        'super_admin_licenses.html',
+        title='Lisans Yönetimi',
+        licenses=licenses,
+        stats=stats,
+        validation_result=validation_result,
+        generated_result=generated_result,
     )
 
 # --- Legal & Compliance Routes ---

@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}Modül Yönetimi{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+<div>
+<h1 class="h2">Modül Yönetimi</h1>
+<p class="text-muted mb-0">
+            Firmalar için hangi modüllerin açık olacağını buradan belirleyin.
+        </p>
+</div>
+<div class="btn-toolbar mb-2 mb-md-0">
+<a class="btn btn-sm btn-outline-secondary" href="{{ url_for('super_admin_panel') }}"><i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}</a>
+</div>
+</div>
+<div class="card mb-4 shadow-sm border-0">
+<div class="card-body">
+<form class="row g-3" method="get">
+<div class="col-md-6">
+<label class="form-label">Firma Seç</label>
+<select class="form-select" name="company_id" onchange="this.form.submit()">
+                {% for c in companies %}
+                <option value="{{ c.id }}" {% if c.id == selected_company_id %}selected{% endif %}>{{ c.name }}</option>
+                {% endfor %}
+            </select>
+</div>
+</form>
+</div>
+</div>
+<div class="card shadow-sm border-0">
+<div class="card-header d-flex justify-content-between align-items-center">
+<h5 class="mb-0">Modül Listesi</h5>
+<small class="text-muted">Çekirdek (CORE) modüller her zaman açıktır.</small>
+</div>
+<div class="card-body p-0">
+<form method="post">
+<input name="company_id" type="hidden" value="{{ selected_company_id }}"/>
+<div class="table-responsive">
+<table class="table table-striped mb-0 align-middle">
+<thead>
+<tr>
+<th style="width: 10%;">Kod</th>
+<th style="width: 30%;">Ad</th>
+<th style="width: 20%;">Kategori</th>
+<th style="width: 15%;">Tür</th>
+<th style="width: 15%;">Durum</th>
+</tr>
+</thead>
+<tbody>
+                    {% for m in modules %}
+                    <tr>
+<td><span class="badge bg-light text-muted border">{{ m.module_code }}</span></td>
+<td>{{ m.module_name }}</td>
+<td>{{ m.category or '-' }}</td>
+<td>
+                            {% if m.is_core %}
+                            <span class="badge bg-primary">CORE</span>
+                            {% else %}
+                            <span class="badge bg-secondary">İsteğe Bağlı</span>
+                            {% endif %}
+                        </td>
+<td>
+                            {% if m.is_core %}
+                            <div class="form-check form-switch mb-0">
+<input checked="" class="form-check-input" disabled="" type="checkbox"/>
+<label class="form-check-label text-muted small">Her zaman açık</label>
+</div>
+                            {% else %}
+                            <div class="form-check form-switch mb-0">
+<input class="form-check-input" id="mod_{{ m.module_code }}" name="module_codes" type="checkbox" value="{{ m.module_code }}" {% if m.is_enabled %}checked{% endif %}/>
+<label class="form-check-label" for="mod_{{ m.module_code }}">{{ 'Açık' if m.is_enabled else 'Kapalı' }}</label>
+</div>
+                            {% endif %}
+                        </td>
+</tr>
+                    {% else %}
+                    <tr>
+<td class="text-center text-muted" colspan="5">Modül bulunamadı.</td>
+</tr>
+                    {% endfor %}
+                </tbody>
+</table>
+</div>
+<div class="border-top p-3 d-flex justify-content-end">
+<button class="btn btn-success" type="submit">
+<i class="bi bi-save"></i> Değişiklikleri Kaydet
+            </button>
+</div>
+</form>
+</div>
+</div>
+{% endblock %}
+

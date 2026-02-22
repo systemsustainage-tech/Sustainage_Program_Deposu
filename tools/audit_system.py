@@ -56,9 +56,22 @@ def scan_files():
     used_keys = set()
     missing_keys_tr = set()
     errors = []
+    syntax_errors = []
+    route_errors = []
     
     # Setup Jinja2 Env for checking
     jinja_env = Environment(loader=FileSystemLoader(TEMPLATES_DIR))
+
+    try:
+        if BASE_DIR not in sys.path:
+            sys.path.append(BASE_DIR)
+        import web_app
+        flask_app = web_app.app
+        valid_endpoints = set(flask_app.view_functions.keys())
+        print(f"Loaded {len(valid_endpoints)} Flask endpoints for url_for checks.")
+    except Exception as e:
+        print(f"WARNING: Could not import web_app for endpoint checks: {e}")
+        valid_endpoints = None
 
     # 1. Load Translation Keys
     tr_data = load_json(LOCALES_PATH_TR)
@@ -87,7 +100,9 @@ def scan_files():
             if ext == '.py':
                 syntax_err = check_python_syntax(path)
                 if syntax_err:
-                    errors.append(f"[SYNTAX ERROR] {rel_path}: {syntax_err}")
+                    msg = f"[SYNTAX ERROR] {rel_path}: {syntax_err}"
+                    errors.append(msg)
+                    syntax_errors.append(msg)
                 
                 matches = LANG_PATTERN.findall(content)
                 for key in matches:
@@ -110,6 +125,12 @@ def scan_files():
                     if key not in defined_keys_tr:
                         missing_keys_tr.add(key)
 
+                if valid_endpoints is not None and os.path.basename(path) == "super_admin.html":
+                    endpoint_matches = re.findall(r"url_for\(\s*['\"]([^'\"]+)['\"]", content)
+                    for endpoint in endpoint_matches:
+                        if endpoint not in valid_endpoints:
+                            route_errors.append(f"[ROUTE ERROR] {rel_path}: url_for('{endpoint}') endpoint not found in Flask app.")
+
             # C. Check Vue/JS & Keys
             elif ext in ['.vue', '.js', '.jsx']:
                 # Find $t('key') or .t('key')
@@ -130,16 +151,29 @@ def scan_files():
             print(f" - {k}")
     else:
         print("No missing keys found in scanned files.")
+
+    if route_errors:
+        print(f"\nRoute errors ({len(route_errors)}):")
+        for err in route_errors:
+            print(f" - {err}")
+    else:
+        print("No missing Flask endpoints detected in templates.")
     
     # Save report
     report = {
         "missing_tr": list(missing_keys_tr),
-        "errors": errors
+        "errors": errors,
+        "syntax_errors": syntax_errors,
+        "route_errors": route_errors
     }
     with open(os.path.join(BASE_DIR, 'tools', 'audit_report.json'), 'w') as f:
         json.dump(report, f, indent=4)
         
     print(f"\nAudit complete. Report saved to tools/audit_report.json")
+    if syntax_errors or route_errors:
+        return 1
+    return 0
 
 if __name__ == "__main__":
-    scan_files()
+    exit_code = scan_files()
+    sys.exit(exit_code)

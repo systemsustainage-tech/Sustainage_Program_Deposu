@@ -1,17 +1,17 @@
 {
     "TSRS": {
         "version": "1.0",
-        "last_checked": "2026-02-20T12:04:48.446921",
+        "last_checked": "2026-02-22T00:23:34.860544",
         "url": "https://kgk.gov.tr/tsrs"
     },
     "ESRS": {
         "version": "1.0",
-        "last_checked": "2026-02-20T12:04:48.446921",
+        "last_checked": "2026-02-22T00:23:34.860544",
         "url": "https://efrag.org/esrs"
     },
     "SASB": {
         "version": "1.0",
-        "last_checked": "2026-02-20T12:04:48.446921",
+        "last_checked": "2026-02-22T00:23:34.860544",
         "url": "https://sasb.org/standards"
     }
 }

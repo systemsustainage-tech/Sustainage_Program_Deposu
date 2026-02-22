@@ -12,6 +12,34 @@
     <style>
       body { background-color: #f8f9fa; }
       .navbar { margin-bottom: 20px; }
+
+      /* Footer styling */
+      .footer-main {
+        font-size: 0.875rem;
+        color: #6c757d;
+        background-color: #f8f9fa;
+      }
+      .footer-main h5 {
+        font-size: 0.9rem;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: #343a40;
+      }
+      .footer-logo {
+        font-weight: 600;
+        color: #0d6efd;
+      }
+      .footer-slogan {
+        max-width: 420px;
+      }
+      .footer-link {
+        color: #6c757d;
+        text-decoration: none;
+      }
+      .footer-link:hover {
+        color: #0d6efd;
+        text-decoration: underline;
+      }
     </style>
   </head>
   <body class="d-flex flex-column min-vh-100">
@@ -103,7 +131,7 @@
                 <li><hr class="dropdown-divider"></li>
                 <li><a class="dropdown-item" href="{{ url_for('user_add') }}">{{ lang('new_user', 'Yeni Kullanıcı') }}</a></li>
                 <li><a class="dropdown-item" href="{{ url_for('company_add') }}">{{ lang('new_company', 'Yeni Şirket') }}</a></li>
-                {% if session.role and session.role|lower in ['super_admin', 'admin', 'test admin'] %}
+                {% if session.role and session.role|lower in ['super_admin', 'test admin'] %}
                 <li><hr class="dropdown-divider"></li>
                 <li><a class="dropdown-item text-danger" href="{{ url_for('super_admin_panel') }}">{{ lang('admin_panel', 'Super Admin Paneli') }}</a></li>
                 {% endif %}
@@ -141,32 +169,42 @@
     </main>
 
     <!-- Footer -->
-    <footer class="bg-light text-lg-start mt-auto border-top">
-      <div class="container py-4">
-        <div class="row align-items-start mb-3">
-          <div class="col-lg-6 col-md-12 mb-4 mb-md-0">
-            <h5 class="text-uppercase mb-2">Sustainage</h5>
-            <p class="mb-0">
+    <footer class="footer-main mt-auto border-top">
+      <div class="container py-3">
+        <div class="row align-items-start gy-2">
+          <div class="col-lg-4 col-md-4">
+            <h5 class="footer-logo mb-1">Sustainage</h5>
+            <p class="footer-slogan mb-0">
               {{ lang('footer_slogan', 'Kurumsal sürdürülebilirlik raporlama ve yönetim platformu. Geleceği bugünden tasarlayın.') }}
             </p>
           </div>
-          <div class="col-lg-3 col-md-6 mb-4 mb-md-0">
-            <h5 class="text-uppercase mb-2">{{ lang('footer_legal', 'Yasal') }}</h5>
+          <div class="col-lg-4 col-md-4">
+            <h5 class="mb-1">{{ lang('footer_legal', 'Yasal') }}</h5>
             <ul class="list-unstyled mb-0">
-              <li><a href="{{ url_for('legal_privacy') }}" class="text-dark text-decoration-none">{{ lang('footer_privacy', 'Gizlilik Politikası') }}</a></li>
-              <li><a href="{{ url_for('legal_sla') }}" class="text-dark text-decoration-none">{{ lang('footer_sla', 'Hizmet Seviyesi (SLA)') }}</a></li>
-              <li><a href="{{ url_for('legal_dpa') }}" class="text-dark text-decoration-none">{{ lang('footer_dpa', 'Veri İşleme (DPA)') }}</a></li>
+              <li class="mb-1">
+                <a href="{{ url_for('legal_privacy') }}" class="footer-link">{{ lang('footer_privacy', 'Gizlilik Politikası') }}</a>
+              </li>
+              <li class="mb-1">
+                <a href="{{ url_for('legal_sla') }}" class="footer-link">{{ lang('footer_sla', 'Hizmet Seviyesi (SLA)') }}</a>
+              </li>
+              <li class="mb-0">
+                <a href="{{ url_for('legal_dpa') }}" class="footer-link">{{ lang('footer_dpa', 'Veri İşleme (DPA)') }}</a>
+              </li>
             </ul>
           </div>
-          <div class="col-lg-3 col-md-6 mb-4 mb-md-0">
-            <h5 class="text-uppercase mb-2">{{ lang('footer_support', 'Destek') }}</h5>
+          <div class="col-lg-4 col-md-4">
+            <h5 class="mb-1">{{ lang('footer_support', 'Destek') }}</h5>
             <ul class="list-unstyled mb-0">
-              <li><a href="{{ url_for('help_module') }}" class="text-dark text-decoration-none">{{ lang('footer_help_center', 'Yardım Merkezi') }}</a></li>
-              <li><a href="mailto:support@sustainage.com" class="text-dark text-decoration-none">{{ lang('footer_contact_us', 'Bize Ulaşın') }}</a></li>
+              <li class="mb-1">
+                <a href="{{ url_for('help_module') }}" class="footer-link">{{ lang('footer_help_center', 'Yardım Merkezi') }}</a>
+              </li>
+              <li class="mb-0">
+                <a href="mailto:support@sustainage.com" class="footer-link">{{ lang('footer_contact_us', 'Bize Ulaşın') }}</a>
+              </li>
             </ul>
           </div>
         </div>
-        <div class="row border-top pt-2 mt-1">
+        <div class="row border-top pt-2 mt-2">
           <div class="col-12 text-center small text-muted">
             {{ lang('footer_copyright', '© 2026 Sustainage. Tüm Hakları Saklıdır.') }}
           </div>

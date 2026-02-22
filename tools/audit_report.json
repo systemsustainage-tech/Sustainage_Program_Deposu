@@ -1,11 +1,5 @@
 {
-    "missing_tr": [
-        "data_flow_title",
-        "data_flow_step1",
-        "data_flow_step2",
-        "data",
-        "data_flow_step3"
-    ],
+    "missing_tr": [],
     "errors": [
         "[READ ERROR] check_output.txt: 'utf-8' codec can't decode byte 0xff in position 0: invalid start byte",
         "[READ ERROR] deploy_package.tar.gz: 'utf-8' codec can't decode byte 0x8b in position 1: invalid start byte",
@@ -78,8 +72,13 @@
         "[READ ERROR] backend\\test_role_mgr_dfdf1b2e5fb945a383964d7907386f36.db: 'utf-8' codec can't decode byte 0xb9 in position 99: invalid start byte",
         "[READ ERROR] backend\\test_role_mgr_e172ff45206f4c0d90db1565325ce225.db: 'utf-8' codec can't decode byte 0xb9 in position 99: invalid start byte",
         "[READ ERROR] backend\\test_supply_chain.db: 'utf-8' codec can't decode byte 0xb9 in position 99: invalid start byte",
+        "[READ ERROR] backend\\test_tenant_api.db: 'utf-8' codec can't decode byte 0xb9 in position 99: invalid start byte",
+        "[READ ERROR] backend\\test_tenant_api.db-shm: 'utf-8' codec can't decode byte 0xe2 in position 1: invalid continuation byte",
+        "[READ ERROR] backend\\test_tenant_api.db-wal: 'utf-8' codec can't decode byte 0x82 in position 3: invalid start byte",
         "[READ ERROR] backend\\data\\SDG_16_169_232.xlsx: 'utf-8' codec can't decode byte 0x92 in position 15: invalid start byte",
         "[READ ERROR] backend\\data\\sdg_desktop.sqlite: 'utf-8' codec can't decode byte 0xb9 in position 99: invalid start byte",
+        "[READ ERROR] backend\\data\\sdg_desktop.sqlite-shm: 'utf-8' codec can't decode byte 0xe2 in position 1: invalid continuation byte",
+        "[READ ERROR] backend\\data\\sdg_desktop.sqlite-wal: 'utf-8' codec can't decode byte 0x82 in position 3: invalid start byte",
         "[READ ERROR] backend\\data\\sdg_prod.sqlite: 'utf-8' codec can't decode byte 0xaf in position 27: invalid start byte",
         "[READ ERROR] backend\\data\\sdg_prod.sqlite-shm: 'utf-8' codec can't decode byte 0xe2 in position 1: invalid continuation byte",
         "[READ ERROR] backend\\data\\sdg_prod.sqlite-wal: 'utf-8' codec can't decode byte 0x82 in position 3: invalid start byte",
@@ -288,6 +287,7 @@
         "[READ ERROR] static\\images\\ungc_logo.png: 'utf-8' codec can't decode byte 0x89 in position 0: invalid start byte",
         "[READ ERROR] tests\\test_mandatory_sections.db: 'utf-8' codec can't decode byte 0xb9 in position 99: invalid start byte",
         "[READ ERROR] tests\\test_sdg_desktop.db: 'utf-8' codec can't decode byte 0xb9 in position 99: invalid start byte",
+        "[READ ERROR] tests\\test_users.db: 'utf-8' codec can't decode byte 0x8a in position 98: invalid start byte",
         "[READ ERROR] tools\\unused_code_report.txt: 'utf-8' codec can't decode byte 0xff in position 0: invalid start byte",
         "[READ ERROR] tools\\data\\test_reports\\turkce_font_test.pdf: 'utf-8' codec can't decode byte 0x93 in position 10: invalid start byte",
         "[READ ERROR] uploads\\reports\\unified_Birlesik_Rapor_Test_2025_20260128_115527.docx: 'utf-8' codec can't decode byte 0xed in position 10: invalid continuation byte",
@@ -318,5 +318,7 @@
         "[READ ERROR] uploads\\reports\\unified_Test_Report_2025_20260128_132724.docx: 'utf-8' codec can't decode byte 0xad in position 14: invalid start byte",
         "[READ ERROR] uploads\\reports\\unified_Test_Report_2025_20260128_133211.docx: 'utf-8' codec can't decode byte 0xad in position 14: invalid start byte",
         "[READ ERROR] uploads\\reports\\unified_Test_Report_2025_20260128_133703.docx: 'utf-8' codec can't decode byte 0xa1 in position 10: invalid start byte"
-    ]
+    ],
+    "syntax_errors": [],
+    "route_errors": []
 }

@@ -17,7 +17,6 @@ session = requests.Session()
 def test_login():
     print(f"Testing login for {USERNAME} at {LOGIN_URL}")
     
-    # 1. Get Login Page for CSRF
     response = session.get(LOGIN_URL, verify=False)
     print(f"GET Status: {response.status_code}")
     
@@ -30,7 +29,6 @@ def test_login():
         print("CSRF Token NOT found")
         return False
         
-    # 2. Post Credentials
     data = {
         'username': USERNAME,
         'password': PASSWORD,
@@ -59,5 +57,18 @@ def test_login():
             print(response.text[:500])
         return False
 
+def test_super_admin():
+    ok = test_login()
+    if not ok:
+        print("Skipping /super_admin check because login failed.")
+        return
+    url = f"{BASE_URL}/super_admin"
+    print(f"Testing {url} ...")
+    response = session.get(url, verify=False)
+    print(f"/super_admin Status: {response.status_code}")
+    print(f"/super_admin Final URL: {response.url}")
+    print("Response preview:")
+    print(response.text[:500])
+
 if __name__ == "__main__":
-    test_login()
+    test_super_admin()

@@ -24,7 +24,7 @@ def run_reset():
         
         # Execute
         print("Running password reset...")
-        cmd = "cd /var/www/sustainage && source venv/bin/activate && python tools/reset_remote_password.py super.admin Admin123!"
+        cmd = "cd /var/www/sustainage && source venv/bin/activate && python tools/reset_remote_password.py super.admin SuperPassword123!"
         stdin, stdout, stderr = ssh.exec_command(f"bash -c '{cmd}'")
         
         print("--- STDOUT ---")

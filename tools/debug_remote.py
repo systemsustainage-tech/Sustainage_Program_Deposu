@@ -25,11 +25,10 @@ def run_command(cmd):
 
 if __name__ == "__main__":
     cmds = [
-        "head -n 60 /var/www/sustainage/templates/dashboard.html",
-        "cat /var/www/sustainage/gunicorn_config.py",
-        "cat /etc/systemd/system/sustainage.service",
-        "netstat -tulpn | grep 5000 || ss -tulpn | grep 5000 || echo 'no listener on 5000'",
-        "ps aux | grep sustainage | head -n 10"
+        "echo '=== Last 40 lines with /super_admin ==='",
+        "grep -n '/super_admin' /var/www/sustainage/logs/error.log | tail -n 40 || echo 'no /super_admin errors'",
+        "echo '=== Last 80 lines of error.log ==='",
+        "tail -n 80 /var/www/sustainage/logs/error.log"
     ]
     for c in cmds:
         run_command(c)

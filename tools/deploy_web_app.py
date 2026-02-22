@@ -35,6 +35,13 @@ def deploy_web_app():
         sftp.put(local_tpl, remote_tpl)
         print("Upload successful.")
 
+        # Upload super_admin.html template
+        local_super_admin = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'templates', 'super_admin.html')
+        remote_super_admin = '/var/www/sustainage/templates/super_admin.html'
+        print(f"Uploading {local_super_admin} to {remote_super_admin}...")
+        sftp.put(local_super_admin, remote_super_admin)
+        print("Upload successful.")
+
         # Restart service
         print("Restarting sustainage service...")
         stdin, stdout, stderr = ssh.exec_command("systemctl restart sustainage")

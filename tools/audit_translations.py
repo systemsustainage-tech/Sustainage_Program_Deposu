@@ -99,7 +99,7 @@ def audit_translations():
     print(f"Found {len(code_keys)} translation keys in code")
     
     # 3. Analyze
-    missing_in_json = code_keys - existing_keys
+    missing_in_json = {k for k in (code_keys - existing_keys) if k != "..."}
     unused_in_json = existing_keys - code_keys
     
     # 4. Report

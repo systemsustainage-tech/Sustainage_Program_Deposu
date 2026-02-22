@@ -1,0 +1,1 @@
+* Eğer istersen bir sonraki adımda, aynı mantığı diğer kritik sayfalara (özellikle login / verify_2fa / dashboard gibi) de yayabiliriz; ama şu an senin yaşadığın sorun doğrudan Super Admin’den kaynaklı olduğu için ilk adımı oraya uyguladım.
