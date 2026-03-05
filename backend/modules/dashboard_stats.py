@@ -1,5 +1,14 @@
 import logging
-from backend.core.base_manager import BaseTenantManager
+try:
+    from backend.core.base_manager import BaseTenantManager
+except ImportError:
+    try:
+        from core.base_manager import BaseTenantManager
+    except ImportError:
+        import sys
+        import os
+        sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+        from backend.core.base_manager import BaseTenantManager
 
 class DashboardStatsManager(BaseTenantManager):
     def __init__(self, db_path):

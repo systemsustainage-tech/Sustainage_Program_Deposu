@@ -3,12 +3,19 @@ from typing import Any, List, Optional, Dict, Union
 from backend.core.database_manager import DatabaseManager
 from backend.core.database import inject_tenant_filter
 
-class BaseTenantManager:
+class TenantAwareModel:
+    """
+    Mixin class to be used by all models/managers to ensure company_id isolation.
+    """
+    pass
+
+class BaseTenantManager(TenantAwareModel):
     """
     Multi-tenant ORM Layer / Base Manager.
     Automatically enforces company_id filtering on database operations.
     """
     def __init__(self, db_path: str, company_id: Optional[int] = None):
+        self.db_path = db_path
         self.db = DatabaseManager(db_path)
         self.company_id = company_id
         self.logger = logging.getLogger(self.__class__.__name__)

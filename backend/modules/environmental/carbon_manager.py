@@ -261,7 +261,8 @@ class CarbonManager(BaseTenantManager):
 
     def get_scope_emissions(self, company_id: int, scope: int, year: int = None) -> float:
         """Belirli bir kapsamdaki toplam emisyonu getir"""
-        cid = self._ensure_context(company_id)
+        # cid = self._ensure_context(company_id) # BaseTenantManager handles context in select/execute_query
+        
         table_map = {1: 'scope1_emissions', 2: 'scope2_emissions', 3: 'scope3_emissions'}
         table = table_map.get(scope)
         
@@ -269,14 +270,25 @@ class CarbonManager(BaseTenantManager):
             return 0.0
             
         try:
-            query = f"SELECT SUM(total_emissions) as total FROM {table} WHERE company_id = ?"
-            params = [cid]
+            # Using BaseTenantManager.select which enforces tenant isolation
+            where_clause = None
+            params = []
             
             if year:
-                query += " AND year = ?"
+                where_clause = "year = ?"
                 params.append(year)
+                
+            # We select SUM directly via raw query or select helper?
+            # select() returns rows. Let's use execute_query with automatic injection.
             
-            result = self.execute_query(query, tuple(params))
+            query = f"SELECT SUM(total_emissions) as total FROM {table}"
+            if year:
+                query += " WHERE year = ?"
+            
+            # Note: execute_query will inject 'WHERE company_id = ?' automatically.
+            # If we already have WHERE, it injects '... AND company_id = ?'
+            
+            result = self.execute_query(query, tuple(params), company_id=company_id)
             return result[0]['total'] if result and result[0]['total'] else 0.0
             
         except Exception as e:
@@ -285,7 +297,7 @@ class CarbonManager(BaseTenantManager):
 
     def get_monthly_emission_stats(self, company_id: int, year: int) -> List[float]:
         """Get monthly aggregated emissions for the given year (Scope 1+2+3)"""
-        cid = self._ensure_context(company_id)
+        # cid = self._ensure_context(company_id) # Handled by execute_query
         monthly_data = [0.0] * 12
         
         try:
@@ -294,15 +306,16 @@ class CarbonManager(BaseTenantManager):
             for table in tables:
                 # Use invoice_date if available, otherwise fallback to created_at
                 # Handle empty strings as NULL using NULLIF
+                # execute_query will inject company_id filter
                 query = f"""
                     SELECT 
                         strftime('%m', COALESCE(NULLIF(invoice_date, ''), NULLIF(created_at, ''), CURRENT_DATE)) as month,
                         SUM(total_emissions) as total
                     FROM {table}
-                    WHERE company_id = ? AND year = ?
+                    WHERE year = ?
                     GROUP BY month
                 """
-                rows = self.execute_query(query, (cid, year))
+                rows = self.execute_query(query, (year,), company_id=company_id)
                 
                 for row in rows:
                     month_str = row['month']
@@ -322,17 +335,34 @@ class CarbonManager(BaseTenantManager):
 
     def get_recent_records(self, company_id: int, limit: int = 10) -> List[Dict]:
         """Son eklenen karbon verilerini getir"""
-        cid = self._ensure_context(company_id)
+        # cid = self._ensure_context(company_id) # Handled by execute_query
         
         try:
+            # Note: Union queries are tricky for auto-injection if not careful.
+            # But execute_query injects into EACH SELECT if we rely on regex.
+            # However, our regex might be too simple for complex UNION ALL.
+            # Safer approach with BaseTenantManager is to execute separate queries or rely on injection if robust.
+            # Our injection regex handles 'FROM table' but might get confused with multiple FROMs in one string.
+            # Let's verify: inject_tenant_filter regex finds "FROM table". It replaces ONE occurrence or ALL?
+            # It finds the first match usually in simple implementation.
+            
+            # Since UNION queries are complex, let's use the explicit 'company_id = ?' 
+            # and pass skip_tenant_filter=True to avoid double injection messing things up,
+            # OR refactor to use separate calls.
+            
+            # Refactoring to separate calls is safer and cleaner for TenantAwareness.
+            
+            cid = self._ensure_context(company_id)
+
             # Scope 1
             query1 = """
                 SELECT 'Scope 1' as scope, emission_source as category, fuel_consumption as quantity, 
                        fuel_unit as unit, total_emissions as emissions, year as period, 
                        created_at as date
                 FROM scope1_emissions 
-                WHERE company_id = ?
+                ORDER BY created_at DESC LIMIT ?
             """
+            rows1 = self.execute_query(query1, (limit,), company_id=cid)
             
             # Scope 2
             query2 = """
@@ -340,8 +370,9 @@ class CarbonManager(BaseTenantManager):
                        energy_unit as unit, total_emissions as emissions, year as period, 
                        created_at as date
                 FROM scope2_emissions 
-                WHERE company_id = ?
+                ORDER BY created_at DESC LIMIT ?
             """
+            rows2 = self.execute_query(query2, (limit,), company_id=cid)
             
             # Scope 3
             query3 = """
@@ -349,25 +380,21 @@ class CarbonManager(BaseTenantManager):
                        activity_unit as unit, total_emissions as emissions, year as period, 
                        created_at as date
                 FROM scope3_emissions 
-                WHERE company_id = ?
+                ORDER BY created_at DESC LIMIT ?
             """
+            rows3 = self.execute_query(query3, (limit,), company_id=cid)
             
-            # Union and sort
-            full_query = f"""
-                SELECT * FROM (
-                    {query1}
-                    UNION ALL
-                    {query2}
-                    UNION ALL
-                    {query3}
-                )
-                ORDER BY date DESC LIMIT ?
-            """
+            # Combine and Sort in Python
+            all_rows = rows1 + rows2 + rows3
             
-            rows = self.execute_query(full_query, (cid, cid, cid, limit))
+            # Sort by date descending
+            all_rows.sort(key=lambda x: x['date'], reverse=True)
+            
+            # Take top N
+            final_rows = all_rows[:limit]
             
             records = []
-            for row in rows:
+            for row in final_rows:
                 records.append({
                         'scope': row['scope'],
                         'category': row['category'],

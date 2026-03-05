@@ -1,0 +1,5094 @@
+{
+    "tr_missing": [
+        {
+            "key": "admin_required",
+            "en_value": "Admin Required"
+        },
+        {
+            "key": "address",
+            "en_value": "Address"
+        },
+        {
+            "key": "activity",
+            "en_value": "Activity"
+        },
+        {
+            "key": "scope1",
+            "en_value": "Scope 1 (Direct Emissions)"
+        },
+        {
+            "key": "status_approved",
+            "en_value": "Approved"
+        },
+        {
+            "key": "viewer",
+            "en_value": "Viewer"
+        },
+        {
+            "key": "blue",
+            "en_value": "Blue"
+        },
+        {
+            "key": "coming_soon",
+            "en_value": "Coming Soon"
+        },
+        {
+            "key": "warning",
+            "en_value": "Warning"
+        },
+        {
+            "key": "baseline",
+            "en_value": "Baseline"
+        },
+        {
+            "key": "missing_parameters",
+            "en_value": "Missing Parameters"
+        },
+        {
+            "key": "remove",
+            "en_value": "Remove"
+        },
+        {
+            "key": "admin",
+            "en_value": "Admin"
+        },
+        {
+            "key": "month",
+            "en_value": "Month"
+        },
+        {
+            "key": "delete_record",
+            "en_value": "Delete Record"
+        },
+        {
+            "key": "password_mismatch",
+            "en_value": "Passwords do not match."
+        },
+        {
+            "key": "total",
+            "en_value": "Total"
+        },
+        {
+            "key": "version",
+            "en_value": "Version 1.0.0"
+        },
+        {
+            "key": "approve",
+            "en_value": "Approve"
+        },
+        {
+            "key": "social_responsibility",
+            "en_value": "Social Responsibility"
+        },
+        {
+            "key": "add_question",
+            "en_value": "Add Question"
+        },
+        {
+            "key": "profile",
+            "en_value": "Profile"
+        },
+        {
+            "key": "Elektrik",
+            "en_value": "Electricity"
+        },
+        {
+            "key": "user_management",
+            "en_value": "User Management"
+        },
+        {
+            "key": "sasb_standards",
+            "en_value": "SASB Standards"
+        },
+        {
+            "key": "status_draft",
+            "en_value": "Draft"
+        },
+        {
+            "key": "Kömür",
+            "en_value": "Coal"
+        },
+        {
+            "key": "eco_desc",
+            "en_value": "Financial sustainability and tax transparency."
+        },
+        {
+            "key": "invalid_request",
+            "en_value": "Invalid Request"
+        },
+        {
+            "key": "page_not_found",
+            "en_value": "Page Not Found"
+        },
+        {
+            "key": "avg_score",
+            "en_value": "Avg Score"
+        },
+        {
+            "key": "scope3",
+            "en_value": "Scope 3 (Other Indirect Emissions)"
+        },
+        {
+            "key": "role",
+            "en_value": "Role"
+        },
+        {
+            "key": "bad",
+            "en_value": "Bad"
+        },
+        {
+            "key": "esg_score",
+            "en_value": "ESG Score"
+        },
+        {
+            "key": "action_plan_status",
+            "en_value": "Action Plan Status"
+        },
+        {
+            "key": "permissions",
+            "en_value": "Permissions"
+        },
+        {
+            "key": "available",
+            "en_value": "Available"
+        },
+        {
+            "key": "manager",
+            "en_value": "Manager"
+        },
+        {
+            "key": "invalid_email",
+            "en_value": "Invalid email address."
+        },
+        {
+            "key": "welcome_message",
+            "en_value": "Welcome to Sustainage"
+        },
+        {
+            "key": "add_data",
+            "en_value": "Add Data"
+        },
+        {
+            "key": "login_required",
+            "en_value": "Login Required"
+        },
+        {
+            "key": "apr",
+            "en_value": "Apr"
+        },
+        {
+            "key": "add_evidence",
+            "en_value": "Add Evidence"
+        },
+        {
+            "key": "eu_taxonomy",
+            "en_value": "EU Taxonomy"
+        },
+        {
+            "key": "and",
+            "en_value": "And"
+        },
+        {
+            "key": "add_new",
+            "en_value": "Add New"
+        },
+        {
+            "key": "success",
+            "en_value": "Success"
+        },
+        {
+            "key": "status_submitted",
+            "en_value": "Submitted"
+        },
+        {
+            "key": "overall_progress",
+            "en_value": "Overall Progress"
+        },
+        {
+            "key": "auto_tasks",
+            "en_value": "Auto Tasks"
+        },
+        {
+            "key": "surveys",
+            "en_value": "Surveys"
+        },
+        {
+            "key": "system_logs",
+            "en_value": "System Logs"
+        },
+        {
+            "key": "Su",
+            "en_value": "Water"
+        },
+        {
+            "key": "reset",
+            "en_value": "Reset"
+        },
+        {
+            "key": "edit_record",
+            "en_value": "Edit Record"
+        },
+        {
+            "key": "messages",
+            "en_value": "Messages"
+        },
+        {
+            "key": "gri_standards",
+            "en_value": "GRI Standards"
+        },
+        {
+            "key": "submit",
+            "en_value": "Submit"
+        },
+        {
+            "key": "name",
+            "en_value": "Name"
+        },
+        {
+            "key": "import",
+            "en_value": "Import"
+        },
+        {
+            "key": "welcome",
+            "en_value": "Welcome"
+        },
+        {
+            "key": "close",
+            "en_value": "Close"
+        },
+        {
+            "key": "export",
+            "en_value": "Export"
+        },
+        {
+            "key": "roles",
+            "en_value": "Roles"
+        },
+        {
+            "key": "analyst",
+            "en_value": "Analyst"
+        },
+        {
+            "key": "unexpected_error",
+            "en_value": "Unexpected Error"
+        },
+        {
+            "key": "home",
+            "en_value": "Home"
+        },
+        {
+            "key": "info",
+            "en_value": "Info"
+        },
+        {
+            "key": "Doğalgaz",
+            "en_value": "Natural Gas"
+        },
+        {
+            "key": "bio_species",
+            "en_value": "Bio Species"
+        },
+        {
+            "key": "sustainability_report",
+            "en_value": "Sustainability Report"
+        },
+        {
+            "key": "waste_management",
+            "en_value": "Waste Management"
+        },
+        {
+            "key": "blocked",
+            "en_value": "Blocked"
+        },
+        {
+            "key": "activity_data",
+            "en_value": "Activity Data"
+        },
+        {
+            "key": "maintenance_mode",
+            "en_value": "Maintenance Mode"
+        },
+        {
+            "key": "answered",
+            "en_value": "Answered"
+        },
+        {
+            "key": "add_risk",
+            "en_value": "Add Risk"
+        },
+        {
+            "key": "report_date",
+            "en_value": "Report Date"
+        },
+        {
+            "key": "system_settings",
+            "en_value": "System Settings"
+        },
+        {
+            "key": "advanced",
+            "en_value": "Advanced"
+        },
+        {
+            "key": "operation_failed",
+            "en_value": "Operation Failed"
+        },
+        {
+            "key": "add_target",
+            "en_value": "Add Target"
+        },
+        {
+            "key": "aug",
+            "en_value": "Aug"
+        },
+        {
+            "key": "confirm",
+            "en_value": "Confirm"
+        },
+        {
+            "key": "assessment_year",
+            "en_value": "Assessment Year"
+        },
+        {
+            "key": "copyright",
+            "en_value": "© 2024 Sustainage. All rights reserved."
+        },
+        {
+            "key": "operation_successful",
+            "en_value": "Operation Successful"
+        },
+        {
+            "key": "tcfd_recommendations",
+            "en_value": "TCFD Recommendations"
+        },
+        {
+            "key": "register",
+            "en_value": "Register"
+        },
+        {
+            "key": "backup_restore",
+            "en_value": "Backup & Restore"
+        },
+        {
+            "key": "super_admin_required",
+            "en_value": "Super Admin Required"
+        },
+        {
+            "key": "faq",
+            "en_value": "FAQ"
+        },
+        {
+            "key": "sort",
+            "en_value": "Sort"
+        },
+        {
+            "key": "btn_add",
+            "en_value": "Btn Add"
+        },
+        {
+            "key": "print",
+            "en_value": "Print"
+        },
+        {
+            "key": "required_field",
+            "en_value": "This field is required."
+        },
+        {
+            "key": "tasks",
+            "en_value": "Tasks"
+        },
+        {
+            "key": "network_error",
+            "en_value": "Network Error"
+        },
+        {
+            "key": "backup_frequency",
+            "en_value": "Backup Frequency"
+        },
+        {
+            "key": "analytics",
+            "en_value": "Analytics"
+        },
+        {
+            "key": "backup_count",
+            "en_value": "Backup Count"
+        },
+        {
+            "key": "update",
+            "en_value": "Update"
+        },
+        {
+            "key": "scope2",
+            "en_value": "Scope 2 (Indirect Energy Emissions)"
+        },
+        {
+            "key": "active_users",
+            "en_value": "Active Users"
+        },
+        {
+            "key": "security_settings",
+            "en_value": "Security Settings"
+        },
+        {
+            "key": "achieved",
+            "en_value": "Achieved"
+        },
+        {
+            "key": "status_cancelled",
+            "en_value": "Cancelled"
+        },
+        {
+            "key": "Akaryakıt",
+            "en_value": "Fuel"
+        },
+        {
+            "key": "total_emissions",
+            "en_value": "Total Emissions"
+        },
+        {
+            "key": "projects",
+            "en_value": "Projects"
+        },
+        {
+            "key": "status_rejected",
+            "en_value": "Rejected"
+        },
+        {
+            "key": "surname",
+            "en_value": "Surname"
+        },
+        {
+            "key": "age",
+            "en_value": "Age"
+        },
+        {
+            "key": "Yenilenebilir",
+            "en_value": "Renewable Energy"
+        },
+        {
+            "key": "annual",
+            "en_value": "Annual"
+        },
+        {
+            "key": "status_assigned",
+            "en_value": "Assigned"
+        },
+        {
+            "key": "LPG",
+            "en_value": "LPG"
+        },
+        {
+            "key": "add_product",
+            "en_value": "Add Product"
+        }
+    ],
+    "de_missing": [
+        {
+            "key": "gov_member_name",
+            "en_value": "Gov Member Name"
+        },
+        {
+            "key": "process",
+            "en_value": "Process"
+        },
+        {
+            "key": "data_type",
+            "en_value": "Data Type"
+        },
+        {
+            "key": "cbam_total_emissions",
+            "en_value": "Cbam Total Emissions"
+        },
+        {
+            "key": "admin_required",
+            "en_value": "Admin Required"
+        },
+        {
+            "key": "general",
+            "en_value": "General"
+        },
+        {
+            "key": "payments_to_capital",
+            "en_value": "Payments To Capital"
+        },
+        {
+            "key": "employee_wages",
+            "en_value": "Employee Wages"
+        },
+        {
+            "key": "common_search",
+            "en_value": "Common Search"
+        },
+        {
+            "key": "stakeholder_help",
+            "en_value": "Stakeholder Help"
+        },
+        {
+            "key": "habitat_type",
+            "en_value": "Habitat Type"
+        },
+        {
+            "key": "col_unit",
+            "en_value": "Col Unit"
+        },
+        {
+            "key": "data_collection_desc",
+            "en_value": "Data Collection Desc"
+        },
+        {
+            "key": "csrd_esrs_env_desc",
+            "en_value": "Csrd Esrs Env Desc"
+        },
+        {
+            "key": "address",
+            "en_value": "Address"
+        },
+        {
+            "key": "confirm_reset",
+            "en_value": "Confirm Reset"
+        },
+        {
+            "key": "water_source",
+            "en_value": "Water Source"
+        },
+        {
+            "key": "esrs_topic",
+            "en_value": "Esrs Topic"
+        },
+        {
+            "key": "conservation",
+            "en_value": "Conservation"
+        },
+        {
+            "key": "activity",
+            "en_value": "Activity"
+        },
+        {
+            "key": "influence_level",
+            "en_value": "Influence Level"
+        },
+        {
+            "key": "internal",
+            "en_value": "Internal"
+        },
+        {
+            "key": "system_online",
+            "en_value": "System Online"
+        },
+        {
+            "key": "medium",
+            "en_value": "Medium"
+        },
+        {
+            "key": "fungi",
+            "en_value": "Fungi"
+        },
+        {
+            "key": "non_compliant",
+            "en_value": "Non Compliant"
+        },
+        {
+            "key": "template_help",
+            "en_value": "Template Help"
+        },
+        {
+            "key": "esg_total",
+            "en_value": "Esg Total"
+        },
+        {
+            "key": "expired",
+            "en_value": "Expired"
+        },
+        {
+            "key": "csrd_materiality_title",
+            "en_value": "Csrd Materiality Title"
+        },
+        {
+            "key": "btn_settings",
+            "en_value": "Btn Settings"
+        },
+        {
+            "key": "opt_water",
+            "en_value": "Opt Water"
+        },
+        {
+            "key": "total_consumption",
+            "en_value": "Total Consumption"
+        },
+        {
+            "key": "response_value",
+            "en_value": "Response Value"
+        },
+        {
+            "key": "high_risk",
+            "en_value": "High Risk"
+        },
+        {
+            "key": "sdg_col_goal",
+            "en_value": "Sdg Col Goal"
+        },
+        {
+            "key": "behind",
+            "en_value": "Behind"
+        },
+        {
+            "key": "policy_library_desc",
+            "en_value": "Policy Library Desc"
+        },
+        {
+            "key": "help_report_file",
+            "en_value": "Help Report File"
+        },
+        {
+            "key": "visualization_desc",
+            "en_value": "Visualization Desc"
+        },
+        {
+            "key": "medium_risk_badge",
+            "en_value": "Medium Risk Badge"
+        },
+        {
+            "key": "social_type_satisfaction",
+            "en_value": "Social Type Satisfaction"
+        },
+        {
+            "key": "social_add_satisfaction",
+            "en_value": "Social Add Satisfaction"
+        },
+        {
+            "key": "governance",
+            "en_value": "Governance"
+        },
+        {
+            "key": "severity_high",
+            "en_value": "Severity High"
+        },
+        {
+            "key": "tcfd_desc",
+            "en_value": "Tcfd Desc"
+        },
+        {
+            "key": "protected",
+            "en_value": "Protected"
+        },
+        {
+            "key": "materiality_matrix",
+            "en_value": "Materiality Matrix"
+        },
+        {
+            "key": "solar",
+            "en_value": "Solar"
+        },
+        {
+            "key": "gov_type_executive",
+            "en_value": "Gov Type Executive"
+        },
+        {
+            "key": "process_status",
+            "en_value": "Process Status"
+        },
+        {
+            "key": "reg_scope",
+            "en_value": "Reg Scope"
+        },
+        {
+            "key": "scope1",
+            "en_value": "Scope 1 (Direct Emissions)"
+        },
+        {
+            "key": "stakeholder_desc",
+            "en_value": "Stakeholder Desc"
+        },
+        {
+            "key": "tnfd_desc",
+            "en_value": "Tnfd Desc"
+        },
+        {
+            "key": "net_profit",
+            "en_value": "Net Profit"
+        },
+        {
+            "key": "status_approved",
+            "en_value": "Approved"
+        },
+        {
+            "key": "sdg_save_selections",
+            "en_value": "Sdg Save Selections"
+        },
+        {
+            "key": "import_risks",
+            "en_value": "Import Risks"
+        },
+        {
+            "key": "gov_comm_governance",
+            "en_value": "Gov Comm Governance"
+        },
+        {
+            "key": "coal",
+            "en_value": "Coal"
+        },
+        {
+            "key": "human_rights_title",
+            "en_value": "Human Rights Title"
+        },
+        {
+            "key": "total_assets",
+            "en_value": "Total Assets"
+        },
+        {
+            "key": "near_miss",
+            "en_value": "Near Miss"
+        },
+        {
+            "key": "docs_title",
+            "en_value": "Docs Title"
+        },
+        {
+            "key": "question",
+            "en_value": "Question"
+        },
+        {
+            "key": "overview",
+            "en_value": "Overview"
+        },
+        {
+            "key": "passive",
+            "en_value": "Passive"
+        },
+        {
+            "key": "protection_measures",
+            "en_value": "Protection Measures"
+        },
+        {
+            "key": "tnfd_nature_impact",
+            "en_value": "Tnfd Nature Impact"
+        },
+        {
+            "key": "partially_protected",
+            "en_value": "Partially Protected"
+        },
+        {
+            "key": "sasb_topics_covered",
+            "en_value": "Sasb Topics Covered"
+        },
+        {
+            "key": "blue",
+            "en_value": "Blue"
+        },
+        {
+            "key": "data_entry_btn",
+            "en_value": "Data Entry Btn"
+        },
+        {
+            "key": "community_involvement_title",
+            "en_value": "Community Involvement Title"
+        },
+        {
+            "key": "select_score",
+            "en_value": "Select Score"
+        },
+        {
+            "key": "waste_desc",
+            "en_value": "Waste Desc"
+        },
+        {
+            "key": "coming_soon",
+            "en_value": "Coming Soon"
+        },
+        {
+            "key": "landfill",
+            "en_value": "Landfill"
+        },
+        {
+            "key": "tsrs_desc",
+            "en_value": "Tsrs Desc"
+        },
+        {
+            "key": "cost",
+            "en_value": "Cost"
+        },
+        {
+            "key": "gender_total",
+            "en_value": "Gender Total"
+        },
+        {
+            "key": "cdp_settings_desc",
+            "en_value": "Cdp Settings Desc"
+        },
+        {
+            "key": "external",
+            "en_value": "External"
+        },
+        {
+            "key": "baseline",
+            "en_value": "Baseline"
+        },
+        {
+            "key": "cbam_report_total_emissions",
+            "en_value": "Cbam Report Total Emissions"
+        },
+        {
+            "key": "cdp_data_entry",
+            "en_value": "Cdp Data Entry"
+        },
+        {
+            "key": "service_type",
+            "en_value": "Service Type"
+        },
+        {
+            "key": "missing_parameters",
+            "en_value": "Missing Parameters"
+        },
+        {
+            "key": "statistics",
+            "en_value": "Statistics"
+        },
+        {
+            "key": "remove",
+            "en_value": "Remove"
+        },
+        {
+            "key": "role_description",
+            "en_value": "Role Description"
+        },
+        {
+            "key": "issb_completion_rate",
+            "en_value": "Issb Completion Rate"
+        },
+        {
+            "key": "waste_amount",
+            "en_value": "Waste Amount"
+        },
+        {
+            "key": "tcfd_data_entry_desc",
+            "en_value": "Tcfd Data Entry Desc"
+        },
+        {
+            "key": "completion_rate",
+            "en_value": "Completion Rate"
+        },
+        {
+            "key": "module_unavailable",
+            "en_value": "Unavailable"
+        },
+        {
+            "key": "male",
+            "en_value": "Male"
+        },
+        {
+            "key": "scope_national",
+            "en_value": "Scope National"
+        },
+        {
+            "key": "results",
+            "en_value": "Results"
+        },
+        {
+            "key": "material_topics",
+            "en_value": "Material Topics"
+        },
+        {
+            "key": "eco_dist_title",
+            "en_value": "Eco Dist Title"
+        },
+        {
+            "key": "data_source",
+            "en_value": "Data Source"
+        },
+        {
+            "key": "delete_record",
+            "en_value": "Delete Record"
+        },
+        {
+            "key": "standard_scheme_info",
+            "en_value": "Standard Scheme Info"
+        },
+        {
+            "key": "cbam_report_total_imports",
+            "en_value": "Cbam Report Total Imports"
+        },
+        {
+            "key": "stakeholder_name",
+            "en_value": "Stakeholder Name"
+        },
+        {
+            "key": "col_status",
+            "en_value": "Col Status"
+        },
+        {
+            "key": "tax_opex",
+            "en_value": "Tax Opex"
+        },
+        {
+            "key": "environmental",
+            "en_value": "Environmental"
+        },
+        {
+            "key": "npv",
+            "en_value": "Npv"
+        },
+        {
+            "key": "cbam_cn_code",
+            "en_value": "Cbam Cn Code"
+        },
+        {
+            "key": "monitoring",
+            "en_value": "Monitoring"
+        },
+        {
+            "key": "sasb_data_entry_desc",
+            "en_value": "Sasb Data Entry Desc"
+        },
+        {
+            "key": "surface_water",
+            "en_value": "Surface Water"
+        },
+        {
+            "key": "esrs_add_title",
+            "en_value": "Esrs Add Title"
+        },
+        {
+            "key": "label_mapping_rationale",
+            "en_value": "Label Mapping Rationale"
+        },
+        {
+            "key": "expected_benefits",
+            "en_value": "Expected Benefits"
+        },
+        {
+            "key": "role_manager",
+            "en_value": "Role Manager"
+        },
+        {
+            "key": "cash_flow_help",
+            "en_value": "Cash Flow Help"
+        },
+        {
+            "key": "target_year",
+            "en_value": "Target Year"
+        },
+        {
+            "key": "incident_near_miss",
+            "en_value": "Incident Near Miss"
+        },
+        {
+            "key": "opt_cbam",
+            "en_value": "Opt Cbam"
+        },
+        {
+            "key": "tnfd_year",
+            "en_value": "Tnfd Year"
+        },
+        {
+            "key": "human_rights",
+            "en_value": "Human Rights"
+        },
+        {
+            "key": "question_text",
+            "en_value": "Question Text"
+        },
+        {
+            "key": "module_not_available",
+            "en_value": "Not Available"
+        },
+        {
+            "key": "tcfd_page_title",
+            "en_value": "Tcfd Page Title"
+        },
+        {
+            "key": "child_labor_risk",
+            "en_value": "Child Labor Risk"
+        },
+        {
+            "key": "contact_info",
+            "en_value": "Contact Info"
+        },
+        {
+            "key": "data_sources_bonuses",
+            "en_value": "Data Sources Bonuses"
+        },
+        {
+            "key": "economic_header",
+            "en_value": "Economic Header"
+        },
+        {
+            "key": "sector",
+            "en_value": "Sector"
+        },
+        {
+            "key": "sasb_unit",
+            "en_value": "Sasb Unit"
+        },
+        {
+            "key": "tcfd_impact",
+            "en_value": "Tcfd Impact"
+        },
+        {
+            "key": "max_login_attempts_desc",
+            "en_value": "Max Login Attempts Desc"
+        },
+        {
+            "key": "tcfd_financial_impact",
+            "en_value": "Tcfd Financial Impact"
+        },
+        {
+            "key": "metric_type",
+            "en_value": "Metric Type"
+        },
+        {
+            "key": "version",
+            "en_value": "Version 1.0.0"
+        },
+        {
+            "key": "user_experience_title",
+            "en_value": "User Experience Title"
+        },
+        {
+            "key": "esrs_summary",
+            "en_value": "Esrs Summary"
+        },
+        {
+            "key": "esrs_materiality_matrix",
+            "en_value": "Esrs Materiality Matrix"
+        },
+        {
+            "key": "max_login_attempts",
+            "en_value": "Max Login Attempts"
+        },
+        {
+            "key": "water_title",
+            "en_value": "Water Title"
+        },
+        {
+            "key": "esrs_desc",
+            "en_value": "Esrs Desc"
+        },
+        {
+            "key": "training",
+            "en_value": "Training"
+        },
+        {
+            "key": "esg_weights_info",
+            "en_value": "Esg Weights Info"
+        },
+        {
+            "key": "approve",
+            "en_value": "Approve"
+        },
+        {
+            "key": "cbam_factor_price",
+            "en_value": "Cbam Factor Price"
+        },
+        {
+            "key": "support_desc",
+            "en_value": "Support Desc"
+        },
+        {
+            "key": "pending_modules",
+            "en_value": "Pending Modules"
+        },
+        {
+            "key": "no_records",
+            "en_value": "No Records"
+        },
+        {
+            "key": "survey_date",
+            "en_value": "Survey Date"
+        },
+        {
+            "key": "turnover_rate",
+            "en_value": "Turnover Rate"
+        },
+        {
+            "key": "opt_general",
+            "en_value": "Opt General"
+        },
+        {
+            "key": "status_passive",
+            "en_value": "Status Passive"
+        },
+        {
+            "key": "no_data_found",
+            "en_value": "No Data Found"
+        },
+        {
+            "key": "text_open",
+            "en_value": "Text Open"
+        },
+        {
+            "key": "grid",
+            "en_value": "Grid"
+        },
+        {
+            "key": "tax_env_objective",
+            "en_value": "Tax Env Objective"
+        },
+        {
+            "key": "questions",
+            "en_value": "Questions"
+        },
+        {
+            "key": "full_compliance",
+            "en_value": "Full Compliance"
+        },
+        {
+            "key": "security_title",
+            "en_value": "Security Title"
+        },
+        {
+            "key": "user_new_title",
+            "en_value": "User New Title"
+        },
+        {
+            "key": "social_responsibility",
+            "en_value": "Social Responsibility"
+        },
+        {
+            "key": "csrd_topic",
+            "en_value": "Csrd Topic"
+        },
+        {
+            "key": "add_question",
+            "en_value": "Add Question"
+        },
+        {
+            "key": "diesel",
+            "en_value": "Diesel"
+        },
+        {
+            "key": "database_title",
+            "en_value": "Database Title"
+        },
+        {
+            "key": "roles_no_records",
+            "en_value": "Roles No Records"
+        },
+        {
+            "key": "gov_comm_remuneration",
+            "en_value": "Gov Comm Remuneration"
+        },
+        {
+            "key": "data_entry",
+            "en_value": "Data entry"
+        },
+        {
+            "key": "Elektrik",
+            "en_value": "Electricity"
+        },
+        {
+            "key": "regulation",
+            "en_value": "Regulation"
+        },
+        {
+            "key": "tnfd_col_impact",
+            "en_value": "Tnfd Col Impact"
+        },
+        {
+            "key": "users_search_placeholder",
+            "en_value": "Users Search Placeholder"
+        },
+        {
+            "key": "respondent_name",
+            "en_value": "Respondent Name"
+        },
+        {
+            "key": "cat_economic",
+            "en_value": "Cat Economic"
+        },
+        {
+            "key": "sasb_list_title",
+            "en_value": "Sasb List Title"
+        },
+        {
+            "key": "sasb_data_entry",
+            "en_value": "Sasb Data Entry"
+        },
+        {
+            "key": "col_id",
+            "en_value": "Col Id"
+        },
+        {
+            "key": "esrs_matrix_title",
+            "en_value": "Esrs Matrix Title"
+        },
+        {
+            "key": "stakeholder_sdg_scores",
+            "en_value": "Stakeholder Sdg Scores"
+        },
+        {
+            "key": "energy_consumption",
+            "en_value": "Energy Consumption"
+        },
+        {
+            "key": "month_may",
+            "en_value": "May"
+        },
+        {
+            "key": "tnfd_page_title",
+            "en_value": "Tnfd Page Title"
+        },
+        {
+            "key": "csrd_esrs_env",
+            "en_value": "Csrd Esrs Env"
+        },
+        {
+            "key": "ebitda",
+            "en_value": "Ebitda"
+        },
+        {
+            "key": "select_template",
+            "en_value": "Select Template"
+        },
+        {
+            "key": "opt_esg",
+            "en_value": "Opt Esg"
+        },
+        {
+            "key": "csrd_esrs_gov_desc",
+            "en_value": "Csrd Esrs Gov Desc"
+        },
+        {
+            "key": "docs_desc",
+            "en_value": "Docs Desc"
+        },
+        {
+            "key": "benchmark_desc",
+            "en_value": "Benchmark Desc"
+        },
+        {
+            "key": "opt_tnfd",
+            "en_value": "Opt Tnfd"
+        },
+        {
+            "key": "tax_obj_circular",
+            "en_value": "Tax Obj Circular"
+        },
+        {
+            "key": "issb_title",
+            "en_value": "Issb Title"
+        },
+        {
+            "key": "gov_comm_audit",
+            "en_value": "Gov Comm Audit"
+        },
+        {
+            "key": "scope_governance",
+            "en_value": "Scope Governance"
+        },
+        {
+            "key": "lpg",
+            "en_value": "Lpg"
+        },
+        {
+            "key": "esrs_likelihood",
+            "en_value": "Esrs Likelihood"
+        },
+        {
+            "key": "select_excel_file",
+            "en_value": "Select Excel File"
+        },
+        {
+            "key": "companies_country_placeholder",
+            "en_value": "Companies Country Placeholder"
+        },
+        {
+            "key": "gov_ethics_training",
+            "en_value": "Gov Ethics Training"
+        },
+        {
+            "key": "interest_level",
+            "en_value": "Interest Level"
+        },
+        {
+            "key": "lbl_company_name",
+            "en_value": "Lbl Company Name"
+        },
+        {
+            "key": "participant",
+            "en_value": "Participant"
+        },
+        {
+            "key": "confirm_delete_selected",
+            "en_value": "Confirm Delete Selected"
+        },
+        {
+            "key": "no_data_msg",
+            "en_value": "No Data Msg"
+        },
+        {
+            "key": "year_offset",
+            "en_value": "Year Offset"
+        },
+        {
+            "key": "user_management",
+            "en_value": "User Management"
+        },
+        {
+            "key": "benchmark",
+            "en_value": "Benchmark"
+        },
+        {
+            "key": "gov_name_surname",
+            "en_value": "Gov Name Surname"
+        },
+        {
+            "key": "validation_desc",
+            "en_value": "Validation Desc"
+        },
+        {
+            "key": "esrs",
+            "en_value": "ESRS"
+        },
+        {
+            "key": "esg_rating_agency",
+            "en_value": "Esg Rating Agency"
+        },
+        {
+            "key": "department",
+            "en_value": "Department"
+        },
+        {
+            "key": "tnfd_dependencies",
+            "en_value": "Tnfd Dependencies"
+        },
+        {
+            "key": "issb_data_entry_desc",
+            "en_value": "Issb Data Entry Desc"
+        },
+        {
+            "key": "gov_committee_def",
+            "en_value": "Gov Committee Def"
+        },
+        {
+            "key": "cbam_direct_emissions",
+            "en_value": "Cbam Direct Emissions"
+        },
+        {
+            "key": "user_edit_title",
+            "en_value": "User Edit Title"
+        },
+        {
+            "key": "lbl_password_hint",
+            "en_value": "Lbl Password Hint"
+        },
+        {
+            "key": "respondent_info",
+            "en_value": "Respondent Info"
+        },
+        {
+            "key": "report_edit_title",
+            "en_value": "Report Edit Title"
+        },
+        {
+            "key": "total_liabilities",
+            "en_value": "Total Liabilities"
+        },
+        {
+            "key": "product_technology_title",
+            "en_value": "Product Technology Title"
+        },
+        {
+            "key": "cbam_threshold_below",
+            "en_value": "Cbam Threshold Below"
+        },
+        {
+            "key": "reg_compliance",
+            "en_value": "Reg Compliance"
+        },
+        {
+            "key": "gov_member_count",
+            "en_value": "Gov Member Count"
+        },
+        {
+            "key": "sasb_standards",
+            "en_value": "SASB Standards"
+        },
+        {
+            "key": "high_risk_badge",
+            "en_value": "High Risk Badge"
+        },
+        {
+            "key": "product_technology_desc",
+            "en_value": "Product Technology Desc"
+        },
+        {
+            "key": "tcfd_col_impact",
+            "en_value": "Tcfd Col Impact"
+        },
+        {
+            "key": "esrs_actions",
+            "en_value": "Esrs Actions"
+        },
+        {
+            "key": "clear",
+            "en_value": "Clear"
+        },
+        {
+            "key": "scheme_custom",
+            "en_value": "Scheme Custom"
+        },
+        {
+            "key": "common.save",
+            "en_value": "Save"
+        },
+        {
+            "key": "contract",
+            "en_value": "Contract"
+        },
+        {
+            "key": "lbl_password",
+            "en_value": "Lbl Password"
+        },
+        {
+            "key": "btn_view_guide",
+            "en_value": "Btn View Guide"
+        },
+        {
+            "key": "csrd_matrix",
+            "en_value": "Csrd Matrix"
+        },
+        {
+            "key": "social_turnover_trend",
+            "en_value": "Social Turnover Trend"
+        },
+        {
+            "key": "col_company_name",
+            "en_value": "Col Company Name"
+        },
+        {
+            "key": "status_draft",
+            "en_value": "Draft"
+        },
+        {
+            "key": "skdm_title",
+            "en_value": "Skdm Title"
+        },
+        {
+            "key": "sdg_goal_selection",
+            "en_value": "Sdg Goal Selection"
+        },
+        {
+            "key": "social_satisfaction_trend",
+            "en_value": "Social Satisfaction Trend"
+        },
+        {
+            "key": "gov_member_type",
+            "en_value": "Gov Member Type"
+        },
+        {
+            "key": "Kömür",
+            "en_value": "Coal"
+        },
+        {
+            "key": "col_full_name",
+            "en_value": "Col Full Name"
+        },
+        {
+            "key": "status_label",
+            "en_value": "Status Label"
+        },
+        {
+            "key": "sasb_metric",
+            "en_value": "Sasb Metric"
+        },
+        {
+            "key": "incident_dangerous_occurrence",
+            "en_value": "Incident Dangerous Occurrence"
+        },
+        {
+            "key": "eco_desc",
+            "en_value": "Financial sustainability and tax transparency."
+        },
+        {
+            "key": "scenario_analysis_title",
+            "en_value": "Scenario Analysis Title"
+        },
+        {
+            "key": "sdg_survey_title",
+            "en_value": "Sdg Survey Title"
+        },
+        {
+            "key": "marine",
+            "en_value": "Marine"
+        },
+        {
+            "key": "col_cost",
+            "en_value": "Col Cost"
+        },
+        {
+            "key": "environmental_desc",
+            "en_value": "Environmental Desc"
+        },
+        {
+            "key": "issb_data_entry",
+            "en_value": "Issb Data Entry"
+        },
+        {
+            "key": "cdp_col_score",
+            "en_value": "Cdp Col Score"
+        },
+        {
+            "key": "stakeholder_title",
+            "en_value": "Stakeholder Title"
+        },
+        {
+            "key": "liter",
+            "en_value": "Liter"
+        },
+        {
+            "key": "organization",
+            "en_value": "Organization"
+        },
+        {
+            "key": "select_stakeholder_group",
+            "en_value": "Select Stakeholder Group"
+        },
+        {
+            "key": "module_gri",
+            "en_value": "GRI"
+        },
+        {
+            "key": "invalid_request",
+            "en_value": "Invalid Request"
+        },
+        {
+            "key": "tax_nace",
+            "en_value": "Tax Nace"
+        },
+        {
+            "key": "label_sdg_target",
+            "en_value": "Label Sdg Target"
+        },
+        {
+            "key": "report_label",
+            "en_value": "Report Label"
+        },
+        {
+            "key": "visualization_title",
+            "en_value": "Visualization Title"
+        },
+        {
+            "key": "col_category",
+            "en_value": "Col Category"
+        },
+        {
+            "key": "total_cost",
+            "en_value": "Total Cost"
+        },
+        {
+            "key": "full_help",
+            "en_value": "Full Help"
+        },
+        {
+            "key": "help_q2",
+            "en_value": "Help Q2"
+        },
+        {
+            "key": "page_not_found",
+            "en_value": "Page Not Found"
+        },
+        {
+            "key": "project",
+            "en_value": "Project"
+        },
+        {
+            "key": "roi",
+            "en_value": "Roi"
+        },
+        {
+            "key": "social",
+            "en_value": "Social"
+        },
+        {
+            "key": "sasb_desc",
+            "en_value": "Sasb Desc"
+        },
+        {
+            "key": "esrs_radar_chart",
+            "en_value": "Esrs Radar Chart"
+        },
+        {
+            "key": "roe",
+            "en_value": "Roe"
+        },
+        {
+            "key": "avg_score",
+            "en_value": "Avg Score"
+        },
+        {
+            "key": "help_q3",
+            "en_value": "Help Q3"
+        },
+        {
+            "key": "col_method",
+            "en_value": "Col Method"
+        },
+        {
+            "key": "select_sector",
+            "en_value": "Select Sector"
+        },
+        {
+            "key": "community_investments",
+            "en_value": "Community Investments"
+        },
+        {
+            "key": "no_targets_msg",
+            "en_value": "No Targets Msg"
+        },
+        {
+            "key": "manager_not_initialized",
+            "en_value": "Manager Not Initialized"
+        },
+        {
+            "key": "month_apr",
+            "en_value": "April"
+        },
+        {
+            "key": "col_value",
+            "en_value": "Col Value"
+        },
+        {
+            "key": "scope_social",
+            "en_value": "Scope Social"
+        },
+        {
+            "key": "module_failed_title",
+            "en_value": "Failed Title"
+        },
+        {
+            "key": "baseline_year",
+            "en_value": "Baseline Year"
+        },
+        {
+            "key": "in_person",
+            "en_value": "In Person"
+        },
+        {
+            "key": "scope_full",
+            "en_value": "Scope Full"
+        },
+        {
+            "key": "risk_alerts_title",
+            "en_value": "Risk Alerts Title"
+        },
+        {
+            "key": "tax_tech_criteria",
+            "en_value": "Tax Tech Criteria"
+        },
+        {
+            "key": "fair_operating_title",
+            "en_value": "Fair Operating Title"
+        },
+        {
+            "key": "all_statuses",
+            "en_value": "All Statuses"
+        },
+        {
+            "key": "database_desc",
+            "en_value": "Database Desc"
+        },
+        {
+            "key": "tracking_title",
+            "en_value": "Tracking Title"
+        },
+        {
+            "key": "supply_chain_desc",
+            "en_value": "Supply Chain Desc"
+        },
+        {
+            "key": "issb_list_title",
+            "en_value": "Issb List Title"
+        },
+        {
+            "key": "help_a1",
+            "en_value": "Help A1"
+        },
+        {
+            "key": "report_add_title",
+            "en_value": "Report Add Title"
+        },
+        {
+            "key": "wetland",
+            "en_value": "Wetland"
+        },
+        {
+            "key": "quality_desc",
+            "en_value": "Quality Desc"
+        },
+        {
+            "key": "unified_report",
+            "en_value": "Unified Report"
+        },
+        {
+            "key": "reduction_target",
+            "en_value": "Reduction Target"
+        },
+        {
+            "key": "edit_info",
+            "en_value": "Edit Info"
+        },
+        {
+            "key": "require_department",
+            "en_value": "Require Department"
+        },
+        {
+            "key": "measurement_method",
+            "en_value": "Measurement Method"
+        },
+        {
+            "key": "confirm_training_plan",
+            "en_value": "Confirm Training Plan"
+        },
+        {
+            "key": "evidence_type",
+            "en_value": "Evidence Type"
+        },
+        {
+            "key": "btn_add_impact",
+            "en_value": "Btn Add Impact"
+        },
+        {
+            "key": "file",
+            "en_value": "File"
+        },
+        {
+            "key": "esrs_likelihood_help",
+            "en_value": "Esrs Likelihood Help"
+        },
+        {
+            "key": "resolved",
+            "en_value": "Resolved"
+        },
+        {
+            "key": "social_ohs_record",
+            "en_value": "Social Ohs Record"
+        },
+        {
+            "key": "lbl_report_name",
+            "en_value": "Lbl Report Name"
+        },
+        {
+            "key": "phone",
+            "en_value": "Phone"
+        },
+        {
+            "key": "supplier_scorecard",
+            "en_value": "Supplier Scorecard"
+        },
+        {
+            "key": "manage",
+            "en_value": "Manage"
+        },
+        {
+            "key": "impact_description",
+            "en_value": "Impact Description"
+        },
+        {
+            "key": "support_title",
+            "en_value": "Support Title"
+        },
+        {
+            "key": "gov_is_independent",
+            "en_value": "Gov Is Independent"
+        },
+        {
+            "key": "payments_to_gov",
+            "en_value": "Payments To Gov"
+        },
+        {
+            "key": "emission_reduction_desc",
+            "en_value": "Emission Reduction Desc"
+        },
+        {
+            "key": "opt_sdg",
+            "en_value": "Opt Sdg"
+        },
+        {
+            "key": "category_reporting",
+            "en_value": "Reporting"
+        },
+        {
+            "key": "col_date",
+            "en_value": "Col Date"
+        },
+        {
+            "key": "create_training_plan",
+            "en_value": "Create Training Plan"
+        },
+        {
+            "key": "csrd_rationale",
+            "en_value": "Csrd Rationale"
+        },
+        {
+            "key": "gov_training_name",
+            "en_value": "Gov Training Name"
+        },
+        {
+            "key": "gender_male",
+            "en_value": "Gender Male"
+        },
+        {
+            "key": "sdg_indicator",
+            "en_value": "Sdg Indicator"
+        },
+        {
+            "key": "duration_hours",
+            "en_value": "Duration Hours"
+        },
+        {
+            "key": "survey_title",
+            "en_value": "Survey Title"
+        },
+        {
+            "key": "save_changes",
+            "en_value": "Save Changes"
+        },
+        {
+            "key": "social_score",
+            "en_value": "Social Score"
+        },
+        {
+            "key": "opt_cdp",
+            "en_value": "Opt Cdp"
+        },
+        {
+            "key": "security_policies",
+            "en_value": "Security Policies"
+        },
+        {
+            "key": "col_description",
+            "en_value": "Col Description"
+        },
+        {
+            "key": "framework_mapping_title",
+            "en_value": "Framework Mapping Title"
+        },
+        {
+            "key": "tnfd_pillar_gov",
+            "en_value": "Tnfd Pillar Gov"
+        },
+        {
+            "key": "tax_aligned",
+            "en_value": "Tax Aligned"
+        },
+        {
+            "key": "define_new_target",
+            "en_value": "Define New Target"
+        },
+        {
+            "key": "flora",
+            "en_value": "Flora"
+        },
+        {
+            "key": "reporting_title",
+            "en_value": "Reporting Title"
+        },
+        {
+            "key": "tax_title",
+            "en_value": "Tax Title"
+        },
+        {
+            "key": "scope3",
+            "en_value": "Scope 3 (Other Indirect Emissions)"
+        },
+        {
+            "key": "scope_environmental",
+            "en_value": "Scope Environmental"
+        },
+        {
+            "key": "role_custom",
+            "en_value": "Role Custom"
+        },
+        {
+            "key": "gri",
+            "en_value": "GRI"
+        },
+        {
+            "key": "opt_taxonomy",
+            "en_value": "Opt Taxonomy"
+        },
+        {
+            "key": "reporting_period",
+            "en_value": "Reporting Period"
+        },
+        {
+            "key": "severity_medium",
+            "en_value": "Severity Medium"
+        },
+        {
+            "key": "standards_title",
+            "en_value": "Standards Title"
+        },
+        {
+            "key": "start_date",
+            "en_value": "Start Date"
+        },
+        {
+            "key": "select_all",
+            "en_value": "Select All"
+        },
+        {
+            "key": "regulation_list",
+            "en_value": "Regulation List"
+        },
+        {
+            "key": "reg_deadline",
+            "en_value": "Reg Deadline"
+        },
+        {
+            "key": "tcfd_data_entry",
+            "en_value": "Tcfd Data Entry"
+        },
+        {
+            "key": "min_password_length_desc",
+            "en_value": "Min Password Length Desc"
+        },
+        {
+            "key": "tab_carbon",
+            "en_value": "Tab Carbon"
+        },
+        {
+            "key": "select_department",
+            "en_value": "Select Department"
+        },
+        {
+            "key": "tnfd_col_year",
+            "en_value": "Tnfd Col Year"
+        },
+        {
+            "key": "audit_search_placeholder",
+            "en_value": "Audit Search Placeholder"
+        },
+        {
+            "key": "cbam_period_report",
+            "en_value": "Cbam Period Report"
+        },
+        {
+            "key": "esrs_distribution_chart",
+            "en_value": "Esrs Distribution Chart"
+        },
+        {
+            "key": "tcfd_no_impact_data",
+            "en_value": "Tcfd No Impact Data"
+        },
+        {
+            "key": "sector_selection",
+            "en_value": "Sector Selection"
+        },
+        {
+            "key": "recycling",
+            "en_value": "Recycling"
+        },
+        {
+            "key": "comp_partial",
+            "en_value": "Comp Partial"
+        },
+        {
+            "key": "btn_reset_standard",
+            "en_value": "Btn Reset Standard"
+        },
+        {
+            "key": "gov_responsibilities",
+            "en_value": "Gov Responsibilities"
+        },
+        {
+            "key": "tab_energy",
+            "en_value": "Tab Energy"
+        },
+        {
+            "key": "participant_count",
+            "en_value": "Participant Count"
+        },
+        {
+            "key": "total_revenue",
+            "en_value": "Total Revenue"
+        },
+        {
+            "key": "gasoline",
+            "en_value": "Gasoline"
+        },
+        {
+            "key": "social_total_investment",
+            "en_value": "Social Total Investment"
+        },
+        {
+            "key": "participants",
+            "en_value": "Participants"
+        },
+        {
+            "key": "cultural",
+            "en_value": "Cultural"
+        },
+        {
+            "key": "bad",
+            "en_value": "Bad"
+        },
+        {
+            "key": "tcfd_col_category",
+            "en_value": "Tcfd Col Category"
+        },
+        {
+            "key": "help_center_title",
+            "en_value": "Help Center Title"
+        },
+        {
+            "key": "project_type",
+            "en_value": "Project Type"
+        },
+        {
+            "key": "esg_score",
+            "en_value": "ESG Score"
+        },
+        {
+            "key": "tcfd_year",
+            "en_value": "Tcfd Year"
+        },
+        {
+            "key": "help_q1",
+            "en_value": "Help Q1"
+        },
+        {
+            "key": "tcfd_col_year",
+            "en_value": "Tcfd Col Year"
+        },
+        {
+            "key": "btn_create_ticket",
+            "en_value": "Btn Create Ticket"
+        },
+        {
+            "key": "esrs_impact_score",
+            "en_value": "Esrs Impact Score"
+        },
+        {
+            "key": "medium_risk",
+            "en_value": "Medium Risk"
+        },
+        {
+            "key": "gri_desc",
+            "en_value": "Data entry and tracking in compliance with Global Reporting Initiative (GRI) standards."
+        },
+        {
+            "key": "duration_minutes",
+            "en_value": "Duration Minutes"
+        },
+        {
+            "key": "enter_data",
+            "en_value": "Enter Data"
+        },
+        {
+            "key": "lbl_department",
+            "en_value": "Lbl Department"
+        },
+        {
+            "key": "completion_date",
+            "en_value": "Completion Date"
+        },
+        {
+            "key": "action_plan_status",
+            "en_value": "Action Plan Status"
+        },
+        {
+            "key": "help_a4",
+            "en_value": "Help A4"
+        },
+        {
+            "key": "materiality_survey_desc",
+            "en_value": "Materiality Survey Desc"
+        },
+        {
+            "key": "economic",
+            "en_value": "Economic"
+        },
+        {
+            "key": "opt_issb",
+            "en_value": "Opt Issb"
+        },
+        {
+            "key": "median",
+            "en_value": "Median"
+        },
+        {
+            "key": "source_type",
+            "en_value": "Source Type"
+        },
+        {
+            "key": "erp_integration_desc",
+            "en_value": "Erp Integration Desc"
+        },
+        {
+            "key": "label_gri_disclosure",
+            "en_value": "Label Gri Disclosure"
+        },
+        {
+            "key": "full_compliance_threshold",
+            "en_value": "Full Compliance Threshold"
+        },
+        {
+            "key": "tnfd_pillar_strat",
+            "en_value": "Tnfd Pillar Strat"
+        },
+        {
+            "key": "tax_tech_criteria_desc",
+            "en_value": "Tax Tech Criteria Desc"
+        },
+        {
+            "key": "tsrs_code",
+            "en_value": "Tsrs Code"
+        },
+        {
+            "key": "audit_date",
+            "en_value": "Audit Date"
+        },
+        {
+            "key": "gender",
+            "en_value": "Gender"
+        },
+        {
+            "key": "tnfd_nature_opps",
+            "en_value": "Tnfd Nature Opps"
+        },
+        {
+            "key": "no_programs",
+            "en_value": "No Programs"
+        },
+        {
+            "key": "no_regulations_found",
+            "en_value": "No Regulations Found"
+        },
+        {
+            "key": "permissions",
+            "en_value": "Permissions"
+        },
+        {
+            "key": "related_module",
+            "en_value": "Related Module"
+        },
+        {
+            "key": "resolution_status",
+            "en_value": "Resolution Status"
+        },
+        {
+            "key": "issb_standards_covered",
+            "en_value": "Issb Standards Covered"
+        },
+        {
+            "key": "economic_page_title",
+            "en_value": "Economic Page Title"
+        },
+        {
+            "key": "loading_data",
+            "en_value": "Loading data..."
+        },
+        {
+            "key": "available",
+            "en_value": "Available"
+        },
+        {
+            "key": "data_import_title",
+            "en_value": "Data Import Title"
+        },
+        {
+            "key": "validation_title",
+            "en_value": "Validation Title"
+        },
+        {
+            "key": "product",
+            "en_value": "Product"
+        },
+        {
+            "key": "social_type_investment",
+            "en_value": "Social Type Investment"
+        },
+        {
+            "key": "esrs_no_data",
+            "en_value": "Esrs No Data"
+        },
+        {
+            "key": "module_coming_soon_desc",
+            "en_value": "Coming Soon Desc"
+        },
+        {
+            "key": "compliance",
+            "en_value": "Compliance"
+        },
+        {
+            "key": "draft",
+            "en_value": "Draft"
+        },
+        {
+            "key": "label_tsrs_metric",
+            "en_value": "Label Tsrs Metric"
+        },
+        {
+            "key": "confirm_delete_company",
+            "en_value": "Confirm Delete Company"
+        },
+        {
+            "key": "csrd_impact_score",
+            "en_value": "Csrd Impact Score"
+        },
+        {
+            "key": "data_inventory_title",
+            "en_value": "Data Inventory Title"
+        },
+        {
+            "key": "policy_library_title",
+            "en_value": "Policy Library Title"
+        },
+        {
+            "key": "col_role",
+            "en_value": "Col Role"
+        },
+        {
+            "key": "month_mar",
+            "en_value": "March"
+        },
+        {
+            "key": "consumer_issues_desc",
+            "en_value": "Consumer Issues Desc"
+        },
+        {
+            "key": "training_name",
+            "en_value": "Training Name"
+        },
+        {
+            "key": "strategic_title",
+            "en_value": "Strategic Title"
+        },
+        {
+            "key": "category_other",
+            "en_value": "Other"
+        },
+        {
+            "key": "reuse",
+            "en_value": "Reuse"
+        },
+        {
+            "key": "opt_tcfd",
+            "en_value": "Opt Tcfd"
+        },
+        {
+            "key": "col_year",
+            "en_value": "Col Year"
+        },
+        {
+            "key": "esrs_add_desc",
+            "en_value": "Esrs Add Desc"
+        },
+        {
+            "key": "emergency_title",
+            "en_value": "Emergency Title"
+        },
+        {
+            "key": "current",
+            "en_value": "Current"
+        },
+        {
+            "key": "welcome_message",
+            "en_value": "Welcome to Sustainage"
+        },
+        {
+            "key": "scope3_desc",
+            "en_value": "Scope3 Desc"
+        },
+        {
+            "key": "answer",
+            "en_value": "Answer"
+        },
+        {
+            "key": "yes_no",
+            "en_value": "Yes No"
+        },
+        {
+            "key": "framework_mapping_desc",
+            "en_value": "Framework Mapping Desc"
+        },
+        {
+            "key": "issb_desc",
+            "en_value": "Issb Desc"
+        },
+        {
+            "key": "satisfaction",
+            "en_value": "Satisfaction"
+        },
+        {
+            "key": "opt_csrd",
+            "en_value": "Opt Csrd"
+        },
+        {
+            "key": "complaint",
+            "en_value": "Complaint"
+        },
+        {
+            "key": "mapping_title",
+            "en_value": "Mapping Title"
+        },
+        {
+            "key": "stakeholder_group",
+            "en_value": "Stakeholder Group"
+        },
+        {
+            "key": "add_data",
+            "en_value": "Add Data"
+        },
+        {
+            "key": "sasb_topic",
+            "en_value": "Sasb Topic"
+        },
+        {
+            "key": "yes",
+            "en_value": "Yes"
+        },
+        {
+            "key": "sdg_available_goals",
+            "en_value": "Sdg Available Goals"
+        },
+        {
+            "key": "skdm_desc",
+            "en_value": "Skdm Desc"
+        },
+        {
+            "key": "progress",
+            "en_value": "Progress"
+        },
+        {
+            "key": "stakeholder_type",
+            "en_value": "Stakeholder Type"
+        },
+        {
+            "key": "view_details",
+            "en_value": "View Details"
+        },
+        {
+            "key": "cbam_indirect_emissions",
+            "en_value": "Cbam Indirect Emissions"
+        },
+        {
+            "key": "species_name",
+            "en_value": "Species Name"
+        },
+        {
+            "key": "tcfd_add_impact_title",
+            "en_value": "Tcfd Add Impact Title"
+        },
+        {
+            "key": "grassland",
+            "en_value": "Grassland"
+        },
+        {
+            "key": "risk_high",
+            "en_value": "Risk High"
+        },
+        {
+            "key": "beneficiary",
+            "en_value": "Beneficiary"
+        },
+        {
+            "key": "recycled",
+            "en_value": "Recycled"
+        },
+        {
+            "key": "electricity",
+            "en_value": "Electricity"
+        },
+        {
+            "key": "details",
+            "en_value": "Details"
+        },
+        {
+            "key": "roles_new_role",
+            "en_value": "Roles New Role"
+        },
+        {
+            "key": "ohs",
+            "en_value": "OHS"
+        },
+        {
+            "key": "cbam_period",
+            "en_value": "Cbam Period"
+        },
+        {
+            "key": "eco_vat",
+            "en_value": "Eco Vat"
+        },
+        {
+            "key": "sustainability_score",
+            "en_value": "Sustainability Score"
+        },
+        {
+            "key": "session_timeout_desc",
+            "en_value": "Session Timeout Desc"
+        },
+        {
+            "key": "protection_status",
+            "en_value": "Protection Status"
+        },
+        {
+            "key": "login_required",
+            "en_value": "Login Required"
+        },
+        {
+            "key": "issb_col_year",
+            "en_value": "Issb Col Year"
+        },
+        {
+            "key": "prioritization_desc",
+            "en_value": "Prioritization Desc"
+        },
+        {
+            "key": "apr",
+            "en_value": "Apr"
+        },
+        {
+            "key": "target_groups",
+            "en_value": "Target Groups"
+        },
+        {
+            "key": "month_jun",
+            "en_value": "June"
+        },
+        {
+            "key": "new_investment_project",
+            "en_value": "New Investment Project"
+        },
+        {
+            "key": "gov_board_member",
+            "en_value": "Gov Board Member"
+        },
+        {
+            "key": "csrd_esrs_gov",
+            "en_value": "Csrd Esrs Gov"
+        },
+        {
+            "key": "out_of_100",
+            "en_value": "/ 100"
+        },
+        {
+            "key": "social_employee_satisfaction",
+            "en_value": "Social Employee Satisfaction"
+        },
+        {
+            "key": "lbl_email",
+            "en_value": "Lbl Email"
+        },
+        {
+            "key": "add_evidence",
+            "en_value": "Add Evidence"
+        },
+        {
+            "key": "no",
+            "en_value": "No"
+        },
+        {
+            "key": "lbl_company_active",
+            "en_value": "Lbl Company Active"
+        },
+        {
+            "key": "btn_add_topic",
+            "en_value": "Btn Add Topic"
+        },
+        {
+            "key": "employee_count",
+            "en_value": "Employee Count"
+        },
+        {
+            "key": "eu_taxonomy",
+            "en_value": "EU Taxonomy"
+        },
+        {
+            "key": "opt_social",
+            "en_value": "Opt Social"
+        },
+        {
+            "key": "lbl_report_type",
+            "en_value": "Lbl Report Type"
+        },
+        {
+            "key": "respondent",
+            "en_value": "Respondent"
+        },
+        {
+            "key": "disposal_method",
+            "en_value": "Disposal Method"
+        },
+        {
+            "key": "and",
+            "en_value": "And"
+        },
+        {
+            "key": "data_provenance_title",
+            "en_value": "Data Provenance Title"
+        },
+        {
+            "key": "dashboard_role",
+            "en_value": "Role"
+        },
+        {
+            "key": "regulation_title",
+            "en_value": "Regulation Title"
+        },
+        {
+            "key": "dist_eco_value",
+            "en_value": "Dist Eco Value"
+        },
+        {
+            "key": "gov_comm_risk",
+            "en_value": "Gov Comm Risk"
+        },
+        {
+            "key": "tax_obj_climate_mitigation",
+            "en_value": "Tax Obj Climate Mitigation"
+        },
+        {
+            "key": "product_technology",
+            "en_value": "Product & Technology"
+        },
+        {
+            "key": "tax_activity",
+            "en_value": "Tax Activity"
+        },
+        {
+            "key": "training_records",
+            "en_value": "Training Records"
+        },
+        {
+            "key": "tax_obj_biodiversity",
+            "en_value": "Tax Obj Biodiversity"
+        },
+        {
+            "key": "esg",
+            "en_value": "ESG"
+        },
+        {
+            "key": "target_tracking",
+            "en_value": "Target Tracking"
+        },
+        {
+            "key": "eco_other_tax",
+            "en_value": "Eco Other Tax"
+        },
+        {
+            "key": "tax_obj_climate_adaptation",
+            "en_value": "Tax Obj Climate Adaptation"
+        },
+        {
+            "key": "module_under_construction",
+            "en_value": "Under Construction"
+        },
+        {
+            "key": "submission_date",
+            "en_value": "Submission Date"
+        },
+        {
+            "key": "road_travel",
+            "en_value": "Road Travel"
+        },
+        {
+            "key": "tnfd",
+            "en_value": "TNFD"
+        },
+        {
+            "key": "lca_implementation",
+            "en_value": "Lca Implementation"
+        },
+        {
+            "key": "role_permissions",
+            "en_value": "Role Permissions"
+        },
+        {
+            "key": "tax_capex",
+            "en_value": "Tax Capex"
+        },
+        {
+            "key": "csrd_desc",
+            "en_value": "Csrd Desc"
+        },
+        {
+            "key": "esrs_financial",
+            "en_value": "Esrs Financial"
+        },
+        {
+            "key": "help_multi_select",
+            "en_value": "Help Multi Select"
+        },
+        {
+            "key": "sasb_col_metric",
+            "en_value": "Sasb Col Metric"
+        },
+        {
+            "key": "status_submitted",
+            "en_value": "Submitted"
+        },
+        {
+            "key": "fair_operating_desc",
+            "en_value": "Fair Operating Desc"
+        },
+        {
+            "key": "esrs_environmental_effect",
+            "en_value": "Esrs Environmental Effect"
+        },
+        {
+            "key": "overall_progress",
+            "en_value": "Overall Progress"
+        },
+        {
+            "key": "no_records_found",
+            "en_value": "No Records Found"
+        },
+        {
+            "key": "tnfd_pillar_metrics",
+            "en_value": "Tnfd Pillar Metrics"
+        },
+        {
+            "key": "tnfd_data_entry",
+            "en_value": "Tnfd Data Entry"
+        },
+        {
+            "key": "end_date",
+            "en_value": "End Date"
+        },
+        {
+            "key": "btn_save_weights",
+            "en_value": "Btn Save Weights"
+        },
+        {
+            "key": "esrs_impact_help",
+            "en_value": "Esrs Impact Help"
+        },
+        {
+            "key": "tnfd_col_pillar",
+            "en_value": "Tnfd Col Pillar"
+        },
+        {
+            "key": "lbl_tax_number",
+            "en_value": "Lbl Tax Number"
+        },
+        {
+            "key": "esrs_materiality_analysis",
+            "en_value": "Esrs Materiality Analysis"
+        },
+        {
+            "key": "opt_governance",
+            "en_value": "Opt Governance"
+        },
+        {
+            "key": "role_edit_header",
+            "en_value": "Role Edit Header"
+        },
+        {
+            "key": "cdp_status_notstarted",
+            "en_value": "Cdp Status Notstarted"
+        },
+        {
+            "key": "gov_position",
+            "en_value": "Gov Position"
+        },
+        {
+            "key": "sdg_title",
+            "en_value": "Sdg Title"
+        },
+        {
+            "key": "auto_tasks",
+            "en_value": "Auto Tasks"
+        },
+        {
+            "key": "surveys",
+            "en_value": "Surveys"
+        },
+        {
+            "key": "supporting",
+            "en_value": "Supporting"
+        },
+        {
+            "key": "tnfd_add_data_title",
+            "en_value": "Tnfd Add Data Title"
+        },
+        {
+            "key": "tax_activity_code",
+            "en_value": "Tax Activity Code"
+        },
+        {
+            "key": "sector_avg",
+            "en_value": "Sector Avg"
+        },
+        {
+            "key": "gri_sector_general",
+            "en_value": "Gri Sector General"
+        },
+        {
+            "key": "verified",
+            "en_value": "Verified"
+        },
+        {
+            "key": "esg_rating",
+            "en_value": "Esg Rating"
+        },
+        {
+            "key": "gov_independent",
+            "en_value": "Gov Independent"
+        },
+        {
+            "key": "tax_framework_mappings",
+            "en_value": "Tax Framework Mappings"
+        },
+        {
+            "key": "reg_title",
+            "en_value": "Reg Title"
+        },
+        {
+            "key": "btn_open",
+            "en_value": "Open"
+        },
+        {
+            "key": "no_data_for_matrix",
+            "en_value": "No Data For Matrix"
+        },
+        {
+            "key": "survey_search_placeholder",
+            "en_value": "Survey Search Placeholder"
+        },
+        {
+            "key": "compliance_status",
+            "en_value": "Compliance Status"
+        },
+        {
+            "key": "digital_security_desc",
+            "en_value": "Digital Security Desc"
+        },
+        {
+            "key": "survey_results",
+            "en_value": "Survey Results"
+        },
+        {
+            "key": "issb_metric",
+            "en_value": "Issb Metric"
+        },
+        {
+            "key": "natural_gas",
+            "en_value": "Natural Gas"
+        },
+        {
+            "key": "csrd_esrs_general",
+            "en_value": "Csrd Esrs General"
+        },
+        {
+            "key": "opt_gri",
+            "en_value": "Opt Gri"
+        },
+        {
+            "key": "role_user",
+            "en_value": "Role User"
+        },
+        {
+            "key": "new_human_rights_assessment",
+            "en_value": "New Human Rights Assessment"
+        },
+        {
+            "key": "cat_governance",
+            "en_value": "Cat Governance"
+        },
+        {
+            "key": "system_logs",
+            "en_value": "System Logs"
+        },
+        {
+            "key": "stakeholders",
+            "en_value": "Stakeholders"
+        },
+        {
+            "key": "benchmark_title",
+            "en_value": "Benchmark Title"
+        },
+        {
+            "key": "cat_environmental",
+            "en_value": "Cat Environmental"
+        },
+        {
+            "key": "sasb_col_year",
+            "en_value": "Sasb Col Year"
+        },
+        {
+            "key": "Su",
+            "en_value": "Water"
+        },
+        {
+            "key": "reg_code",
+            "en_value": "Reg Code"
+        },
+        {
+            "key": "gender_female",
+            "en_value": "Gender Female"
+        },
+        {
+            "key": "wage_compliance",
+            "en_value": "Wage Compliance"
+        },
+        {
+            "key": "completed",
+            "en_value": "Completed"
+        },
+        {
+            "key": "reset",
+            "en_value": "Reset"
+        },
+        {
+            "key": "risk_low",
+            "en_value": "Risk Low"
+        },
+        {
+            "key": "edit_record",
+            "en_value": "Edit Record"
+        },
+        {
+            "key": "messages",
+            "en_value": "Messages"
+        },
+        {
+            "key": "issb_col_metric",
+            "en_value": "Issb Col Metric"
+        },
+        {
+            "key": "gri_standards",
+            "en_value": "GRI Standards"
+        },
+        {
+            "key": "eu_taxonomy_title",
+            "en_value": "Eu Taxonomy Title"
+        },
+        {
+            "key": "scenario_analysis_desc",
+            "en_value": "Scenario Analysis Desc"
+        },
+        {
+            "key": "energy_type",
+            "en_value": "Energy Type"
+        },
+        {
+            "key": "environmental_title",
+            "en_value": "Environmental Title"
+        },
+        {
+            "key": "lbl_report_file",
+            "en_value": "Lbl Report File"
+        },
+        {
+            "key": "cdp_status_inprogress",
+            "en_value": "Cdp Status Inprogress"
+        },
+        {
+            "key": "sasb_total_metrics",
+            "en_value": "Sasb Total Metrics"
+        },
+        {
+            "key": "module_load_error",
+            "en_value": "Module Load Error"
+        },
+        {
+            "key": "supplier_name",
+            "en_value": "Supplier Name"
+        },
+        {
+            "key": "data_collection_title",
+            "en_value": "Data Collection Title"
+        },
+        {
+            "key": "regulation_desc",
+            "en_value": "Regulation Desc"
+        },
+        {
+            "key": "target_achieved",
+            "en_value": "Target Achieved"
+        },
+        {
+            "key": "prioritization_title",
+            "en_value": "Prioritization Title"
+        },
+        {
+            "key": "submit",
+            "en_value": "Submit"
+        },
+        {
+            "key": "relationship",
+            "en_value": "Relationship"
+        },
+        {
+            "key": "module_supply_chain",
+            "en_value": "Supply Chain"
+        },
+        {
+            "key": "csrd_esrs_general_desc",
+            "en_value": "Csrd Esrs General Desc"
+        },
+        {
+            "key": "prioritization",
+            "en_value": "Prioritization"
+        },
+        {
+            "key": "question_type",
+            "en_value": "Question Type"
+        },
+        {
+            "key": "tnfd_pillar",
+            "en_value": "Tnfd Pillar"
+        },
+        {
+            "key": "sdg_avg_progress",
+            "en_value": "Sdg Avg Progress"
+        },
+        {
+            "key": "title",
+            "en_value": "Title"
+        },
+        {
+            "key": "select_option",
+            "en_value": "Select Option"
+        },
+        {
+            "key": "col_created_at",
+            "en_value": "Col Created At"
+        },
+        {
+            "key": "tcfd_total_opps",
+            "en_value": "Tcfd Total Opps"
+        },
+        {
+            "key": "save_responses",
+            "en_value": "Save Responses"
+        },
+        {
+            "key": "issb",
+            "en_value": "ISSB"
+        },
+        {
+            "key": "social_avg_score",
+            "en_value": "Social Avg Score"
+        },
+        {
+            "key": "renewable_ratio",
+            "en_value": "Renewable Ratio"
+        },
+        {
+            "key": "erp_integration_title",
+            "en_value": "Erp Integration Title"
+        },
+        {
+            "key": "no_responses_yet",
+            "en_value": "No Responses Yet"
+        },
+        {
+            "key": "iirc_desc",
+            "en_value": "Iirc Desc"
+        },
+        {
+            "key": "sasb_year",
+            "en_value": "Sasb Year"
+        },
+        {
+            "key": "urban",
+            "en_value": "Urban"
+        },
+        {
+            "key": "tnfd_col_disclosure",
+            "en_value": "Tnfd Col Disclosure"
+        },
+        {
+            "key": "low_risk",
+            "en_value": "Low Risk"
+        },
+        {
+            "key": "data_not_found_desc",
+            "en_value": "Data Not Found Desc"
+        },
+        {
+            "key": "scope",
+            "en_value": "Scope"
+        },
+        {
+            "key": "investment_amount",
+            "en_value": "Investment Amount"
+        },
+        {
+            "key": "file_manager_title",
+            "en_value": "File Manager Title"
+        },
+        {
+            "key": "module_cdp",
+            "en_value": "CDP"
+        },
+        {
+            "key": "waste_title",
+            "en_value": "Waste Title"
+        },
+        {
+            "key": "training_programs",
+            "en_value": "Training Programs"
+        },
+        {
+            "key": "esrs_score",
+            "en_value": "Esrs Score"
+        },
+        {
+            "key": "tax_obj_water",
+            "en_value": "Tax Obj Water"
+        },
+        {
+            "key": "excel_columns_info",
+            "en_value": "Excel Columns Info"
+        },
+        {
+            "key": "site_name",
+            "en_value": "Site Name"
+        },
+        {
+            "key": "all_caught_up",
+            "en_value": "Great! No pending actions."
+        },
+        {
+            "key": "target_group",
+            "en_value": "Target Group"
+        },
+        {
+            "key": "esg_settings_desc",
+            "en_value": "Esg Settings Desc"
+        },
+        {
+            "key": "scale_1_5",
+            "en_value": "Scale 1 5"
+        },
+        {
+            "key": "gov_add_ethics",
+            "en_value": "Gov Add Ethics"
+        },
+        {
+            "key": "water_consumption",
+            "en_value": "Water Consumption"
+        },
+        {
+            "key": "site_location",
+            "en_value": "Site Location"
+        },
+        {
+            "key": "gov_expertise",
+            "en_value": "Gov Expertise"
+        },
+        {
+            "key": "other",
+            "en_value": "Other"
+        },
+        {
+            "key": "min_password_length",
+            "en_value": "Min Password Length"
+        },
+        {
+            "key": "region_country",
+            "en_value": "Region Country"
+        },
+        {
+            "key": "restricted",
+            "en_value": "Restricted"
+        },
+        {
+            "key": "pending_actions",
+            "en_value": "Pending Actions"
+        },
+        {
+            "key": "governance_title",
+            "en_value": "Governance Title"
+        },
+        {
+            "key": "issb_year",
+            "en_value": "Issb Year"
+        },
+        {
+            "key": "workflow_desc",
+            "en_value": "Workflow Desc"
+        },
+        {
+            "key": "csrd_financial_score",
+            "en_value": "Csrd Financial Score"
+        },
+        {
+            "key": "energy_source",
+            "en_value": "Energy Source"
+        },
+        {
+            "key": "documentation",
+            "en_value": "Documentation"
+        },
+        {
+            "key": "eu_taxonomy_desc",
+            "en_value": "Eu Taxonomy Desc"
+        },
+        {
+            "key": "fair_labor",
+            "en_value": "Fair Labor"
+        },
+        {
+            "key": "employees",
+            "en_value": "Employees"
+        },
+        {
+            "key": "question_list",
+            "en_value": "Question List"
+        },
+        {
+            "key": "tax_analysis_desc",
+            "en_value": "Tax Analysis Desc"
+        },
+        {
+            "key": "esrs_range",
+            "en_value": "Esrs Range"
+        },
+        {
+            "key": "issb_col_disclosure",
+            "en_value": "Issb Col Disclosure"
+        },
+        {
+            "key": "hydro",
+            "en_value": "Hydro"
+        },
+        {
+            "key": "roles_confirm_delete",
+            "en_value": "Roles Confirm Delete"
+        },
+        {
+            "key": "tsrs_title",
+            "en_value": "Tsrs Title"
+        },
+        {
+            "key": "scheme_standard",
+            "en_value": "Scheme Standard"
+        },
+        {
+            "key": "csrd_title",
+            "en_value": "Csrd Title"
+        },
+        {
+            "key": "cdp_page_title",
+            "en_value": "Cdp Page Title"
+        },
+        {
+            "key": "training_desc",
+            "en_value": "Training Desc"
+        },
+        {
+            "key": "innovation_desc",
+            "en_value": "Innovation Desc"
+        },
+        {
+            "key": "gov_non_executive",
+            "en_value": "Gov Non Executive"
+        },
+        {
+            "key": "new_company",
+            "en_value": "New Company"
+        },
+        {
+            "key": "roles",
+            "en_value": "Roles"
+        },
+        {
+            "key": "cbam_liability_est",
+            "en_value": "Cbam Liability Est"
+        },
+        {
+            "key": "female",
+            "en_value": "Female"
+        },
+        {
+            "key": "company_info_desc",
+            "en_value": "Company Info Desc"
+        },
+        {
+            "key": "total_non_compliance",
+            "en_value": "Total Non Compliance"
+        },
+        {
+            "key": "labor_practices_desc",
+            "en_value": "Labor Practices Desc"
+        },
+        {
+            "key": "csrd_esrs_social_desc",
+            "en_value": "Csrd Esrs Social Desc"
+        },
+        {
+            "key": "gov_total_hours",
+            "en_value": "Gov Total Hours"
+        },
+        {
+            "key": "role_add_header",
+            "en_value": "Role Add Header"
+        },
+        {
+            "key": "tax_turnover",
+            "en_value": "Tax Turnover"
+        },
+        {
+            "key": "col_quantity",
+            "en_value": "Col Quantity"
+        },
+        {
+            "key": "cdp",
+            "en_value": "CDP"
+        },
+        {
+            "key": "risk",
+            "en_value": "Risk"
+        },
+        {
+            "key": "evidence_documents",
+            "en_value": "Evidence Documents"
+        },
+        {
+            "key": "evidence_url",
+            "en_value": "Evidence Url"
+        },
+        {
+            "key": "comp_compliant",
+            "en_value": "Comp Compliant"
+        },
+        {
+            "key": "col_username",
+            "en_value": "Col Username"
+        },
+        {
+            "key": "municipal",
+            "en_value": "Municipal"
+        },
+        {
+            "key": "cbam_threshold_above",
+            "en_value": "Cbam Threshold Above"
+        },
+        {
+            "key": "issb_total_disclosures",
+            "en_value": "Issb Total Disclosures"
+        },
+        {
+            "key": "analyst",
+            "en_value": "Analyst"
+        },
+        {
+            "key": "opt_carbon",
+            "en_value": "Opt Carbon"
+        },
+        {
+            "key": "role_add_title",
+            "en_value": "Role Add Title"
+        },
+        {
+            "key": "edit_question",
+            "en_value": "Edit Question"
+        },
+        {
+            "key": "no_questions",
+            "en_value": "No Questions"
+        },
+        {
+            "key": "cbam_threshold_status",
+            "en_value": "Cbam Threshold Status"
+        },
+        {
+            "key": "trend",
+            "en_value": "Trend"
+        },
+        {
+            "key": "survey_response_details",
+            "en_value": "Survey Response Details"
+        },
+        {
+            "key": "union_rights",
+            "en_value": "Union Rights"
+        },
+        {
+            "key": "demographics_desc",
+            "en_value": "Demographics Desc"
+        },
+        {
+            "key": "esrs_code",
+            "en_value": "Esrs Code"
+        },
+        {
+            "key": "col_type",
+            "en_value": "Col Type"
+        },
+        {
+            "key": "social_community_investment",
+            "en_value": "Social Community Investment"
+        },
+        {
+            "key": "sasb_page_title",
+            "en_value": "Sasb Page Title"
+        },
+        {
+            "key": "gov_executive",
+            "en_value": "Gov Executive"
+        },
+        {
+            "key": "baseline_value",
+            "en_value": "Baseline Value"
+        },
+        {
+            "key": "my_company",
+            "en_value": "My Company"
+        },
+        {
+            "key": "gri_disclosure_placeholder",
+            "en_value": "Gri Disclosure Placeholder"
+        },
+        {
+            "key": "required",
+            "en_value": "Required"
+        },
+        {
+            "key": "unexpected_error",
+            "en_value": "Unexpected Error"
+        },
+        {
+            "key": "comp_unknown",
+            "en_value": "Comp Unknown"
+        },
+        {
+            "key": "lockout_duration",
+            "en_value": "Lockout Duration"
+        },
+        {
+            "key": "lbl_description",
+            "en_value": "Lbl Description"
+        },
+        {
+            "key": "ungc_p",
+            "en_value": "Ungc P"
+        },
+        {
+            "key": "tsrs_esrs_mappings",
+            "en_value": "Tsrs Esrs Mappings"
+        },
+        {
+            "key": "upcoming_deadlines",
+            "en_value": "Upcoming Deadlines"
+        },
+        {
+            "key": "total_licenses",
+            "en_value": "Total Licenses"
+        },
+        {
+            "key": "col_last_login",
+            "en_value": "Col Last Login"
+        },
+        {
+            "key": "in_progress",
+            "en_value": "In Progress"
+        },
+        {
+            "key": "integration_title",
+            "en_value": "Integration Title"
+        },
+        {
+            "key": "non_hazardous",
+            "en_value": "Non Hazardous"
+        },
+        {
+            "key": "app.title",
+            "en_value": "App.Title"
+        },
+        {
+            "key": "community",
+            "en_value": "Community"
+        },
+        {
+            "key": "expiring_soon_30d",
+            "en_value": "Expiring Soon 30d"
+        },
+        {
+            "key": "lbl_fullname",
+            "en_value": "Lbl Fullname"
+        },
+        {
+            "key": "consumption_type",
+            "en_value": "Consumption Type"
+        },
+        {
+            "key": "module_tnfd",
+            "en_value": "TNFD"
+        },
+        {
+            "key": "opt_iirc",
+            "en_value": "Opt Iirc"
+        },
+        {
+            "key": "sasb_completion_rate",
+            "en_value": "Sasb Completion Rate"
+        },
+        {
+            "key": "suppliers",
+            "en_value": "Suppliers"
+        },
+        {
+            "key": "Doğalgaz",
+            "en_value": "Natural Gas"
+        },
+        {
+            "key": "regulating",
+            "en_value": "Regulating"
+        },
+        {
+            "key": "module_energy_unavailable",
+            "en_value": "Energy Unavailable"
+        },
+        {
+            "key": "project_name",
+            "en_value": "Project Name"
+        },
+        {
+            "key": "operating_costs",
+            "en_value": "Operating Costs"
+        },
+        {
+            "key": "quality_title",
+            "en_value": "Quality Title"
+        },
+        {
+            "key": "btn_back",
+            "en_value": "Back"
+        },
+        {
+            "key": "risk_level",
+            "en_value": "Risk Level"
+        },
+        {
+            "key": "bio_species",
+            "en_value": "Bio Species"
+        },
+        {
+            "key": "last_update_today",
+            "en_value": "Updated today"
+        },
+        {
+            "key": "data_entry_completed",
+            "en_value": "Data entry completed: {score}%"
+        },
+        {
+            "key": "sustainability_report",
+            "en_value": "Sustainability Report"
+        },
+        {
+            "key": "module_action",
+            "en_value": "Module / Action"
+        },
+        {
+            "key": "evidence",
+            "en_value": "Evidence"
+        },
+        {
+            "key": "module_sdg",
+            "en_value": "SDG"
+        },
+        {
+            "key": "high",
+            "en_value": "High"
+        },
+        {
+            "key": "critical",
+            "en_value": "Critical"
+        },
+        {
+            "key": "opt_waste",
+            "en_value": "Opt Waste"
+        },
+        {
+            "key": "sdg_selected_goals",
+            "en_value": "Sdg Selected Goals"
+        },
+        {
+            "key": "module_prioritization",
+            "en_value": "Prioritization"
+        },
+        {
+            "key": "sdg_col_status",
+            "en_value": "Sdg Col Status"
+        },
+        {
+            "key": "forms_desc",
+            "en_value": "Forms Desc"
+        },
+        {
+            "key": "investment_projects",
+            "en_value": "Investment Projects"
+        },
+        {
+            "key": "beneficiaries",
+            "en_value": "Beneficiaries"
+        },
+        {
+            "key": "report_status",
+            "en_value": "Report Status"
+        },
+        {
+            "key": "audit_average",
+            "en_value": "Audit Average"
+        },
+        {
+            "key": "company_desc",
+            "en_value": "Company Desc"
+        },
+        {
+            "key": "carbon_emission",
+            "en_value": "Carbon Emission"
+        },
+        {
+            "key": "payback",
+            "en_value": "Payback"
+        },
+        {
+            "key": "sdg_col_progress",
+            "en_value": "Sdg Col Progress"
+        },
+        {
+            "key": "tax_desc",
+            "en_value": "Tax Desc"
+        },
+        {
+            "key": "cdp_settings_title",
+            "en_value": "Cdp Settings Title"
+        },
+        {
+            "key": "sasb_col_value",
+            "en_value": "Sasb Col Value"
+        },
+        {
+            "key": "role_edit_title",
+            "en_value": "Role Edit Title"
+        },
+        {
+            "key": "supplier_list",
+            "en_value": "Supplier List"
+        },
+        {
+            "key": "role_display_name",
+            "en_value": "Role Display Name"
+        },
+        {
+            "key": "lbl_sector",
+            "en_value": "Lbl Sector"
+        },
+        {
+            "key": "select_indicator",
+            "en_value": "Select Indicator"
+        },
+        {
+            "key": "emergency_desc",
+            "en_value": "Emergency Desc"
+        },
+        {
+            "key": "month_jan",
+            "en_value": "January"
+        },
+        {
+            "key": "cbam_factor_period",
+            "en_value": "Cbam Factor Period"
+        },
+        {
+            "key": "waste_management",
+            "en_value": "Waste Management"
+        },
+        {
+            "key": "role_name_help",
+            "en_value": "Role Name Help"
+        },
+        {
+            "key": "require_name",
+            "en_value": "Require Name"
+        },
+        {
+            "key": "human_rights_desc",
+            "en_value": "Human Rights Desc"
+        },
+        {
+            "key": "data_import_desc",
+            "en_value": "Data Import Desc"
+        },
+        {
+            "key": "cbam_sector",
+            "en_value": "Cbam Sector"
+        },
+        {
+            "key": "system_stats_title",
+            "en_value": "System Stats Title"
+        },
+        {
+            "key": "no_supplier_defined",
+            "en_value": "No Supplier Defined"
+        },
+        {
+            "key": "opt_sasb",
+            "en_value": "Opt Sasb"
+        },
+        {
+            "key": "blocked",
+            "en_value": "Blocked"
+        },
+        {
+            "key": "duration",
+            "en_value": "Duration"
+        },
+        {
+            "key": "upload_evidence",
+            "en_value": "Upload Evidence"
+        },
+        {
+            "key": "require_email",
+            "en_value": "Require Email"
+        },
+        {
+            "key": "lost_days",
+            "en_value": "Lost Days"
+        },
+        {
+            "key": "activity_data",
+            "en_value": "Activity Data"
+        },
+        {
+            "key": "comments",
+            "en_value": "Comments"
+        },
+        {
+            "key": "water_type",
+            "en_value": "Water Type"
+        },
+        {
+            "key": "final",
+            "en_value": "Final"
+        },
+        {
+            "key": "sdg_completed_actions",
+            "en_value": "Sdg Completed Actions"
+        },
+        {
+            "key": "maintenance_mode",
+            "en_value": "Maintenance Mode"
+        },
+        {
+            "key": "water_desc",
+            "en_value": "Water Desc"
+        },
+        {
+            "key": "tcfd_disclosure",
+            "en_value": "Tcfd Disclosure"
+        },
+        {
+            "key": "records",
+            "en_value": "Records"
+        },
+        {
+            "key": "ifrs",
+            "en_value": "IFRS"
+        },
+        {
+            "key": "role_name_key",
+            "en_value": "Role Name Key"
+        },
+        {
+            "key": "esrs_materiality_items",
+            "en_value": "Esrs Materiality Items"
+        },
+        {
+            "key": "module_failed_desc",
+            "en_value": "Failed Desc"
+        },
+        {
+            "key": "module_carbon",
+            "en_value": "Carbon Footprint"
+        },
+        {
+            "key": "paper",
+            "en_value": "Paper"
+        },
+        {
+            "key": "data_sources_desc",
+            "en_value": "Data Sources Desc"
+        },
+        {
+            "key": "consumer_issues_title",
+            "en_value": "Consumer Issues Title"
+        },
+        {
+            "key": "lbl_companies",
+            "en_value": "Lbl Companies"
+        },
+        {
+            "key": "tcfd_category",
+            "en_value": "Tcfd Category"
+        },
+        {
+            "key": "comp_non_compliant",
+            "en_value": "Comp Non Compliant"
+        },
+        {
+            "key": "full_name",
+            "en_value": "Full Name"
+        },
+        {
+            "key": "cdp_col_module",
+            "en_value": "Cdp Col Module"
+        },
+        {
+            "key": "cdp_module_water",
+            "en_value": "Cdp Water"
+        },
+        {
+            "key": "file_manager_desc",
+            "en_value": "File Manager Desc"
+        },
+        {
+            "key": "cash_flow_amount",
+            "en_value": "Cash Flow Amount"
+        },
+        {
+            "key": "gov_membership_type",
+            "en_value": "Gov Membership Type"
+        },
+        {
+            "key": "scope3_title",
+            "en_value": "Scope3 Title"
+        },
+        {
+            "key": "cbam_origin_country",
+            "en_value": "Cbam Origin Country"
+        },
+        {
+            "key": "col_actions",
+            "en_value": "Col Actions"
+        },
+        {
+            "key": "comp_not_applicable",
+            "en_value": "Comp Not Applicable"
+        },
+        {
+            "key": "import_risk_data",
+            "en_value": "Import Risk Data"
+        },
+        {
+            "key": "incident_type",
+            "en_value": "Incident Type"
+        },
+        {
+            "key": "new_report",
+            "en_value": "New Report"
+        },
+        {
+            "key": "roles_header",
+            "en_value": "Roles Header"
+        },
+        {
+            "key": "sdg_survey_desc",
+            "en_value": "Sdg Survey Desc"
+        },
+        {
+            "key": "tax_framework_mappings_desc",
+            "en_value": "Tax Framework Mappings Desc"
+        },
+        {
+            "key": "gov_independence",
+            "en_value": "Gov Independence"
+        },
+        {
+            "key": "social_performance",
+            "en_value": "Social Performance (ISO 26000)"
+        },
+        {
+            "key": "initial_investment",
+            "en_value": "Initial Investment"
+        },
+        {
+            "key": "no_mappings_found",
+            "en_value": "No Mappings Found"
+        },
+        {
+            "key": "tax_obj_pollution",
+            "en_value": "Tax Obj Pollution"
+        },
+        {
+            "key": "answered",
+            "en_value": "Answered"
+        },
+        {
+            "key": "common_filter",
+            "en_value": "Common Filter"
+        },
+        {
+            "key": "opt_ifrs",
+            "en_value": "Opt Ifrs"
+        },
+        {
+            "key": "groundwater",
+            "en_value": "Groundwater"
+        },
+        {
+            "key": "incineration",
+            "en_value": "Incineration"
+        },
+        {
+            "key": "add_risk",
+            "en_value": "Add Risk"
+        },
+        {
+            "key": "benchmark_info_text",
+            "en_value": "Benchmark Info Text"
+        },
+        {
+            "key": "esrs_average",
+            "en_value": "Esrs Average"
+        },
+        {
+            "key": "company_info",
+            "en_value": "Company Info"
+        },
+        {
+            "key": "gender_other",
+            "en_value": "Gender Other"
+        },
+        {
+            "key": "risk_score",
+            "en_value": "Risk Score"
+        },
+        {
+            "key": "company_title",
+            "en_value": "Company Title"
+        },
+        {
+            "key": "tcfd_col_disclosure",
+            "en_value": "Tcfd Col Disclosure"
+        },
+        {
+            "key": "sasb_value",
+            "en_value": "Sasb Value"
+        },
+        {
+            "key": "help_q4",
+            "en_value": "Help Q4"
+        },
+        {
+            "key": "report_date",
+            "en_value": "Report Date"
+        },
+        {
+            "key": "practice_area",
+            "en_value": "Practice Area"
+        },
+        {
+            "key": "sdg_desc",
+            "en_value": "Sdg Desc"
+        },
+        {
+            "key": "system_settings",
+            "en_value": "System Settings"
+        },
+        {
+            "key": "failed",
+            "en_value": "Failed"
+        },
+        {
+            "key": "opt_esrs",
+            "en_value": "Opt Esrs"
+        },
+        {
+            "key": "tnfd_list_title",
+            "en_value": "Tnfd List Title"
+        },
+        {
+            "key": "advanced",
+            "en_value": "Advanced"
+        },
+        {
+            "key": "questions_count",
+            "en_value": "Questions Count"
+        },
+        {
+            "key": "btn_start_analysis",
+            "en_value": "Btn Start Analysis"
+        },
+        {
+            "key": "ungc_desc",
+            "en_value": "Ungc Desc"
+        },
+        {
+            "key": "cdp_col_year",
+            "en_value": "Cdp Col Year"
+        },
+        {
+            "key": "issb_standard",
+            "en_value": "Issb Standard"
+        },
+        {
+            "key": "cat_social",
+            "en_value": "Cat Social"
+        },
+        {
+            "key": "operation_failed",
+            "en_value": "Operation Failed"
+        },
+        {
+            "key": "years",
+            "en_value": "Years"
+        },
+        {
+            "key": "add_target",
+            "en_value": "Add Target"
+        },
+        {
+            "key": "fauna",
+            "en_value": "Fauna"
+        },
+        {
+            "key": "col_role_name",
+            "en_value": "Col Role Name"
+        },
+        {
+            "key": "consumption",
+            "en_value": "Consumption"
+        },
+        {
+            "key": "aug",
+            "en_value": "Aug"
+        },
+        {
+            "key": "methodology_used",
+            "en_value": "Methodology Used"
+        },
+        {
+            "key": "lbl_module",
+            "en_value": "Lbl Module"
+        },
+        {
+            "key": "select_type",
+            "en_value": "Select Type"
+        },
+        {
+            "key": "headquarters_address",
+            "en_value": "Headquarters Address"
+        },
+        {
+            "key": "tnfd_nature_risks",
+            "en_value": "Tnfd Nature Risks"
+        },
+        {
+            "key": "ton",
+            "en_value": "Ton"
+        },
+        {
+            "key": "target_value",
+            "en_value": "Target Value"
+        },
+        {
+            "key": "tcfd_total_risks",
+            "en_value": "Tcfd Total Risks"
+        },
+        {
+            "key": "upload_and_import",
+            "en_value": "Upload And Import"
+        },
+        {
+            "key": "issb_col_standard",
+            "en_value": "Issb Col Standard"
+        },
+        {
+            "key": "financial_perf",
+            "en_value": "Financial Perf"
+        },
+        {
+            "key": "require_special_char",
+            "en_value": "Require Special Char"
+        },
+        {
+            "key": "gov_participants",
+            "en_value": "Gov Participants"
+        },
+        {
+            "key": "questionnaire_title",
+            "en_value": "Questionnaire Title"
+        },
+        {
+            "key": "product_safety",
+            "en_value": "Product Safety"
+        },
+        {
+            "key": "economic_lead",
+            "en_value": "Economic Lead"
+        },
+        {
+            "key": "select",
+            "en_value": "Select"
+        },
+        {
+            "key": "company_new_title",
+            "en_value": "Company New Title"
+        },
+        {
+            "key": "new_investment_desc",
+            "en_value": "New Investment Desc"
+        },
+        {
+            "key": "sasb_col_topic",
+            "en_value": "Sasb Col Topic"
+        },
+        {
+            "key": "not_specified",
+            "en_value": "Not Specified"
+        },
+        {
+            "key": "btn_new_data_entry",
+            "en_value": "Btn New Data Entry"
+        },
+        {
+            "key": "strategic_desc",
+            "en_value": "Strategic Desc"
+        },
+        {
+            "key": "sasb_col_unit",
+            "en_value": "Sasb Col Unit"
+        },
+        {
+            "key": "cbam_product_code",
+            "en_value": "Cbam Product Code"
+        },
+        {
+            "key": "participation_rate",
+            "en_value": "Participation Rate"
+        },
+        {
+            "key": "common_clear",
+            "en_value": "Common Clear"
+        },
+        {
+            "key": "best_performer",
+            "en_value": "Best Performer"
+        },
+        {
+            "key": "discount_rate",
+            "en_value": "Discount Rate"
+        },
+        {
+            "key": "assessment_year",
+            "en_value": "Assessment Year"
+        },
+        {
+            "key": "tnfd_disclosure",
+            "en_value": "Tnfd Disclosure"
+        },
+        {
+            "key": "topic_name",
+            "en_value": "Topic Name"
+        },
+        {
+            "key": "operation_successful",
+            "en_value": "Operation Successful"
+        },
+        {
+            "key": "incident_occupational_disease",
+            "en_value": "Incident Occupational Disease"
+        },
+        {
+            "key": "user_experience_desc",
+            "en_value": "User Experience Desc"
+        },
+        {
+            "key": "year_help",
+            "en_value": "Year Help"
+        },
+        {
+            "key": "created_at",
+            "en_value": "Created At"
+        },
+        {
+            "key": "incidents_found",
+            "en_value": "Incidents Found"
+        },
+        {
+            "key": "rd_investment_ratio",
+            "en_value": "Rd Investment Ratio"
+        },
+        {
+            "key": "metric_name",
+            "en_value": "Metric Name"
+        },
+        {
+            "key": "ungc_title",
+            "en_value": "Ungc Title"
+        },
+        {
+            "key": "open",
+            "en_value": "Open"
+        },
+        {
+            "key": "default",
+            "en_value": "Default"
+        },
+        {
+            "key": "management_plan",
+            "en_value": "Management Plan"
+        },
+        {
+            "key": "carbon_footprint",
+            "en_value": "Carbon Footprint"
+        },
+        {
+            "key": "data_provenance_desc",
+            "en_value": "Data Provenance Desc"
+        },
+        {
+            "key": "principle",
+            "en_value": "Principle"
+        },
+        {
+            "key": "emission_reduction_title",
+            "en_value": "Emission Reduction Title"
+        },
+        {
+            "key": "tcfd_recommendations",
+            "en_value": "TCFD Recommendations"
+        },
+        {
+            "key": "severity",
+            "en_value": "Severity"
+        },
+        {
+            "key": "digital_security_title",
+            "en_value": "Digital Security Title"
+        },
+        {
+            "key": "on_track",
+            "en_value": "On Track"
+        },
+        {
+            "key": "sasb_add_title",
+            "en_value": "Sasb Add Title"
+        },
+        {
+            "key": "tcfd_list_title",
+            "en_value": "Tcfd List Title"
+        },
+        {
+            "key": "deselect_all",
+            "en_value": "Deselect All"
+        },
+        {
+            "key": "weight",
+            "en_value": "Weight"
+        },
+        {
+            "key": "issb_disclosure",
+            "en_value": "Issb Disclosure"
+        },
+        {
+            "key": "data_management_title",
+            "en_value": "Data Management Title"
+        },
+        {
+            "key": "no_evidence",
+            "en_value": "No Evidence"
+        },
+        {
+            "key": "create_new_survey",
+            "en_value": "Create New Survey"
+        },
+        {
+            "key": "forced_labor_risk",
+            "en_value": "Forced Labor Risk"
+        },
+        {
+            "key": "notes",
+            "en_value": "Notes"
+        },
+        {
+            "key": "mapping_desc",
+            "en_value": "Mapping Desc"
+        },
+        {
+            "key": "active_modules",
+            "en_value": "Active Modules"
+        },
+        {
+            "key": "lbl_reporting_period",
+            "en_value": "Lbl Reporting Period"
+        },
+        {
+            "key": "supply_chain",
+            "en_value": "Supply Chain"
+        },
+        {
+            "key": "backup_restore",
+            "en_value": "Backup & Restore"
+        },
+        {
+            "key": "sdg",
+            "en_value": "SDG"
+        },
+        {
+            "key": "patent_applications",
+            "en_value": "Patent Applications"
+        },
+        {
+            "key": "compliant",
+            "en_value": "Compliant"
+        },
+        {
+            "key": "habitat_name",
+            "en_value": "Habitat Name"
+        },
+        {
+            "key": "super_admin_required",
+            "en_value": "Super Admin Required"
+        },
+        {
+            "key": "opt_tsrs",
+            "en_value": "Opt Tsrs"
+        },
+        {
+            "key": "position",
+            "en_value": "Position"
+        },
+        {
+            "key": "faq",
+            "en_value": "FAQ"
+        },
+        {
+            "key": "integration_desc",
+            "en_value": "Integration Desc"
+        },
+        {
+            "key": "data_inventory_desc",
+            "en_value": "Data Inventory Desc"
+        },
+        {
+            "key": "tab_water",
+            "en_value": "Tab Water"
+        },
+        {
+            "key": "tax_eligible",
+            "en_value": "Tax Eligible"
+        },
+        {
+            "key": "value",
+            "en_value": "Value"
+        },
+        {
+            "key": "city",
+            "en_value": "City"
+        },
+        {
+            "key": "innovation_title",
+            "en_value": "Innovation Title"
+        },
+        {
+            "key": "beneficiaries_count",
+            "en_value": "Beneficiaries Count"
+        },
+        {
+            "key": "record",
+            "en_value": "Record"
+        },
+        {
+            "key": "incident_work_accident",
+            "en_value": "Incident Work Accident"
+        },
+        {
+            "key": "thresholds_desc",
+            "en_value": "Thresholds Desc"
+        },
+        {
+            "key": "score",
+            "en_value": "Score"
+        },
+        {
+            "key": "severity_low",
+            "en_value": "Severity Low"
+        },
+        {
+            "key": "sustainability_modules",
+            "en_value": "Sustainability Modules"
+        },
+        {
+            "key": "esrs_impact",
+            "en_value": "Esrs Impact"
+        },
+        {
+            "key": "general_progress",
+            "en_value": "General Progress: {progress}%"
+        },
+        {
+            "key": "csrd_esrs_social",
+            "en_value": "Csrd Esrs Social"
+        },
+        {
+            "key": "training_title",
+            "en_value": "Training Title"
+        },
+        {
+            "key": "target",
+            "en_value": "Target"
+        },
+        {
+            "key": "btn_add",
+            "en_value": "Btn Add"
+        },
+        {
+            "key": "gov_type_non_executive",
+            "en_value": "Gov Type Non Executive"
+        },
+        {
+            "key": "hazardous",
+            "en_value": "Hazardous"
+        },
+        {
+            "key": "module_performance_analysis",
+            "en_value": "Module Performance Analysis"
+        },
+        {
+            "key": "cdp_module_climate",
+            "en_value": "Cdp Climate"
+        },
+        {
+            "key": "esg_desc",
+            "en_value": "Esg Desc"
+        },
+        {
+            "key": "gov_committee_name",
+            "en_value": "Gov Committee Name"
+        },
+        {
+            "key": "education",
+            "en_value": "Education"
+        },
+        {
+            "key": "forms_title",
+            "en_value": "Forms Title"
+        },
+        {
+            "key": "numerical_value",
+            "en_value": "Numerical Value"
+        },
+        {
+            "key": "file_help",
+            "en_value": "File Help"
+        },
+        {
+            "key": "document_processing_title",
+            "en_value": "Document Processing Title"
+        },
+        {
+            "key": "sdg_action",
+            "en_value": "Sdg Action"
+        },
+        {
+            "key": "tasks",
+            "en_value": "Tasks"
+        },
+        {
+            "key": "col_consumption",
+            "en_value": "Col Consumption"
+        },
+        {
+            "key": "category",
+            "en_value": "Category"
+        },
+        {
+            "key": "information",
+            "en_value": "Information"
+        },
+        {
+            "key": "tnfd_data_entry_desc",
+            "en_value": "Tnfd Data Entry Desc"
+        },
+        {
+            "key": "scope_international",
+            "en_value": "Scope International"
+        },
+        {
+            "key": "esrs_financial_effect",
+            "en_value": "Esrs Financial Effect"
+        },
+        {
+            "key": "training_record",
+            "en_value": "Training Record"
+        },
+        {
+            "key": "iirc_title",
+            "en_value": "Iirc Title"
+        },
+        {
+            "key": "network_error",
+            "en_value": "Network Error"
+        },
+        {
+            "key": "backup_frequency",
+            "en_value": "Backup Frequency"
+        },
+        {
+            "key": "total_responses",
+            "en_value": "Total Responses"
+        },
+        {
+            "key": "cdp_col_status",
+            "en_value": "Cdp Col Status"
+        },
+        {
+            "key": "roles_page_title",
+            "en_value": "Roles Page Title"
+        },
+        {
+            "key": "cbam_show_report",
+            "en_value": "Cbam Show Report"
+        },
+        {
+            "key": "tnfd_pillar_risk",
+            "en_value": "Tnfd Pillar Risk"
+        },
+        {
+            "key": "backup_count",
+            "en_value": "Backup Count"
+        },
+        {
+            "key": "tcfd_add_title",
+            "en_value": "Tcfd Add Title"
+        },
+        {
+            "key": "company_add_title",
+            "en_value": "Company Add Title"
+        },
+        {
+            "key": "company_info_title",
+            "en_value": "Company Info Title"
+        },
+        {
+            "key": "restoration",
+            "en_value": "Restoration"
+        },
+        {
+            "key": "update",
+            "en_value": "Update"
+        },
+        {
+            "key": "satisfaction_score",
+            "en_value": "Satisfaction Score"
+        },
+        {
+            "key": "scope2",
+            "en_value": "Scope 2 (Indirect Energy Emissions)"
+        },
+        {
+            "key": "active_users",
+            "en_value": "Active Users"
+        },
+        {
+            "key": "data_not_found_title",
+            "en_value": "Data Not Found Title"
+        },
+        {
+            "key": "total_hours",
+            "en_value": "Total Hours"
+        },
+        {
+            "key": "opt_ungc",
+            "en_value": "Opt Ungc"
+        },
+        {
+            "key": "sdg.data_entry",
+            "en_value": "Sdg Data Entry"
+        },
+        {
+            "key": "policy",
+            "en_value": "Policy"
+        },
+        {
+            "key": "business_impact",
+            "en_value": "Business Impact"
+        },
+        {
+            "key": "no_answers_found",
+            "en_value": "No Answers Found"
+        },
+        {
+            "key": "cbam_total_imports",
+            "en_value": "Cbam Total Imports"
+        },
+        {
+            "key": "forest",
+            "en_value": "Forest"
+        },
+        {
+            "key": "complaint_date",
+            "en_value": "Complaint Date"
+        },
+        {
+            "key": "contact_person",
+            "en_value": "Contact Person"
+        },
+        {
+            "key": "issb_add_title",
+            "en_value": "Issb Add Title"
+        },
+        {
+            "key": "total_topics",
+            "en_value": "Total Topics"
+        },
+        {
+            "key": "csrd_materiality_desc",
+            "en_value": "Csrd Materiality Desc"
+        },
+        {
+            "key": "esrs_list_title",
+            "en_value": "Esrs List Title"
+        },
+        {
+            "key": "assessment_date",
+            "en_value": "Assessment Date"
+        },
+        {
+            "key": "sdg_target",
+            "en_value": "Sdg Target"
+        },
+        {
+            "key": "indicator",
+            "en_value": "Indicator"
+        },
+        {
+            "key": "security_settings",
+            "en_value": "Security Settings"
+        },
+        {
+            "key": "update_compliance",
+            "en_value": "Update Compliance"
+        },
+        {
+            "key": "cbam_report_liability",
+            "en_value": "Cbam Report Liability"
+        },
+        {
+            "key": "tcfd",
+            "en_value": "TCFD"
+        },
+        {
+            "key": "report_name",
+            "en_value": "Report Name"
+        },
+        {
+            "key": "col_sector",
+            "en_value": "Col Sector"
+        },
+        {
+            "key": "document_processing_desc",
+            "en_value": "Document Processing Desc"
+        },
+        {
+            "key": "delete_selected",
+            "en_value": "Delete Selected"
+        },
+        {
+            "key": "next_reporting_date",
+            "en_value": "Next Reporting Date"
+        },
+        {
+            "key": "memberships",
+            "en_value": "Memberships"
+        },
+        {
+            "key": "tax_analysis",
+            "en_value": "Tax Analysis"
+        },
+        {
+            "key": "achieved",
+            "en_value": "Achieved"
+        },
+        {
+            "key": "provisioning",
+            "en_value": "Provisioning"
+        },
+        {
+            "key": "low_risk_badge",
+            "en_value": "Low Risk Badge"
+        },
+        {
+            "key": "role_system",
+            "en_value": "Role System"
+        },
+        {
+            "key": "weighting_scheme",
+            "en_value": "Weighting Scheme"
+        },
+        {
+            "key": "common.btn_save",
+            "en_value": "Btn Save"
+        },
+        {
+            "key": "gov_add_member",
+            "en_value": "Gov Add Member"
+        },
+        {
+            "key": "ecodesign_integration",
+            "en_value": "Ecodesign Integration"
+        },
+        {
+            "key": "ungc_settings",
+            "en_value": "Ungc Settings"
+        },
+        {
+            "key": "compliance_level",
+            "en_value": "Compliance Level"
+        },
+        {
+            "key": "role_info",
+            "en_value": "Role Info"
+        },
+        {
+            "key": "investment_cost",
+            "en_value": "Investment Cost"
+        },
+        {
+            "key": "status_not_started",
+            "en_value": "Not Started"
+        },
+        {
+            "key": "status_cancelled",
+            "en_value": "Cancelled"
+        },
+        {
+            "key": "community_involvement_desc",
+            "en_value": "Community Involvement Desc"
+        },
+        {
+            "key": "status_completed",
+            "en_value": "Completed"
+        },
+        {
+            "key": "companies_search_placeholder",
+            "en_value": "Companies Search Placeholder"
+        },
+        {
+            "key": "role_admin",
+            "en_value": "Role Admin"
+        },
+        {
+            "key": "reg_authority",
+            "en_value": "Reg Authority"
+        },
+        {
+            "key": "Akaryakıt",
+            "en_value": "Fuel"
+        },
+        {
+            "key": "audit_score",
+            "en_value": "Audit Score"
+        },
+        {
+            "key": "cdp_desc",
+            "en_value": "Cdp Desc"
+        },
+        {
+            "key": "total_emissions",
+            "en_value": "Total Emissions"
+        },
+        {
+            "key": "standards_desc",
+            "en_value": "Standards Desc"
+        },
+        {
+            "key": "gri_title",
+            "en_value": "GRI Reporting Standards"
+        },
+        {
+            "key": "col_hazardous",
+            "en_value": "Col Hazardous"
+        },
+        {
+            "key": "tcfd_financial_impact_title",
+            "en_value": "Tcfd Financial Impact Title"
+        },
+        {
+            "key": "help_a3",
+            "en_value": "Help A3"
+        },
+        {
+            "key": "principles",
+            "en_value": "Principles"
+        },
+        {
+            "key": "conservation_status",
+            "en_value": "Conservation Status"
+        },
+        {
+            "key": "lbl_roles",
+            "en_value": "Lbl Roles"
+        },
+        {
+            "key": "taxonomy",
+            "en_value": "EU Taxonomy"
+        },
+        {
+            "key": "tax_objective_code",
+            "en_value": "Tax Objective Code"
+        },
+        {
+            "key": "session_timeout",
+            "en_value": "Session Timeout"
+        },
+        {
+            "key": "cbam",
+            "en_value": "CBAM"
+        },
+        {
+            "key": "gri_add_data",
+            "en_value": "Gri Add Data"
+        },
+        {
+            "key": "general_settings",
+            "en_value": "General Settings"
+        },
+        {
+            "key": "cdp_module_forests",
+            "en_value": "Cdp Forests"
+        },
+        {
+            "key": "projects",
+            "en_value": "Projects"
+        },
+        {
+            "key": "sdg_total_goals",
+            "en_value": "Sdg Total Goals"
+        },
+        {
+            "key": "generator",
+            "en_value": "Generator"
+        },
+        {
+            "key": "summary",
+            "en_value": "Summary"
+        },
+        {
+            "key": "col_department",
+            "en_value": "Col Department"
+        },
+        {
+            "key": "current_scheme",
+            "en_value": "Current Scheme"
+        },
+        {
+            "key": "no_questions_found",
+            "en_value": "No Questions Found"
+        },
+        {
+            "key": "mitigation_plan",
+            "en_value": "Mitigation Plan"
+        },
+        {
+            "key": "assigned",
+            "en_value": "Assigned"
+        },
+        {
+            "key": "cbam_report_eu_ets_price",
+            "en_value": "Cbam Report Eu Ets Price"
+        },
+        {
+            "key": "stakeholder_groups_label",
+            "en_value": "Stakeholder Groups Label"
+        },
+        {
+            "key": "target_name",
+            "en_value": "Target Name"
+        },
+        {
+            "key": "common_all_roles",
+            "en_value": "Common All Roles"
+        },
+        {
+            "key": "deleted_question",
+            "en_value": "Deleted Question"
+        },
+        {
+            "key": "stakeholder_impact",
+            "en_value": "Stakeholder Impact"
+        },
+        {
+            "key": "certifications",
+            "en_value": "Certifications"
+        },
+        {
+            "key": "not_protected",
+            "en_value": "Not Protected"
+        },
+        {
+            "key": "reporting_desc",
+            "en_value": "Reporting Desc"
+        },
+        {
+            "key": "status_rejected",
+            "en_value": "Rejected"
+        },
+        {
+            "key": "lockout_duration_desc",
+            "en_value": "Lockout Duration Desc"
+        },
+        {
+            "key": "lbl_user_active",
+            "en_value": "Lbl User Active"
+        },
+        {
+            "key": "help_a2",
+            "en_value": "Help A2"
+        },
+        {
+            "key": "content_url",
+            "en_value": "Content Url"
+        },
+        {
+            "key": "inert",
+            "en_value": "Inert"
+        },
+        {
+            "key": "species_type",
+            "en_value": "Species Type"
+        },
+        {
+            "key": "investors",
+            "en_value": "Investors"
+        },
+        {
+            "key": "opt_other",
+            "en_value": "Opt Other"
+        },
+        {
+            "key": "opt_energy",
+            "en_value": "Opt Energy"
+        },
+        {
+            "key": "population_count",
+            "en_value": "Population Count"
+        },
+        {
+            "key": "no_projects",
+            "en_value": "No Projects"
+        },
+        {
+            "key": "search_placeholder",
+            "en_value": "Search..."
+        },
+        {
+            "key": "internal_server_error",
+            "en_value": "Internal Server Error"
+        },
+        {
+            "key": "demographics",
+            "en_value": "Demographics"
+        },
+        {
+            "key": "partial_compliance_threshold",
+            "en_value": "Partial Compliance Threshold"
+        },
+        {
+            "key": "age",
+            "en_value": "Age"
+        },
+        {
+            "key": "materiality_survey_title",
+            "en_value": "Materiality Survey Title"
+        },
+        {
+            "key": "Yenilenebilir",
+            "en_value": "Renewable Energy"
+        },
+        {
+            "key": "common.btn_cancel",
+            "en_value": "Btn Cancel"
+        },
+        {
+            "key": "annual",
+            "en_value": "Annual"
+        },
+        {
+            "key": "cbam_btn_quarterly_report",
+            "en_value": "Cbam Btn Quarterly Report"
+        },
+        {
+            "key": "generate",
+            "en_value": "Generate"
+        },
+        {
+            "key": "tab_waste",
+            "en_value": "Tab Waste"
+        },
+        {
+            "key": "type",
+            "en_value": "Type"
+        },
+        {
+            "key": "lbl_username",
+            "en_value": "Lbl Username"
+        },
+        {
+            "key": "esrs_environmental",
+            "en_value": "Esrs Environmental"
+        },
+        {
+            "key": "risk_medium",
+            "en_value": "Risk Medium"
+        },
+        {
+            "key": "partial_help",
+            "en_value": "Partial Help"
+        },
+        {
+            "key": "period",
+            "en_value": "Period"
+        },
+        {
+            "key": "csrd",
+            "en_value": "CSRD"
+        },
+        {
+            "key": "hazard",
+            "en_value": "Hazard"
+        },
+        {
+            "key": "col_scope",
+            "en_value": "Col Scope"
+        },
+        {
+            "key": "ethics",
+            "en_value": "Ethics"
+        },
+        {
+            "key": "status_assigned",
+            "en_value": "Assigned"
+        },
+        {
+            "key": "col_country",
+            "en_value": "Col Country"
+        },
+        {
+            "key": "LPG",
+            "en_value": "LPG"
+        },
+        {
+            "key": "month_feb",
+            "en_value": "February"
+        },
+        {
+            "key": "wind",
+            "en_value": "Wind"
+        },
+        {
+            "key": "partial_compliance",
+            "en_value": "Partial Compliance"
+        },
+        {
+            "key": "col_year_month",
+            "en_value": "Col Year Month"
+        },
+        {
+            "key": "require_company",
+            "en_value": "Require Company"
+        },
+        {
+            "key": "manage_data",
+            "en_value": "Manage Data"
+        },
+        {
+            "key": "workflow_title",
+            "en_value": "Workflow Title"
+        },
+        {
+            "key": "respected",
+            "en_value": "Respected"
+        },
+        {
+            "key": "progress_pct",
+            "en_value": "Progress Pct"
+        },
+        {
+            "key": "category_economic",
+            "en_value": "Category Economic"
+        },
+        {
+            "key": "tracking_desc",
+            "en_value": "Tracking Desc"
+        },
+        {
+            "key": "id",
+            "en_value": "Id"
+        },
+        {
+            "key": "gov_comm_nomination",
+            "en_value": "Gov Comm Nomination"
+        },
+        {
+            "key": "view_survey",
+            "en_value": "View Survey"
+        },
+        {
+            "key": "cbam_ets_factor_title",
+            "en_value": "Cbam Ets Factor Title"
+        },
+        {
+            "key": "gri_standard",
+            "en_value": "Standard"
+        },
+        {
+            "key": "company",
+            "en_value": "Company"
+        },
+        {
+            "key": "management",
+            "en_value": "Management"
+        },
+        {
+            "key": "privacy",
+            "en_value": "Privacy"
+        },
+        {
+            "key": "category_performance",
+            "en_value": "Category Performance"
+        },
+        {
+            "key": "no_recent_activity",
+            "en_value": "No recent activity."
+        },
+        {
+            "key": "labor_practices_title",
+            "en_value": "Labor Practices Title"
+        },
+        {
+            "key": "cdp_status_submitted",
+            "en_value": "Cdp Status Submitted"
+        },
+        {
+            "key": "innovation_budget",
+            "en_value": "Innovation Budget"
+        },
+        {
+            "key": "audit_logs_title",
+            "en_value": "Audit Logs Title"
+        },
+        {
+            "key": "security_desc",
+            "en_value": "Security Desc"
+        },
+        {
+            "key": "active_period",
+            "en_value": "Active Period"
+        },
+        {
+            "key": "add_product",
+            "en_value": "Add Product"
+        },
+        {
+            "key": "esg_settings_title",
+            "en_value": "Esg Settings Title"
+        },
+        {
+            "key": "low",
+            "en_value": "Low"
+        },
+        {
+            "key": "reg_status",
+            "en_value": "Reg Status"
+        }
+    ]
+}

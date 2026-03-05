@@ -17,6 +17,8 @@ import threading
 from contextlib import contextmanager
 from typing import Any, Generator, Optional
 from config.database import DB_PATH
+from backend.core.database import inject_tenant_filter
+from flask import g, has_request_context
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -48,11 +50,11 @@ class DatabaseManager:
                 cls._instances[db_path] = super().__new__(cls)
         return cls._instances[db_path]
 
-    def __init__(self, db_path: str = DB_PATH, pool_size: int = 50):
+    def __init__(self, db_path: str = DB_PATH, pool_size: int = None):
         """
         Args:
             db_path: Veritabanı yolu
-            pool_size: Connection pool boyutu (varsayılan: 50)
+            pool_size: Connection pool boyutu (varsayılan: Env veya 50)
         """
         # İlk init kontrolü (singleton/multiton için)
         if hasattr(self, '_initialized'):
@@ -62,6 +64,15 @@ class DatabaseManager:
         if not os.path.isabs(db_path):
             base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
             db_path = os.path.join(base_dir, db_path)
+
+        # Performance Tuning based on Load Test
+        # 50 users -> 50 conn is okay
+        # 200 users -> might need more or handle queue better
+        # Let's make it dynamic based on env or default to optimized value
+        if pool_size is None:
+            # Increased pool size for load handling (200 concurrent users)
+            # Default to 200 to match max concurrent users
+            pool_size = int(os.environ.get('DB_POOL_SIZE', 200))
 
         self.db_path = db_path
         self.pool_size = pool_size
@@ -96,7 +107,8 @@ class DatabaseManager:
         conn.execute("PRAGMA synchronous=NORMAL")  # Daha hızlı yazma
         conn.execute("PRAGMA foreign_keys=ON")  # Foreign key kontrolü
         conn.execute("PRAGMA temp_store=MEMORY")  # Geçici veriler RAM'de
-        conn.execute("PRAGMA cache_size=-64000")  # 64MB cache
+        conn.execute("PRAGMA cache_size=-128000")  # Increased to 128MB cache
+        conn.execute("PRAGMA mmap_size=268435456") # 256MB mmap for faster reads
         
         # Row factory
         conn.row_factory = sqlite3.Row
@@ -160,15 +172,22 @@ class DatabaseManager:
 
     def execute_query(self, query: str, params: tuple = ()) -> list:
         """
-        Basit sorgu çalıştır (SELECT için)
+        Sorgu çalıştır (SELECT)
         
         Args:
             query: SQL sorgusu
-            params: Parametreler (tuple)
+            params: Parametreler
         
         Returns:
-            list: Sonuç satırları
+            list: Sonuç satırları (Row factory ile)
         """
+        # Inject tenant filter if applicable
+        if has_request_context() and hasattr(g, 'user') and g.user and 'company_id' in g.user:
+            query, params = inject_tenant_filter(query, params, g.user['company_id'])
+        elif has_request_context() and hasattr(g, 'license') and g.license and 'company_id' in g.license:
+             # Fallback for license-based auth
+             query, params = inject_tenant_filter(query, params, g.license['company_id'])
+
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, params)
@@ -185,6 +204,12 @@ class DatabaseManager:
         Returns:
             int: Etkilenen satır sayısı veya lastrowid
         """
+        # Inject tenant filter if applicable
+        if has_request_context() and hasattr(g, 'user') and g.user and 'company_id' in g.user:
+            query, params = inject_tenant_filter(query, params, g.user['company_id'])
+        elif has_request_context() and hasattr(g, 'license') and g.license and 'company_id' in g.license:
+             query, params = inject_tenant_filter(query, params, g.license['company_id'])
+
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, params)

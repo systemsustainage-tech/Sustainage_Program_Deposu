@@ -69,8 +69,7 @@ class MultilingualManager(BaseTenantManager):
                     VALUES 
                     ('tr', 'Türkçe', 1),
                     ('en', 'English', 0),
-                    ('de', 'Deutsch', 0),
-                    ('fr', 'Français', 0)
+                    ('de', 'Deutsch', 0)
                 """, skip_tenant_filter=True)
         except Exception as e:
             logging.error(f"Varsayılan diller eklenemedi: {e}")

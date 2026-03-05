@@ -588,25 +588,27 @@ class UserManager(BaseTenantManager):
             # Şifreyi hash'le
             password_hash = self._hash_password(user_data['password'])
 
-            # Transaction wrapper via DatabaseManager?
-            # self.db.transaction?
-            # UserManager doesn't inherit transaction method.
-            # We can use self.db.transaction if it exists.
-            # DatabaseManager doesn't have transaction method in snippet I read.
-            # I added execute_script, but transaction?
-            # RoleManager used self.db.transaction?
-            # Let's check RoleManager.
-            
+            # Ensure company_id context
+            if self.company_id is None:
+                # Fallback to user_data if available
+                if 'company_id' in user_data:
+                    self.company_id = user_data['company_id']
+                else:
+                    raise ValueError("Company ID context missing for create_user")
+
+            cid = self.company_id
+
             # Since create_user needs lastrowid and multiple inserts, best to use connection.
             with self.db.get_connection() as conn:
                 cursor = conn.cursor()
                 
                 cursor.execute("""
                     INSERT INTO users 
-                    (username, email, password_hash, first_name, last_name, phone, 
+                    (company_id, username, email, password_hash, first_name, last_name, phone, 
                      department, position, is_active, is_verified, created_by, updated_by)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
+                    cid,
                     user_data['username'],
                     user_data['email'],
                     password_hash,
@@ -625,32 +627,35 @@ class UserManager(BaseTenantManager):
                 
                 # Kullanıcı profilini oluştur
                 cursor.execute("""
-                    INSERT INTO user_profiles (user_id)
-                    VALUES (?)
-                """, (user_id,))
+                    INSERT INTO user_profiles (company_id, user_id)
+                    VALUES (?, ?)
+                """, (cid, user_id,))
                 
                 # Varsayılan rolü ata (eğer belirtilmişse)
                 if 'role_ids' in user_data and user_data['role_ids']:
                     for role_id in user_data['role_ids']:
                         cursor.execute(
                             """
-                            INSERT INTO user_roles (user_id, role_id, assigned_by)
-                            VALUES (?, ?, ?)
+                            INSERT INTO user_roles (company_id, user_id, role_id, assigned_by)
+                            VALUES (?, ?, ?, ?)
                             """,
-                            (user_id, role_id, created_by),
+                            (cid, user_id, role_id, created_by),
                         )
                 else:
                     # Hiç rol verilmemişse varsayılan 'user' rolünü ata
                     try:
+                        # Roles are often global or per-company. Assuming per-company or global with company_id=0/1
+                        # But for safety, filter by company_id OR global
+                        # Here we assume roles table has company_id
                         cursor.execute("SELECT id FROM roles WHERE name = 'user' AND is_active = 1")
                         row = cursor.fetchone()
-                        if row and row['id']:
+                        if row and row[0]:
                             cursor.execute(
                                 """
-                                INSERT OR IGNORE INTO user_roles (user_id, role_id, assigned_by)
-                                VALUES (?, ?, ?)
+                                INSERT OR IGNORE INTO user_roles (company_id, user_id, role_id, assigned_by)
+                                VALUES (?, ?, ?, ?)
                                 """,
-                                (user_id, row['id'], created_by)
+                                (cid, user_id, row[0], created_by)
                             )
                     except Exception as e:
                         logging.error(f"Error assigning default role: {e}")

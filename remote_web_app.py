@@ -535,45 +535,33 @@ def require_company_context(f):
             
         g.company_id = int(company_id) # Ensure int
         
-        # --- LICENSE RESTRICTION CHECK ---
         try:
-            # Get active license for this company
             license_key = license_manager.get_active_license(g.company_id)
             if license_key:
-                # Verify and get payload (IP/Domain rules)
                 verify_result = license_manager.verify_license_key(license_key)
                 if not verify_result or len(verify_result) != 3:
                      logging.error(f"Invalid verify_license_key return: {verify_result}")
                      is_valid, msg, payload = False, "Internal Error", {}
                 else:
                      is_valid, msg, payload = verify_result
-                     
                 if is_valid:
                     allowed_ips = payload.get('allowed_ips')
                     allowed_domains = payload.get('allowed_domains')
-                    
-                    # IP Check
                     if allowed_ips:
-                        # Normalize list if string (comma separated)
                         if isinstance(allowed_ips, str): 
                             allowed_ips = [ip.strip() for ip in allowed_ips.split(',')]
-                        
                         client_ip = get_remote_address()
-                        # Handle potential localhost mapping
                         if client_ip == '127.0.0.1' and 'localhost' in allowed_ips:
-                            pass # Allowed
+                            pass
                         elif client_ip not in allowed_ips:
                             logging.warning(f"License Violation: IP {client_ip} not in {allowed_ips}")
                             report_violation('LICENSE_VIOLATION', client_ip, details={'reason': 'IP_MISMATCH', 'expected': allowed_ips})
                             if request.path.startswith('/api/'):
                                 return jsonify({'error': f"IP '{client_ip}' not authorized by license"}), 403
                             abort(403, description=f"IP Adresi ({client_ip}) lisans kapsamında yetkilendirilmemiş.")
-                            
-                    # Domain Check (if referrer/host is available)
                     if allowed_domains:
                         if isinstance(allowed_domains, str):
                             allowed_domains = [d.strip() for d in allowed_domains.split(',')]
-                        
                         host = request.host.split(':')[0]
                         if host not in allowed_domains:
                             logging.warning(f"License Violation: Domain {host} not in {allowed_domains}")
@@ -581,11 +569,17 @@ def require_company_context(f):
                             if request.path.startswith('/api/'):
                                 return jsonify({'error': f"Domain '{host}' not authorized by license"}), 403
                             abort(403, description=f"Domain ({host}) lisans kapsamında yetkilendirilmemiş.")
-                
+                    abuse_result = license_manager.update_usage_and_check_abuse(license_key)
+                    is_abusive, abuse_reason = (abuse_result if isinstance(abuse_result, tuple) and len(abuse_result) == 2 else (False, ''))
+                    if is_abusive:
+                        client_ip = get_remote_address()
+                        report_violation('LICENSE_ABUSE', client_ip, details={'reason': abuse_reason, 'license_key': license_key, 'company_id': payload.get('company_id')})
+                        license_manager.suspend_license(license_key, abuse_reason)
+                        if request.path.startswith('/api/'):
+                            return jsonify({'error': 'License suspended due to abuse.'}), 403
+                        abort(403, description='Lisans kötüye kullanım nedeniyle askıya alındı.')
         except Exception as e:
             logging.error(f"License restriction check error: {e}")
-            # Do not block on error, just log
-        # ---------------------------------
         
         return f(*args, **kwargs)
     return decorated_function

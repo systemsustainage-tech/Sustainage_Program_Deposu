@@ -101,15 +101,18 @@ class SSOManager(BaseTenantManager):
             logging.error(f"[HATA] SSO provider ekleme: {e}")
             return False
 
-            conn.commit()
-            return True
-
-        except Exception as e:
-            logging.error(f"SSO sağlayıcısı ekleme hatası: {e}")
-            conn.rollback()
-            return False
-        finally:
-            conn.close()
+    def get_provider_by_name(self, company_id: int, provider_name: str) -> Optional[Dict]:
+        """İsimle sağlayıcı getir"""
+        rows = self.execute_query("""
+            SELECT * FROM sso_providers
+            WHERE company_id = ? AND provider_name = ?
+        """, (company_id, provider_name))
+        
+        if not rows:
+            return None
+            
+        row = rows[0]
+        return dict(row)
 
     def create_sso_session(self, company_id: int, user_id: int, provider_name: str,
                           external_user_id: str, expires_at: str) -> str:

@@ -1,0 +1,10 @@
+app.title
+common.btn_cancel
+common.btn_save
+common.save
+dashboard_summary_completion
+dashboard_summary_next_deadline
+dashboard_summary_no_deadline
+dashboard_summary_total_modules
+last_updated
+sdg.data_entry

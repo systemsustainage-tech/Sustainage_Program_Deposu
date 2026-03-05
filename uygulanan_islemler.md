@@ -13,6 +13,9 @@ Bu bölüm `trae_strict_prompt.pdf` dosyasından çıkarılmıştır ve projenin
 - [x] `web_app.py` içinde şifrelerin açık metin olarak saklanmasını engelle; Argon2 ile hashleme kullan. *(Backdoor kaldırıldı, UserManager Argon2 kullanıyor)*
 - [x] Kullanıcı girişlerinde `company_id` kontrolü yap; yanlış firma erişimini engelle. *(Mevcut yapıda var)*
 - [x] Kritik işlemler (silme, güncelleme) için denetim izi (audit log) mekanizması kur; kimin, ne zaman, ne yaptığını kaydet. *(AuditLog tablosu oluşturuldu, user_manager.py entegre edildi, company_id ile test edildi)*
+- [ ] Kod tabanında kalan legacy `sqlite3.connect` çağrılarını tarayıp BaseTenantManager veya TenantAwareDB kullanacak şekilde refaktör et; doğrudan bağlantı açılan yer bırakma.
+- [ ] `GLOBAL_TABLES` listesini gözden geçir; gerçekten global olmayan ama yanlışlıkla listede kalmış tabloları listeden çıkar ve bu tablolar için company_id izolasyonunu zorunlu kıl.
+- [ ] API rate limiting politikalarını şirket büyüklüğüne göre ince ayarla; belirli kritik API uçları (örn. `/api/ai/...`, `/api/report/...`) için daha sıkı limitler ve ayrı `resource_type` tanımlayarak özel rate limit kuralları uygula.
 
 ### 2. Rol ve Yetki Yönetimi
 - [x] Veritabanında roller, izinler, kullanıcı rollerini ayrıntılı şekilde tanımla; her modül için okuma, yazma, silme ve yönetim yetkilerini ayrı ayrı belirle. *(API ve tablolar oluşturuldu)*
@@ -23,6 +26,12 @@ Bu bölüm `trae_strict_prompt.pdf` dosyasından çıkarılmıştır ve projenin
 - [ ] İngilizce, Almanca, Fransızca gibi dilleri tamamla.
 - [ ] Kullanıcı dil seçiminde bütün sayfa içeriğinin anında değiştiğini test et; çevirisi olmayan metin bırakma.
 - [x] AI rapor çıktıları için de dil yönetimini `LanguageManager` ile entegre et. *(Madde 48 kapsamında tamamlandı)*
+- [ ] Belirli modüller/sayfalar (ör. Login, raporlama ekranları) için İngilizce ve Almanca metinleri modül bazında ince ayarla.
+
+### 6. Dokümantasyon ve Hukuki Evraklar
+- [ ] Kullanıcı kılavuzuna modül bazlı mini walkthrough’lar ekle (örneğin GRI modülü için ayrı alt bölüm, veri girişi → haritalama → rapor oluşturma akışı).
+- [ ] Geliştirici kılavuzuna veritabanı şeması için tablo/görsel ağırlıklı bir özet ekle; temel tabloları (kullanıcılar, şirketler, survey_questions, report_templates vb.) ilişki diyagramı perspektifiyle açıkla.
+- [ ] Legal dokümanlarda (gizlilik politikası, SLA, DPA) ülke/AB özel maddeleri detaylandır; özellikle uluslararası veri aktarımı için SCC, SCC + UK IDTA ve benzeri mekanizmalarla uyumu netleştir.
 
 ### 4. Yedekleme ve Sunucu Yapılandırması
 - [ ] Veritabanlarını düzenli aralıklarla yedekleyen ve eski yedekleri yöneten bir otomatik görev sistemi kur.
@@ -34,6 +43,7 @@ Bu bölüm `trae_strict_prompt.pdf` dosyasından çıkarılmıştır ve projenin
 - [-] Dashboard ve rapor bileşenlerinde sayfalama, arama ve filtrelemeyi etkinleştir; önbellekleme ve lazy loading ile performansı artır. *(Çalışılıyor: Support ve AuditLog için sayfalama ekleniyor)*
 - [x] Dashboard 'Quick Data Entry' kutusunu kalıcı olarak kaldır. *(Yapıldı)*
 - [ ] Karanlık mod ve kullanıcıya özel tema seçenekleri ekleyerek daha iyi bir kullanıcı deneyimi sağla.
+- [ ] Dashboard’daki ortalama tamamlanma hesabını kritik modüllere ağırlık verecek şekilde güncelle; tarih alanlarını (örn. 2025-12-31 → 31.12.2025) yerelleştirecek yardımcı fonksiyon ekle.
 
 ### 6. Yeni Modüller ve Fonksiyonlar
 - [x] GRI Modülü: 2025-2026 güncellemelerini indirip `gri_standards` tablosunu güncelle. *(Şema güncellendi, effective_date ve version sütunları eklendi ve veriler 2026 güncellemesine göre dolduruldu)*
@@ -45,6 +55,7 @@ Bu bölüm `trae_strict_prompt.pdf` dosyasından çıkarılmıştır ve projenin
 - [x] Benchmarking modülü ile şirket verilerini sektör ortalamalarıyla karşılaştır; regülasyon takibi modülü ile yasal değişiklikleri izle ve hatırlat. *(Modül arayüzleri ve backend mantığı tamamlandı, sektör veritabanı entegre edildi, uzak sunucuya deploy edildi ve doğrulandı)*
 - [x] Stakeholder anketleri ve eğitim modülü oluşturarak çalışan ve paydaş memnuniyeti anketleri oluşturacak şekilde genişlet; çevrimiçi eğitim içeriklerini yönetecek sistem kur. *(Modül oluşturuldu, web_app.py entegrasyonu tamamlandı, uzak sunucuya deploy edildi ve doğrulandı)*
 - [x] Tüm standartları ağırlıklandırarak tek bir ESG skoru hesaplayan modülü geliştir. *(Puanlama mantığı veri bonusları ile geliştirildi, eksik veri durumları için fallback eklendi, UI güncellendi, uzak sunucuya deploy edildi ve doğrulandı)*
+- [ ] API anahtarları için lisans benzeri otomatik suspend + uyarı akışı tasarla ve uygula; olağandışı isteklerde API key’i geçici olarak askıya al ve yöneticilere uyarı gönder.
 
 ### 7. Yapay Zekâ Destekli Raporlama
 - [x] AI raporları için tüm modüllerden gelen verileri tek bir JSON konteynırında birleştiren `prepare_context` fonksiyonunu yaz. *(ai_manager.py içinde mevcut)*

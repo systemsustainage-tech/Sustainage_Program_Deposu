@@ -60,6 +60,12 @@ class ReportGenerator(BaseTenantManager):
                 )
             """)
 
+            # Otomatik İndeksleme (Performans için)
+            self.execute_update("CREATE INDEX IF NOT EXISTS idx_report_templates_company ON report_templates(company_id)", skip_tenant_filter=True)
+            self.execute_update("CREATE INDEX IF NOT EXISTS idx_generated_reports_company ON generated_reports(company_id)", skip_tenant_filter=True)
+            self.execute_update("CREATE INDEX IF NOT EXISTS idx_generated_reports_template ON generated_reports(template_id)", skip_tenant_filter=True)
+            self.execute_update("CREATE INDEX IF NOT EXISTS idx_generated_reports_created ON generated_reports(created_at)", skip_tenant_filter=True)
+
             logging.info("[OK] Raporlama modulu tablolari basariyla olusturuldu")
 
         except Exception as e:

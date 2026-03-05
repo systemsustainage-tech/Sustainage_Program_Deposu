@@ -42,6 +42,52 @@
     </div>
 </div>
 
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body py-3">
+        <div class="row g-3 align-items-center">
+            <div class="col-md-4">
+                <div class="d-flex align-items-center">
+                    <div class="rounded-circle bg-success bg-opacity-10 d-flex align-items-center justify-content-center me-3" style="width: 42px; height: 42px;">
+                        <i class="bi bi-grid-3x3-gap-fill text-success"></i>
+                    </div>
+                    <div>
+                        <div class="text-muted small text-uppercase">{{ lang('dashboard_summary_total_modules', 'Toplam Modül Sayısı') }}</div>
+                        <div class="fw-bold fs-5">{{ module_stats|length }}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="d-flex align-items-center">
+                    <div class="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center me-3" style="width: 42px; height: 42px;">
+                        <i class="bi bi-speedometer2 text-primary"></i>
+                    </div>
+                    <div>
+                        <div class="text-muted small text-uppercase">{{ lang('dashboard_summary_completion', 'Ortalama Tamamlanma Yüzdesi') }}</div>
+                        <div class="fw-bold fs-5">%{{ module_completion_avg or 0 }}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="d-flex align-items-center">
+                    <div class="rounded-circle bg-warning bg-opacity-10 d-flex align-items-center justify-content-center me-3" style="width: 42px; height: 42px;">
+                        <i class="bi bi-calendar-event text-warning"></i>
+                    </div>
+                    <div>
+                        <div class="text-muted small text-uppercase">{{ lang('dashboard_summary_next_deadline', 'Yaklaşan Rapor Teslim Tarihi') }}</div>
+                        <div class="fw-bold fs-6">
+                            {% if next_deadline %}
+                                {{ next_deadline }}
+                            {% else %}
+                                {{ lang('dashboard_summary_no_deadline', 'Yaklaşan teslim tarihi yok') }}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="row g-3 mb-4">
     <div class="col-md-3">
         <div class="card h-100 border-0 shadow-sm">

@@ -20,6 +20,12 @@ if "%EXIT_CODE%" NEQ "0" (
 
 echo [CI] Auditing Translations...
 python audit_translations.py
+if %ERRORLEVEL% NEQ 0 (
+    echo [CI] ERROR: Missing translation keys detected!
+    echo [CI] Please run 'pushd tools && python add_missing_keys.py && popd' to add them.
+    popd
+    exit /b 1
+)
 
 echo [CI] Preparing Frontend Build Assets...
 python prepare_frontend_build.py

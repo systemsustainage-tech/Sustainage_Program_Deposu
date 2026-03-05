@@ -9,14 +9,19 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 # Add backend to path
 current_dir = os.path.dirname(os.path.abspath(__file__))
-backend_dir = os.path.join(os.path.dirname(current_dir), 'backend')
-sys.path.append(backend_dir)
+project_root = os.path.dirname(current_dir)
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
 try:
-    from security.core.enhanced_2fa import _encrypt_secret, _decrypt_secret, ENCRYPTION_KEY
-except ImportError as e:
-    logging.error(f"Failed to import from backend: {e}")
-    sys.exit(1)
+    from backend.core.security.enhanced_2fa import _encrypt_secret, _decrypt_secret, ENCRYPTION_KEY
+except ImportError:
+    # Try different path structure
+    try:
+        from backend.security.core.enhanced_2fa import _encrypt_secret, _decrypt_secret, ENCRYPTION_KEY
+    except ImportError as e:
+        logging.error(f"Failed to import from backend: {e}")
+        sys.exit(1)
 
 def migrate_secrets(db_path):
     """

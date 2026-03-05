@@ -59,7 +59,8 @@ GLOBAL_TABLES = {
     'gri_risks',
     'gri_user_roles', 'gri_permissions', 'gri_audit_log', 'scope3_categories',
     'standard_mappings', 'policy_categories', 'message_templates', 'ip_whitelist', 'ip_blacklist',
-    'backup_history', 'recovery_history'
+    'backup_history', 'recovery_history',
+    'licenses' # License table is global
 }
 
 def inject_tenant_filter(sql, params, company_id):
@@ -74,98 +75,116 @@ def inject_tenant_filter(sql, params, company_id):
     sql_stripped = sql.strip()
     sql_stripped_lower = sql_stripped.lower()
     
-    # Use UNSTRIPPED lower for regex to preserve indices
-    sql_lower = sql.lower()
-    
     # 0. Skip DDL and PRAGMA
     if sql_stripped_lower.startswith(('create', 'alter', 'drop', 'pragma', 'begin', 'commit', 'rollback')):
         return sql, params
+        
+    # Use full SQL lower for regex searching to maintain correct indices
+    sql_lower = sql.lower()
 
-    # 1. Skip if company_id is already in SQL
+    # 1. Determine operation type and table
+    op_match = re.search(r'\b(select|insert|update|delete)\b', sql_lower)
+    if not op_match:
+        return sql, params
+        
+    operation = op_match.group(1)
+    
+    # Extract table name(s)
+    # Simple regex, might fail on complex joins, but good enough for 90%
+    if operation == 'insert':
+        table_match = re.search(r'into\s+([a-zA-Z0-9_]+)', sql_lower)
+    elif operation == 'update':
+        table_match = re.search(r'update\s+([a-zA-Z0-9_]+)', sql_lower)
+    elif operation == 'delete':
+        table_match = re.search(r'from\s+([a-zA-Z0-9_]+)', sql_lower)
+    else: # SELECT
+        table_match = re.search(r'from\s+([a-zA-Z0-9_]+)', sql_lower)
+        
+    if not table_match:
+        return sql, params
+        
+    table_name = table_match.group(1)
+    
+    if table_name in GLOBAL_TABLES:
+        return sql, params
+        
+    # 2. Check if company_id is already in SQL (to avoid double injection)
+    # This is a bit risky if company_id is used in a subquery or join condition
+    # But for simple CRUD it's okay.
     if 'company_id' in sql_lower:
         return sql, params
         
-    # 2. Handle INSERT statements
-    if sql_stripped_lower.startswith('insert'):
-        insert_match = re.search(r'insert\s+into\s+([a-zA-Z0-9_]+)\s*\((.*?)\)\s*values\s*\((.*?)\)', sql_lower, re.IGNORECASE | re.DOTALL)
-        
-        if insert_match:
-            table_name = insert_match.group(1)
-            columns_str = insert_match.group(2)
-            
-            if table_name in GLOBAL_TABLES:
+    # 3. Handle INSERT
+    if operation == 'insert':
+        # Find columns part
+        cols_match = re.search(r'\((.*?)\)\s*values', sql_lower, re.DOTALL)
+        if cols_match:
+            cols_str = cols_match.group(1)
+            # If company_id already in columns, skip
+            if 'company_id' in cols_str:
                 return sql, params
             
-            if 'company_id' in columns_str.lower():
-                return sql, params
+            # Inject column
+            # We need to find the closing parenthesis of columns and values
+            # This is hard with regex due to nested parens.
+            # Simplified approach: Append to end of lists
             
-            # Injection needed
-            cols_span = insert_match.span(2)
-            values_span = insert_match.span(3)
+            # Reconstruct SQL
+            # INSERT INTO table (col1, col2) VALUES (?, ?)
+            # -> INSERT INTO table (col1, col2, company_id) VALUES (?, ?, ?)
             
-            part1 = sql[:cols_span[1]]
-            part2 = ", company_id"
-            part3 = sql[cols_span[1]:values_span[1]]
-            part4 = ", ?"
-            part5 = sql[values_span[1]:]
+            # Find the first closing paren before VALUES
+            values_idx = sql_lower.find('values')
+            cols_end = sql.rfind(')', 0, values_idx)
             
-            new_sql = part1 + part2 + part3 + part4 + part5
+            # Find the last closing paren
+            vals_end = sql.rfind(')')
             
-            new_params = list(params)
-            new_params.append(company_id)
-            
-            return new_sql, tuple(new_params)
-        
+            if cols_end > 0 and vals_end > 0:
+                new_sql = sql[:cols_end] + ", company_id" + sql[cols_end:vals_end] + ", ?" + sql[vals_end:]
+                new_params = list(params) if params else []
+                new_params.append(company_id)
+                return new_sql, tuple(new_params)
         return sql, params
 
-    # 3. Extract Table Name (for SELECT, UPDATE, DELETE)
-    table_match = re.search(r'\b(from|update|into)\s+(?:[a-zA-Z0-9_]+\.)?([a-zA-Z0-9_]+)', sql_lower)
-    if not table_match:
-        return sql, params
-    
-    table_name = table_match.group(2)
-    if table_name in GLOBAL_TABLES:
-        return sql, params
-
-    # 4. Inject Logic
-    new_sql = sql
+    # 4. Handle SELECT, UPDATE, DELETE
+    # Inject WHERE clause
     new_params = list(params) if params else []
     
-    # Determine injection point
     where_match = re.search(r'\bwhere\b', sql_lower)
     
     if where_match:
+        # Insert "company_id = ? AND" after WHERE
         start, end = where_match.span()
-        
-        # Calculate param index
-        pre_sql = sql[:end]
-        param_index = pre_sql.count('?')
-        
-        # Insert SQL
         new_sql = sql[:end] + " company_id = ? AND" + sql[end:]
+        # new_params.insert(0, company_id) # Prepend param? No, depends on position.
+        # Actually, if we insert at WHERE, it's before existing WHERE params.
+        # But wait, existing params order matches ? placeholders.
+        # If we insert SQL text, we must insert param at correct index.
         
-        # Insert Param
-        new_params.insert(param_index, company_id)
+        # Count ? before WHERE
+        pre_where = sql[:start]
+        param_idx = pre_where.count('?')
+        new_params.insert(param_idx, company_id)
         
     else:
-        # No WHERE clause
+        # No WHERE clause. Append to end, but before GROUP BY/ORDER BY/LIMIT
         suffix_match = re.search(r'\b(group by|order by|limit)\b', sql_lower)
         
         if suffix_match:
             start = suffix_match.start()
-            pre_sql = sql[:start]
-            param_index = pre_sql.count('?')
-            
             new_sql = sql[:start] + " WHERE company_id = ? " + sql[start:]
-            new_params.insert(param_index, company_id)
-        else:
-            # Just append
-            clean_sql = sql.rstrip(';')
-            param_index = clean_sql.count('?')
             
+            # Count ? before suffix
+            pre_suffix = sql[:start]
+            param_idx = pre_suffix.count('?')
+            new_params.insert(param_idx, company_id)
+        else:
+            # Append at end
+            clean_sql = sql.rstrip(';')
             new_sql = clean_sql + " WHERE company_id = ?"
             new_params.append(company_id)
-    
+            
     return new_sql, tuple(new_params)
 
 class TenantAwareDB:

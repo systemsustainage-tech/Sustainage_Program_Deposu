@@ -1,6 +1,7 @@
 <script setup>
 import { RouterLink, RouterView, useRouter } from 'vue-router'
 import { useAuthStore } from './stores/auth'
+import LanguageSwitcher from './components/LanguageSwitcher.vue'
 
 const authStore = useAuthStore()
 const router = useRouter()
@@ -15,7 +16,7 @@ function handleLogout() {
   <header>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
       <div class="container-fluid">
-        <a class="navbar-brand" href="#">Sustainage SPA</a>
+        <a class="navbar-brand" href="#">{{ $t('app_name') }}</a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
           <span class="navbar-toggler-icon"></span>
         </button>
@@ -25,7 +26,10 @@ function handleLogout() {
               <RouterLink class="nav-link" to="/">{{ $t('dashboard') }}</RouterLink>
             </li>
           </ul>
-          <ul class="navbar-nav">
+          <ul class="navbar-nav align-items-center">
+            <li class="nav-item me-3">
+              <LanguageSwitcher />
+            </li>
             <li class="nav-item" v-if="!authStore.isAuthenticated">
               <RouterLink class="nav-link" to="/login">{{ $t('login') }}</RouterLink>
             </li>

@@ -93,7 +93,6 @@
                 <li><a class="dropdown-item" href="{{ url_for('set_language', lang='tr') }}" onclick="localStorage.setItem('lang', 'tr')">Türkçe</a></li>
                 <li><a class="dropdown-item" href="{{ url_for('set_language', lang='en') }}" onclick="localStorage.setItem('lang', 'en')">English</a></li>
                 <li><a class="dropdown-item" href="{{ url_for('set_language', lang='de') }}" onclick="localStorage.setItem('lang', 'de')">Deutsch</a></li>
-                <li><a class="dropdown-item" href="{{ url_for('set_language', lang='fr') }}" onclick="localStorage.setItem('lang', 'fr')">Français</a></li>
               </ul>
             </li>
 
@@ -274,9 +273,6 @@
           
           if (lang === 'en') langUrl = "//cdn.datatables.net/plug-ins/1.13.6/i18n/en-GB.json";
           else if (lang === 'de') langUrl = "//cdn.datatables.net/plug-ins/1.13.6/i18n/de-DE.json";
-          else if (lang === 'fr') langUrl = "//cdn.datatables.net/plug-ins/1.13.6/i18n/fr-FR.json";
-          else if (lang === 'es') langUrl = "//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json";
-          else if (lang === 'ru') langUrl = "//cdn.datatables.net/plug-ins/1.13.6/i18n/ru.json";
 
           $('.table:not(.no-datatable)').DataTable({
             language: {

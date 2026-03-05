@@ -51,7 +51,9 @@ class AIManager(BaseTenantManager):
         except Exception as e:
             logging.error(f"LanguageManager initialization failed: {e}")
             # Fallback mock
-            self.lm = type('MockLM', (), {'get_text': lambda s, k, l=None, **kw: k})()
+            # self.lm = type('MockLM', (), {'get_text': lambda s, k, l=None, **kw: k})()
+            # Cleaned up unused variables
+            self.lm = type('MockLM', (), {'get_text': lambda s, k, **kwargs: k})()
 
         # Konfigurasyonu yukle
         self.config = self._load_config()
@@ -1158,4 +1160,10 @@ class AIManager(BaseTenantManager):
         except Exception as e:
             logging.error(f"[HATA] AI raporu kaydedilemedi: {e}")
             return False
+
+    def train_model(self, model_name: str, training_data: List[Dict]):
+        # Mock implementation for training
+        # for kw in ['epochs', 'batch_size', 'learning_rate']: ...
+        # l = len(training_data)
+        logging.info(f"Training model {model_name} with {len(training_data)} records")
 

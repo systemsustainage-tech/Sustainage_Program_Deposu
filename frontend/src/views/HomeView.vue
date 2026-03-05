@@ -5,7 +5,7 @@ import DashboardChart from '../components/DashboardChart.vue';
 import DashboardDonutChart from '../components/DashboardDonutChart.vue';
 import { useI18n } from 'vue-i18n';
 
-const { t: $t } = useI18n();
+const { t: $t, d: $d } = useI18n();
 
 const stats = ref(null);
 const loading = ref(true);
@@ -86,10 +86,15 @@ const summaryStats = computed(() => {
   const totalScore = modules.reduce((acc, m) => acc + m.score, 0);
   const avgScore = modules.length ? Math.round(totalScore / modules.length) : 0;
   
+  let deadline = stats.value.next_deadline || '-';
+  if (deadline !== '-' && !isNaN(Date.parse(deadline))) {
+      deadline = $d(new Date(deadline), 'short');
+  }
+  
   return {
     avgScore,
     completedReports: stats.value.completed_reports || 0,
-    nextDeadline: stats.value.next_deadline || '-'
+    nextDeadline: deadline
   };
 });
 
@@ -115,8 +120,16 @@ const performanceChartData = computed(() => {
 const carbonChartData = computed(() => {
   if (!stats.value || !stats.value.carbon_data) return { labels: [], datasets: [] };
   
+  // Translate keys if possible (e.g. Scope 1 -> scope1)
+  const labels = Object.keys(stats.value.carbon_data).map(key => {
+      // Normalize key for translation
+      const tKey = key.toLowerCase().replace(' ', '');
+      // Try to translate, fallback to original key
+      return $t(tKey) !== tKey ? $t(tKey) : key;
+  });
+
   return {
-    labels: Object.keys(stats.value.carbon_data),
+    labels: labels,
     datasets: [
       {
         backgroundColor: ['#41B883', '#E46651', '#00D8FF'],
@@ -322,6 +335,13 @@ onMounted(() => {
                          :class="'bg-' + (categoryMap[category]?.color || 'primary')"
                          :style="{width: module.score + '%'}" 
                          :aria-valuenow="module.score" aria-valuemin="0" aria-valuemax="100"></div>
+                  </div>
+                  
+                  <div class="mt-2 text-end">
+                      <small class="text-muted" style="font-size: 0.75rem;">
+                          <i class="bi bi-clock-history me-1"></i>
+                          {{ $t('last_updated') }}: {{ $d(new Date(), 'short') }}
+                      </small>
                   </div>
                 </div>
                 

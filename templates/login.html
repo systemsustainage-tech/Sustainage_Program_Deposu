@@ -19,24 +19,32 @@
                         <input type="password" class="form-control" id="password" name="password" required>
                     </div>
 
-                    {% if captcha_required %}
+                    {% if show_captcha %}
                     <div class="mb-3">
-                        <label class="form-label">{{ lang('security_check') }}</label>
-                        {% if recaptcha_site_key %}
-                            <!-- Google reCAPTCHA -->
-                            <script src="https://www.google.com/recaptcha/api.js" async defer></script>
-                            <div class="g-recaptcha" data-sitekey="{{ recaptcha_site_key }}"></div>
-                        {% else %}
-                            <!-- Custom CAPTCHA Fallback -->
-                            <div class="d-flex align-items-center mb-2">
-                                <img src="{{ url_for('captcha_image', t=range(1, 10000) | random) }}" alt="CAPTCHA" class="img-fluid border rounded me-2" style="height: 50px;">
-                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="this.previousElementSibling.src='{{ url_for('captcha_image') }}?t=' + Math.random()">
-                                    <i class="bi bi-arrow-clockwise"></i> {{ lang('refresh') }}
-                                </button>
+                        <label class="form-label">{{ lang('security_check', 'Güvenlik Kontrolü') }}</label>
+                        <div class="d-flex align-items-center mb-2">
+                            <div id="captcha-question" class="form-control-plaintext border rounded px-3 me-2 fw-bold bg-light" style="width: auto;">
+                                <!-- Loaded via JS -->
+                                ...
                             </div>
-                            <input type="text" class="form-control" name="captcha" placeholder="{{ lang('enter_captcha_code') }}" required>
-                        {% endif %}
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="loadCaptcha()">
+                                <i class="bi bi-arrow-clockwise"></i>
+                            </button>
+                        </div>
+                        <input type="text" class="form-control" name="captcha" placeholder="{{ lang('enter_captcha_result', 'İşlem sonucunu giriniz') }}" required>
                     </div>
+                    <script>
+                        function loadCaptcha() {
+                            fetch("{{ url_for('captcha_image') }}")
+                                .then(response => response.json())
+                                .then(data => {
+                                    document.getElementById('captcha-question').innerText = data.question;
+                                })
+                                .catch(err => console.error(err));
+                        }
+                        // Load on start
+                        document.addEventListener('DOMContentLoaded', loadCaptcha);
+                    </script>
                     {% endif %}
                     
                     <div class="mb-3 form-check">

@@ -67,6 +67,15 @@ class LicenseManager:
         license_key = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
         
         try:
+            # Check if licenses table exists and has correct columns
+            # If allowed_ips column missing, add it (migration on the fly for simplicity)
+            try:
+                self.db.execute_update("ALTER TABLE licenses ADD COLUMN allowed_ips TEXT")
+            except: pass
+            try:
+                self.db.execute_update("ALTER TABLE licenses ADD COLUMN allowed_domains TEXT")
+            except: pass
+            
             self.db.execute_update("""
                 INSERT INTO licenses (company_id, license_key, issued_at, expires_at, max_users, status, allowed_ips, allowed_domains)
                 VALUES (?, ?, ?, ?, ?, 'active', ?, ?)
@@ -83,31 +92,37 @@ class LicenseManager:
             return {
                 'success': True,
                 'license_key': license_key,
-                'expires_at': expires_at,
+                'expires_at': expires_at.isoformat(),
                 'max_users': max_users
             }
         except Exception as e:
             logging.error(f"Error generating license: {e}")
             return {'success': False, 'message': str(e)}
 
-    def update_usage_and_check_abuse(self, license_key: str) -> Tuple[bool, str]:
+    def check_abuse_and_update_usage(self, license_key: str, request_ip: str = None) -> Tuple[bool, str]:
         """
-        Updates usage stats and checks for abuse.
+        Updates usage stats and checks for abuse (Rate Limit + IP Tracking).
         Returns: (is_abusive, reason)
         """
         current_time = time.time()
         
         # 1. Update in-memory history
+        if license_key not in self._request_history:
+             self._request_history[license_key] = []
+             
         history = self._request_history[license_key]
-        # Remove old requests
-        while history and history[0] < current_time - self.ABUSE_WINDOW_SECONDS:
-            history.pop(0)
+        # Remove old requests (sliding window)
+        # Filter list in place
+        self._request_history[license_key] = [t for t in history if t > current_time - self.ABUSE_WINDOW_SECONDS]
+        history = self._request_history[license_key]
         
         history.append(current_time)
         
         # 2. Check threshold
         if len(history) > self.ABUSE_LIMIT_REQUESTS:
-            return True, f"Rate limit exceeded: {len(history)} requests in {self.ABUSE_WINDOW_SECONDS}s"
+            reason = f"Abuse detected: {len(history)} requests in {self.ABUSE_WINDOW_SECONDS}s from IP {request_ip}"
+            self.suspend_license(license_key, reason)
+            return True, reason
             
         # 3. Update DB stats (every 10th request to save DB writes, or just always if critical)
         # For strict tracking, we update always.
@@ -137,9 +152,10 @@ class LicenseManager:
         except Exception as e:
             logging.error(f"Error suspending license: {e}")
 
-    def verify_license_key(self, license_key: str) -> Tuple[bool, str, Dict[str, Any]]:
+    def verify_license_key(self, license_key: str, request_ip: str = None, request_domain: str = None) -> Tuple[bool, str, Dict[str, Any]]:
         """
         Verifies a license key.
+        Optional checks for IP and Domain if provided.
         Returns: (is_valid, message, payload)
         """
         if not license_key:
@@ -164,6 +180,24 @@ class LicenseManager:
             
             if payload.get('company_id') != db_company_id:
                 return False, "License company mismatch", {}
+
+            # 3. Check IP and Domain Restrictions if provided
+            allowed_ips = payload.get('allowed_ips')
+            if allowed_ips and request_ip:
+                if request_ip not in allowed_ips:
+                    return False, f"Access denied from IP: {request_ip}", {}
+
+            allowed_domains = payload.get('allowed_domains')
+            if allowed_domains and request_domain:
+                # Simple domain check (exact match or subdomain check could be added)
+                # For now, exact match or presence in list
+                domain_match = False
+                for domain in allowed_domains:
+                    if domain == request_domain or request_domain.endswith('.' + domain):
+                        domain_match = True
+                        break
+                if not domain_match:
+                    return False, f"Access denied from Domain: {request_domain}", {}
 
             return True, "Valid license", payload
             

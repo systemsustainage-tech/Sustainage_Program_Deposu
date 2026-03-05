@@ -14,16 +14,30 @@ try:
 except ImportError:
     from backend.config.database import DB_PATH
 
+try:
+    from backend.modules.cbam.cbam_manager import CBAMManager
+except ImportError:
+    # Fallback if path issues
+    import sys
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+    from modules.cbam.cbam_manager import CBAMManager
 
-class SKDMManager(BaseTenantManager):
-    """SKDM Modülü Yönetim Sınıfı"""
+
+class SKDMManager(CBAMManager):
+    """
+    SKDM (Sınırda Karbon Düzenleme Mekanizması) Modülü Yöneticisi.
+    Bu sınıf, CBAMManager'dan miras alarak tüm CBAM işlevlerini (AB uyumlu) sağlar.
+    Ayrıca eski SKDM tablolarını da destekler (geriye dönük uyumluluk için).
+    """
 
     def __init__(self, db_path: str = DB_PATH, company_id: Optional[int] = None) -> None:
+        # CBAMManager init çağrılır (bu sayede cbam_ tabloları oluşur)
         super().__init__(db_path, company_id)
-        self._init_tables()
+        # SKDM'e özel ek tablolar (varsa)
+        self._init_skdm_tables()
 
-    def _init_tables(self) -> None:
-        """SKDM tablolarını oluştur"""
+    def _init_skdm_tables(self) -> None:
+        """Eski SKDM tablolarını oluştur (geriye dönük uyumluluk)"""
         try:
             # Karbon yönetimi tablosu
             self.db.execute_update("""

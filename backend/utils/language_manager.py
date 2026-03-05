@@ -63,7 +63,6 @@ class LanguageManager:
             'tr': 'Türkçe',
             'en': 'English',
             'de': 'Deutsch',
-            'fr': 'Français',
             'es': 'Español',
             'it': 'Italiano',
             'ru': 'Русский',

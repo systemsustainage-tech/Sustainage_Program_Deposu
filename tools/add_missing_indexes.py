@@ -1,7 +1,11 @@
 import sqlite3
 import os
+import sys
 
-DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'backend', 'sustainage.db')
+# Add project root to sys.path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from backend.config.database import DB_PATH
 
 def add_indexes():
     if not os.path.exists(DB_PATH):
@@ -12,6 +16,7 @@ def add_indexes():
     cursor = conn.cursor()
 
     indexes_to_create = [
+        # TSRS Indexes
         ("tsrs_responses", "indicator_id", "idx_tsrs_responses_indicator_id"),
         ("tsrs_targets", "indicator_id", "idx_tsrs_targets_indicator_id"),
         ("tsrs_risks", "standard_id", "idx_tsrs_risks_standard_id"),
@@ -19,7 +24,22 @@ def add_indexes():
         ("tsrs_stakeholder_engagement", "stakeholder_group_id", "idx_tsrs_stakeholder_engagement_stakeholder_group_id"),
         ("tsrs_reports", "template_id", "idx_tsrs_reports_template_id"),
         ("tsrs_kpis", "indicator_id", "idx_tsrs_kpis_indicator_id"),
-        ("tsrs_performance_data", "kpi_id", "idx_tsrs_performance_data_kpi_id")
+        ("tsrs_performance_data", "kpi_id", "idx_tsrs_performance_data_kpi_id"),
+        
+        # Performance Indexes for Multi-tenancy
+        ("companies", "id", "idx_companies_id"),
+        ("users", "company_id", "idx_users_company_id"),
+        ("users", "username", "idx_users_username"),
+        ("licenses", "company_id", "idx_licenses_company_id"),
+        ("licenses", "license_key", "idx_licenses_key"),
+        
+        # Module Indexes (Common Filters)
+        ("energy_consumption", "company_id", "idx_energy_company_id"),
+        ("water_consumption", "company_id", "idx_water_company_id"),
+        ("waste_generation", "company_id", "idx_waste_company_id"),
+        ("carbon_emission_factors", "source_type", "idx_carbon_factors_source"),
+        ("audit_logs", "company_id", "idx_audit_company_id"),
+        ("audit_logs", "timestamp", "idx_audit_timestamp")
     ]
 
     print(f"Adding {len(indexes_to_create)} missing indexes...")

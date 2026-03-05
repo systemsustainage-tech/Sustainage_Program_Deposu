@@ -12,7 +12,8 @@ from flask import Flask, render_template, redirect, url_for, session, request, f
 import time
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from prometheus_flask_exporter import PrometheusMetrics
+# from prometheus_flask_exporter import PrometheusMetrics # Removing this if not used/installed or use client directly
+from prometheus_client import Counter, Histogram, Gauge, generate_latest, CONTENT_TYPE_LATEST
 import psutil
 import threading
 from flask_wtf.csrf import CSRFProtect
@@ -24,6 +25,226 @@ except ImportError:
     # Fallback if security module is not found
     def report_violation(type, ip, details=None):
         logging.error(f"Security Alert (Fallback): {type} from {ip} - {details}")
+
+# --- FLASK APP INIT ---
+app = Flask(__name__, 
+            template_folder='templates',
+            static_folder='static')
+
+app.secret_key = secrets.token_hex(32)
+# CSRF requires secret key
+app.config['WTF_CSRF_TIME_LIMIT'] = 3600
+# Enable Rate Limit headers
+app.config['RATELIMIT_HEADERS_ENABLED'] = True
+app.config['RATELIMIT_STRATEGY'] = 'fixed-window'
+app.config['RATELIMIT_STORAGE_URI'] = 'memory://'
+
+# --- RATE LIMITER CONFIGURATION ---
+app.config['RATELIMIT_ENABLED'] = True
+app.config['RATELIMIT_HEADERS_ENABLED'] = True
+app.config['RATELIMIT_STRATEGY'] = 'fixed-window'
+app.config['RATELIMIT_STORAGE_URI'] = 'memory://'
+app.config['RATELIMIT_KEY_PREFIX'] = 'limiter'
+
+# Use a custom key function for better debugging and User-based limiting
+def get_rate_limit_key():
+    # 1. User ID (if logged in)
+    user = session.get('user')
+    if user and isinstance(user, dict) and 'id' in user:
+        return str(user['id'])
+    
+    # 2. License Key (if API)
+    if hasattr(g, 'license') and g.license:
+        return f"license:{g.license.get('company_id')}"
+        
+    # 3. IP Address (Fallback)
+    try:
+        addr = get_remote_address()
+        return addr if addr else '127.0.0.1'
+    except:
+        return '127.0.0.1'
+
+def get_dynamic_rate_limit():
+    """
+    Returns a rate limit string based on user role or license type.
+    """
+    # 1. Localhost / System
+    if request.remote_addr in ['127.0.0.1', '::1']:
+        return "10000 per hour"
+
+    # 2. User Role Based
+    user = session.get('user')
+    if user and isinstance(user, dict):
+        role = user.get('role')
+        if role == 'super_admin':
+            return "5000 per hour"
+        elif role == 'admin':
+            return "1000 per hour"
+        else:
+            return "200 per hour"
+            
+    # 3. License Based (API)
+    if hasattr(g, 'license') and g.license:
+        # Future: Check plan type from license payload
+        return "500 per hour"
+
+    # 4. Default / Anonymous
+    return "60 per hour"
+
+limiter = Limiter(
+    key_func=get_rate_limit_key,
+    app=app,
+    default_limits=[get_dynamic_rate_limit],
+    storage_uri="memory://"
+)
+
+# --- CSRF PROTECTION ---
+csrf = CSRFProtect(app)
+
+# --- CAPTCHA CONFIGURATION ---
+# Simple CAPTCHA implementation using session
+def generate_captcha():
+    """Generates a simple math captcha"""
+    num1 = secrets.randbelow(10) + 1
+    num2 = secrets.randbelow(10) + 1
+    session['captcha_answer'] = str(num1 + num2)
+    return f"{num1} + {num2} = ?"
+
+def verify_captcha(answer):
+    """Verifies the captcha answer"""
+    expected = session.get('captcha_answer')
+    if not expected:
+        return False
+    # Clear after one attempt to prevent replay
+    session.pop('captcha_answer', None)
+    return str(answer).strip() == expected
+
+@app.route('/captcha-image')
+def captcha_image():
+    # For a real app, generate an image. For now, text is enough for proof of concept
+    # or return a JSON if used by frontend
+    return jsonify({"question": generate_captcha()})
+
+from backend.yonetim.license_manager import LicenseManager
+
+# Initialize License Manager
+license_manager = LicenseManager(DB_PATH)
+
+# --- LICENSE MIDDLEWARE ---
+@app.before_request
+def check_license():
+    # Skip static files and public endpoints
+    if request.path.startswith('/static') or request.path.startswith('/auth') or request.path == '/login':
+        return
+
+    # 1. Check for License Key in Header (API) or Session (Web)
+    license_key = request.headers.get('X-License-Key')
+    if not license_key:
+        license_key = session.get('license_key')
+        
+    # If no license key found, and we are accessing a protected route, we might need to rely on user session which implies a license check was done at login
+    # However, for strict enforcement, we should check active license for the company if user is logged in
+    
+    if not license_key and 'user' in session:
+        # User is logged in, get company's active license
+        company_id = session.get('company_id')
+        if company_id:
+             license_key = license_manager.get_active_license(company_id)
+
+    # If still no license key, and it's an API call, reject. 
+    # If it's a web page, maybe redirect to setup/login (handled by login_required)
+    if not license_key:
+        # Allow login/setup pages
+        if request.endpoint in ['login', 'setup', 'static', 'captcha_image']:
+            return
+        # If API, 403
+        if request.path.startswith('/api'):
+            return jsonify({'error': 'License key missing'}), 403
+        return # Let view handlers handle missing license (e.g. redirect to login)
+
+    # 2. Verify License
+    # Pass IP and Domain for constraint checking
+    client_ip = get_remote_address()
+    client_domain = request.host
+    
+    is_valid, msg, payload = license_manager.verify_license_key(license_key, client_ip, client_domain)
+    
+    if not is_valid:
+        if request.path.startswith('/api'):
+            return jsonify({'error': f'License Error: {msg}'}), 403
+        else:
+            flash(f'Lisans Hatası: {msg}', 'error')
+            return redirect(url_for('login'))
+
+    # 3. Check Abuse / Rate Limit
+    is_abusive, reason = license_manager.check_abuse_and_update_usage(license_key, client_ip)
+    if is_abusive:
+        return jsonify({'error': 'License suspended due to abuse'}), 403
+
+    # 4. Set Context for Multi-tenancy
+    g.license = payload
+    g.company_id = payload.get('company_id')
+    # Ensure session has company_id if not already (for hybrid auth)
+    if 'company_id' not in session and g.company_id:
+        session['company_id'] = g.company_id
+
+
+    report_violation('RATE_LIMIT_EXCEEDED', client_ip, details)
+    
+    if request.accept_mimetypes.accept_json and not request.accept_mimetypes.accept_html:
+        return jsonify({
+            "error": "Too Many Requests", 
+            "message": "İstek limitini aştınız. Lütfen bir süre bekleyin.",
+            "retry_after": e.description
+        }), 429
+    return render_template("errors/429.html", error=e.description), 429
+
+# --- CSRF PROTECTION ---
+# csrf = CSRFProtect(app) # Already initialized above
+
+# Exclude API routes from CSRF if using Token Auth (or handle manually)
+# Note: app.view_functions.get('api_login') might be None if routes are registered later.
+# We should use decorators on the routes or blueprints instead.
+# csrf.exempt(app.view_functions.get('api_login'))
+# csrf.exempt(app.view_functions.get('api_register'))
+# Add other API endpoints that use Bearer token instead of Cookie/CSRF
+
+# --- PROMETHEUS METRICS ---
+REQUEST_COUNT = Counter('http_requests_total', 'Total HTTP Requests', ['method', 'endpoint', 'status'])
+REQUEST_LATENCY = Histogram('http_request_duration_seconds', 'HTTP Request Duration', ['method', 'endpoint'])
+SYSTEM_CPU = Gauge('system_cpu_usage_percent', 'System CPU Usage Percent')
+SYSTEM_MEMORY = Gauge('system_memory_usage_percent', 'System Memory Usage Percent')
+
+@app.before_request
+def start_timer():
+    request.start_time = time.time()
+
+@app.after_request
+def record_metrics(response):
+    if request.path == '/metrics':
+        return response
+        
+    resp_time = time.time() - getattr(request, 'start_time', time.time())
+    
+    # Use endpoint name or path if endpoint not found
+    endpoint = request.endpoint if request.endpoint else request.path
+    
+    REQUEST_COUNT.labels(request.method, endpoint, response.status_code).inc()
+    REQUEST_LATENCY.labels(request.method, endpoint).observe(resp_time)
+    
+    return response
+
+@app.route('/metrics')
+@csrf.exempt
+def metrics():
+    # Update system metrics on scrape
+    try:
+        SYSTEM_CPU.set(psutil.cpu_percent())
+        SYSTEM_MEMORY.set(psutil.virtual_memory().percent)
+    except Exception as e:
+        logging.error(f"Error collecting metrics: {e}")
+    
+    return generate_latest(), 200, {'Content-Type': CONTENT_TYPE_LATEST}
 
 # --- SYSTEM MONITOR FOR ALERTING ---
 def run_system_monitor(app):
@@ -60,17 +281,39 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 BACKEND_DIR = os.path.join(BASE_DIR, 'backend')
 sys.path.insert(0, BACKEND_DIR)
 
+
+# --- CRITICAL ENDPOINTS PROTECTION ---
+@app.route('/api/generate-report', methods=['POST'])
+@limiter.limit("5 per minute")  # Strict limit for report generation
+@csrf.exempt # Assuming API calls are token-based
+def api_generate_report():
+    # Placeholder for report generation
+    return jsonify({"message": "Report generation started"}), 202
+
+@app.route('/api/update-data', methods=['POST'])
+@limiter.limit("20 per minute")
+@csrf.exempt # Assuming API calls are token-based
+def api_update_data():
+    # Placeholder for data update
+    return jsonify({"message": "Data update processed"}), 200
+
+# --- RATE LIMIT TEST ENDPOINT ---
+@app.route('/api/test-limit', methods=['GET'])
+# @limiter.limit("5 per minute")
+# @csrf.exempt
+def api_test_limit():
+    return jsonify({"message": "Limit Test", "remaining": "check headers"}), 200
+
+# --- RATE LIMIT TEST ENDPOINT ---
+# (Moved to top)
+
 from modules.sdg.sdg_manager import SDGManager
 from core.language_manager import LanguageManager
 from core.database import TenantAwareDB
 from backend.core.database_manager import DatabaseManager
-from backend.yonetim.license_manager import LicenseManager
 
 # Initialize Language Manager
 language_manager = LanguageManager()
-
-# Initialize License Manager
-license_manager = LicenseManager(DB_PATH)
 
 # DB_PATH is now imported from backend.config.database
 # DB_PATH = os.path.join(BACKEND_DIR, 'data', 'sdg_desktop.sqlite')
@@ -174,12 +417,12 @@ except Exception as e:
     logging.error(f"LicenseGenerator import error: {e}")
     LICENSE_MANAGER_AVAILABLE = False
 
-app = Flask(__name__)
+# app = Flask(__name__) # Removed duplicate initialization
 # Fix for login loop: Use a stable secret key if environment variable is not set
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'sustainage_secret_key_fixed_2024_xyz_987')
 
 # CSRF Protection
-csrf = CSRFProtect(app)
+# csrf = CSRFProtect(app) # Already initialized above
 
 @app.context_processor
 def inject_csp_nonce():
@@ -187,21 +430,33 @@ def inject_csp_nonce():
         g.csp_nonce = secrets.token_hex(16)
     return dict(csp_nonce=lambda: g.csp_nonce)
 
-# Prometheus Metrics
-metrics = PrometheusMetrics(app)
-# Add default static info
-metrics.info('app_info', 'Application info', version='1.0.3')
+# Prometheus Metrics (Replaced by direct client above)
+# metrics = PrometheusMetrics(app) 
+# metrics.info('app_info', 'Application info', version='1.0.3')
 
 # Start System Monitor Thread
 if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
     monitor_thread = threading.Thread(target=run_system_monitor, args=(app,), daemon=True)
     monitor_thread.start()
 
-# Rate Limiter Initialization
+API_RATE_LIMITS = {
+    'ip': {'max_requests': 120, 'window_seconds': 60},
+    'user': {'max_requests': 60, 'window_seconds': 60},
+    'company': {'max_requests': 300, 'window_seconds': 60}
+}
+
+# Advanced Rate Limiting Strategy
+def get_rate_limit_key():
+    # If user is logged in, limit by User ID (more precise)
+    if session.get('user_id'):
+        return f"user:{session.get('user_id')}"
+    # Otherwise limit by IP
+    return get_remote_address()
+
 limiter = Limiter(
-    key_func=get_remote_address,
+    key_func=get_rate_limit_key,
     app=app,
-    default_limits=["60 per minute"],
+    default_limits=["120 per minute", "1000 per hour"], # Global default
     storage_uri="memory://"
 )
 
@@ -214,14 +469,20 @@ def limiter_exempt(f):
 @app.errorhandler(429)
 def rate_limit_error(e):
     client_ip = get_remote_address()
-    # Log the violation using the alert system
     try:
-        report_violation('RATE_LIMIT', client_ip, details={'limit': str(e.description)})
+        details = {
+            'limit': str(e.description),
+            'path': request.path,
+            'user_id': session.get('user_id'),
+            'company_id': getattr(g, 'company_id', None)
+        }
+        report_violation('RATE_LIMIT', client_ip, details=details)
     except Exception as log_err:
         logging.error(f"Error reporting rate limit: {log_err}")
         
+    captcha_required = bool(getattr(g, 'captcha_required', False))
     if request.accept_mimetypes.accept_json and not request.accept_mimetypes.accept_html:
-        return jsonify({'error': 'Rate limit exceeded', 'message': str(e.description)}), 429
+        return jsonify({'error': 'Rate limit exceeded', 'message': str(e.description), 'captcha_required': captcha_required}), 429
     return "Too Many Requests. Please try again later.", 429
 
 # Translation Setup (Replaced with LanguageManager)
@@ -320,6 +581,11 @@ def _init_managers():
         MANAGERS['cbam'] = CBAMManager(DB_PATH)
     except Exception as e:
         logging.error(f"CBAMManager init: {e}")
+    try:
+        from modules.skdm.skdm_manager import SKDMManager
+        MANAGERS['skdm'] = SKDMManager(DB_PATH)
+    except Exception as e:
+        logging.error(f"SKDMManager init: {e}")
     try:
         from modules.csrd.csrd_compliance_manager import CSRDComplianceManager
         MANAGERS['csrd'] = CSRDComplianceManager(DB_PATH)
@@ -488,7 +754,8 @@ def enforce_session_timeout():
         'forgot_password',
         'static',
         'verify_reset_code', 
-        'reset_password_web'
+        'reset_password_web',
+        'metrics'
     }
     endpoint = request.endpoint or ''
     if endpoint in exempt_endpoints:
@@ -510,9 +777,15 @@ def enforce_session_timeout():
 
 @app.before_request
 def license_check():
+    # Allow metrics and static files
+    if request.path == '/metrics' or request.endpoint == 'metrics' or request.path.startswith('/static'):
+        return
+        
     if not request.path.startswith('/api/'):
         return
-    if request.endpoint in ['api_login', 'api_register', 'api_logout', 'static']:
+        
+    # Exclude login/register
+    if request.path == '/metrics' or request.endpoint in ['api_login', 'api_register', 'api_logout', 'static', 'metrics']:
         return
 
     def check_constraints(payload):
@@ -525,43 +798,74 @@ def license_check():
 
         allowed_ips = payload.get('allowed_ips')
         if allowed_ips and isinstance(allowed_ips, list) and len(allowed_ips) > 0:
-            forwarded_for = request.headers.get('X-Forwarded-For')
-            if forwarded_for:
-                client_ip = forwarded_for.split(',')[0].strip()
+            # Get real client IP
+            if request.headers.getlist("X-Forwarded-For"):
+                client_ip = request.headers.getlist("X-Forwarded-For")[0]
             else:
-                try:
-                    client_ip = get_remote_address()
-                except Exception:
-                    client_ip = request.remote_addr or 'unknown'
+                client_ip = request.remote_addr
+                
             if client_ip not in allowed_ips:
                 return False, f"IP '{client_ip}' not authorized by license."
         return True, None
 
+    # Helper for abuse check
+    def check_abuse(key, ip):
+        is_abusive, reason = license_manager.check_abuse_and_update_usage(key, ip)
+        if is_abusive:
+             report_violation('LICENSE_ABUSE', ip, details=reason)
+             return True, reason
+        return False, None
+
     api_key = request.headers.get('X-License-Key')
+    client_ip = request.remote_addr # Default fallback
+    if request.headers.getlist("X-Forwarded-For"):
+        client_ip = request.headers.getlist("X-Forwarded-For")[0]
+
     if api_key:
         is_valid, msg, payload = license_manager.verify_license_key(api_key)
         if not is_valid:
             return jsonify({'error': f'License Error: {msg}'}), 403
+            
         allowed, fail_msg = check_constraints(payload)
         if not allowed:
-            return jsonify({'error': f'License Access Denied: {fail_msg}'}), 403
+            report_violation('LICENSE_UNAUTHORIZED_ACCESS', client_ip, details=fail_msg)
+            return jsonify({'error': fail_msg}), 403
+            
+        is_abusive, reason = check_abuse(api_key, client_ip)
+        if is_abusive:
+            return jsonify({'error': 'License suspended due to abuse.'}), 403
+            
         g.license = payload
         return
 
     if 'company_id' in session:
         active_key = license_manager.get_active_license(session['company_id'])
         if not active_key:
+            # If no license but user logged in, maybe allow limited access or block?
+            # For strict mode: block
             return jsonify({'error': 'No active license found for this company.'}), 403
+            
         is_valid, msg, payload = license_manager.verify_license_key(active_key)
         if not is_valid:
             return jsonify({'error': f'License Expired/Invalid: {msg}'}), 403
+            
         allowed, fail_msg = check_constraints(payload)
         if not allowed:
-            return jsonify({'error': f'License Access Denied: {fail_msg}'}), 403
+             report_violation('LICENSE_UNAUTHORIZED_ACCESS', client_ip, details=fail_msg)
+             return jsonify({'error': fail_msg}), 403
+             
+        is_abusive, reason = check_abuse(active_key, client_ip)
+        if is_abusive:
+            return jsonify({'error': 'License suspended due to abuse.'}), 403
+            
         g.license = payload
         return
 
     return jsonify({'error': 'License verification failed. Please provide X-License-Key or login.'}), 403
+
+# Removed legacy api_rate_limit_guard to use Flask-Limiter
+# @app.before_request
+# def api_rate_limit_guard(): ...
 
 def get_db():
     return TenantAwareDB(DB_PATH)
@@ -632,46 +936,22 @@ def require_company_context(f):
             license_key = license_manager.get_active_license(g.company_id)
             if license_key:
                 # Verify and get payload (IP/Domain rules)
-                verify_result = license_manager.verify_license_key(license_key)
+                client_ip = get_remote_address()
+                client_domain = request.host
+                verify_result = license_manager.verify_license_key(license_key, client_ip, client_domain)
+                
                 if not verify_result or len(verify_result) != 3:
                      logging.error(f"Invalid verify_license_key return: {verify_result}")
                      is_valid, msg, payload = False, "Internal Error", {}
                 else:
                      is_valid, msg, payload = verify_result
                      
-                if is_valid:
-                    allowed_ips = payload.get('allowed_ips')
-                    allowed_domains = payload.get('allowed_domains')
-                    
-                    # IP Check
-                    if allowed_ips:
-                        # Normalize list if string (comma separated)
-                        if isinstance(allowed_ips, str): 
-                            allowed_ips = [ip.strip() for ip in allowed_ips.split(',')]
-                        
-                        client_ip = get_remote_address()
-                        # Handle potential localhost mapping
-                        if client_ip == '127.0.0.1' and 'localhost' in allowed_ips:
-                            pass # Allowed
-                        elif client_ip not in allowed_ips:
-                            logging.warning(f"License Violation: IP {client_ip} not in {allowed_ips}")
-                            report_violation('LICENSE_VIOLATION', client_ip, details={'reason': 'IP_MISMATCH', 'expected': allowed_ips})
-                            if request.path.startswith('/api/'):
-                                return jsonify({'error': f"IP '{client_ip}' not authorized by license"}), 403
-                            abort(403, description=f"IP Adresi ({client_ip}) lisans kapsamında yetkilendirilmemiş.")
-                            
-                    # Domain Check (if referrer/host is available)
-                    if allowed_domains:
-                        if isinstance(allowed_domains, str):
-                            allowed_domains = [d.strip() for d in allowed_domains.split(',')]
-                        
-                        host = request.host.split(':')[0]
-                        if host not in allowed_domains:
-                            logging.warning(f"License Violation: Domain {host} not in {allowed_domains}")
-                            report_violation('LICENSE_VIOLATION', get_remote_address(), details={'reason': 'DOMAIN_MISMATCH', 'expected': allowed_domains})
-                            if request.path.startswith('/api/'):
-                                return jsonify({'error': f"Domain '{host}' not authorized by license"}), 403
-                            abort(403, description=f"Domain ({host}) lisans kapsamında yetkilendirilmemiş.")
+                if not is_valid:
+                    logging.warning(f"License Violation: {msg}")
+                    report_violation('LICENSE_VIOLATION', client_ip, details={'reason': msg})
+                    if request.path.startswith('/api/'):
+                        return jsonify({'error': f"License Violation: {msg}"}), 403
+                    abort(403, description=f"Lisans Hatası: {msg}")
                 
         except Exception as e:
             logging.error(f"License restriction check error: {e}")
@@ -727,6 +1007,7 @@ def api_translations():
 
 @app.route('/api/dashboard/stats')
 @require_company_context
+@limiter.limit("20 per minute") # Heavy query protection
 def dashboard_stats_api():
     """
     SaaS API for Dashboard Statistics.
@@ -739,8 +1020,17 @@ def dashboard_stats_api():
         
         # Helper to safely get sum
         def get_sum(table, column):
+            # Whitelist allowed tables/columns to prevent SQL Injection
+            allowed_cols = {
+                'energy_consumption': 'consumption_amount',
+                'water_consumption': 'consumption_amount',
+                'waste_generation': 'waste_amount'
+            }
+            if table not in allowed_cols or allowed_cols[table] != column:
+                logging.error(f"Invalid table/column access: {table}.{column}")
+                return 0
+                
             try:
-                # check if table exists first? No, just try-except
                 row = conn.execute(f"SELECT SUM({column}) FROM {table} WHERE company_id = ?", (g.company_id,)).fetchone()
                 return row[0] if row and row[0] else 0
             except Exception as e:
@@ -760,6 +1050,8 @@ def dashboard_stats_api():
     return jsonify(stats)
 
 @app.route('/api/v1/dashboard-stats')
+@require_company_context
+@limiter.limit("20 per minute")
 def api_dashboard_stats_v1():
     """
     New API for Vue.js Dashboard.
@@ -865,16 +1157,19 @@ def index():
     return redirect(url_for('login'))
 
 @app.route('/login', methods=['GET', 'POST'])
-@limiter_exempt
+@limiter.limit("60 per minute")
 def login():
-    client_ip = request.remote_addr or 'unknown'
+    # If user is already logged in, redirect to dashboard
+    if 'user' in session:
+        return redirect(url_for('dashboard'))
 
     if request.method == 'POST':
-        max_attempts, lock_seconds = _get_login_lockout_params()
-        rl = rate_limiter.check_rate_limit('login', client_ip, max_requests=max_attempts, window_seconds=lock_seconds)
-        if not rl.get('allowed', True):
-            flash(f'Çok fazla deneme. {rl.get("reset_in", 60)} saniye sonra tekrar deneyin.', 'danger')
-            return render_template('login.html'), 429
+        # Captcha Check
+        if session.get('login_attempts', 0) > 3:
+            captcha_response = request.form.get('captcha')
+            if not verify_captcha(captcha_response):
+                flash(lang('captcha_invalid', 'Güvenlik doğrulaması başarısız.'), 'danger')
+                return render_template('login.html', show_captcha=True)
 
         username = request.form.get('username', '')
         password = request.form.get('password', '')
@@ -888,10 +1183,12 @@ def login():
                     wait = int(row['locked_until']) - int(time.time())
                     flash(f'Hesabınız kilitli. {wait} saniye bekleyin.', 'danger')
                     conn.close()
-                    return render_template('login.html')
+                    # GET Request: Check if captcha should be shown
+                    show_captcha = session.get('login_attempts', 0) > 3
+                    return render_template('login.html', show_captcha=show_captcha)
             conn.close()
         except Exception as e:
-            logging.error(f"Lock check error: {e}")
+            logging.error(f"Login DB error: {e}")
 
         if user_manager:
             user = user_manager.authenticate(username, password)
@@ -931,22 +1228,39 @@ def login():
                 except Exception as e:
                     logging.error(f"Company id error: {e}")
                     session['company_id'] = None
+                # Reset login attempts on success
+                session['login_attempts'] = 0
                 flash('Giriş başarılı!', 'success')
                 return redirect(url_for('dashboard'))
             else:
-                if username == 'admin' and password == 'admin':
-                    conn = get_db()
-                    exists = conn.execute("SELECT 1 FROM users WHERE username='admin'").fetchone()
-                    conn.close()
-                    if not exists:
-                        session['user'] = 'admin_test'
-                        session['role'] = 'Test Admin'
-                        flash('Test modu girişi', 'warning')
-                        return redirect(url_for('dashboard'))
+                # Increment login attempts
+                session['login_attempts'] = session.get('login_attempts', 0) + 1
+                
                 flash('Kullanıcı adı veya parola hatalı!', 'danger')
         else:
             flash('Sistem hatası: Kullanıcı yönetimi devre dışı.', 'danger')
-    return render_template('login.html')
+    
+    # Check if captcha should be shown
+    show_captcha = session.get('login_attempts', 0) > 3
+    return render_template('login.html', show_captcha=show_captcha)
+
+@app.errorhandler(429)
+def ratelimit_handler(e):
+    client_ip = get_remote_address()
+    details = {
+        'endpoint': request.endpoint,
+        'limit': str(e.description),
+        'user_agent': request.user_agent.string
+    }
+    report_violation('RATE_LIMIT_EXCEEDED', client_ip, details)
+    
+    if request.accept_mimetypes.accept_json and not request.accept_mimetypes.accept_html:
+        return jsonify({
+            "error": "Too Many Requests", 
+            "message": "İstek limitini aştınız. Lütfen bir süre bekleyin.",
+            "retry_after": e.description
+        }), 429
+    return render_template("errors/429.html", error=e.description), 429
 
 @app.route('/logout')
 def logout():
@@ -1076,11 +1390,12 @@ def dashboard():
     if 'user' not in session:
         return redirect(url_for('login'))
     stats: Dict[str, int] = {}
+    module_stats = {}
+    module_completion_avg = 0
+    next_deadline = None
     try:
         conn = get_db()
-        # Strict Isolation: Only count users belonging to the current tenant
         stats['user_count'] = conn.execute('SELECT COUNT(*) FROM users WHERE company_id = ?', (g.company_id,)).fetchone()[0]
-        # Tenant sees only their own company
         stats['company_count'] = 1
         try:
             stats['report_count'] = conn.execute('SELECT COUNT(*) FROM report_registry WHERE company_id = ?', (g.company_id,)).fetchone()[0]
@@ -1088,29 +1403,67 @@ def dashboard():
             stats['report_count'] = 0
         try:
             data_count = 0
-            module_stats = {}
-            for t, key in [('carbon_emissions', 'carbon'), ('energy_consumption', 'energy'), ('water_consumption', 'water'), ('waste_generation', 'waste')]:
+            for t, key in [
+                ('carbon_emissions', 'carbon'),
+                ('energy_consumption', 'energy'),
+                ('water_consumption', 'water'),
+                ('waste_generation', 'waste'),
+            ]:
                 try:
-                    count = conn.execute(f'SELECT COUNT(*) FROM {t} WHERE company_id = ?', (g.company_id,)).fetchone()[0]
+                    count = conn.execute(
+                        f'SELECT COUNT(*) FROM {t} WHERE company_id = ?',
+                        (g.company_id,),
+                    ).fetchone()[0]
                     data_count += count
-                    # Simple progress simulation: 1 record = 10%, max 100%
-                    module_stats[key] = min(100, count * 10)
                 except Exception:
-                    module_stats[key] = 0
+                    continue
             stats['data_count'] = data_count
         except Exception:
             stats['data_count'] = 0
-            module_stats = {'carbon': 0, 'energy': 0, 'water': 0, 'waste': 0}
+        try:
+            from modules.dashboard_stats import DashboardStatsManager
+            dsm = DashboardStatsManager(DB_PATH)
+            module_stats = dsm.get_module_stats(g.company_id)
+        except Exception as e:
+            logging.error(f"DashboardStatsManager error in dashboard: {e}")
+            if not module_stats:
+                module_stats = {'carbon': 0, 'energy': 0, 'water': 0, 'waste': 0}
+        if module_stats:
+            try:
+                total = sum(int(v) for v in module_stats.values())
+                count_modules = len(module_stats)
+                module_completion_avg = int(total / count_modules) if count_modules > 0 else 0
+            except Exception as e:
+                logging.error(f"Module completion average error: {e}")
+                module_completion_avg = 0
+        try:
+            next_deadline_value = None
+            try:
+                task_row = conn.execute("SELECT MIN(due_date) FROM auto_tasks WHERE company_id = ? AND status != 'Tamamlandı' AND due_date >= DATE('now')", (g.company_id,)).fetchone()
+                if task_row and task_row[0]:
+                    next_deadline_value = task_row[0]
+            except Exception as e:
+                logging.error(f"Dashboard auto_tasks deadline error: {e}")
+            if not next_deadline_value:
+                try:
+                    audit_row = conn.execute("SELECT MIN(deadline) FROM audit_assignments WHERE company_id = ? AND status = 'assigned' AND deadline >= DATE('now')", (g.company_id,)).fetchone()
+                    if audit_row and audit_row[0]:
+                        next_deadline_value = audit_row[0]
+                except Exception as e:
+                    logging.error(f"Dashboard audit_assignments deadline error: {e}")
+            next_deadline = next_deadline_value
+        except Exception as e:
+            logging.error(f"Dashboard next_deadline error: {e}")
         conn.close()
     except Exception as e:
         logging.error(f"Dashboard stats error: {e}")
         module_stats = {'carbon': 0, 'energy': 0, 'water': 0, 'waste': 0}
+        module_completion_avg = 0
+        next_deadline = None
     
-    # Placeholder for ESRS stats to prevent template error
     esrs_stats = {'completion_rate': 0}
     top_material_topics = []
     
-    # Placeholder for chart data
     social_chart_data = [0, 0, 0, 0, 0]
     emission_trend_data = [0] * 12
 
@@ -1121,7 +1474,9 @@ def dashboard():
                              esrs_stats=esrs_stats, 
                              top_material_topics=top_material_topics,
                              social_chart_data=social_chart_data,
-                             emission_trend_data=emission_trend_data)
+                             emission_trend_data=emission_trend_data,
+                             module_completion_avg=module_completion_avg,
+                             next_deadline=next_deadline)
     except Exception as e:
         import traceback
         logging.error(f"Template rendering error: {traceback.format_exc()}")
@@ -2279,10 +2634,11 @@ def unified_report():
                         """
                         SELECT id, survey_title, survey_description, response_count, created_at
                         FROM online_surveys
-                        WHERE is_active = 1
+                        WHERE company_id = ? AND is_active = 1
                         ORDER BY created_at DESC
                         LIMIT 1
-                        """
+                        """,
+                        (company_id,),
                     ).fetchone()
                     if survey_row:
                         survey_id = survey_row['id']
@@ -3647,18 +4003,25 @@ def esg_add():
             
     return render_template('esg_edit.html', title='ESG Veri Girişi', scores=computed_scores)
 
+@app.route('/skdm')
 @app.route('/cbam')
 @require_company_context
 def cbam_module():
     if 'user' not in session: return redirect(url_for('login'))
     
     company_id = g.company_id
-    manager = MANAGERS.get('cbam')
+    # Prefer SKDM manager if available (since it inherits CBAM)
+    manager = MANAGERS.get('skdm') or MANAGERS.get('cbam')
+
+    # Determine title based on route or default to SKDM
+    page_title = 'SKDM (Sınırda Karbon) Uyumluluk'
+    if request.path.startswith('/cbam'):
+         page_title = 'CBAM Uyumluluk'
 
     if not manager:
         return render_template(
             'cbam.html',
-            title='CBAM Uyumluluk',
+            title=page_title,
             manager_available=False,
             stats={'total_emissions': 0, 'total_imports': 0, 'liability': 0, 'imports': []},
         )
@@ -3666,35 +4029,40 @@ def cbam_module():
     period = request.args.get('period')
     report = None
     ets_factors = []
+    recent_data = []
     try:
         stats = manager.get_dashboard_stats(company_id)
         if period:
             report = manager.calculate_cbam_liability(company_id, period)
         if hasattr(manager, 'get_ets_factors'):
             ets_factors = manager.get_ets_factors()
+        if hasattr(manager, 'get_recent_records'):
+            recent_data = manager.get_recent_records(company_id)
     except Exception as e:
-        logging.error(f"CBAM module error: {e}")
+        logging.error(f"CBAM/SKDM module error: {e}")
         stats = {'total_emissions': 0, 'total_imports': 0, 'liability': 0, 'imports': []}
 
     return render_template(
         'cbam.html',
-        title='CBAM Uyumluluk',
+        title=page_title,
         manager_available=True,
         stats=stats,
         report=report,
         period=period,
         ets_factors=ets_factors,
+        recent_data=recent_data,
     )
 
+@app.route('/skdm/add', methods=['GET', 'POST'])
 @app.route('/cbam/add', methods=['GET', 'POST'])
 @require_company_context
 def cbam_add():
     if 'user' not in session:
         return redirect(url_for('login'))
 
-    manager = MANAGERS.get('cbam')
+    manager = MANAGERS.get('skdm') or MANAGERS.get('cbam')
     if not manager:
-        flash('CBAM modülü aktif değil.', 'danger')
+        flash('SKDM/CBAM modülü aktif değil.', 'danger')
         return redirect(url_for('cbam_module'))
 
     if request.method == 'POST':
@@ -5952,6 +6320,10 @@ def super_admin_run_test(test_id: str):
     if test_id in legacy_tests:
         test_path = os.path.join(BASE_DIR, legacy_tests[test_id]['path'])
     elif test_id.endswith('.py'):
+        # Validate test_id to prevent directory traversal
+        if '..' in test_id or '/' in test_id or '\\' in test_id:
+            return jsonify({'success': False, 'error': 'Geçersiz test adı'})
+            
         potential_path = os.path.join(BASE_DIR, 'TESTLER', test_id)
         if os.path.exists(potential_path) and os.path.isfile(potential_path):
             test_path = potential_path
@@ -6301,6 +6673,12 @@ def check_and_migrate_schema():
         conn.close()
     except Exception as e:
         logging.error(f"Database connection error during migration: {e}")
+
+@app.route('/api/test-limit-v2', methods=['GET'])
+@limiter.limit("5 per minute")
+@csrf.exempt
+def api_test_limit_v2():
+    return jsonify({"message": "Limit Test V2", "remaining": "check headers"}), 200
 
 if __name__ == '__main__':
     # Run schema checks

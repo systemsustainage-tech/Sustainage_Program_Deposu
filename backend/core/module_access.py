@@ -9,7 +9,7 @@ MODÜL ERİŞİM KONTROLÜ
 
 import logging
 from typing import Dict, List
-from config.database import DB_PATH
+# from config.database import DB_PATH # Removed unused import
 from backend.core.database_manager import DatabaseManager
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -154,7 +154,7 @@ MODULE_FUNCTION_MAP = {
 # --- FLASK DECORATORS ---
 try:
     from functools import wraps
-    from flask import session, jsonify, abort
+    from flask import session, jsonify
 except ImportError:
     # If flask/functools not available (e.g. CLI tools), define dummy
     def require_permission(perm):
