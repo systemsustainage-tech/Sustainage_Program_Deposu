@@ -6680,6 +6680,343 @@ def check_and_migrate_schema():
 def api_test_limit_v2():
     return jsonify({"message": "Limit Test V2", "remaining": "check headers"}), 200
 
+
+# --- AUTO-GENERATED ROUTES FOR MISSING PAGES ---
+@app.route('/advanced_calculation')
+@require_company_context
+def advanced_calculation():
+    return render_template('advanced_calculation.html')
+
+@app.route('/advanced_inventory')
+@require_company_context
+def advanced_inventory():
+    return render_template('advanced_inventory.html')
+
+@app.route('/advanced_reporting')
+@require_company_context
+def advanced_reporting():
+    return render_template('advanced_reporting.html')
+
+@app.route('/ai')
+@require_company_context
+def ai():
+    return render_template('ai.html')
+
+@app.route('/ai_reports')
+@require_company_context
+def ai_reports():
+    return render_template('ai_reports.html')
+
+@app.route('/analysis')
+@require_company_context
+def analysis():
+    return render_template('analysis.html')
+
+@app.route('/audit_logs')
+@require_company_context
+def audit_logs():
+    return render_template('audit_logs.html')
+
+@app.route('/auditor')
+@require_company_context
+def auditor():
+    return render_template('auditor.html')
+
+@app.route('/automation')
+@require_company_context
+def automation():
+    return render_template('automation.html')
+
+@app.route('/benchmark')
+@require_company_context
+def benchmark():
+    return render_template('benchmark.html')
+
+@app.route('/cbam')
+@require_company_context
+def cbam():
+    return render_template('cbam.html')
+
+@app.route('/community')
+@require_company_context
+def community():
+    return render_template('community.html')
+
+@app.route('/company_stakeholder_survey')
+@require_company_context
+def company_stakeholder_survey():
+    return render_template('company_stakeholder_survey.html')
+
+@app.route('/consumer')
+@require_company_context
+def consumer():
+    return render_template('consumer.html')
+
+@app.route('/data_collection')
+@require_company_context
+def data_collection():
+    return render_template('data_collection.html')
+
+@app.route('/data_import')
+@require_company_context
+def data_import():
+    return render_template('data_import.html')
+
+@app.route('/data_provenance')
+@require_company_context
+def data_provenance():
+    return render_template('data_provenance.html')
+
+@app.route('/database')
+@require_company_context
+def database():
+    return render_template('database.html')
+
+@app.route('/digital_security')
+@require_company_context
+def digital_security():
+    return render_template('digital_security.html')
+
+@app.route('/document_processing')
+@require_company_context
+def document_processing():
+    return render_template('document_processing.html')
+
+@app.route('/emergency')
+@require_company_context
+def emergency():
+    return render_template('emergency.html')
+
+@app.route('/emission_reduction')
+@require_company_context
+def emission_reduction():
+    return render_template('emission_reduction.html')
+
+@app.route('/environmental')
+@require_company_context
+def environmental():
+    return render_template('environmental.html')
+
+@app.route('/erp_integration')
+@require_company_context
+def erp_integration():
+    return render_template('erp_integration.html')
+
+@app.route('/esg_settings')
+@require_company_context
+def esg_settings():
+    return render_template('esg_settings.html')
+
+@app.route('/eu_taxonomy')
+@require_company_context
+def eu_taxonomy():
+    return render_template('eu_taxonomy.html')
+
+@app.route('/fair_operating')
+@require_company_context
+def fair_operating():
+    return render_template('fair_operating.html')
+
+@app.route('/file_manager')
+@require_company_context
+def file_manager():
+    return render_template('file_manager.html')
+
+@app.route('/forms')
+@require_company_context
+def forms():
+    return render_template('forms.html')
+
+@app.route('/framework_mapping')
+@require_company_context
+def framework_mapping():
+    return render_template('framework_mapping.html')
+
+@app.route('/human_rights')
+@require_company_context
+def human_rights():
+    return render_template('human_rights.html')
+
+@app.route('/innovation')
+@require_company_context
+def innovation():
+    return render_template('innovation.html')
+
+@app.route('/integration')
+@require_company_context
+def integration():
+    return render_template('integration.html')
+
+@app.route('/labor')
+@require_company_context
+def labor():
+    return render_template('labor.html')
+
+@app.route('/lca')
+@require_company_context
+def lca():
+    return render_template('lca.html')
+
+@app.route('/lca_assessment')
+@require_company_context
+def lca_assessment():
+    return render_template('lca_assessment.html')
+
+@app.route('/lca_product')
+@require_company_context
+def lca_product():
+    return render_template('lca_product.html')
+
+@app.route('/mapping')
+@require_company_context
+def mapping():
+    return render_template('mapping.html')
+
+@app.route('/notifications')
+@require_company_context
+def notifications():
+    return render_template('notifications.html')
+
+@app.route('/policy_library')
+@require_company_context
+def policy_library():
+    return render_template('policy_library.html')
+
+@app.route('/product_technology')
+@require_company_context
+def product_technology():
+    return render_template('product_technology.html')
+
+@app.route('/quality')
+@require_company_context
+def quality():
+    return render_template('quality.html')
+
+@app.route('/realtime')
+@require_company_context
+def realtime():
+    return render_template('realtime.html')
+
+@app.route('/realtime_device')
+@require_company_context
+def realtime_device():
+    return render_template('realtime_device.html')
+
+@app.route('/regulation')
+@require_company_context
+def regulation():
+    return render_template('regulation.html')
+
+@app.route('/reporting')
+@require_company_context
+def reporting():
+    return render_template('reporting.html')
+
+@app.route('/risk_management')
+@require_company_context
+def risk_management():
+    return render_template('risk_management.html')
+
+@app.route('/sasb')
+@require_company_context
+def sasb():
+    return render_template('sasb.html')
+
+@app.route('/scenario_analysis')
+@require_company_context
+def scenario_analysis():
+    return render_template('scenario_analysis.html')
+
+@app.route('/scope3')
+@require_company_context
+def scope3():
+    return render_template('scope3.html')
+
+@app.route('/security')
+@require_company_context
+def security():
+    return render_template('security.html')
+
+@app.route('/skdm')
+@require_company_context
+def skdm():
+    return render_template('skdm.html')
+
+@app.route('/stakeholder')
+@require_company_context
+def stakeholder():
+    return render_template('stakeholder.html')
+
+@app.route('/stakeholder_portal')
+@require_company_context
+def stakeholder_portal():
+    return render_template('stakeholder_portal.html')
+
+@app.route('/stakeholder_survey')
+@require_company_context
+def stakeholder_survey():
+    return render_template('stakeholder_survey.html')
+
+@app.route('/standards')
+@require_company_context
+def standards():
+    return render_template('standards.html')
+
+@app.route('/strategic')
+@require_company_context
+def strategic():
+    return render_template('strategic.html')
+
+@app.route('/supply_chain_profile')
+@require_company_context
+def supply_chain_profile():
+    return render_template('supply_chain_profile.html')
+
+@app.route('/survey_public')
+@require_company_context
+def survey_public():
+    return render_template('survey_public.html')
+
+@app.route('/tracking')
+@require_company_context
+def tracking():
+    return render_template('tracking.html')
+
+@app.route('/training')
+@require_company_context
+def training():
+    return render_template('training.html')
+
+@app.route('/tsrs')
+@require_company_context
+def tsrs():
+    return render_template('tsrs.html')
+
+@app.route('/ungc')
+@require_company_context
+def ungc():
+    return render_template('ungc.html')
+
+@app.route('/unified_report')
+@require_company_context
+def unified_report():
+    return render_template('unified_report.html')
+
+@app.route('/user_experience')
+@require_company_context
+def user_experience():
+    return render_template('user_experience.html')
+
+@app.route('/validation')
+@require_company_context
+def validation():
+    return render_template('validation.html')
+
+@app.route('/workflow')
+@require_company_context
+def workflow():
+    return render_template('workflow.html')
+
 if __name__ == '__main__':
     # Run schema checks
     check_and_migrate_schema()
