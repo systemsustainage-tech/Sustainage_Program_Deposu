@@ -1,7 +1,7 @@
 {
     "missing_tr": [
-        "enter_captcha_result",
-        "captcha_invalid"
+        "captcha_invalid",
+        "enter_captcha_result"
     ],
     "errors": [
         "[READ ERROR] check_output.txt: 'utf-8' codec can't decode byte 0xff in position 0: invalid start byte",

@@ -435,9 +435,9 @@ def inject_csp_nonce():
 # metrics.info('app_info', 'Application info', version='1.0.3')
 
 # Start System Monitor Thread
-if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
-    monitor_thread = threading.Thread(target=run_system_monitor, args=(app,), daemon=True)
-    monitor_thread.start()
+# if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+#     monitor_thread = threading.Thread(target=run_system_monitor, args=(app,), daemon=True)
+#     monitor_thread.start()
 
 API_RATE_LIMITS = {
     'ip': {'max_requests': 120, 'window_seconds': 60},
@@ -6997,10 +6997,11 @@ def tsrs():
 def ungc():
     return render_template('ungc.html')
 
-@app.route('/unified_report')
-@require_company_context
-def unified_report():
-    return render_template('unified_report.html')
+# Duplicate route removed
+# @app.route('/unified_report')
+# @require_company_context
+# def unified_report():
+#    return render_template('unified_report.html')
 
 @app.route('/user_experience')
 @require_company_context
