@@ -21,9 +21,9 @@ except ImportError:
     except ImportError:
         EmailService = None
 
-from yonetim.security.core.crypto import hash_password as secure_hash_password
-from yonetim.security.core.crypto import verify_password_compat as secure_verify_password
-from config.database import DB_PATH
+from backend.yonetim.security.core.crypto import hash_password as secure_hash_password
+from backend.yonetim.security.core.crypto import verify_password_compat as secure_verify_password
+from backend.config.database import DB_PATH
 from backend.core.base_manager import BaseTenantManager
 from backend.utils.language_manager import LanguageManager
 

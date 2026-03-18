@@ -35,20 +35,57 @@ def request_password_reset(db_path: str, username_or_email: str) -> Tuple[bool, 
         with db.get_connection() as conn:
             cur = conn.cursor()
             
-            # Kullaniciyi bul (username veya email ile)
-            cur.execute("""
-                SELECT id, username, email, display_name, is_active
-                FROM users
-                WHERE username = ? OR email = ?
-            """, (username_or_email, username_or_email))
+            cur.execute("PRAGMA table_info(users)")
+            user_columns = {row[1] for row in cur.fetchall()}
 
+            select_sql = None
+            selected_name_fields = []
+            if 'display_name' in user_columns:
+                select_sql = """
+                    SELECT id, username, email, display_name, is_active
+                    FROM users
+                    WHERE username = ? OR email = ?
+                """
+                selected_name_fields = ['display_name']
+            else:
+                if 'first_name' in user_columns:
+                    selected_name_fields.append('first_name')
+                if 'last_name' in user_columns:
+                    selected_name_fields.append('last_name')
+
+                name_sql = ""
+                if selected_name_fields:
+                    name_sql = ", " + ", ".join(selected_name_fields)
+
+                select_sql = f"""
+                    SELECT id, username, email{name_sql}, is_active
+                    FROM users
+                    WHERE username = ? OR email = ?
+                """
+
+            cur.execute(select_sql, (username_or_email, username_or_email))
             user = cur.fetchone()
 
             if not user:
                 # Guvenlik: Kullanici bulunamadi deme
                 return False, "Kullanici bulunamadi veya email kayitli degil"
 
-            user_id, username, email, display_name, is_active = user
+            if 'display_name' in user_columns:
+                user_id, username, email, display_name, is_active = user
+            else:
+                user_id = user[0]
+                username = user[1]
+                email = user[2]
+                is_active = user[-1]
+
+                display_name_parts = []
+                if 'first_name' in selected_name_fields:
+                    display_name_parts.append((user[3] or '').strip())
+                if 'last_name' in selected_name_fields:
+                    offset = 4 if 'first_name' in selected_name_fields else 3
+                    display_name_parts.append((user[offset] or '').strip())
+
+                display_name = " ".join([p for p in display_name_parts if p]).strip() or None
 
             # Aktif mi?
             if not is_active:
@@ -120,9 +157,8 @@ def request_password_reset(db_path: str, username_or_email: str) -> Tuple[bool, 
 
         except Exception as e:
             logging.error(f"[HATA] Email gonderilemedi: {e}")
-            # Yine de kodu console'a yazdir (test icin)
             logging.info(f"[TEST] Sifre sifirlama kodu: {otp_code}")
-            return True, f"Kod olusturuldu (email gonderimi basarisiz): {otp_code}"
+            return False, "E-posta gönderilemedi. Lütfen daha sonra tekrar deneyin."
 
     except Exception as e:
         logging.error(f"[HATA] Sifre sifirlama hatasi: {e}")
@@ -172,6 +208,8 @@ def verify_reset_code_and_change_password(db_path: str, username: str, code: str
             if datetime.now() > expires_at:
                 return False, "Kodun suresi dolmus. Lutfen yeni kod isteyin"
 
+            new_password = (new_password or "").strip()
+
             if GlobalPasswordPolicy is not None:
                 ok, msg = GlobalPasswordPolicy.validate(new_password)
                 if not ok:
@@ -184,11 +222,27 @@ def verify_reset_code_and_change_password(db_path: str, username: str, code: str
             new_hash = hash_password(new_password)
 
             # Sifreyi guncelle
-            cur.execute("""
-                UPDATE users
-                SET password_hash = ?, pw_hash_version = 'argon2', must_change_password = 0
-                WHERE id = ?
-            """, (new_hash, user_id))
+            cur.execute("PRAGMA table_info(users)")
+            user_columns = {row[1] for row in cur.fetchall()}
+
+            if 'pw_hash_version' in user_columns:
+                cur.execute(
+                    """
+                    UPDATE users
+                    SET password_hash = ?, pw_hash_version = 'argon2', must_change_password = 0
+                    WHERE id = ?
+                    """,
+                    (new_hash, user_id),
+                )
+            else:
+                cur.execute(
+                    """
+                    UPDATE users
+                    SET password_hash = ?, must_change_password = 0
+                    WHERE id = ?
+                    """,
+                    (new_hash, user_id),
+                )
 
             # Token'i kullanilmis olarak isaretleupdate
             cur.execute("""

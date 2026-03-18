@@ -77,20 +77,22 @@
 </thead>
 <tbody>
                             {% for item in materiality %}
+                            {% set impact_score = (item.get('impact_score') if item is mapping else item.impact_score)|default(0)|int %}
+                            {% set financial_score = (item.get('financial_score') if item is mapping else item.financial_score)|default(0)|int %}
                             <tr>
 <td><span class="badge bg-secondary">{{ item.topic_code }}</span> {{ item.topic_name }}</td>
 <td>
-                                    {% if item.impact_score >= 4 %}
-                                        <span class="badge bg-danger">{{ item.impact_score }}</span>
+                                    {% if impact_score >= 4 %}
+                                        <span class="badge bg-danger">{{ impact_score }}</span>
                                     {% else %}
-                                        <span class="badge bg-success">{{ item.impact_score }}</span>
+                                        <span class="badge bg-success">{{ impact_score }}</span>
                                     {% endif %}
                                 </td>
 <td>
-                                    {% if item.financial_score >= 4 %}
-                                        <span class="badge bg-danger">{{ item.financial_score }}</span>
+                                    {% if financial_score >= 4 %}
+                                        <span class="badge bg-danger">{{ financial_score }}</span>
                                     {% else %}
-                                        <span class="badge bg-success">{{ item.financial_score }}</span>
+                                        <span class="badge bg-success">{{ financial_score }}</span>
                                     {% endif %}
                                 </td>
 <td><small>{{ item.rationale }}</small></td>

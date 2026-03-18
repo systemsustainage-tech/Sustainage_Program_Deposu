@@ -630,7 +630,7 @@ class EmailService:
             logging.error(f"Template email sending failed: {e}")
             return {'success': False, 'error': str(e)}
 
-    def send_password_reset_email(self, to_email: str, user_name: str, reset_code: str) -> bool:
+    def send_password_reset_email(self, to_email: str, user_name: str, reset_code: str, support_email: str = None) -> bool:
         """Şifre sıfırlama emaili gönder"""
         template = self.templates['password_reset']
         subject = template['subject']
@@ -639,7 +639,7 @@ class EmailService:
         variables = {
             'user_name': user_name,
             'reset_code': reset_code,
-            'support_email': 'support@sustainage.tr'
+            'support_email': support_email or 'support@sustainage.tr'
         }
         
         for k, v in variables.items():

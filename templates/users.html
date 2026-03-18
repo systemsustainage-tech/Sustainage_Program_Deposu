@@ -88,9 +88,19 @@
 <i class="bi bi-pencil"></i>
 </a>
                     {% if user.id != session.user_id %}
-                    <a class="btn btn-sm btn-outline-danger btn-delete-user" href="{{ url_for('user_delete', user_id=user.id) }}" data-confirm-message="{{ lang('users_confirm_delete') }}" title="{{ lang('common_delete') }}">
-                        <i class="bi bi-trash"></i>
-                    </a>
+                    <form action="{{ url_for('user_delete', user_id=user.id) }}" method="POST" style="display:inline;" onsubmit="return confirm('{{ lang('users_confirm_delete') }}');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        {% if session.role|lower == 'super_admin' %}
+                        <input type="hidden" name="hard_delete" value="1">
+                        <button class="btn btn-sm btn-danger" title="Kalıcı Sil" type="submit" onclick="return confirm('Bu kullanıcıyı KALICI olarak silmek istediğinize emin misiniz? Bu işlem geri alınamaz.');">
+                            <i class="bi bi-trash"></i> Kalıcı Sil
+                        </button>
+                        {% else %}
+                        <button class="btn btn-sm btn-outline-warning" title="Pasife Al" type="submit" onclick="return confirm('Bu kullanıcıyı pasife almak istediğinize emin misiniz?');">
+                            <i class="bi bi-slash-circle"></i> Pasife Al
+                        </button>
+                        {% endif %}
+                    </form>
                     {% endif %}
                     {% endif %}
                 </td>

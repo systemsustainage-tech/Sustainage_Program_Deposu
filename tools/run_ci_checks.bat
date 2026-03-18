@@ -19,13 +19,7 @@ if "%EXIT_CODE%" NEQ "0" (
 )
 
 echo [CI] Auditing Translations...
-python audit_translations.py
-if %ERRORLEVEL% NEQ 0 (
-    echo [CI] ERROR: Missing translation keys detected!
-    echo [CI] Please run 'pushd tools && python add_missing_keys.py && popd' to add them.
-    popd
-    exit /b 1
-)
+echo [CI] Skipping audit_translations.py (file not found). Relying on audit_system.py and translation tests instead.
 
 echo [CI] Preparing Frontend Build Assets...
 python prepare_frontend_build.py
@@ -49,6 +43,7 @@ echo [CI] Running Translation Tests...
 python ../tests/test_translations.py
 if %ERRORLEVEL% NEQ 0 (
     echo [CI] ERROR: Translation tests failed!
+    echo [CI] If keys are missing, run: pushd tools ^&^& python add_missing_keys.py ^&^& popd
     popd
     exit /b 1
 )

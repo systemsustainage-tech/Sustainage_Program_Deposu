@@ -1,8 +1,7 @@
 
 {% extends "base.html" %}
-{% from "includes/pagination.html" import render_pagination %}
 
-{% block title %}Tedarik Zinciri Sürdürülebilirliği - SustainAge{% endblock %}
+{% block title %}{{ lang('supply_chain_title', 'Tedarik Zinciri Sürdürülebilirliği') }} - SustainAge{% endblock %}
 
 {% block content %}
 <div class="row mb-4">
@@ -17,68 +16,15 @@
     </div>
 </div>
 
-{% if alerts %}
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="card border-warning">
-            <div class="card-header bg-warning text-dark">
-                <h5 class="mb-0"><i class="bi bi-exclamation-triangle"></i> {{ lang('risk_alerts_title', 'Önemli Risk Uyarıları') }}</h5>
-            </div>
-            <div class="card-body">
-                <div class="list-group">
-                    {% for alert in alerts %}
-                    <a href="{{ alert.link }}" class="list-group-item list-group-item-action list-group-item-{{ alert.level }}">
-                        <div class="d-flex w-100 justify-content-between">
-                            <h5 class="mb-1">{{ alert.type }}</h5>
-                        </div>
-                        <p class="mb-1">{{ alert.message }}</p>
-                    </a>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-{% endif %}
-
-<div class="card mb-4 shadow-sm">
-    <div class="card-body">
-        <form method="get" action="{{ url_for('supply_chain_module') }}" class="row g-3 align-items-end">
-            <div class="col-md-4">
-                <label for="search" class="form-label">{{ lang('search', 'Ara') }}</label>
-                <input type="text" class="form-control" id="search" name="search" value="{{ search or '' }}" placeholder="{{ lang('search_placeholder', 'Tedarikçi adı, sektör veya bölge...') }}">
-            </div>
-            <div class="col-md-3">
-                <label for="risk_level" class="form-label">{{ lang('risk_level', 'Risk Seviyesi') }}</label>
-                <select class="form-select" id="risk_level" name="risk_level">
-                    <option value="">{{ lang('all', 'Tümü') }}</option>
-                    <option value="Low" {% if risk_filter == 'Low' %}selected{% endif %}>{{ lang('low_risk', 'Düşük Risk (Skor > 70)') }}</option>
-                    <option value="Medium" {% if risk_filter == 'Medium' %}selected{% endif %}>{{ lang('medium_risk', 'Orta Risk (50-70)') }}</option>
-                    <option value="High" {% if risk_filter == 'High' %}selected{% endif %}>{{ lang('high_risk', 'Yüksek Risk (< 50)') }}</option>
-                </select>
-            </div>
-            <div class="col-md-3">
-                <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> {{ lang('filter', 'Filtrele') }}</button>
-                {% if search or risk_filter %}
-                <a href="{{ url_for('supply_chain_module') }}" class="btn btn-outline-secondary"><i class="bi bi-x-circle"></i> {{ lang('clear', 'Temizle') }}</a>
-                {% endif %}
-            </div>
-        </form>
-    </div>
-</div>
-
 <div class="row">
     <div class="col-12">
         <div class="card shadow-sm border-0">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">{{ lang('supplier_list', 'Tedarikçi Listesi') }}</h5>
                 <div>
-                    <button class="btn btn-outline-primary btn-sm me-2" data-bs-toggle="modal" data-bs-target="#importRisksModal">
-                        <i class="fas fa-file-import"></i> {{ lang('import_risks', 'Riskleri İçe Aktar') }}
-                    </button>
-                    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addSupplierModal">
+                    <a class="btn btn-primary btn-sm" href="{{ url_for('supply_chain_add') }}">
                         <i class="fas fa-plus"></i> {{ lang('add_new_supplier', 'Yeni Tedarikçi Ekle') }}
-                    </button>
+                    </a>
                 </div>
             </div>
             <div class="card-body">
@@ -88,116 +34,43 @@
                         <thead>
                             <tr>
                                 <th>{{ lang('supplier_name', 'Tedarikçi Adı') }}</th>
-                                <th>{{ lang('sector', 'Sektör') }}</th>
-                                <th>{{ lang('region_country', 'Bölge') }}</th>
-                                <th>{{ lang('risk_score', 'Risk Skoru') }}</th>
-                                <th class="text-end">{{ lang('actions', 'İşlemler') }}</th>
+                                <th>{{ lang('supplier_type', 'Tip') }}</th>
+                                <th>{{ lang('country', 'Ülke') }}</th>
+                                <th>{{ lang('sustainability_score', 'Sürdürülebilirlik Skoru') }}</th>
+                                <th>{{ lang('risk_level', 'Risk Seviyesi') }}</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for supplier in suppliers %}
+                            {% set supplier_name = supplier.get('name') if supplier is mapping else supplier.name %}
+                            {% set supplier_type = supplier.get('type') if supplier is mapping else supplier.type %}
+                            {% set supplier_country = supplier.get('country') if supplier is mapping else supplier.country %}
+                            {% set score = (supplier.get('score') if supplier is mapping else supplier.score)|default(0)|float %}
+                            {% set risk = (supplier.get('risk') if supplier is mapping else supplier.risk)|default('-') %}
                             <tr>
                                 <td>
-                                    <strong>{{ supplier.name }}</strong><br>
-                                    <small class="text-muted">{{ supplier.contact_info }}</small>
+                                    <strong>{{ supplier_name }}</strong>
                                 </td>
-                                <td>{{ supplier.sector }}</td>
-                                <td>{{ supplier.region }}</td>
-                                <td>
-                                    {% if supplier.risk_score > 70 %}
-                                    <span class="badge bg-success">{{ lang('low_risk_badge', 'Düşük Risk') }} ({{ supplier.risk_score|round(1) }})</span>
-                                    {% elif supplier.risk_score > 50 %}
-                                    <span class="badge bg-warning text-dark">{{ lang('medium_risk_badge', 'Orta Risk') }} ({{ supplier.risk_score|round(1) }})</span>
-                                    {% else %}
-                                    <span class="badge bg-danger">{{ lang('high_risk_badge', 'Yüksek Risk') }} ({{ supplier.risk_score|round(1) }})</span>
-                                    {% endif %}
-                                </td>
-                                <td class="text-end">
-                                    <a href="{{ url_for('supply_chain_profile', supplier_id=supplier.id) }}" class="btn btn-sm btn-info text-white">
-                                        <i class="fas fa-eye"></i> {{ lang('details', 'Detay') }}
-                                    </a>
-                                </td>
+                                <td>{{ supplier_type }}</td>
+                                <td>{{ supplier_country }}</td>
+                                <td>{{ score }}</td>
+                                <td><span class="badge bg-secondary">{{ risk }}</span></td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
-                {% if pagination %}
-                {{ render_pagination(pagination, 'supply_chain_module', search=search, risk_level=risk_filter) }}
-                {% endif %}
                 {% else %}
                 <div class="text-center py-5">
                     <i class="fas fa-truck-loading fa-3x text-muted mb-3"></i>
                     <p class="text-muted">{{ lang('no_supplier_defined', 'Henüz bir tedarikçi tanımlanmamış.') }}</p>
-                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addSupplierModal">
+                    <a class="btn btn-primary" href="{{ url_for('supply_chain_add') }}">
                         {{ lang('add_first_supplier', 'İlk Tedarikçiyi Ekle') }}
-                    </button>
+                    </a>
                 </div>
                 {% endif %}
             </div>
         </div>
     </div>
 </div>
-
-<!-- Add Supplier Modal -->
-<div class="modal fade" id="addSupplierModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form action="{{ url_for('supply_chain_add_supplier') }}" method="POST">
-                <div class="modal-header">
-                    <h5 class="modal-title">{{ lang('add_new_supplier', 'Yeni Tedarikçi Ekle') }}</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">{{ lang('supplier_name', 'Tedarikçi Adı') }}</label>
-                        <input type="text" class="form-control" name="name" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">{{ lang('sector', 'Sektör') }}</label>
-                        <input type="text" class="form-control" name="sector" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">{{ lang('region_country', 'Bölge/Ülke') }}</label>
-                        <input type="text" class="form-control" name="region" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">{{ lang('contact_info', 'İletişim Bilgileri') }}</label>
-                        <textarea class="form-control" name="contact_info" rows="2"></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ lang('cancel', 'İptal') }}</button>
-                    <button type="submit" class="btn btn-primary">{{ lang('save', 'Kaydet') }}</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Import Risks Modal -->
-<div class="modal fade" id="importRisksModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form action="{{ url_for('supply_chain_import_risks') }}" method="POST" enctype="multipart/form-data">
-                <div class="modal-header">
-                    <h5 class="modal-title">{{ lang('import_risk_data', 'Risk Verilerini İçe Aktar (Excel)') }}</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <p class="text-muted small">{{ lang('excel_columns_info', 'Excel dosyanız şu sütunları içermelidir: Tedarikçi Adı, Risk Kategorisi, Risk Açıklaması, Olasılık (1-5), Etki (1-5), Azaltma Planı') }}</p>
-                    <div class="mb-3">
-                        <label for="file" class="form-label">{{ lang('select_excel_file', 'Excel Dosyası Seç') }}</label>
-                        <input class="form-control" type="file" id="file" name="file" accept=".xlsx, .xls" required>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ lang('cancel', 'İptal') }}</button>
-                    <button type="submit" class="btn btn-primary">{{ lang('upload_and_import', 'Yükle ve İçe Aktar') }}</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
 {% endblock %}

@@ -1,6 +1,0 @@
-{
-  "enabled": true,
-  "ttl": 3600,
-  "max_size": 100,
-  "auto_clear": true
-}

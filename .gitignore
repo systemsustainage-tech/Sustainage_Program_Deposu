@@ -11,12 +11,28 @@ config/github_config.json
 logs/
 *.log
 
+# Databases / runtime data
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.sqlite-journal
+*.db
+*.db-shm
+*.db-wal
+backend/data/
+backups/
+tests/*.db
+
 config/github_token.txt
 *.tar.gz
 *.zip
 *.rar
 push_log.txt
 push_log_new.txt
+
+# Local backups / temp files
+*.bak
+*.backup
 
 config/google_key.json
 config/smtp_config.json

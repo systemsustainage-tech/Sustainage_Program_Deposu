@@ -112,7 +112,7 @@
 </div>
 <div class="col-12">
 <div class="form-check form-switch">
-<input class="form-check-input" id="aktif" name="aktif" type="checkbox" {% if company and (company.aktif or company.is_active) %}checked{% endif %}/>
+<input class="form-check-input" id="aktif" name="aktif" type="checkbox" {% if (not company) or (company and (company.aktif or company.is_active)) %}checked{% endif %}/>
 <label class="form-check-label" for="aktif">{{ lang('lbl_company_active') }}</label>
 </div>
 </div>

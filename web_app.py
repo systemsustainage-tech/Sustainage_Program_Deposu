@@ -2,6 +2,7 @@ import os
 import sys
 import logging
 import json
+import re
 import sqlite3
 import secrets
 from datetime import datetime
@@ -107,17 +108,25 @@ def generate_captcha():
     """Generates a simple math captcha"""
     num1 = secrets.randbelow(10) + 1
     num2 = secrets.randbelow(10) + 1
-    session['captcha_answer'] = str(num1 + num2)
+    answer = str(num1 + num2)
+    session['captcha_answer'] = answer
+    session['captcha_code'] = answer
     return f"{num1} + {num2} = ?"
 
 def verify_captcha(answer):
     """Verifies the captcha answer"""
     expected = session.get('captcha_answer')
-    if not expected:
+    expected_code = session.get('captcha_code')
+    if not expected and not expected_code:
         return False
-    # Clear after one attempt to prevent replay
-    session.pop('captcha_answer', None)
-    return str(answer).strip() == expected
+    if expected:
+        ok = str(answer).strip() == str(expected).strip()
+    else:
+        ok = str(answer).strip().upper() == str(expected_code).strip().upper()
+    if ok:
+        session.pop('captcha_answer', None)
+        session.pop('captcha_code', None)
+    return ok
 
 @app.route('/captcha-image')
 def captcha_image():
@@ -135,6 +144,9 @@ license_manager = LicenseManager(DB_PATH)
 def check_license():
     # Skip static files and public endpoints
     if request.path.startswith('/static') or request.path.startswith('/auth') or request.path == '/login':
+        return
+    
+    if request.path.startswith('/api/'):
         return
 
     # 1. Check for License Key in Header (API) or Session (Web)
@@ -187,17 +199,6 @@ def check_license():
     # Ensure session has company_id if not already (for hybrid auth)
     if 'company_id' not in session and g.company_id:
         session['company_id'] = g.company_id
-
-
-    report_violation('RATE_LIMIT_EXCEEDED', client_ip, details)
-    
-    if request.accept_mimetypes.accept_json and not request.accept_mimetypes.accept_html:
-        return jsonify({
-            "error": "Too Many Requests", 
-            "message": "İstek limitini aştınız. Lütfen bir süre bekleyin.",
-            "retry_after": e.description
-        }), 429
-    return render_template("errors/429.html", error=e.description), 429
 
 # --- CSRF PROTECTION ---
 # csrf = CSRFProtect(app) # Already initialized above
@@ -394,7 +395,7 @@ MONITORING_AVAILABLE = False
 LICENSE_MANAGER_AVAILABLE = False
 
 try:
-    from yonetim.kullanici_yonetimi.models.user_manager import UserManager
+    from backend.yonetim.kullanici_yonetimi.models.user_manager import UserManager
     USER_MANAGER_AVAILABLE = True
 except Exception as e:
     logging.error(f"UserManager import error: {e}")
@@ -496,6 +497,18 @@ def gettext(key, default=None):
 
 app.jinja_env.globals.update(_=gettext, lang=gettext)
 _ = gettext
+
+@app.context_processor
+def _inject_template_helpers():
+    def endpoint_exists(endpoint_name: str) -> bool:
+        try:
+            return endpoint_name in app.view_functions
+        except Exception:
+            return False
+
+    return {
+        "endpoint_exists": endpoint_exists,
+    }
 
 @app.route('/set_language/<lang>', endpoint='set_language')
 @app.route('/set-language/<lang>')
@@ -788,6 +801,27 @@ def license_check():
     if request.path == '/metrics' or request.endpoint in ['api_login', 'api_register', 'api_logout', 'static', 'metrics']:
         return
 
+    role = str(session.get('role', '')).lower()
+    is_super_admin = role == 'super_admin'
+    if is_super_admin:
+        if 'user' not in session:
+            return jsonify({'error': 'Authentication required'}), 401
+        if not session.get('company_id'):
+            try:
+                conn = sqlite3.connect(DB_PATH)
+                cur = conn.cursor()
+                cur.execute("SELECT id FROM companies ORDER BY id ASC LIMIT 1")
+                row = cur.fetchone()
+                conn.close()
+                if row and row[0]:
+                    session['company_id'] = int(row[0])
+            except Exception:
+                pass
+        if session.get('company_id'):
+            g.license = {'company_id': int(session['company_id']), 'bypass': True}
+            g.company_id = int(session['company_id'])
+        return
+
     def check_constraints(payload):
         allowed_domains = payload.get('allowed_domains')
         if allowed_domains and isinstance(allowed_domains, list) and len(allowed_domains) > 0:
@@ -810,10 +844,16 @@ def license_check():
 
     # Helper for abuse check
     def check_abuse(key, ip):
-        is_abusive, reason = license_manager.check_abuse_and_update_usage(key, ip)
-        if is_abusive:
-             report_violation('LICENSE_ABUSE', ip, details=reason)
-             return True, reason
+        try:
+            res = license_manager.check_abuse_and_update_usage(key, ip)
+        except Exception:
+            return False, None
+
+        if isinstance(res, (tuple, list)) and len(res) == 2:
+            is_abusive, reason = res
+            if is_abusive:
+                report_violation('LICENSE_ABUSE', ip, details=reason)
+                return True, reason
         return False, None
 
     api_key = request.headers.get('X-License-Key')
@@ -911,19 +951,48 @@ def require_company_context(f):
             if request.path.startswith('/api/'):
                 return jsonify({'error': 'Authentication required'}), 401
             return redirect(url_for('login'))
+
+        role = str(session.get('role', 'User')).lower()
+        is_super_admin = role == 'super_admin'
+        g.is_super_admin = is_super_admin
         
         # Enforce Company Context
-        company_id = session.get('company_id')
+        company_id = None
+        if is_super_admin:
+            view_args = getattr(request, "view_args", None) or {}
+            if "company_id" in view_args and view_args.get("company_id"):
+                company_id = view_args.get("company_id")
+            elif "company_id" in kwargs and kwargs.get("company_id"):
+                company_id = kwargs.get("company_id")
+
+        if not company_id:
+            company_id = session.get('company_id')
         
         # DEBUG: Check if company_id is a dict (SaaS isolation fix)
         if isinstance(company_id, dict):
             logging.warning(f"DEBUG: company_id in session is a dict: {company_id}. Extracting ID.")
             company_id = company_id.get('id') or company_id.get('company_id')
             session['company_id'] = company_id # Update session
+
+        if (not company_id) and is_super_admin:
+            try:
+                conn = sqlite3.connect(DB_PATH)
+                cur = conn.cursor()
+                cur.execute("SELECT id FROM companies ORDER BY id ASC LIMIT 1")
+                row = cur.fetchone()
+                conn.close()
+                company_id = int(row[0]) if row and row[0] else None
+                if company_id:
+                    session['company_id'] = company_id
+            except Exception:
+                company_id = None
             
         if not company_id:
             # STRICT MODE: No fallback to 1.
             # If no company context, force logout or error.
+            if is_super_admin:
+                flash('Şirket bulunamadı. Lütfen önce bir şirket oluşturun.', 'warning')
+                return redirect(url_for('company_add'))
             session.clear()
             flash('Oturum süreniz doldu veya geçerli bir şirket bulunamadı.', 'warning')
             return redirect(url_for('login'))
@@ -931,31 +1000,29 @@ def require_company_context(f):
         g.company_id = int(company_id) # Ensure int
         
         # --- LICENSE RESTRICTION CHECK ---
-        try:
-            # Get active license for this company
-            license_key = license_manager.get_active_license(g.company_id)
-            if license_key:
-                # Verify and get payload (IP/Domain rules)
-                client_ip = get_remote_address()
-                client_domain = request.host
-                verify_result = license_manager.verify_license_key(license_key, client_ip, client_domain)
-                
-                if not verify_result or len(verify_result) != 3:
-                     logging.error(f"Invalid verify_license_key return: {verify_result}")
-                     is_valid, msg, payload = False, "Internal Error", {}
-                else:
-                     is_valid, msg, payload = verify_result
-                     
-                if not is_valid:
-                    logging.warning(f"License Violation: {msg}")
-                    report_violation('LICENSE_VIOLATION', client_ip, details={'reason': msg})
-                    if request.path.startswith('/api/'):
-                        return jsonify({'error': f"License Violation: {msg}"}), 403
-                    abort(403, description=f"Lisans Hatası: {msg}")
-                
-        except Exception as e:
-            logging.error(f"License restriction check error: {e}")
-            # Do not block on error, just log
+        if not is_super_admin:
+            try:
+                license_key = license_manager.get_active_license(g.company_id)
+                if license_key:
+                    client_ip = get_remote_address()
+                    client_domain = request.host
+                    verify_result = license_manager.verify_license_key(license_key, client_ip, client_domain)
+
+                    if not verify_result or len(verify_result) != 3:
+                        logging.error(f"Invalid verify_license_key return: {verify_result}")
+                        is_valid, msg, payload = False, "Internal Error", {}
+                    else:
+                        is_valid, msg, payload = verify_result
+
+                    if not is_valid:
+                        logging.warning(f"License Violation: {msg}")
+                        report_violation('LICENSE_VIOLATION', client_ip, details={'reason': msg})
+                        if request.path.startswith('/api/'):
+                            return jsonify({'error': f"License Violation: {msg}"}), 403
+                        abort(403, description=f"Lisans Hatası: {msg}")
+
+            except Exception as e:
+                logging.error(f"License restriction check error: {e}")
         # ---------------------------------
         
         return f(*args, **kwargs)
@@ -1165,14 +1232,17 @@ def login():
 
     if request.method == 'POST':
         # Captcha Check
-        if session.get('login_attempts', 0) > 3:
+        if session.get('login_attempts', 0) >= 3:
             captcha_response = request.form.get('captcha')
             if not verify_captcha(captcha_response):
-                flash(lang('captcha_invalid', 'Güvenlik doğrulaması başarısız.'), 'danger')
+                flash(gettext('captcha_invalid', 'Güvenlik doğrulaması başarısız.'), 'danger')
                 return render_template('login.html', show_captcha=True)
 
-        username = request.form.get('username', '')
-        password = request.form.get('password', '')
+        raw_username = request.form.get('username', '')
+        username = (raw_username or '').strip()
+        if username.lower() == 'super.admin':
+            username = '__super__'
+        password = (request.form.get('password') or '').strip()
 
         try:
             conn = get_db()
@@ -1194,6 +1264,7 @@ def login():
             user = user_manager.authenticate(username, password)
             if user:
                 session['user'] = user.get('display_name', user.get('username'))
+                session['username'] = user.get('username')
                 session['user_id'] = user.get('id')
                 try:
                     conn = get_db()
@@ -1207,6 +1278,8 @@ def login():
                     conn.close()
                 except Exception:
                     session['role'] = 'User'
+                if (user.get('username') or '').lower() == '__super__':
+                    session['role'] = 'super_admin'
                 try:
                     logging.info(f"User {username} authenticated. ID: {user.get('id')}")
                     company_id = user_manager.get_user_company(user.get('id'))
@@ -1217,10 +1290,16 @@ def login():
                          logging.warning(f"DEBUG: get_user_company returned dict: {company_id}")
                          company_id = company_id.get('id') or company_id.get('company_id')
 
-                    # Fallback for super.admin if company lookup failed but diagnosis shows it exists
-                    if not company_id and username == 'super.admin':
-                        logging.warning("super.admin has no company from get_user_company. Forcing company_id=1.")
-                        company_id = 1
+                    # Fallback for super admin accounts if company lookup failed
+                    if not company_id and username in ('super.admin', '__super__'):
+                        try:
+                            conn = get_db()
+                            row = conn.execute("SELECT id FROM companies ORDER BY id ASC LIMIT 1").fetchone()
+                            conn.close()
+                            company_id = int(row['id']) if row and row['id'] else 1
+                        except Exception:
+                            company_id = 1
+                        logging.warning(f"{username} has no company from get_user_company. Forcing company_id={company_id}.")
 
                     # STRICT: If no company assigned, do not default to 1.
                     # This will be caught by require_company_context if None.
@@ -1241,7 +1320,7 @@ def login():
             flash('Sistem hatası: Kullanıcı yönetimi devre dışı.', 'danger')
     
     # Check if captcha should be shown
-    show_captcha = session.get('login_attempts', 0) > 3
+    show_captcha = session.get('login_attempts', 0) >= 3
     return render_template('login.html', show_captcha=show_captcha)
 
 @app.errorhandler(429)
@@ -1303,13 +1382,45 @@ def complete_journey_step(step_number):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/forgot_password', methods=['GET', 'POST'])
-@limiter_exempt
+@limiter.limit("3 per minute")
 def forgot_password():
+    recaptcha_site_key = app.config.get('RECAPTCHA_SITE_KEY')
+    recaptcha_secret_key = app.config.get('RECAPTCHA_SECRET_KEY')
+    captcha_required = bool(recaptcha_site_key and recaptcha_secret_key)
+
     if request.method == 'POST':
-        username = (request.form.get('username') or '').strip()
-        if not username:
+        if captcha_required:
+            recaptcha_token = (request.form.get('g-recaptcha-response') or '').strip()
+            if not recaptcha_token:
+                flash('Lütfen reCAPTCHA doğrulamasını tamamlayın.', 'danger')
+                return render_template('forgot_password.html', recaptcha_site_key=recaptcha_site_key, captcha_required=True)
+
+            verified = False
+            try:
+                if app.config.get('TESTING'):
+                    verified = True
+                else:
+                    from backend.security.captcha_manager import CaptchaManager
+                    verified = CaptchaManager().verify_google_recaptcha(
+                        token=recaptcha_token,
+                        secret_key=recaptcha_secret_key,
+                        remote_ip=get_remote_address()
+                    )
+            except Exception as e:
+                logging.error(f"reCAPTCHA verification error: {e}")
+                verified = False
+
+            if not verified:
+                flash('reCAPTCHA doğrulaması başarısız.', 'danger')
+                return render_template('forgot_password.html', recaptcha_site_key=recaptcha_site_key, captcha_required=True)
+
+        raw_username = (request.form.get('username') or '').strip()
+        if not raw_username:
             flash('Lütfen kullanıcı adınızı girin.', 'warning')
-            return redirect(url_for('forgot_password'))
+            return render_template('forgot_password.html', recaptcha_site_key=recaptcha_site_key, captcha_required=captcha_required)
+        username = raw_username
+        if raw_username.lower() == 'super.admin':
+            username = '__super__'
         try:
             from backend.security.core.password_reset import request_password_reset
         except Exception as e:
@@ -1326,8 +1437,9 @@ def forgot_password():
             flash(msg or 'Şifre sıfırlama kodu e-posta adresinize gönderildi.', 'success')
             return redirect(url_for('verify_reset_code'))
         flash(msg or 'Şifre sıfırlama isteği başarısız.', 'danger')
-        return redirect(url_for('forgot_password'))
-    return render_template('forgot_password.html')
+        return render_template('forgot_password.html', recaptcha_site_key=recaptcha_site_key, captcha_required=captcha_required)
+
+    return render_template('forgot_password.html', recaptcha_site_key=recaptcha_site_key, captcha_required=captcha_required)
 
 
 @app.route('/verify_reset_code', methods=['GET', 'POST'])
@@ -2055,7 +2167,7 @@ def user_edit(user_id):
         
     return render_template('user_edit.html', user=user)
 
-@app.route('/users/delete/<int:user_id>')
+@app.route('/users/delete/<int:user_id>', methods=['POST'])
 @require_company_context
 @admin_required
 def user_delete(user_id):
@@ -2064,18 +2176,98 @@ def user_delete(user_id):
         return redirect(url_for('users'))
     try:
         conn = get_db()
-        # Security check
-        check = conn.execute("SELECT 1 FROM users WHERE id=? AND company_id=?", (user_id, g.company_id)).fetchone()
-        if not check:
+        user_row = conn.execute("SELECT id, username, company_id, is_active FROM users WHERE id=?", (user_id,)).fetchone()
+        if not user_row:
+            conn.close()
+            flash('Kullanıcı bulunamadı.', 'warning')
+            return redirect(url_for('users'))
+
+        user_row = dict(user_row)
+
+        role = str(session.get('role') or '').lower()
+        is_super_admin = role == 'super_admin'
+
+        if (not is_super_admin) and (int(user_row.get('company_id') or 0) != int(g.company_id)):
             conn.close()
             flash('Yetkisiz işlem.', 'danger')
             return redirect(url_for('users'))
-            
-        conn.execute("DELETE FROM user_roles WHERE user_id=?", (user_id,))
-        conn.execute("DELETE FROM users WHERE id=?", (user_id,))
-        conn.commit()
-        conn.close()
-        flash('Kullanıcı silindi.', 'success')
+
+        target_username = str(user_row.get('username') or '')
+
+        try:
+            from backend.security.core.super_user_protection import check_delete_protection
+            can_delete, protection_msg = check_delete_protection(DB_PATH, target_username, actor_id=session.get('user_id'))
+            if not can_delete:
+                conn.close()
+                flash(protection_msg, 'warning')
+                return redirect(url_for('users'))
+        except Exception as e:
+            logging.error(f"Super admin protection check error: {e}")
+
+        role_row = conn.execute("""
+            SELECT r.name as role_name
+            FROM user_roles ur
+            JOIN roles r ON ur.role_id = r.id
+            WHERE ur.user_id = ?
+            LIMIT 1
+        """, (user_id,)).fetchone()
+        target_role = (dict(role_row).get('role_name') if role_row else None)
+
+        if (not is_super_admin) and target_role and str(target_role).lower() in ('admin', 'super_admin'):
+            admin_count_row = conn.execute("""
+                SELECT COUNT(*) as cnt
+                FROM users u
+                JOIN user_roles ur ON u.id = ur.user_id
+                JOIN roles r ON ur.role_id = r.id
+                WHERE u.is_active = 1
+                  AND u.company_id = ?
+                  AND lower(r.name) IN ('admin', 'super_admin')
+            """, (g.company_id,)).fetchone()
+            admin_count = int(dict(admin_count_row).get('cnt') or 0) if admin_count_row else 0
+            if admin_count <= 1:
+                conn.close()
+                flash('Son yönetici kullanıcı silinemez.', 'warning')
+                return redirect(url_for('users'))
+
+        hard_delete = is_super_admin and (request.form.get('hard_delete') == '1')
+        if hard_delete:
+            if target_username == '__super__':
+                conn.close()
+                flash('Root Super Admin silinemez.', 'warning')
+                return redirect(url_for('users'))
+            conn.close()
+            raw = sqlite3.connect(DB_PATH)
+            try:
+                raw.execute("PRAGMA foreign_keys=OFF")
+                cur = raw.cursor()
+                cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
+                tables = [r[0] for r in cur.fetchall()]
+                safe_tables = [t for t in tables if re.match(r'^[A-Za-z0-9_]+$', str(t or ''))]
+
+                for t in safe_tables:
+                    cur.execute(f"PRAGMA table_info({t})")
+                    cols = [row[1] for row in cur.fetchall()]
+                    if 'user_id' in cols:
+                        cur.execute(f"DELETE FROM {t} WHERE user_id = ?", (user_id,))
+                    for c in ('created_by', 'updated_by', 'assigned_by', 'granted_by'):
+                        if c in cols:
+                            cur.execute(f"UPDATE {t} SET {c} = NULL WHERE {c} = ?", (user_id,))
+
+                cur.execute("DELETE FROM users WHERE id = ?", (user_id,))
+                raw.commit()
+            finally:
+                raw.close()
+            flash('Kullanıcı kalıcı olarak silindi.', 'success')
+        else:
+            now = datetime.now()
+            conn.execute(
+                "UPDATE users SET is_active = 0, updated_by = ?, updated_at = ? WHERE id = ?",
+                (session.get('user_id'), now, user_id)
+            )
+            conn.execute("DELETE FROM user_roles WHERE user_id=?", (user_id,))
+            conn.commit()
+            conn.close()
+            flash('Kullanıcı pasif edildi.', 'success')
     except Exception as e:
         logging.error(f"Error deleting user: {e}")
         flash('Silme hatası.', 'danger')
@@ -2088,41 +2280,203 @@ def companies():
         return redirect(url_for('login'))
     
     companies = []
+    pagination = None
     try:
         conn = get_db()
-        # Strict Isolation: Tenant sees only their own company
-        companies = conn.execute("SELECT * FROM companies WHERE id = ?", (g.company_id,)).fetchall()
+        role = str(session.get('role') or '').lower()
+        if role in ['admin', 'super_admin', 'test admin']:
+            companies = conn.execute("SELECT * FROM companies ORDER BY id DESC").fetchall()
+        else:
+            companies = conn.execute("SELECT * FROM companies WHERE id = ?", (g.company_id,)).fetchall()
         conn.close()
     except Exception as e:
         logging.error(f"Error fetching companies: {e}")
         
-    return render_template('companies.html', title='Şirketler', companies=companies)
+    return render_template('companies.html', title='Şirketler', companies=companies, pagination=pagination)
 
 @app.route('/companies/add', methods=['GET', 'POST'])
 @admin_required
 def company_add():
     if request.method == 'POST':
         try:
-            name = request.form.get('name')
-            sector = request.form.get('sector')
-            country = request.form.get('country')
-            tax_number = request.form.get('tax_number')
-            is_active = request.form.get('is_active') == 'on'
+            name = (request.form.get('name') or request.form.get('sirket_adi') or '').strip()
+            sector = (request.form.get('sector') or request.form.get('sektor') or '').strip() or None
+            country = (request.form.get('country') or request.form.get('ulke') or '').strip() or 'Türkiye'
+            tax_number = (request.form.get('tax_number') or request.form.get('vergi_no') or '').strip() or None
+            is_active_field_present = ('is_active' in request.form) or ('aktif' in request.form)
+            is_active = ((request.form.get('is_active') == 'on') or (request.form.get('aktif') == 'on')) if is_active_field_present else True
+            employee_count_raw = (request.form.get('employee_count') or request.form.get('calisan_sayisi') or '').strip()
+            employee_count = None
+            if employee_count_raw:
+                try:
+                    employee_count = int(employee_count_raw)
+                except Exception:
+                    employee_count = None
+
+            if not name:
+                flash('Şirket adı zorunludur.', 'warning')
+                return render_template('company_edit.html', company=None)
             
             conn = get_db()
-            conn.execute("""
-                INSERT INTO companies (name, sector, country, tax_number, is_active, created_at)
-                VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-            """, (name, sector, country, tax_number, is_active))
+            cur = conn.execute("""
+                INSERT INTO companies (name, sector, country, tax_number, employee_count, is_active)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (name, sector, country, tax_number, employee_count, is_active))
+            new_company_id = cur.lastrowid
             conn.commit()
             conn.close()
             flash('Şirket oluşturuldu.', 'success')
+            if new_company_id:
+                session['company_id'] = int(new_company_id)
+                return redirect(url_for('company_info_edit', company_id=new_company_id))
             return redirect(url_for('companies'))
         except Exception as e:
             logging.error(f"Error adding company: {e}")
             flash(f'Hata: {e}', 'danger')
             
     return render_template('company_edit.html', company=None)
+
+@app.route('/companies/switch/<int:company_id>')
+@admin_required
+def company_switch(company_id):
+    try:
+        conn = get_db()
+        row = conn.execute("SELECT id FROM companies WHERE id = ?", (company_id,)).fetchone()
+        conn.close()
+        if not row:
+            flash('Şirket bulunamadı.', 'warning')
+            return redirect(url_for('companies'))
+        session['company_id'] = int(company_id)
+        flash('Şirket değiştirildi.', 'success')
+        return redirect(url_for('company_info_edit', company_id=company_id))
+    except Exception as e:
+        logging.error(f"Error switching company: {e}")
+        flash('Şirket değiştirilemedi.', 'danger')
+        return redirect(url_for('companies'))
+
+@app.route('/companies/<int:company_id>/status', methods=['POST'])
+@require_company_context
+@admin_required
+def company_set_status(company_id):
+    role = str(session.get('role') or '').lower()
+    is_super_admin = role == 'super_admin'
+    if (not is_super_admin) and int(company_id) != int(g.company_id):
+        flash('Yetkisiz işlem.', 'danger')
+        return redirect(url_for('companies'))
+
+    is_active = str(request.form.get('is_active') or '').strip().lower() in ('1', 'true', 'on', 'yes')
+    try:
+        conn = get_db()
+        conn.execute("UPDATE companies SET is_active = ? WHERE id = ?", (1 if is_active else 0, company_id))
+        conn.commit()
+        conn.close()
+        flash('Şirket güncellendi.', 'success')
+    except Exception as e:
+        logging.error(f"Error updating company status: {e}")
+        flash('Şirket güncellenemedi.', 'danger')
+
+    return redirect(url_for('companies'))
+
+def _sqlite_safe_tables(conn) -> list:
+    cur = conn.cursor()
+    cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
+    tables = [r[0] for r in cur.fetchall()]
+    return [t for t in tables if re.match(r'^[A-Za-z0-9_]+$', str(t or ''))]
+
+def _hard_delete_users_in_conn(conn, user_ids: list) -> None:
+    if not user_ids:
+        return
+    cur = conn.cursor()
+    tables = _sqlite_safe_tables(conn)
+    user_tables = []
+    actor_tables = []
+    for t in tables:
+        cur.execute(f"PRAGMA table_info({t})")
+        cols = [row[1] for row in cur.fetchall()]
+        if 'user_id' in cols:
+            user_tables.append(t)
+        if any(c in cols for c in ('created_by', 'updated_by', 'assigned_by', 'granted_by')):
+            actor_tables.append((t, cols))
+
+    for uid in user_ids:
+        for t in user_tables:
+            cur.execute(f"DELETE FROM {t} WHERE user_id = ?", (uid,))
+        for t, cols in actor_tables:
+            for c in ('created_by', 'updated_by', 'assigned_by', 'granted_by'):
+                if c in cols:
+                    cur.execute(f"UPDATE {t} SET {c} = NULL WHERE {c} = ?", (uid,))
+        cur.execute("DELETE FROM users WHERE id = ?", (uid,))
+
+@app.route('/companies/delete/<int:company_id>', methods=['POST'])
+@require_company_context
+@admin_required
+def company_delete(company_id):
+    role = str(session.get('role') or '').lower()
+    is_super_admin = role == 'super_admin'
+    hard_delete = is_super_admin and (request.form.get('hard_delete') == '1')
+
+    if int(company_id) != int(g.company_id):
+        flash('Yetkisiz işlem.', 'danger')
+        return redirect(url_for('companies'))
+
+    if hard_delete and int(company_id) == 1:
+        flash('Varsayılan şirket silinemez.', 'warning')
+        return redirect(url_for('companies'))
+
+    try:
+        if not hard_delete:
+            conn = get_db()
+            conn.execute("UPDATE companies SET is_active = 0 WHERE id = ?", (company_id,))
+            conn.commit()
+            conn.close()
+            flash('Şirket pasif edildi.', 'success')
+            return redirect(url_for('companies'))
+
+        raw = sqlite3.connect(DB_PATH)
+        try:
+            raw.execute("PRAGMA foreign_keys=OFF")
+            cur = raw.cursor()
+            cur.execute("SELECT id FROM companies WHERE id <> ? ORDER BY id ASC LIMIT 1", (company_id,))
+            fallback = cur.fetchone()
+            fallback_company_id = int(fallback[0]) if fallback and fallback[0] else None
+            if not fallback_company_id:
+                flash('En az bir şirket kalmalıdır. Silme işlemi iptal edildi.', 'warning')
+                return redirect(url_for('companies'))
+
+            cur.execute("SELECT id FROM users WHERE username = '__super__' LIMIT 1")
+            su_row = cur.fetchone()
+            su_id = int(su_row[0]) if su_row and su_row[0] else None
+            if su_id is not None:
+                cur.execute("UPDATE users SET company_id = ? WHERE id = ? AND company_id = ?", (fallback_company_id, su_id, company_id))
+                cur.execute("DELETE FROM user_companies WHERE user_id = ? AND company_id = ?", (su_id, company_id))
+                cur.execute("INSERT OR IGNORE INTO user_companies (user_id, company_id, is_primary) VALUES (?, ?, 1)", (su_id, fallback_company_id))
+
+            cur.execute("SELECT id FROM users WHERE company_id = ? AND username <> '__super__'", (company_id,))
+            user_ids = [int(r[0]) for r in cur.fetchall() if r and r[0] is not None]
+            _hard_delete_users_in_conn(raw, user_ids)
+
+            tables = _sqlite_safe_tables(raw)
+            for t in tables:
+                cur.execute(f"PRAGMA table_info({t})")
+                cols = [row[1] for row in cur.fetchall()]
+                if 'company_id' in cols and t != 'companies':
+                    cur.execute(f"DELETE FROM {t} WHERE company_id = ?", (company_id,))
+
+            cur.execute("UPDATE users SET company_id = ? WHERE company_id = ?", (fallback_company_id, company_id))
+            cur.execute("DELETE FROM companies WHERE id = ?", (company_id,))
+            raw.commit()
+        finally:
+            raw.close()
+
+        if int(session.get('company_id') or 0) == int(company_id):
+            session['company_id'] = fallback_company_id
+
+        flash('Şirket kalıcı olarak silindi.', 'success')
+    except Exception as e:
+        logging.error(f"Error deleting company: {e}")
+        flash('Şirket pasif edilemedi.', 'danger')
+
+    return redirect(url_for('companies'))
 
 @app.route('/companies/<int:company_id>/info', methods=['GET', 'POST'])
 @require_company_context
@@ -5894,6 +6248,52 @@ def prioritization_module():
         logging.error(f"Prioritization module error: {e}")
         
     return render_template('prioritization.html', title='Prioritization', stats=stats, records=records, columns=columns, manager_available=True)
+
+@app.route('/prioritization/add', methods=['POST'])
+@require_company_context
+@admin_required
+def prioritization_add():
+    if 'user' not in session:
+        return redirect(url_for('login'))
+
+    company_id = g.company_id
+    topic_name = (request.form.get('topic_name') or '').strip()
+    category = (request.form.get('category') or 'Genel').strip()
+    description = (request.form.get('description') or '').strip() or None
+
+    try:
+        stakeholder_impact = float(request.form.get('stakeholder_impact') or 0)
+        business_impact = float(request.form.get('business_impact') or 0)
+    except Exception:
+        stakeholder_impact = 0.0
+        business_impact = 0.0
+
+    if not topic_name:
+        flash('Konu adı zorunludur.', 'warning')
+        return redirect(url_for('prioritization_module'))
+
+    priority_score = (stakeholder_impact + business_impact) / 2.0
+
+    try:
+        from backend.modules.prioritization.prioritization_manager import PrioritizationManager
+        manager = PrioritizationManager(DB_PATH)
+        new_id = manager.save_materiality_topic(
+            company_id=company_id,
+            topic_name=topic_name,
+            stakeholder_impact=stakeholder_impact,
+            business_impact=business_impact,
+            priority_score=priority_score,
+            category=category,
+            description=description,
+        )
+        if not new_id:
+            raise RuntimeError('Kayıt eklenemedi.')
+        flash('Konu eklendi.', 'success')
+    except Exception as e:
+        logging.error(f"Prioritization add error: {e}")
+        flash('Konu eklenemedi.', 'danger')
+
+    return redirect(url_for('prioritization_module'))
 
 @app.route('/targets_module')
 @require_company_context

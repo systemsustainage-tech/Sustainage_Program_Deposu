@@ -84,6 +84,12 @@ def verify_password_compat(stored_hash: str, plain: str) -> bool:
             except Exception:
                 s = stored_hash
             return verify_password(s, plain)
+        if stored_hash.startswith("pbkdf2$"):
+            payload = stored_hash.split("pbkdf2$", 1)[1]
+            if ":" in payload:
+                salt, hash_hex = payload.split(":", 1)
+                calc = hashlib.pbkdf2_hmac('sha256', (plain or "").encode('utf-8'), salt.encode('utf-8'), 100000).hex()
+                return calc == hash_hex
         # Werkzeug (pbkdf2:...)
         if stored_hash.startswith("pbkdf2:") or stored_hash.startswith("scrypt:"):
             try:

@@ -1,8 +1,5 @@
 {
-    "missing_tr": [
-        "captcha_invalid",
-        "enter_captcha_result"
-    ],
+    "missing_tr": [],
     "errors": [
         "[READ ERROR] check_output.txt: 'utf-8' codec can't decode byte 0xff in position 0: invalid start byte",
         "[READ ERROR] deploy_package.tar.gz: 'utf-8' codec can't decode byte 0x8b in position 1: invalid start byte",
@@ -78,7 +75,7 @@
         "[READ ERROR] backend\\data\\SDG_16_169_232.xlsx: 'utf-8' codec can't decode byte 0x92 in position 15: invalid start byte",
         "[READ ERROR] backend\\data\\sdg_desktop.sqlite: 'utf-8' codec can't decode byte 0xb9 in position 99: invalid start byte",
         "[READ ERROR] backend\\data\\sdg_desktop.sqlite-shm: 'utf-8' codec can't decode byte 0xe2 in position 1: invalid continuation byte",
-        "[READ ERROR] backend\\data\\sdg_prod.sqlite: 'utf-8' codec can't decode byte 0xba in position 31: invalid start byte",
+        "[READ ERROR] backend\\data\\sdg_prod.sqlite: 'utf-8' codec can't decode byte 0xbc in position 31: invalid start byte",
         "[READ ERROR] backend\\data\\sdg_prod.sqlite-shm: 'utf-8' codec can't decode byte 0xe2 in position 1: invalid continuation byte",
         "[READ ERROR] backend\\data\\sdg_prod.sqlite-wal: 'utf-8' codec can't decode byte 0x82 in position 3: invalid start byte",
         "[READ ERROR] backend\\data\\sustainability.db: 'utf-8' codec can't decode byte 0x89 in position 31: invalid start byte",

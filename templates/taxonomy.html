@@ -1,6 +1,9 @@
 {% extends "base.html" %}
 
-{% block title %}{{ lang('tax_title') }} - SDG Platform<!-- Add Taxonomy Modal -->
+{% block title %}{{ lang('tax_title') }} - SDG Platform{% endblock %}
+
+{% block content %}
+
 <div aria-hidden="true" aria-labelledby="addTaxonomyModalLabel" class="modal fade" id="addTaxonomyModal" tabindex="-1">
 <div class="modal-dialog modal-lg">
 <div class="modal-content">
@@ -94,9 +97,6 @@
 </div>
 </div>
 </div>
-{% endblock %}
-
-{% block content %}
 
 <div class="row mb-4">
 <div class="col-md-12">
@@ -142,7 +142,7 @@
 <div class="card text-center h-100 border-success">
 <div class="card-body">
 <h6 class="text-muted">{{ lang('tax_turnover') }}</h6>
-<h2 class="display-6 text-success">%{{ stats.turnover_pct }}</h2>
+<h2 class="display-6 text-success">%{{ stats.turnover_pct|default(0) }}</h2>
 <small class="text-muted">{{ lang('tax_aligned') }}</small>
 </div>
 </div>
@@ -151,7 +151,7 @@
 <div class="card text-center h-100 border-primary">
 <div class="card-body">
 <h6 class="text-muted">{{ lang('tax_capex') }}</h6>
-<h2 class="display-6 text-primary">%{{ stats.capex_pct }}</h2>
+<h2 class="display-6 text-primary">%{{ stats.capex_pct|default(0) }}</h2>
 <small class="text-muted">{{ lang('tax_aligned') }}</small>
 </div>
 </div>
@@ -160,7 +160,7 @@
 <div class="card text-center h-100 border-info">
 <div class="card-body">
 <h6 class="text-muted">{{ lang('tax_opex') }}</h6>
-<h2 class="display-6 text-info">%{{ stats.opex_pct }}</h2>
+<h2 class="display-6 text-info">%{{ stats.opex_pct|default(0) }}</h2>
 <small class="text-muted">{{ lang('tax_aligned') }}</small>
 </div>
 </div>
@@ -298,7 +298,7 @@
                                 {% endfor %}
                             {% else %}
                                 <tr>
-<td class="text-center text-muted" colspan="7">{{ lang('no_data_available') }}</td>
+<td class="text-center text-muted" colspan="11">{{ lang('no_data_available') }}</td>
 </tr>
                             {% endif %}
                         </tbody>
@@ -314,6 +314,7 @@
 </div>
 <div class="card-body">
 <p class="text-muted small mb-3">{{ lang('tax_framework_mappings_desc') }}</p>
+{% if endpoint_exists('taxonomy_mapping_add') %}
 <form action="{{ url_for('taxonomy_mapping_add') }}" class="mb-3" method="POST">
 <div class="mb-2">
 <label class="form-label">{{ lang('tax_activity_code') }}</label>
@@ -341,6 +342,11 @@
 </div>
 <button class="btn btn-sm btn-primary w-100" type="submit">{{ lang('common.btn_save') }}</button>
 </form>
+{% else %}
+<div class="alert alert-info mb-0">
+{{ lang('module_under_construction', 'Bu modülün web arayüzü entegrasyonu devam etmektedir.') }}
+</div>
+{% endif %}
 <div class="table-responsive" style="max-height: 260px;">
 <table class="table table-sm table-striped">
 <thead>

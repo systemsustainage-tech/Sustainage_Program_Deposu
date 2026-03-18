@@ -171,7 +171,7 @@ else:
                     return jsonify({'error': 'Authentication required'}), 401
                 
                 # Super Admin bypass
-                if session.get('role') == 'Super Admin':
+                if str(session.get('role') or '').lower() in ('super admin', 'super_admin'):
                     return f(*args, **kwargs)
                 
                 # Check specific permission

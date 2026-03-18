@@ -40,10 +40,19 @@ class DatabaseManager:
 
     def __new__(cls, db_path: str = DB_PATH, *args, **kwargs):
         """Multiton pattern - her db_path için tek instance"""
-        # Mutlak yol
         if not os.path.isabs(db_path):
-            base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-            db_path = os.path.join(base_dir, db_path)
+            cwd_candidate = os.path.abspath(db_path)
+            project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+            root_candidate = os.path.join(project_root, db_path)
+            backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+            backend_candidate = os.path.join(backend_dir, db_path)
+
+            if os.path.exists(cwd_candidate):
+                db_path = cwd_candidate
+            elif os.path.exists(root_candidate):
+                db_path = root_candidate
+            else:
+                db_path = backend_candidate
 
         with cls._lock:
             if db_path not in cls._instances:
@@ -60,10 +69,19 @@ class DatabaseManager:
         if hasattr(self, '_initialized'):
             return
 
-        # Mutlak yol
         if not os.path.isabs(db_path):
-            base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-            db_path = os.path.join(base_dir, db_path)
+            cwd_candidate = os.path.abspath(db_path)
+            project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+            root_candidate = os.path.join(project_root, db_path)
+            backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+            backend_candidate = os.path.join(backend_dir, db_path)
+
+            if os.path.exists(cwd_candidate):
+                db_path = cwd_candidate
+            elif os.path.exists(root_candidate):
+                db_path = root_candidate
+            else:
+                db_path = backend_candidate
 
         # Performance Tuning based on Load Test
         # 50 users -> 50 conn is okay
@@ -75,15 +93,16 @@ class DatabaseManager:
             pool_size = int(os.environ.get('DB_POOL_SIZE', 200))
 
         self.db_path = db_path
-        self.pool_size = pool_size
-        self._pool = queue.Queue(maxsize=pool_size)
+        self._use_pool = not os.path.basename(self.db_path).lower().startswith('test_')
+        self.pool_size = pool_size if self._use_pool else 0
+        self._pool = queue.Queue(maxsize=self.pool_size) if self._use_pool else None
         self._local = threading.local()
         self._initialized = True
 
-        # Pool'u başlat
-        self._init_pool()
+        if self._use_pool:
+            self._init_pool()
 
-        logging.info(f" DatabaseManager başlatıldı: {db_path} ({pool_size} bağlantı)")
+        logging.info(f" DatabaseManager başlatıldı: {db_path} ({self.pool_size} bağlantı)")
 
     def _init_pool(self) -> None:
         """Connection pool'u başlat"""
@@ -118,13 +137,13 @@ class DatabaseManager:
     def close(self):
         """Tüm bağlantıları kapat ve instance'ı temizle"""
         try:
-            # Pool'daki boşta olan bağlantıları kapat
-            while not self._pool.empty():
-                try:
-                    conn = self._pool.get_nowait()
-                    conn.close()
-                except:
-                    pass
+            if self._use_pool and self._pool is not None:
+                while not self._pool.empty():
+                    try:
+                        conn = self._pool.get_nowait()
+                        conn.close()
+                    except:
+                        pass
             
             # Instance listesinden çıkar
             with self._lock:
@@ -147,11 +166,14 @@ class DatabaseManager:
         """
         conn = None
         try:
-            # Pool'dan bağlantı al (timeout: 5 saniye)
+            if not self._use_pool:
+                conn = self._create_connection()
+                yield conn
+                return
+
             conn = self._pool.get(timeout=5)
             yield conn
         except queue.Empty:
-            # Pool dolu ise yeni bağlantı oluştur (geçici)
             logging.info("️ Pool dolu, geçici bağlantı oluşturuluyor...")
             temp_conn = self._create_connection()
             try:
@@ -163,8 +185,12 @@ class DatabaseManager:
                 conn.rollback()
             raise
         finally:
-            # Bağlantıyı pool'a geri koy
-            if conn:
+            if not self._use_pool:
+                if conn:
+                    conn.close()
+                return
+
+            if conn and self._pool is not None:
                 try:
                     self._pool.put_nowait(conn)
                 except queue.Full:

@@ -6,7 +6,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const trends = JSON.parse('{{ trends | tojson | replace("\'", "\\\'") | safe }}');
+        const trends = {{ trends|default({})|tojson }};
         
         if (trends && trends.years && trends.years.length > 0) {
             // Satisfaction Chart
@@ -80,7 +80,9 @@
                         <p class="text-muted mt-2 mb-0">{{ lang('social_desc') }}</p>
                     </div>
                     <div>
-                        <a href="{{ url_for('social_export') }}" class="btn btn-sm btn-outline-success ms-2"><i class="bi bi-file-earmark-excel"></i> Excel Raporu</a>
+    {% if endpoint_exists('social_export') %}
+    <a href="{{ url_for('social_export') }}" class="btn btn-sm btn-outline-success ms-2"><i class="bi bi-file-earmark-excel"></i> Excel Raporu</a>
+    {% endif %}
                         <button class="btn btn-sm btn-outline-secondary ms-2" onclick="history.back()"><i class="bi bi-arrow-left"></i> {{ lang('btn_back', 'Geri') }}</button>
                     </div>
                 </div>

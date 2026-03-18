@@ -124,7 +124,13 @@
               <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
                 <li><a class="dropdown-item" href="{{ url_for('users') }}">{{ lang('users', 'Kullanıcılar') }}</a></li>
                 <li><a class="dropdown-item" href="{{ url_for('companies') }}">{{ lang('companies', 'Şirketler') }}</a></li>
-                <li><a class="dropdown-item" href="{{ url_for('company_info_edit', company_id=g.company_id) }}">{{ lang('company_info', 'Firma Bilgileri') }}</a></li>
+                {% set _cid = session.get('company_id') %}
+                {% if _cid is mapping %}
+                  {% set _cid = _cid.get('id') or _cid.get('company_id') %}
+                {% endif %}
+                {% if _cid %}
+                <li><a class="dropdown-item" href="{{ url_for('company_info_edit', company_id=_cid) }}">{{ lang('company_info', 'Firma Bilgileri') }}</a></li>
+                {% endif %}
                 <li><a class="dropdown-item" href="{{ url_for('audit_bp.view_audit_logs') }}">{{ lang('audit_logs', 'Denetim Kayıtları') }}</a></li>
                 {# <li><a class="dropdown-item" href="{{ url_for('supplier_portal.login') }}" target="_blank"><i class="bi bi-box-arrow-in-right"></i> {{ lang('supplier_login', 'Tedarikçi Girişi') }}</a></li> #}
                 <li><hr class="dropdown-divider"></li>
@@ -266,7 +272,7 @@
         }
         
         // Initialize DataTables
-        // Add 'data-table' class to any table you want to enhance, OR it applies to all .table by default
+        // Add 'data-table' class to any table you want to enhance
         if ($.fn.DataTable) {
           const lang = document.documentElement.lang || 'tr';
           let langUrl = "//cdn.datatables.net/plug-ins/1.13.6/i18n/tr.json";
@@ -274,7 +280,7 @@
           if (lang === 'en') langUrl = "//cdn.datatables.net/plug-ins/1.13.6/i18n/en-GB.json";
           else if (lang === 'de') langUrl = "//cdn.datatables.net/plug-ins/1.13.6/i18n/de-DE.json";
 
-          $('.table:not(.no-datatable)').DataTable({
+          $('.data-table:not(.no-datatable)').DataTable({
             language: {
               url: langUrl
             },
@@ -316,6 +322,9 @@
         if (!localStorage.getItem('cookieConsent')) {
           setTimeout(() => {
             cookieConsent.style.display = 'block';
+            try {
+              document.body.style.paddingBottom = cookieConsent.offsetHeight + 'px';
+            } catch (e) {}
           }, 1000);
         }
         
@@ -323,6 +332,9 @@
             acceptBtn.addEventListener('click', function() {
             localStorage.setItem('cookieConsent', 'true');
             cookieConsent.style.display = 'none';
+            try {
+              document.body.style.paddingBottom = '';
+            } catch (e) {}
             });
         }
       });

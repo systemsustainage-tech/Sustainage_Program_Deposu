@@ -41,13 +41,32 @@ def _is_super_admin(conn, username: str) -> bool:
             JOIN users u ON u.id = ur.user_id
             WHERE u.username = ?
         """, (username,))
-        roles = [row[0] for row in cursor.fetchall()]
-        if 'Super Admin' in roles:
+        roles = [str(row[0]) for row in cursor.fetchall()]
+        role_names = {r.strip().lower() for r in roles if r}
+        if 'super admin' in role_names or 'super_admin' in role_names:
              return True
     except Exception as e:
         logging.error(f"Error checking super admin status: {e}")
     
     return False
+
+def _actor_is_super_admin(conn, actor_id: int) -> bool:
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT r.name
+            FROM roles r
+            JOIN user_roles ur ON r.id = ur.role_id
+            WHERE ur.user_id = ?
+            """,
+            (actor_id,),
+        )
+        roles = [str(row[0]) for row in cursor.fetchall()]
+        role_names = {r.strip().lower() for r in roles if r}
+        return ('super admin' in role_names) or ('super_admin' in role_names)
+    except Exception:
+        return False
 
 def _check_two_stage_approval(db_path: str, actor_id: int, target_username: str, action_type: str) -> Tuple[bool, str]:
     """
@@ -134,6 +153,14 @@ def check_delete_protection(db_path: str, username: str, actor_id: Optional[int]
     # 3. If target IS Super Admin, enforce 2-stage approval
     if actor_id is None:
         return False, "Security check failed: Actor ID is required for Super Admin operations."
+
+    try:
+        db = DatabaseManager(db_path)
+        with db.get_connection() as conn:
+            if _actor_is_super_admin(conn, int(actor_id)):
+                return True, "Actor is super admin, deletion allowed."
+    except Exception:
+        pass
         
     # Check authorization (Actor must also be powerful, but we assume the caller checks basic permissions. 
     # Here we enforce the 2-step process.)
@@ -158,5 +185,19 @@ def check_password_change_protection(db_path: str, username: str, new_password: 
              # However, this function doesn't know the session user.
              # We will assume secure usage requiring actor_id.
              return False, "Security check failed: Actor ID required."
+
+        try:
+            cursor = conn.cursor()
+            cursor.execute("SELECT id FROM users WHERE username = ?", (username,))
+            row = cursor.fetchone()
+            target_user_id = int(row[0]) if row and row[0] is not None else None
+        except Exception:
+            target_user_id = None
+
+        if target_user_id is not None and int(actor_id) == int(target_user_id):
+            return True, "Self password change allowed."
+
+        if _actor_is_super_admin(conn, int(actor_id)):
+            return True, "Actor is super admin, password change allowed."
 
     return _check_two_stage_approval(db_path, actor_id, username, "PASSWORD_CHANGE")

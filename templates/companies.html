@@ -80,14 +80,42 @@
 <i class="bi bi-eye"></i>
 </a>
                     {% if session.role|lower in ['admin', 'super_admin', 'test admin'] %}
-                    <a class="btn btn-sm btn-outline-primary" href="{{ url_for('company_edit', company_id=company['id']) }}" title="{{ lang('company_edit_title') }}">
+                    <a class="btn btn-sm btn-outline-primary" href="{{ url_for('company_switch', company_id=company['id']) }}" title="{{ lang('company_edit_title') }}">
 <i class="bi bi-pencil"></i>
 </a>
-<form action="{{ url_for('company_delete', company_id=company['id']) }}" method="POST" onsubmit="return confirm('{{ lang('confirm_delete_company') }}');" style="display:inline;">
-<button class="btn btn-sm btn-outline-danger" title="{{ lang('btn_delete') }}" type="submit">
-<i class="bi bi-trash"></i>
+{% if company['is_active'] %}
+<form action="{{ url_for('company_set_status', company_id=company['id']) }}" method="POST" onsubmit="return confirm('Bu şirketi pasife almak istediğinize emin misiniz?');" style="display:inline;">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<input type="hidden" name="is_active" value="0">
+<button class="btn btn-sm btn-outline-warning" title="Pasife Al" type="submit">
+<i class="bi bi-slash-circle"></i> Pasife Al
 </button>
 </form>
+{% else %}
+<form action="{{ url_for('company_set_status', company_id=company['id']) }}" method="POST" onsubmit="return confirm('Bu şirketi aktif etmek istediğinize emin misiniz?');" style="display:inline;">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<input type="hidden" name="is_active" value="1">
+<button class="btn btn-sm btn-outline-success" title="Aktif Et" type="submit">
+<i class="bi bi-check-circle"></i> Aktif Et
+</button>
+</form>
+{% endif %}
+{% if session.role|lower == 'super_admin' %}
+<form action="{{ url_for('company_delete', company_id=company['id']) }}" method="POST" onsubmit="return confirm('Bu şirketi KALICI olarak silmek istediğinize emin misiniz? Bu işlem geri alınamaz.');" style="display:inline;">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<input type="hidden" name="hard_delete" value="1">
+<button class="btn btn-sm btn-danger" title="Kalıcı Sil" type="submit">
+<i class="bi bi-trash"></i> Kalıcı Sil
+</button>
+</form>
+{% else %}
+<form action="{{ url_for('company_delete', company_id=company['id']) }}" method="POST" onsubmit="return confirm('Bu şirketi pasife almak istediğinize emin misiniz?');" style="display:inline;">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<button class="btn btn-sm btn-outline-warning" title="Pasife Al" type="submit">
+<i class="bi bi-slash-circle"></i> Pasife Al
+</button>
+</form>
+{% endif %}
                     {% endif %}
                 </td>
 </tr>
@@ -102,6 +130,8 @@
 </div>
 
 {% from "includes/pagination.html" import render_pagination %}
+{% if pagination is defined and pagination %}
 {{ render_pagination(pagination, 'companies') }}
+{% endif %}
 
 {% endblock %}
