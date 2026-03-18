@@ -1176,6 +1176,8 @@
   "supplier_list": "Tedarikçi Listesi",
   "supplier_login": "Supplier Login",
   "supplier_name": "Tedarikçi Adı",
+  "supplier_type": "Tedarikçi Tipi",
+  "country": "Ülke",
   "supplier_scorecard": "Tedarikçi Karnesi",
   "suppliers": " Tedarikçiler",
   "supply_chain_desc": "Sürdürülebilir Tedarik Zinciri",
