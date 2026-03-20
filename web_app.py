@@ -3042,21 +3042,21 @@ def unified_report():
                                 if strongest:
                                     parts = []
                                     for item in strongest:
-                                        g = item.get("goal")
+                                        goal = item.get("goal")
                                         t = item.get("title") or ""
                                         s = item.get("avg_score")
-                                        if g is not None and s is not None:
-                                            parts.append(f"SDG {g} - {t} (ortalama {s})")
+                                        if goal is not None and s is not None:
+                                            parts.append(f"SDG {goal} - {t} (ortalama {s})")
                                     if parts:
                                         insight_lines.append("En guclu hedefler: " + ", ".join(parts))
                                 if weakest:
                                     parts = []
                                     for item in weakest:
-                                        g = item.get("goal")
+                                        goal = item.get("goal")
                                         t = item.get("title") or ""
                                         s = item.get("avg_score")
-                                        if g is not None and s is not None:
-                                            parts.append(f"SDG {g} - {t} (ortalama {s})")
+                                        if goal is not None and s is not None:
+                                            parts.append(f"SDG {goal} - {t} (ortalama {s})")
                                     if parts:
                                         insight_lines.append("Gelisim gerektiren hedefler: " + ", ".join(parts))
                                 if insight_lines:
@@ -3345,21 +3345,21 @@ def unified_report():
                     if strongest:
                         parts = []
                         for item in strongest:
-                            g = item.get("goal")
+                            goal = item.get("goal")
                             t = item.get("title") or ""
                             s = item.get("avg_score")
-                            if g is not None and s is not None:
-                                parts.append(f"SDG {g} - {t} (ortalama {s})")
+                            if goal is not None and s is not None:
+                                parts.append(f"SDG {goal} - {t} (ortalama {s})")
                         if parts:
                             lines.append("En guclu hedefler: " + ", ".join(parts))
                     if weakest:
                         parts = []
                         for item in weakest:
-                            g = item.get("goal")
+                            goal = item.get("goal")
                             t = item.get("title") or ""
                             s = item.get("avg_score")
-                            if g is not None and s is not None:
-                                parts.append(f"SDG {g} - {t} (ortalama {s})")
+                            if goal is not None and s is not None:
+                                parts.append(f"SDG {goal} - {t} (ortalama {s})")
                         if parts:
                             lines.append("Gelisim gerektiren hedefler: " + ", ".join(parts))
                     if lines:

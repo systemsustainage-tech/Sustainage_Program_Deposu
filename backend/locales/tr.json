@@ -1690,5 +1690,6 @@
     "data_flow_step2": "Data Flow Step2",
     "data_flow_step3": "Data Flow Step3",
     "data_flow_title": "Data Flow Title",
-    "scope1_add_error": "Scope 1 emisyon ekleme hatası"
+    "scope1_add_error": "Scope 1 emisyon ekleme hatası",
+    "emission_factor_not_found": "Emisyon faktörü bulunamadı"
 }
